@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v1.9｜星紅織品百貨活動管理</title>
+<style>
+:root{
+  --bg:#eef3f6;--card:#fff;--text:#274253;--muted:#667b88;--line:#d8e1e7;
+  --accent:#274253;--shadow:0 12px 30px rgba(58,42,31,.09);
+  --north:#dbeafe;--north-deep:#2563eb;
+  --central:#fef3c7;--central-deep:#b7791f;
+  --south:#fee2e2;--south-deep:#dc2626;
+  --east:#dcfce7;--east-deep:#15803d;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:linear-gradient(180deg,#ffffff,#f6f9fb 280px,#eef3f6);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-inner{width:min(1180px,calc(100% - 28px));margin:auto;display:flex;justify-content:space-between;align-items:center;padding:12px 0}
+.brand{font-weight:900;letter-spacing:.08em}.nav{display:flex;gap:8px}
+.nav button{border:0;border-radius:999px;padding:9px 14px;background:#e7eef2;color:var(--text);font-weight:700}
+.nav button.active{background:var(--accent);color:#fff}
+.hero{text-align:center;padding:38px 20px 22px}.eyebrow{color:var(--accent);font-size:13px;font-weight:800;letter-spacing:.2em}
+h1{font-size:clamp(28px,5vw,44px);margin:9px 0}.hero p{color:var(--muted);margin:0;line-height:1.7}
+.container{width:min(1180px,calc(100% - 28px));margin:0 auto 60px}
+.page{display:none}.page.active{display:block}
+.toolbar,.panel,.card,.login-box,.summary-box{background:rgba(255,255,255,.95);border:1px solid var(--line);box-shadow:var(--shadow)}
+.toolbar{padding:14px;border-radius:18px;display:grid;grid-template-columns:1.3fr .8fr .8fr auto;gap:10px;margin-bottom:18px}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff;color:var(--text)}
+button.primary{border:0;border-radius:12px;padding:11px 16px;background:var(--accent);color:#fff;font-weight:800}
+button.secondary{border:0;border-radius:12px;padding:11px 16px;background:#e7eef2;color:var(--text);font-weight:800}
+button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;color:#9a352e;font-weight:800}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.summary-box{padding:17px;border-radius:16px}.summary-box b{display:block;font-size:27px}.summary-box span{font-size:14px;color:var(--muted)}
+.events{display:flex;flex-direction:column;gap:10px}
+.card{border-radius:20px;overflow:hidden;border-top:7px solid var(--accent)}
+.card.north{border-top-color:var(--north-deep)}.card.central{border-top-color:var(--central-deep)}.card.south{border-top-color:var(--south-deep)}.card.east{border-top-color:var(--east-deep)}
+.card-head{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+.mall{font-size:21px;font-weight:900}.sub{font-size:14px;color:var(--muted);margin-top:5px}
+.badges{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.badge{border-radius:999px;padding:6px 10px;font-size:13px;font-weight:800}
+.badge.active{background:#dcfce7;color:#15803d}.badge.upcoming{background:#fff2d9;color:#9a6516}.badge.ended{background:#eee;color:#777}
+.badge.north{background:var(--north);color:var(--north-deep)}.badge.central{background:var(--central);color:var(--central-deep)}
+.badge.south{background:var(--south);color:var(--south-deep)}.badge.east{background:var(--east);color:var(--east-deep)}
+.card-body{padding:18px 20px 20px}.meta{display:grid;gap:10px}.row{display:grid;grid-template-columns:88px 1fr;gap:10px;line-height:1.6}.label{color:var(--muted);font-size:14px}
+.tags{display:flex;flex-wrap:wrap;gap:8px}.tag{background:#eef4f7;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px}
+.gallery{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.gallery img{width:92px;height:74px;object-fit:contain;background:#f7fafc;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;transition:transform .28s ease,box-shadow .28s ease,opacity .28s ease}
+.gallery img:hover{transform:scale(1.025);box-shadow:0 6px 16px rgba(39,66,83,.12);opacity:.96}
+.empty{grid-column:1/-1;text-align:center;padding:44px;background:#fff;border:1px dashed var(--line);border-radius:18px;color:var(--muted)}
+.login-wrap{display:grid;place-items:center;min-height:460px}.login-box{width:min(430px,100%);border-radius:20px;padding:24px}.login-box h2{margin-top:0}
+.panel{border-radius:20px;padding:20px;margin-bottom:18px}.panel h2{margin:0 0 15px}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.wide{grid-column:span 2}
+.field label{font-size:13px;color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.photo-preview{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.photo-preview img{width:100%;height:100px;object-fit:contain;background:#f7fafc;border-radius:10px;border:1px solid var(--line)}
+.note{font-size:13px;color:var(--muted);line-height:1.7;margin-top:10px}
+.manage-list{display:grid;gap:10px}.manage-item{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
+.manage-actions{display:flex;gap:8px}
+
+.lightbox{display:none;position:fixed;inset:0;z-index:999;background:rgba(239,245,248,.88);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:32px;opacity:0;transition:opacity .45s ease}
+.lightbox.open{display:flex;opacity:1}
+.lightbox img{max-width:78vw;max-height:78vh;object-fit:contain;background:#fff;border-radius:18px;box-shadow:0 14px 32px rgba(39,66,83,.14);transform:scale(.985);animation:softZoom .45s cubic-bezier(.22,.61,.36,1) forwards}
+.lightbox-close{position:absolute;top:20px;right:24px;width:42px;height:42px;border:1px solid #d8e1e7;border-radius:50%;background:rgba(255,255,255,.9);color:#274253;font-size:24px;font-weight:900}
+.account-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
+@keyframes softZoom{0%{transform:scale(.985);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
+.admin-tabs{display:flex;gap:8px;margin-bottom:16px}.admin-tabs button{border:0;border-radius:999px;padding:10px 16px;background:#e7eef2;color:#274253;font-weight:800}.admin-tabs button.active{background:#274253;color:#fff}.admin-tab-panel{display:none}.admin-tab-panel.active{display:block}
+
+
+.event-row{background:#fff;border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:14px;box-shadow:0 7px 20px rgba(39,66,83,.07);overflow:hidden}
+.event-row.north{border-left-color:var(--north-deep)}.event-row.central{border-left-color:var(--central-deep)}.event-row.south{border-left-color:var(--south-deep)}.event-row.east{border-left-color:var(--east-deep)}
+.event-summary{width:100%;display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(120px,.7fr) minmax(190px,1fr) auto 32px;gap:14px;align-items:center;padding:15px 18px;background:#fff;border:0;color:var(--text);text-align:left}
+.event-summary:hover{background:#f7fafc}
+.mall-name{font-weight:900;font-size:17px}
+.summary-region,.summary-date{font-size:14px;color:var(--muted)}
+.summary-badges{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
+.chevron{font-size:20px;transition:transform .28s ease;text-align:center;color:#728794}
+.event-row.open .chevron{transform:rotate(180deg)}
+.event-detail{max-height:0;overflow:hidden;opacity:0;padding:0 18px;transition:max-height .48s cubic-bezier(.22,.61,.36,1),opacity .3s ease,padding .35s ease}
+.event-row.open .event-detail{max-height:1000px;opacity:1;padding:8px 18px 18px}
+.event-detail-inner{border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:760px){
+ .event-summary{grid-template-columns:1fr auto;gap:8px}
+ .summary-region,.summary-date{grid-column:1/2}
+ .summary-badges{grid-column:1/2;justify-content:flex-start}
+ .chevron{grid-column:2;grid-row:1/5}
+}
+
+
+.dropzone{
+  min-height:240px;
+  border:2px dashed #274253;
+  border-radius:18px;
+  background:#f8fbfc;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  color:#274253;
+  transition:.25s;
+  cursor:pointer;
+}
+.dropzone.dragover{
+  background:#eef6f8;
+  border-color:#1d3340;
+  transform:scale(1.01);
+}
+.dropzone .icon{font-size:42px}
+.photo-preview{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:16px;
+}
+.photo-preview .thumb{
+  position:relative;
+  width:110px;
+}
+.photo-preview .cover{
+  position:absolute;
+  left:6px;top:6px;
+  background:#274253;
+  color:#fff;
+  font-size:11px;
+  padding:2px 6px;
+  border-radius:999px;
+}
+.photo-preview .remove{
+  position:absolute;
+  right:6px;top:6px;
+  width:22px;height:22px;
+  border-radius:50%;
+  border:none;
+  background:#fff;
+  cursor:pointer;
+}
+
+
+.store-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
+.store-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.store-item{display:grid;grid-template-columns:1.4fr .8fr .8fr auto;gap:12px;align-items:center;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.store-item .store-name{font-weight:900}
+.store-item .store-sub{font-size:13px;color:var(--muted)}
+@media(max-width:800px){
+ .store-form{grid-template-columns:1fr 1fr}
+ .store-item{grid-template-columns:1fr auto}
+}
+
+
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.user-chip .meta{font-size:12px;color:var(--muted);line-height:1.35}
+.account-form{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
+.account-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.account-item{display:grid;grid-template-columns:1.2fr 1fr .8fr 1.2fr auto;gap:12px;align-items:center;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.account-item .name{font-weight:900}
+.account-item .small{font-size:12px;color:var(--muted)}
+.role-badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}
+.role-badge.admin{background:#274253;color:#fff}
+.role-badge.manager{background:#e9f1f4;color:#274253}
+.status-dot{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.status-dot:before{content:"";width:8px;height:8px;border-radius:50%;background:#4d9b68}
+.status-dot.off:before{background:#a8a8a8}
+.audit{font-size:12px;color:var(--muted);margin-top:6px}
+.hidden-by-role{display:none!important}
+@media(max-width:950px){
+ .account-form{grid-template-columns:1fr 1fr}
+ .account-item{grid-template-columns:1fr 1fr}
+}
+
+
+.store-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.store-filter-group{display:flex;flex-wrap:wrap;gap:8px}
+.filter-btn{border:1px solid var(--line);background:#fff;color:#274253;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}
+.filter-btn.active{background:#274253;color:#fff;border-color:#274253}
+.store-list.compact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.store-list.compact .store-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px 14px}
+.store-list.compact .store-info{min-width:0}
+.store-list.compact .store-name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-list.compact .store-meta{font-size:12px;color:var(--muted);margin-top:4px}
+.store-list.compact .manage-actions{justify-content:flex-end}
+.toggle-wrap{display:inline-flex;align-items:center;gap:10px;font-weight:800;color:#274253;cursor:pointer;user-select:none}
+.toggle-wrap input{display:none}
+.toggle-ui{position:relative;width:48px;height:26px;border-radius:999px;background:#c8d0d4;transition:.2s}
+.toggle-ui:after{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:.2s}
+.toggle-wrap input:checked + .toggle-ui{background:#274253}
+.toggle-wrap input:checked + .toggle-ui:after{transform:translateX(22px)}
+.password-cell{display:flex;align-items:center;gap:8px}
+.password-text{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#f4f6f7;border:1px solid var(--line);padding:5px 8px;border-radius:8px;min-width:92px}
+.icon-btn{border:0;background:transparent;cursor:pointer;font-size:16px;padding:4px}
+@media(max-width:850px){
+ .store-list.compact{grid-template-columns:1fr}
+}
+
+@media(max-width:850px){
+ .toolbar{grid-template-columns:1fr 1fr}.toolbar input{grid-column:1/-1}.summary{grid-template-columns:1fr 1fr}.events{grid-template-columns:1fr}
+ .form-grid{grid-template-columns:1fr 1fr}.field.wide{grid-column:span 2}.account-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+ .topbar-inner{align-items:flex-start}.nav{flex-direction:column}.toolbar,.form-grid,.summary{grid-template-columns:1fr}.toolbar input,.field.wide{grid-column:auto}
+ .gallery,.photo-preview{grid-template-columns:repeat(3,1fr)}.gallery img:hover{transform:scale(1.02)}
+}
+
+.store-list.compact .store-item{
+  position:relative;
+  min-height:92px;
+  align-items:center;
+  border:1px solid #d9e2e7;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 3px 10px rgba(39,66,83,.04);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.store-list.compact .store-item:hover{
+  transform:translateY(-1px);
+  box-shadow:0 7px 18px rgba(39,66,83,.08);
+  border-color:#b9c9d2;
+}
+.store-list.compact .store-info{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr);
+  grid-template-areas:
+    "area name"
+    "area floor";
+  column-gap:14px;
+  align-items:center;
+}
+.store-area-block{
+  grid-area:area;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:58px;
+  border-radius:13px;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.store-area-block.north{background:#e9f2f8;color:#315f79}
+.store-area-block.central{background:#fff1c9;color:#a76b00}
+.store-area-block.south{background:#f9e6e2;color:#a54a3d}
+.store-area-block.east{background:#e8f3eb;color:#3f7552}
+.store-list.compact .store-name{
+  grid-area:name;
+  font-size:17px;
+  font-weight:900;
+  line-height:1.35;
+  color:#203d4e;
+}
+.store-floor-row{
+  grid-area:floor;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:6px;
+  color:#718693;
+  font-size:13px;
+}
+.floor-label{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 9px;
+  border-radius:999px;
+  background:#f1f5f7;
+  color:#7b8c96;
+  font-size:11px;
+  font-weight:500;
+}
+.floor-value{
+  font-size:13px;
+  font-weight:500;
+  color:#556c79;
+}
+.store-list.compact .manage-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.store-list.compact .manage-actions button{
+  min-width:68px;
+  height:42px;
+  border-radius:12px;
+}
+@media(max-width:620px){
+  .store-list.compact .store-item{
+    grid-template-columns:1fr;
+  }
+  .store-list.compact .manage-actions{
+    justify-content:flex-end;
+    margin-top:10px;
+  }
+}
+
+
+.global-drop-overlay{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(24,48,62,.72);
+  backdrop-filter:blur(4px);
+  pointer-events:none;
+}
+.global-drop-overlay.show{display:flex}
+.global-drop-card{
+  min-width:min(520px,82vw);
+  padding:42px 32px;
+  border:3px dashed rgba(255,255,255,.78);
+  border-radius:24px;
+  color:#fff;
+  text-align:center;
+  background:rgba(255,255,255,.10);
+  box-shadow:0 24px 70px rgba(0,0,0,.24);
+}
+.global-drop-icon{font-size:48px;line-height:1;margin-bottom:14px}
+.global-drop-title{font-size:24px;font-weight:900}
+.global-drop-hint{margin-top:8px;font-size:14px;opacity:.88}
+.photo-preview img{aspect-ratio:1/1;object-fit:cover}
+
+
+.brand-home-btn{
+  appearance:none;border:0;padding:0;margin:0;background:transparent;
+  color:inherit;font:inherit;font-weight:900;cursor:pointer;text-align:left
+}
+.brand-home-btn:hover{opacity:.76}
+.brand-home-btn:focus-visible{
+  outline:3px solid rgba(39,66,83,.22);outline-offset:5px;border-radius:6px
+}
+.month-filter-wrap{
+  display:flex;align-items:center;gap:8px;font-weight:800;color:#274253
+}
+.month-filter-wrap select{
+  min-width:128px;height:42px;padding:0 36px 0 13px;
+  border:1px solid #d5e0e6;border-radius:12px;background:#fff;
+  color:#274253;font:inherit;font-weight:700;cursor:pointer
+}
+
+.store-activity-group{
+  margin-bottom:16px;
+  border:1px solid #dbe4e8;
+  border-radius:16px;
+  background:#fff;
+  overflow:hidden;
+  box-shadow:0 3px 12px rgba(39,66,83,.05);
+}
+.store-activity-group summary{
+  list-style:none;
+  cursor:pointer;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:16px 18px;
+  background:#f7fafb;
+}
+.store-activity-group summary::-webkit-details-marker{display:none}
+.store-activity-group summary:hover{background:#f1f6f8}
+.store-group-name{font-size:18px;font-weight:900;color:#274253}
+.store-group-sub{margin-top:4px;font-size:13px;color:#788b96}
+.store-group-count{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 12px;border-radius:999px;
+  background:#274253;color:#fff;font-size:13px;font-weight:800
+}
+.store-group-arrow{transition:transform .18s ease}
+.store-activity-group[open] .store-group-arrow{transform:rotate(180deg)}
+.store-group-events{padding:2px 14px 14px}
+.store-group-events .event-row{margin-top:12px}
+.store-event-sequence{
+  display:flex;align-items:center;gap:8px;
+  margin:12px 4px 4px;color:#8a9aa3;font-size:12px;font-weight:700
+}
+.store-event-sequence:before,.store-event-sequence:after{
+  content:"";height:1px;flex:1;background:#e6ecef
+}
+
+
+.photo-upload-zone{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ min-height:145px;padding:22px;border:2px dashed #c8d5dc;border-radius:16px;
+ background:#f8fafb;text-align:center;cursor:pointer;transition:.18s ease
+}
+.photo-upload-zone:hover{border-color:#274253;background:#f1f6f8}
+.photo-upload-zone input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.photo-upload-icon{
+ display:flex;align-items:center;justify-content:center;width:42px;height:42px;
+ border-radius:50%;background:#274253;color:#fff;font-size:27px;line-height:1
+}
+.photo-upload-title{margin-top:11px;font-weight:900;color:#274253}
+.photo-upload-sub{margin-top:5px;font-size:13px;color:#738792}
+.photo-preview{
+ display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+ gap:12px;margin-top:13px
+}
+.photo-preview-item{position:relative;aspect-ratio:1/1;cursor:grab;transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease}
+.photo-preview-item:active{cursor:grabbing}
+.photo-preview-item.dragging{opacity:.42;transform:scale(.96)}
+.photo-preview-item.drag-over{box-shadow:0 0 0 3px rgba(39,66,83,.28);border-radius:13px;transform:scale(1.03)}
+.photo-preview-item img{
+ width:100%;height:100%;object-fit:cover;border-radius:13px;border:1px solid #d8e1e7
+}
+.photo-remove-btn{
+ position:absolute;top:6px;right:6px;width:27px;height:27px;border:0;border-radius:50%;
+ background:rgba(25,36,43,.78);color:#fff;font-size:19px;line-height:1
+}
+
+.photo-empty-hint{
+ grid-column:1/-1;padding:12px;text-align:center;color:#91a0a8;
+ border:1px dashed #d8e1e7;border-radius:12px;font-size:13px
+}
+
+.manage-list-heading{
+ display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px
+}
+.manage-list-heading h2{margin-bottom:3px}
+.manage-list-description{font-size:13px;color:#758994}
+.manage-result-count{
+ flex:0 0 auto;padding:7px 11px;border-radius:999px;
+ background:#e8eff3;color:#274253;font-size:13px;font-weight:800
+}
+.manage-filter-bar{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;
+ gap:10px;align-items:end;padding:14px;margin-bottom:15px;
+ border:1px solid #dce5e9;border-radius:15px;background:#f8fafb
+}
+.manage-filter-bar .field label{display:block;margin-bottom:6px;font-size:12px;font-weight:800;color:#627884}
+.manage-clear-filter{height:43px;white-space:nowrap}
+.manage-activity-card{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;
+ padding:18px;margin-bottom:13px;border:1px solid #dce5e9;border-radius:16px;background:#fff
+}
+.manage-card-top{
+ display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+ padding-bottom:13px;border-bottom:1px solid #e7edf0
+}
+.manage-card-store{font-size:18px;font-weight:900;color:#274253}
+.manage-card-store span{
+ display:inline-block;margin-left:8px;font-size:13px;font-weight:600;color:#728590
+}
+.manage-card-meta{margin-top:5px;font-size:13px;color:#728590}
+.manage-info-grid{padding-top:4px}
+.manage-info-row{
+ display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;
+ padding:10px 0;border-bottom:1px dashed #e2e9ed
+}
+.manage-info-row:last-child{border-bottom:0}
+.manage-info-label{font-size:13px;font-weight:800;color:#7a8d97}
+.manage-info-value{line-height:1.65;color:#334e5d;white-space:pre-wrap}
+.manage-campaign{font-weight:900;font-size:16px;color:#274253}
+.manage-note{color:#5e737f}
+.manage-photo-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.manage-photo-strip img{
+ width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid #dce5e9;cursor:pointer
+}
+.manage-card-actions{
+ display:flex;flex-direction:column;justify-content:flex-start;min-width:82px
+}
+.manage-card-actions button{width:100%}
+@media(max-width:850px){
+ .manage-filter-bar{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .manage-clear-filter{grid-column:1/-1}
+}
+@media(max-width:650px){
+ .manage-filter-bar{grid-template-columns:1fr}
+ .manage-activity-card{grid-template-columns:1fr}
+ .manage-card-actions{flex-direction:row}
+ .manage-info-row{grid-template-columns:72px minmax(0,1fr)}
+}
+
+
+.front-filter-panel{
+ margin:18px 0 20px;
+ padding:18px;
+ border:1px solid #dce5e9;
+ border-radius:18px;
+ background:linear-gradient(180deg,#fbfcfd 0%,#f6f9fa 100%);
+ box-shadow:0 5px 18px rgba(39,66,83,.06)
+}
+.front-filter-heading{
+ display:flex;
+ align-items:flex-start;
+ justify-content:space-between;
+ gap:16px;
+ margin-bottom:15px
+}
+.front-filter-title{
+ font-size:18px;
+ font-weight:900;
+ color:#274253
+}
+.front-filter-subtitle{
+ margin-top:4px;
+ font-size:13px;
+ color:#778b96
+}
+.front-filter-clear{
+ flex:0 0 auto;
+ height:38px;
+ padding:0 14px;
+ border:1px solid #cdd9df;
+ border-radius:10px;
+ background:#fff;
+ color:#526b79;
+ font-weight:800;
+ cursor:pointer
+}
+.front-filter-clear:hover{
+ border-color:#274253;
+ color:#274253;
+ background:#f7fafb
+}
+.front-filter-grid{
+ display:grid;
+ grid-template-columns:minmax(240px,1.8fr) repeat(3,minmax(150px,1fr));
+ gap:12px;
+ align-items:end
+}
+.front-filter-field{
+ display:flex;
+ flex-direction:column;
+ gap:7px;
+ min-width:0
+}
+.front-filter-field>span{
+ font-size:12px;
+ font-weight:800;
+ color:#607784
+}
+.front-filter-field select,
+.front-filter-field input{
+ width:100%;
+ height:44px;
+ border:1px solid #d2dde3;
+ border-radius:12px;
+ background:#fff;
+ color:#274253;
+ font:inherit;
+ outline:none;
+ transition:.16s ease
+}
+.front-filter-field select{
+ padding:0 38px 0 13px;
+ cursor:pointer
+}
+.front-filter-field input{
+ padding:0 13px 0 39px
+}
+.front-filter-field select:focus,
+.front-filter-field input:focus{
+ border-color:#274253;
+ box-shadow:0 0 0 3px rgba(39,66,83,.10)
+}
+.front-search-box{
+ position:relative
+}
+.front-search-icon{
+ position:absolute;
+ left:14px;
+ top:50%;
+ transform:translateY(-50%);
+ color:#7e919b;
+ font-size:18px;
+ pointer-events:none
+}
+@media(max-width:980px){
+ .front-filter-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))
+ }
+ .front-filter-search{
+  grid-column:1/-1
+ }
+}
+@media(max-width:620px){
+ .front-filter-panel{padding:14px}
+ .front-filter-heading{
+  align-items:stretch;
+  flex-direction:column
+ }
+ .front-filter-clear{width:100%}
+ .front-filter-grid{grid-template-columns:1fr}
+ .front-filter-search{grid-column:auto}
+}
+
+
+
+/* 後台活動操作按鈕：集中排列，避免按鈕散落換行 */
+.activity-action-bar{
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  width:100%;
+  margin-top:4px;
+  padding-top:16px;
+  border-top:1px solid #e2e9ed;
+}
+.activity-action-bar button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:142px;
+  height:46px;
+  padding:0 18px;
+  border-radius:12px;
+  white-space:nowrap;
+  transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease;
+}
+.activity-action-bar button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 15px rgba(39,66,83,.12);
+}
+.activity-action-bar button:active{
+  transform:translateY(0);
+  box-shadow:none;
+}
+.activity-action-bar .activity-main-action{
+  min-width:170px;
+  box-shadow:0 5px 13px rgba(39,66,83,.16);
+}
+.activity-action-bar .backup-action{
+  background:#edf2f5;
+  color:#274253;
+}
+.activity-action-bar .backup-action.import-action{
+  background:#fff;
+  border:1px solid #c8d5dc;
+}
+.activity-action-bar .activity-cancel-action{
+  margin-left:auto;
+}
+@media(max-width:700px){
+  .activity-action-bar button{
+    flex:1 1 calc(50% - 6px);
+    min-width:0;
+  }
+  .activity-action-bar .activity-main-action{
+    flex-basis:100%;
+  }
+  .activity-action-bar .activity-cancel-action{
+    margin-left:0;
+  }
+}
+@media(max-width:430px){
+  .activity-action-bar button{
+    flex-basis:100%;
+  }
+}
+
+
+/* 首頁與活動清單：沿用百貨門市管理的區域色彩 */
+.activity-area-label{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-width:58px;padding:6px 10px;border-radius:10px;
+ font-size:12px;font-weight:900;letter-spacing:.06em;white-space:nowrap
+}
+.activity-area-label.north{background:#e9f2f8;color:#315f79}
+.activity-area-label.central{background:#fff1c9;color:#a76b00}
+.activity-area-label.south{background:#f9e6e2;color:#a54a3d}
+.activity-area-label.east{background:#e8f3eb;color:#3f7552}
+.store-group-title-row{display:flex;align-items:center;gap:10px;min-width:0}
+.manage-card-store-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.manage-card-top .activity-area-label{flex:0 0 auto}
+@media(max-width:620px){
+ .activity-area-label{min-width:52px;padding:5px 8px}
+ .store-group-title-row{align-items:flex-start}
+}
+
+
+/* 照片上傳區：左側上傳、右側預覽，完整使用後台寬度 */
+.photo-field{grid-column:1/-1!important}
+.photo-workspace{
+ display:grid;
+ grid-template-columns:minmax(250px,30%) minmax(0,1fr);
+ gap:16px;
+ align-items:stretch;
+ margin-top:2px
+}
+.photo-workspace .photo-upload-zone{
+ min-height:210px;
+ height:100%;
+ padding:20px
+}
+.photo-workspace .photo-preview{
+ display:grid;
+ grid-template-columns:repeat(5,minmax(112px,1fr));
+ gap:12px;
+ align-content:start;
+ margin-top:0;
+ min-height:210px;
+ padding:12px;
+ border:1px solid #dce5e9;
+ border-radius:16px;
+ background:#f8fafb
+}
+.photo-workspace .photo-preview-item{min-width:0}
+.photo-workspace .photo-empty-hint{
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ min-height:184px;
+ background:#fff
+}
+.photo-order-hint{
+ margin-top:6px;
+ text-align:center;
+ color:#5f7683;
+ font-size:12px;
+ font-weight:700;
+ white-space:nowrap
+}
+@media(max-width:1050px){
+ .photo-workspace{grid-template-columns:minmax(220px,34%) minmax(0,1fr)}
+ .photo-workspace .photo-preview{grid-template-columns:repeat(3,minmax(105px,1fr))}
+}
+@media(max-width:720px){
+ .photo-workspace{grid-template-columns:1fr}
+ .photo-workspace .photo-upload-zone{min-height:150px}
+ .photo-workspace .photo-preview{grid-template-columns:repeat(3,minmax(0,1fr));min-height:auto}
+ .photo-workspace .photo-empty-hint{min-height:90px}
+}
+@media(max-width:480px){
+ .photo-workspace .photo-preview{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+
+
+/* 新增成功提示視窗 */
+.success-modal{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(27,49,62,.44);backdrop-filter:blur(5px)}
+.success-modal.show{display:flex}
+.success-dialog{width:min(420px,100%);padding:28px 24px 22px;border-radius:22px;background:#fff;border:1px solid #dce5e9;box-shadow:0 24px 70px rgba(25,48,62,.22);text-align:center;animation:successPop .24s ease-out}
+.success-icon{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 15px;border-radius:50%;background:#e5f5ea;color:#2b7a49;font-size:34px;font-weight:900}
+.success-title{font-size:23px;font-weight:900;color:#274253}
+.success-text{margin-top:8px;color:#6b808c;line-height:1.65}
+.success-dialog button{width:100%;margin-top:20px;height:46px}
+@keyframes successPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+
+/* 後台活動清單收合 */
+.manage-activity-card{display:block;padding:0;overflow:hidden}
+.manage-activity-card summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:16px 18px;background:#fff}
+.manage-activity-card summary::-webkit-details-marker{display:none}
+.manage-activity-card summary:hover{background:#f7fafb}
+.manage-summary-main{min-width:0}
+.manage-summary-title{font-size:17px;font-weight:900;color:#274253;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.manage-summary-sub{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:6px;font-size:13px;color:#728590}
+.manage-expand-icon{font-size:20px;color:#718693;transition:transform .2s ease}
+.manage-activity-card[open] .manage-expand-icon{transform:rotate(180deg)}
+.manage-collapse-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;padding:0 18px 18px;border-top:1px solid #e7edf0;background:#fff}
+.manage-collapse-content{padding-top:14px}
+.manage-collapse-body .manage-card-actions{padding-top:14px}
+@media(max-width:650px){
+ .manage-activity-card summary{grid-template-columns:minmax(0,1fr) auto;padding:14px}
+ .manage-activity-card summary .badge{grid-column:1/2;justify-self:start}
+ .manage-expand-icon{grid-column:2;grid-row:1/3}
+ .manage-collapse-body{grid-template-columns:1fr;padding:0 14px 14px}
+ .manage-collapse-body .manage-card-actions{flex-direction:row;padding-top:0}
+}
+
+
+/* 跨區門市複選：電腦版勾選、手機版維持原選單 */
+.store-picker-field{grid-column:span 2}
+.desktop-store-picker{border:1px solid #d8e3e8;border-radius:16px;background:#f8fafb;padding:13px}
+.desktop-picker-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.desktop-picker-title{font-size:13px;font-weight:900;color:#536d7b}
+.desktop-picker-actions{display:flex;gap:7px;flex-wrap:wrap}
+.store-picker-btn{border:1px solid #cdd9df;border-radius:9px;background:#fff;color:#526b79;padding:6px 10px;font-size:12px;font-weight:800}
+.store-checkbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:235px;overflow:auto;padding:2px}
+.store-check-card{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid #dce5e9;border-radius:12px;background:#fff;cursor:pointer;transition:.16s ease}
+.store-check-card:hover{border-color:#9fb5c1;box-shadow:0 4px 12px rgba(39,66,83,.07)}
+.store-check-card.selected{border-color:#274253;background:#eef4f7;box-shadow:0 0 0 2px rgba(39,66,83,.07)}
+.store-check-card input{width:19px;height:19px;margin:1px 0 0;accent-color:#274253;flex:0 0 auto}
+.store-check-text{min-width:0}
+.store-check-name{display:block;font-size:14px;font-weight:900;color:#274253}
+.store-check-floor{display:block;margin-top:3px;font-size:12px;color:#748995}
+.selected-store-summary{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;min-height:31px}
+.selected-store-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;background:#274253;color:#fff;font-size:12px;font-weight:800}
+.selected-store-chip button{border:0;background:transparent;color:#fff;font-size:16px;line-height:1;padding:0;cursor:pointer}
+.selected-store-empty{padding:6px 2px;font-size:12px;color:#8b9aa3}
+.mobile-store-picker{display:none}
+@media(max-width:760px){
+ .desktop-store-picker{display:none}
+ .mobile-store-picker{display:block}
+ .store-picker-field{grid-column:span 2}
+ #mall{min-height:132px}
+}
+@media(max-width:560px){.store-picker-field{grid-column:auto}}
+
+/* 活動清單批次選取與刪除 */
+.manage-bulk-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border:1px solid #dce5e9;border-radius:14px;background:#f8fafb}
+.manage-bulk-left,.manage-bulk-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.manage-select-all{display:inline-flex;align-items:center;gap:8px;font-weight:800;color:#274253;cursor:pointer}
+.manage-select-all input,.manage-card-checkbox{width:19px;height:19px;accent-color:#274253;cursor:pointer}
+.manage-selected-count{font-size:13px;color:#6d818d;font-weight:700}
+.manage-bulk-delete:disabled{opacity:.45;cursor:not-allowed}
+.manage-summary-select{display:flex;align-items:center;justify-content:center}
+.manage-activity-card summary{grid-template-columns:auto minmax(0,1fr) auto auto}
+@media(max-width:650px){.manage-bulk-bar{align-items:stretch}.manage-bulk-left,.manage-bulk-right{width:100%;justify-content:space-between}.manage-bulk-delete{width:100%}.manage-activity-card summary{grid-template-columns:auto minmax(0,1fr) auto}}
+
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-inner">
+  <div class="brand"><button type="button" class="brand-home-btn" onclick="goToActivityOverview()">星紅織品｜百貨活動</button></div>
+  <div class="nav">
+    <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
+    <button id="adminNav" onclick="showPage('admin')">後台管理</button>
+  </div>
+</div></div>
+
+<header class="hero">
+  <div class="eyebrow">STAR RED TEXTILE</div>
+  <h1 id="pageTitle">百貨活動總覽</h1>
+  <p id="pageDesc">快速查看北、中、南、東各地活動日期、櫃位、商品與活動照片。</p>
+</header>
+
+<main class="container">
+<section id="homePage" class="page active">
+  
+<div class="front-filter-panel">
+  <div class="front-filter-heading">
+    <div>
+      <div class="front-filter-title">活動篩選</div>
+      <div class="front-filter-subtitle">可同時使用關鍵字、區域、狀態與活動月份篩選</div>
+    </div>
+    <button type="button" class="front-filter-clear" onclick="clearFilters()">清除篩選</button>
+  </div>
+
+  <div class="front-filter-grid">
+    <label class="front-filter-field front-filter-search">
+      <span>搜尋活動</span>
+      <div class="front-search-box">
+        <span class="front-search-icon">⌕</span>
+        <input id="keyword" type="search" placeholder="輸入百貨、樓層、活動名稱或內容" oninput="renderHome()">
+      </div>
+    </label>
+
+    <label class="front-filter-field">
+      <span>區域</span>
+      <select id="areaFilter" onchange="renderHome()">
+        <option value="">全部區域</option>
+        <option value="north">北部</option>
+        <option value="central">中部</option>
+        <option value="south">南部</option>
+        <option value="east">東部／離島</option>
+      </select>
+    </label>
+
+    <label class="front-filter-field">
+      <span>活動狀態</span>
+      <select id="statusFilter" onchange="renderHome()">
+        <option value="">全部狀態</option>
+        <option value="active">進行中</option>
+        <option value="upcoming">即將開始</option>
+        <option value="ended">已結束</option>
+      </select>
+    </label>
+
+    <label class="front-filter-field">
+      <span>活動月份</span>
+      <select id="monthFilter" onchange="renderHome()">
+        <option value="all">全部月份</option>
+        <option value="1">1月</option><option value="2">2月</option>
+        <option value="3">3月</option><option value="4">4月</option>
+        <option value="5">5月</option><option value="6">6月</option>
+        <option value="7">7月</option><option value="8">8月</option>
+        <option value="9">9月</option><option value="10">10月</option>
+        <option value="11">11月</option><option value="12">12月</option>
+      </select>
+    </label>
+  </div>
+</div>
+
+  <div class="summary">
+    <div class="summary-box"><b id="totalCount">0</b><span>活動總數</span></div>
+    <div class="summary-box"><b id="activeCount">0</b><span>活動中</span></div>
+    <div class="summary-box"><b id="upcomingCount">0</b><span>即將開始</span></div>
+    <div class="summary-box"><b id="endedCount">0</b><span>已結束</span></div>
+  </div>
+  <div id="eventList" class="events"></div>
+</section>
+
+<section id="adminPage" class="page">
+  <div id="loginSection" class="login-wrap">
+    <div class="login-box">
+      <h2>後台登入</h2>
+      <div class="field"><label>帳號</label><input id="loginAccount" autocomplete="username"></div><br>
+      <div class="field"><label>密碼</label><input id="loginPassword" type="password" autocomplete="current-password"></div><br>
+      <button class="primary" style="width:100%" onclick="login()">登入</button>
+      <div class="note">首次使用預設帳號：admin　預設密碼：admin123。登入後請至「管理員設定」新增主管帳號。</div>
+    </div>
+  </div>
+
+  <div id="adminContent" style="display:none">
+
+    <div class="admin-tabs">
+      <button id="activityTabBtn" class="active" onclick="showAdminTab('activity')">活動清單</button>
+      <button id="storeTabBtn" onclick="showAdminTab('store')">百貨門市管理</button>
+      <button id="accountTabBtn" onclick="showAdminTab('account')">管理員設定</button>
+    </div>
+
+
+    <div id="storeTab" class="admin-tab-panel">
+      <section class="panel">
+        <h2 id="storeFormTitle">新增百貨門市</h2>
+        <div class="store-form">
+          <div class="field">
+            <label>所屬區域</label>
+            <select id="storeArea">
+              <option value="north">北部</option>
+              <option value="central">中部</option>
+              <option value="south">南部</option>
+              <option value="east">東部／離島</option>
+            </select>
+          </div>
+          <div class="field"><label>百貨名稱</label><input id="storeName" placeholder="例如：嘉義秀泰生活"></div>
+          <div class="field"><label>樓層／櫃位</label><input id="storeFloor" placeholder="例如：1F 活動區"></div>
+          <button class="primary" id="storeSaveBtn" onclick="saveStore()">新增門市</button>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button class="secondary" id="storeCancelBtn" style="display:none" onclick="resetStoreForm()">取消編輯</button>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="store-toolbar">
+          <h2 style="margin:0">百貨門市清單</h2>
+          <div class="store-filter-group">
+            <button class="filter-btn active" data-store-filter="all" onclick="setStoreFilter('all',this)">全部</button>
+            <button class="filter-btn" data-store-filter="north" onclick="setStoreFilter('north',this)">北部</button>
+            <button class="filter-btn" data-store-filter="central" onclick="setStoreFilter('central',this)">中部</button>
+            <button class="filter-btn" data-store-filter="south" onclick="setStoreFilter('south',this)">南部</button>
+            <button class="filter-btn" data-store-filter="east" onclick="setStoreFilter('east',this)">東部／離島</button>
+          </div>
+        </div>
+        <div id="storeCount" class="hint"></div>
+<div id="storeDeleteStatus" style="display:none;margin:10px 0;padding:10px 14px;border-radius:10px;background:#eef7f2;color:#275c42;font-weight:800"></div>
+        <div id="storeList" class="store-list compact"></div>
+      </section>
+    </div>
+
+    <div id="accountTab" class="admin-tab-panel">
+      <section class="panel">
+        <h2 id="accountFormTitle">新增管理帳號</h2>
+        <div class="account-form">
+          <div class="field"><label>姓名</label><input id="accountName" placeholder="例如：王店長"></div>
+          <div class="field"><label>帳號</label><input id="accountUsername" placeholder="登入帳號"></div>
+          <div class="field"><label>密碼</label><input id="accountPassword" type="password" placeholder="至少6碼"></div>
+          <div class="field"><label>權限</label>
+            <select id="accountRole">
+              <option value="manager">主管</option>
+              <option value="admin">系統管理員</option>
+            </select>
+          </div>
+          <button class="primary" id="accountSaveBtn" onclick="saveAccount()">新增帳號</button>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <label class="toggle-wrap">
+  <input id="accountEnabled" type="checkbox" checked>
+  <span class="toggle-ui"></span>
+  <span id="accountEnabledText">帳號啟用</span>
+</label>
+          <button class="secondary" id="accountCancelBtn" style="display:none" onclick="resetAccountForm()">取消編輯</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>管理帳號清單</h2>
+        <div id="accountList" class="account-list"></div>
+      </section>
+    </div>
+    <div id="activityTab" class="admin-tab-panel active">
+    <section class="panel">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+        <h2 id="formTitle">新增活動</h2>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="user-chip"><div>👤</div><div><strong id="currentUserName">—</strong><div class="meta" id="currentUserRole">—</div></div></div>
+          <button class="secondary" onclick="logout()">登出</button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>區域</label>
+          <select id="area" onchange="rebuildMallOptions()">
+            <option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option>
+          </select>
+        </div>
+        <div class="field store-picker-field">
+          <label>百貨門市（可跨區複選）</label>
+          <div class="desktop-store-picker">
+            <div class="desktop-picker-head">
+              <div id="desktopPickerTitle" class="desktop-picker-title">請勾選門市</div>
+              <div class="desktop-picker-actions">
+                <button type="button" class="store-picker-btn" onclick="selectAllStoresInArea()">本區全選</button>
+                <button type="button" class="store-picker-btn" onclick="clearStoresInArea()">清除本區</button>
+              </div>
+            </div>
+            <div id="storeCheckboxGrid" class="store-checkbox-grid"></div>
+            <div id="selectedStoreSummary" class="selected-store-summary"></div>
+          </div>
+          <div class="mobile-store-picker">
+            <select id="mall" multiple size="5" onchange="handleMobileStoreSelection()">
+              <option value="">請先選擇區域</option>
+            </select>
+            <div class="note" style="margin-top:6px">手機版維持點選方式；切換區域後，原本已選門市會保留。</div>
+          </div>
+        </div>
+        <div class="field"><label>已選門市／櫃位</label><textarea id="location" rows="3" readonly placeholder="選擇百貨後自動帶入"></textarea></div>
+        <div class="field"><label>開始日期</label><input id="start" type="date" onchange="refreshAutoStatus()"></div>
+        <div class="field"><label>結束日期</label><input id="end" type="date" onchange="refreshAutoStatus()"></div>
+        <div class="field"><label>活動狀態（自動）</label><input id="autoStatus" disabled></div>
+        <div class="field"><label>活動名稱</label><input id="campaign" placeholder="例如：星紅織品期間限定櫃"></div>
+        <div class="field wide"><label>主打商品</label><input id="products" placeholder="用逗號分隔，例如：毛巾, 浴巾, 紗布被"></div>
+        <div class="field wide"><label>優惠／備註</label><textarea id="note" rows="3"></textarea></div>
+        <div class="field wide photo-field">
+          <label>活動照片（最多 5 張，會自動裁切成 1：1）</label>
+          <div class="photo-workspace">
+            <label class="photo-upload-zone" for="photos">
+              <div class="photo-upload-icon">＋</div>
+              <div class="photo-upload-title">點擊選擇照片</div>
+              <div class="photo-upload-sub">也可拖拉照片到頁面任何位置<br>支援一次多選，自動置中裁切為 1：1</div>
+              <input id="photos" type="file" accept="image/*" multiple onchange="handlePhotos(event)">
+            </label>
+            <div id="photoPreview" class="photo-preview"></div>
+          </div>
+        </div>
+        <div class="activity-action-bar">
+          <button class="primary activity-main-action" id="saveBtn" onclick="saveEvent()">＋ 新增活動</button>
+          <button class="secondary backup-action import-action" onclick="document.getElementById('importFile').click()">⇩ 匯入備份</button>
+          <button class="secondary backup-action" onclick="exportData()">⇧ 匯出備份</button>
+          <button class="secondary activity-cancel-action" id="cancelBtn" style="display:none" onclick="resetForm()">取消編輯</button>
+          <input id="importFile" type="file" accept=".json" hidden onchange="importData(event)">
+        </div>
+      </div>
+      <div class="note">圖片會儲存在目前瀏覽器，建議壓縮後上傳。過多或過大的照片可能超過瀏覽器儲存容量。</div>
+    </section>
+    <section class="panel">
+      <div class="manage-list-heading">
+        <div>
+          <h2>活動清單</h2>
+          <div class="manage-list-description">可依區域、門市、活動狀態與月份快速查詢</div>
+        </div>
+        <div id="manageResultCount" class="manage-result-count">共 0 筆</div>
+      </div>
+
+      <div class="manage-filter-bar">
+        <div class="field">
+          <label>區域</label>
+          <select id="manageAreaFilter" onchange="updateManageStoreFilter();renderManage()">
+            <option value="">全部區域</option>
+            <option value="north">北部</option>
+            <option value="central">中部</option>
+            <option value="south">南部</option>
+            <option value="east">東部／離島</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>門市</label>
+          <select id="manageStoreFilter" onchange="renderManage()">
+            <option value="">全部門市</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>活動狀態</label>
+          <select id="manageStatusFilter" onchange="renderManage()">
+            <option value="">全部狀態</option>
+            <option value="active">進行中</option>
+            <option value="upcoming">即將開始</option>
+            <option value="ended">已結束</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>月份</label>
+          <select id="manageMonthFilter" onchange="renderManage()">
+            <option value="">全部月份</option>
+            <option value="1">1月</option><option value="2">2月</option>
+            <option value="3">3月</option><option value="4">4月</option>
+            <option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option>
+            <option value="9">9月</option><option value="10">10月</option>
+            <option value="11">11月</option><option value="12">12月</option>
+          </select>
+        </div>
+
+        <button type="button" class="secondary manage-clear-filter" onclick="clearManageFilters()">清除篩選</button>
+      </div>
+
+
+      <div class="manage-bulk-bar">
+        <div class="manage-bulk-left">
+          <label class="manage-select-all">
+            <input id="manageSelectAll" type="checkbox" onchange="toggleSelectAllManage(this.checked)">
+            <span>全選目前篩選結果</span>
+          </label>
+          <span id="manageSelectedCount" class="manage-selected-count">已選 0 筆</span>
+        </div>
+        <div class="manage-bulk-right">
+          <button id="manageBulkDeleteBtn" type="button" class="danger manage-bulk-delete" onclick="deleteSelectedEvents()" disabled>刪除已選活動</button>
+        </div>
+      </div>
+
+      <div id="manageList" class="manage-list"></div>
+    </section>
+    </div>
+  </div>
+</section>
+</main>
+
+
+<div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
+  <div class="success-dialog">
+    <div class="success-icon">✓</div>
+    <div id="successTitle" class="success-title">活動建立成功</div>
+    <div class="success-text">資料已儲存，表單也已清空，可以直接開始輸入下一筆活動。</div>
+    <button type="button" class="primary" onclick="closeSuccessModal()">開始新增下一筆</button>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+  <img id="lightboxImage" alt="活動照片放大">
+</div>
+
+<script>
+
+function goToActivityOverview(){
+  try{
+    if(typeof showTab==="function"){
+      showTab("activity");
+    }else if(typeof switchTab==="function"){
+      switchTab("activity");
+    }
+    const candidates=Array.from(document.querySelectorAll("button,a"));
+    const tab=candidates.find(el=>{
+      if(el.classList.contains("brand-home-btn")) return false;
+      const text=(el.textContent||"").trim();
+      return text==="活動總攬" || text==="活動清單" || text==="活動管理";
+    });
+    if(tab) tab.click();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }catch(err){
+    console.error(err);
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+}
+
+const STORAGE_KEY="starred_events_v4";
+const LOGIN_KEY="starred_admin_logged_in";
+const STORE_KEY="starred_department_stores_v1";
+const ACCOUNTS_KEY="starred_admin_accounts_v2";
+const CURRENT_USER_KEY="starred_current_user_v2";
+const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
+let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+let editingId=null;
+let selectedManageEventIds=new Set();
+let currentPhotos=[];
+let selectedStoreIds=new Set();
+let stores=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");
+let editingStoreId=null;
+let accounts=JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||"[]");
+let currentUser=JSON.parse(sessionStorage.getItem(CURRENT_USER_KEY)||"null");
+let editingAccountId=null;
+let storeFilter="all";
+let deletedStoreKeys=new Set(JSON.parse(localStorage.getItem(DELETED_STORES_KEY)||"[]"));
+const areaText={north:"北部",central:"中部",south:"南部",east:"東部／離島"};
+const statusText={active:"活動中",upcoming:"即將開始",ended:"已結束"};
+
+if(!events.length){
+ events=[{id:crypto.randomUUID(),area:"central",mall:"嘉義秀泰生活",location:"1F 活動區",start:"2026-07-01",end:"2026-07-31",campaign:"星紅織品期間限定櫃",products:["浴巾","毛巾","兒童方巾"],note:"毛巾5件599、浴巾3件1399",photos:[]}];
+ persist();
+}
+if(!stores.length){
+ const seen=new Set();
+ stores=events.filter(e=>e.mall).map(e=>({id:crypto.randomUUID(),area:e.area,name:e.mall,floor:e.location||""}))
+   .filter(s=>{const k=s.area+"|"+s.name+"|"+s.floor;if(seen.has(k))return false;seen.add(k);return true});
+ if(!stores.length)stores=[{id:crypto.randomUUID(),area:"central",name:"嘉義秀泰生活",floor:"1F 活動區"}];
+ persistStores();
+}
+
+const BUILTIN_STORES=[
+ {"area": "central", "name": "漢神洲際", "floor": "B1"},
+ {"area": "central", "name": "台中遠百特賣", "floor": "10F"},
+ {"area": "central", "name": "台中站前秀泰1館", "floor": "1F"},
+ {"area": "central", "name": "台中新光", "floor": "6F"},
+ {"area": "central", "name": "台中麗寶C區", "floor": "1F"},
+ {"area": "central", "name": "廣三SOGO", "floor": "12F"},
+ {"area": "central", "name": "台中遠百北棟", "floor": "8F"},
+ {"area": "central", "name": "文心秀泰", "floor": "6F"},
+ {"area": "central", "name": "南投樹德夢工廠", "floor": "806櫃"},
+ {"area": "central", "name": "南投中興", "floor": "2F"},
+ {"area":"north","name":"統一Dream Plaza","floor":"3F"},
+ {"area":"north","name":"新莊宏匯","floor":"6F"},
+ {"area":"north","name":"樹林秀泰","floor":"7F"},
+ {"area":"north","name":"遠百信義A13","floor":"B2"},
+ {"area":"north","name":"林口三井2館","floor":"3F"},
+ {"area":"north","name":"桃園遠百","floor":"9F"},
+ {"area":"north","name":"日月光","floor":"B2"},
+ {"area":"north","name":"誠品新板","floor":"1F"},
+ {"area":"south","name":"嘉義秀泰","floor":"2F"},
+ {"area":"south","name":"嘉義NICE","floor":"B1"},
+ {"area":"south","name":"台南遠百成功店","floor":"2F"},
+ {"area":"south","name":"高雄大樂","floor":"1F"},
+ {"area":"south","name":"台南西門新光","floor":"6F"},
+ {"area":"south","name":"高雄巨蛋","floor":"5F"},
+ {"area":"south","name":"高雄義享","floor":"4F"},
+ {"area":"south","name":"台南西門新光","floor":"5F"},
+ {"area":"south","name":"高雄夢時代","floor":"7F"},
+ {"area":"south","name":"台南中山新光","floor":"B1"},
+ {"area":"south","name":"高雄夢時代","floor":"3F"}
+];
+const storeKey=s=>`${s.area}|${s.name}|${s.floor}`;
+let storeChanged=false;
+BUILTIN_STORES.forEach(item=>{
+ const key=storeKey(item);
+ const exists=stores.some(s=>storeKey(s)===key);
+ if(!exists&&!deletedStoreKeys.has(key)){
+  stores.push({id:crypto.randomUUID(),...item,builtin:true});
+  storeChanged=true;
+ }
+});
+if(storeChanged)persistStores();
+
+if(!accounts.length){
+ accounts=[{
+   id:crypto.randomUUID(),
+   name:"系統管理員",
+   username:"admin",
+   password:"admin123",
+   role:"admin",
+   enabled:true,
+   lastLogin:""
+ }];
+ persistAccounts();
+}
+function $(id){return document.getElementById(id)}
+function persist(){localStorage.setItem(STORAGE_KEY,JSON.stringify(events))}
+function persistStores(){localStorage.setItem(STORE_KEY,JSON.stringify(stores))}
+function persistAccounts(){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(accounts))}
+function todayStr(){return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})}
+function calcStatus(start,end){
+ const t=todayStr();
+ if(!start||!end)return "";
+ if(t<start)return "upcoming";
+ if(t>end)return "ended";
+ return "active";
+}
+function showPage(page){
+ $("homePage").classList.toggle("active",page==="home");
+ $("adminPage").classList.toggle("active",page==="admin");
+ $("homeNav").classList.toggle("active",page==="home");
+ $("adminNav").classList.toggle("active",page==="admin");
+ $("pageTitle").textContent=page==="home"?"百貨活動總覽":"百貨活動後台";
+ $("pageDesc").textContent=page==="home"?"快速查看北、中、南、東各地活動日期、櫃位、商品與活動照片。":"登入後新增、修改、刪除活動資料。";
+ if(page==="admin")checkLogin();
+setTimeout(()=>{const x=$("accountEnabled");if(x){x.addEventListener("change",updateEnabledLabel);updateEnabledLabel()}},0);
+}
+function showAdminTab(tab){
+ if(tab==="account"&&(!currentUser||currentUser.role!=="admin")){alert("只有系統管理員可以管理帳號");return}
+ $("activityTab").classList.toggle("active",tab==="activity");
+ $("storeTab").classList.toggle("active",tab==="store");
+ $("accountTab").classList.toggle("active",tab==="account");
+ $("activityTabBtn").classList.toggle("active",tab==="activity");
+ $("storeTabBtn").classList.toggle("active",tab==="store");
+ $("accountTabBtn").classList.toggle("active",tab==="account");
+ if(tab==="store")renderStores();
+ if(tab==="activity")rebuildMallOptions();
+ if(tab==="account")renderAccounts();
+}
+function checkLogin(){
+ const ok=sessionStorage.getItem(LOGIN_KEY)==="1"&&currentUser;
+ $("loginSection").style.display=ok?"none":"grid";
+ $("adminContent").style.display=ok?"block":"none";
+ if(ok){
+  $("currentUserName").textContent=currentUser.name;
+  $("currentUserRole").textContent=currentUser.role==="admin"?"系統管理員":"主管";
+  $("accountTabBtn").classList.toggle("hidden-by-role",currentUser.role!=="admin");
+  rebuildMallOptions();renderManage();renderStores();renderAccounts();
+ }else{
+  $("accountTabBtn").classList.remove("hidden-by-role");
+ }
+}
+function login(){
+ const username=$("loginAccount").value.trim();
+ const password=$("loginPassword").value;
+ const user=accounts.find(a=>a.username===username&&a.password===password);
+ if(!user){alert("帳號或密碼錯誤");return}
+ if(!user.enabled){alert("此帳號已停用");return}
+ user.lastLogin=new Date().toISOString();
+ persistAccounts();
+ currentUser={id:user.id,name:user.name,username:user.username,role:user.role};
+ sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+ sessionStorage.setItem(LOGIN_KEY,"1");
+ checkLogin();
+}
+function logout(){
+ sessionStorage.removeItem(LOGIN_KEY);
+ sessionStorage.removeItem(CURRENT_USER_KEY);
+ currentUser=null;
+ showAdminTab("activity");
+ checkLogin();
+}
+function requireAdmin(){
+ if(!currentUser||currentUser.role!=="admin"){alert("只有系統管理員可以使用此功能");return false}
+ return true;
+}
+function refreshAutoStatus(){
+ const s=calcStatus($("start").value,$("end").value);
+ $("autoStatus").value=s?statusText[s]:"請選擇日期";
+}
+function rebuildMallOptions(selectedMall=""){
+ const area=$("area").value;
+ const matching=stores.filter(s=>s.area===area).sort((a,b)=>a.name.localeCompare(b.name,"zh-Hant"));
+ const incoming=Array.isArray(selectedMall)?selectedMall:[selectedMall];
+ incoming.filter(Boolean).forEach(value=>{
+  const found=stores.find(s=>String(s.id)===String(value)||s.name===value);
+  if(found)selectedStoreIds.add(found.id);
+ });
+ $("mall").innerHTML=matching.length
+  ?matching.map(s=>`<option value="${s.id}" ${selectedStoreIds.has(s.id)?"selected":""}>${escapeHtml(s.name)}｜${escapeHtml(s.floor)}</option>`).join("")
+  :'<option value="" disabled>此區域尚無門市</option>';
+ renderDesktopStorePicker(matching);
+ syncSelectedStore();
+}
+function renderDesktopStorePicker(matching){
+ const title=$("desktopPickerTitle");
+ if(title)title.textContent=`${areaText[$("area").value]}門市｜已選 ${selectedStoreIds.size} 間`;
+ const grid=$("storeCheckboxGrid");
+ if(grid)grid.innerHTML=matching.length?matching.map(s=>`<label class="store-check-card ${selectedStoreIds.has(s.id)?"selected":""}">
+  <input type="checkbox" ${selectedStoreIds.has(s.id)?"checked":""} onchange="toggleStoreSelection('${s.id}',this.checked)">
+  <span class="store-check-text"><span class="store-check-name">${escapeHtml(s.name)}</span><span class="store-check-floor">${escapeHtml(s.floor)}</span></span>
+ </label>`).join(""):'<div class="selected-store-empty">此區域尚無門市</div>';
+ renderSelectedStoreSummary();
+}
+function renderSelectedStoreSummary(){
+ const box=$("selectedStoreSummary");if(!box)return;
+ const selected=stores.filter(s=>selectedStoreIds.has(s.id));
+ box.innerHTML=selected.length?selected.map(s=>`<span class="selected-store-chip">${areaText[s.area]}｜${escapeHtml(s.name)} ${escapeHtml(s.floor)}<button type="button" onclick="removeSelectedStore('${s.id}')" aria-label="移除">×</button></span>`).join(""):'<span class="selected-store-empty">尚未選擇門市，可切換區域繼續勾選。</span>';
+}
+function toggleStoreSelection(id,checked){if(checked)selectedStoreIds.add(id);else selectedStoreIds.delete(id);rebuildMallOptions()}
+function removeSelectedStore(id){selectedStoreIds.delete(id);rebuildMallOptions()}
+function selectAllStoresInArea(){stores.filter(s=>s.area===$("area").value).forEach(s=>selectedStoreIds.add(s.id));rebuildMallOptions()}
+function clearStoresInArea(){stores.filter(s=>s.area===$("area").value).forEach(s=>selectedStoreIds.delete(s.id));rebuildMallOptions()}
+function handleMobileStoreSelection(){
+ const area=$("area").value;
+ stores.filter(s=>s.area===area).forEach(s=>selectedStoreIds.delete(s.id));
+ Array.from($("mall").selectedOptions||[]).forEach(option=>{if(option.value)selectedStoreIds.add(option.value)});
+ rebuildMallOptions();
+}
+function getSelectedStores(){return stores.filter(s=>selectedStoreIds.has(s.id))}
+function syncSelectedStore(){
+ const selected=getSelectedStores();
+ $("location").value=selected.map(s=>`${areaText[s.area]}｜${s.name}｜${s.floor}`).join("\n");
+}
+
+
+function updateEnabledLabel(){
+ const el=$("accountEnabledText");
+ if(el)el.textContent=$("accountEnabled").checked?"帳號啟用":"帳號停用";
+}
+function saveAccount(){
+ if(!requireAdmin())return;
+ const name=$("accountName").value.trim();
+ const username=$("accountUsername").value.trim();
+ const password=$("accountPassword").value;
+ const role=$("accountRole").value;
+ const enabled=$("accountEnabled").checked;
+ if(!name||!username){alert("請填寫姓名與帳號");return}
+ if(!editingAccountId&&password.length<6){alert("新帳號密碼至少需要6碼");return}
+ const duplicate=accounts.find(a=>a.id!==editingAccountId&&a.username===username);
+ if(duplicate){alert("此登入帳號已存在");return}
+ if(editingAccountId){
+  accounts=accounts.map(a=>a.id===editingAccountId?{...a,name,username,role,enabled,password:password||a.password}:a);
+ }else{
+  accounts.unshift({id:crypto.randomUUID(),name,username,password,role,enabled,lastLogin:""});
+ }
+ persistAccounts();resetAccountForm();renderAccounts();
+}
+function editAccount(id){
+ if(!requireAdmin())return;
+ const a=accounts.find(x=>x.id===id);if(!a)return;
+ editingAccountId=id;
+ $("accountName").value=a.name;$("accountUsername").value=a.username;$("accountPassword").value="";
+ $("accountRole").value=a.role;$("accountEnabled").checked=a.enabled;updateEnabledLabel();
+ $("accountFormTitle").textContent="修改管理帳號";
+ $("accountSaveBtn").textContent="儲存修改";
+ $("accountCancelBtn").style.display="inline-block";
+}
+function toggleAccount(id){
+ if(!requireAdmin())return;
+ const a=accounts.find(x=>x.id===id);if(!a)return;
+ if(a.id===currentUser.id&&a.enabled){alert("不能停用目前登入中的帳號");return}
+ a.enabled=!a.enabled;persistAccounts();renderAccounts();
+}
+function deleteAccount(id){
+ if(!requireAdmin())return;
+ const a=accounts.find(x=>x.id===id);if(!a)return;
+ if(a.id===currentUser.id){alert("不能刪除目前登入中的帳號");return}
+ if(a.role==="admin"&&accounts.filter(x=>x.role==="admin").length===1){alert("系統至少要保留一個系統管理員");return}
+ if(!confirm(`確定刪除「${a.name}」的帳號？`))return;
+ accounts=accounts.filter(x=>x.id!==id);persistAccounts();renderAccounts();
+}
+function resetAccountForm(){
+ editingAccountId=null;
+ $("accountName").value="";$("accountUsername").value="";$("accountPassword").value="";
+ $("accountRole").value="manager";$("accountEnabled").checked=true;updateEnabledLabel();
+ $("accountFormTitle").textContent="新增管理帳號";$("accountSaveBtn").textContent="新增帳號";
+ $("accountCancelBtn").style.display="none";
+}
+function fmtDateTime(v){
+ if(!v)return "尚未登入";
+ try{return new Date(v).toLocaleString("zh-TW",{hour12:false})}catch{return v}
+}
+function renderAccounts(){
+ if(!currentUser||currentUser.role!=="admin")return;
+ $("accountList").innerHTML=accounts.map(a=>`<div class="account-item" style="grid-template-columns:1.1fr .9fr .9fr 1.25fr 1.1fr auto">
+  <div><div class="name">${escapeHtml(a.name)}</div><div class="small">${escapeHtml(a.username)}</div></div>
+  <div><span class="role-badge ${a.role}">${a.role==="admin"?"系統管理員":"主管"}</span></div>
+  <div><span class="status-dot ${a.enabled?"":"off"}">${a.enabled?"啟用":"停用"}</span></div>
+  <div class="password-cell">
+    <span class="password-text">${escapeHtml(a.password)}</span>
+  </div>
+  <div class="small">最後登入：${fmtDateTime(a.lastLogin)}</div>
+  <div class="manage-actions">
+    <button type="button" class="secondary" onclick="editAccount('${a.id}')">修改</button>
+    <button type="button" class="secondary" onclick="toggleAccount('${a.id}')">${a.enabled?"停用":"啟用"}</button>
+    <button type="button" class="danger" onclick="deleteAccount('${a.id}')">刪除</button>
+  </div>
+ </div>`).join("");
+}
+function auditNow(){
+ return {by:currentUser?currentUser.name:"未知",at:new Date().toISOString()};
+}
+
+function saveStore(){
+ const area=$("storeArea").value;
+ const name=$("storeName").value.trim();
+ const floor=$("storeFloor").value.trim();
+ if(!name||!floor){alert("請填寫百貨名稱與樓層／櫃位");return}
+ const duplicate=stores.find(s=>s.id!==editingStoreId&&s.area===area&&s.name===name&&s.floor===floor);
+ if(duplicate){alert("這間百貨門市已經存在");return}
+ const item={id:editingStoreId||crypto.randomUUID(),area,name,floor};
+ if(editingStoreId)stores=stores.map(s=>s.id===editingStoreId?item:s);else stores.unshift(item);
+ persistStores();resetStoreForm();renderStores();rebuildMallOptions();
+}
+function editStore(id){
+ const s=stores.find(x=>x.id===id);if(!s)return;
+ editingStoreId=id;$("storeArea").value=s.area;$("storeName").value=s.name;$("storeFloor").value=s.floor;
+ $("storeFormTitle").textContent="修改百貨門市";$("storeSaveBtn").textContent="儲存修改";$("storeCancelBtn").style.display="inline-block";
+}
+window.deleteStore=function(id){
+ try{
+  id=String(id||"");
+  const index=stores.findIndex(x=>String(x.id)===id);
+  if(index<0){
+   alert("找不到這筆門市資料，請重新整理頁面後再試。");
+   return;
+  }
+
+  const s=stores[index];
+  const usedCount=events.filter(e=>
+   String(e.storeId||"")===id ||
+   (String(e.mall||"")===String(s.name||"") &&
+    String(e.location||"")===String(s.floor||""))
+  ).length;
+
+  const message=usedCount>0
+   ? `「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。刪除門市不會刪除既有活動，確定繼續嗎？`
+   : `確定刪除「${s.name} ${s.floor}」嗎？`;
+
+  if(!confirm(message))return;
+
+  const key=`${s.area}|${s.name}|${s.floor}`;
+  deletedStoreKeys.add(key);
+  localStorage.setItem(DELETED_STORES_KEY,JSON.stringify(Array.from(deletedStoreKeys)));
+
+  stores.splice(index,1);
+  localStorage.setItem(STORE_KEY,JSON.stringify(stores));
+
+  if(String(editingStoreId||"")===id)resetStoreForm();
+
+  renderStores();
+  rebuildMallOptions();
+
+  const status=document.getElementById("storeDeleteStatus");
+  if(status){
+   status.textContent=`已刪除：${s.name} ${s.floor}`;
+   status.style.display="block";
+   setTimeout(()=>status.style.display="none",2500);
+  }
+ }catch(error){
+  console.error("deleteStore error",error);
+  alert("刪除失敗："+(error&&error.message?error.message:"未知錯誤"));
+ }
+}
+function resetStoreForm(){
+ editingStoreId=null;$("storeArea").value="north";$("storeName").value="";$("storeFloor").value="";
+ $("storeFormTitle").textContent="新增百貨門市";$("storeSaveBtn").textContent="新增門市";$("storeCancelBtn").style.display="none";
+}
+function setStoreFilter(filter,btn){
+ storeFilter=filter;
+ document.querySelectorAll("[data-store-filter]").forEach(b=>b.classList.remove("active"));
+ if(btn)btn.classList.add("active");
+ renderStores();
+}
+function renderStores(){
+ const filtered=storeFilter==="all"?stores:stores.filter(s=>s.area===storeFilter);
+ $("storeCount").textContent=`共 ${filtered.length} 筆門市`;
+
+ const list=$("storeList");
+ list.innerHTML=filtered.length?filtered
+  .slice()
+  .sort((a,b)=>areaText[a.area].localeCompare(areaText[b.area],"zh-Hant")||a.name.localeCompare(b.name,"zh-Hant")||a.floor.localeCompare(b.floor,"zh-Hant"))
+  .map(s=>`<div class="store-item">
+   <div class="store-info">
+    <div class="store-area-block ${s.area}">${areaText[s.area]}</div>
+    <div class="store-name">${escapeHtml(s.name)}</div>
+    <div class="store-floor-row">
+      <span class="floor-label">樓層／櫃位</span>
+      <span class="floor-value">${escapeHtml(s.floor)}</span>
+    </div>
+   </div>
+   <div class="manage-actions">
+    <button type="button" class="secondary store-edit-btn" data-store-id="${escapeHtml(String(s.id))}">修改</button>
+    <button type="button" class="danger store-delete-btn" data-store-id="${escapeHtml(String(s.id))}">刪除</button>
+   </div>
+  </div>`).join(""):`<div class="empty">這個區域尚未建立百貨門市</div>`;
+
+ list.querySelectorAll(".store-delete-btn").forEach(btn=>{
+  btn.onclick=function(event){
+   event.preventDefault();
+   event.stopPropagation();
+   window.deleteStore(this.getAttribute("data-store-id"));
+  };
+ });
+
+ list.querySelectorAll(".store-edit-btn").forEach(btn=>{
+  btn.onclick=function(event){
+   event.preventDefault();
+   event.stopPropagation();
+   editStore(this.getAttribute("data-store-id"));
+  };
+ });
+}
+
+
+async function cropImageFileToSquare(file){
+ return new Promise((resolve,reject)=>{
+  if(!file || !file.type || !file.type.startsWith("image/")){
+   reject(new Error("不是圖片檔案"));
+   return;
+  }
+
+  const reader=new FileReader();
+  reader.onerror=()=>reject(new Error("照片讀取失敗"));
+  reader.onload=()=>{
+   const img=new Image();
+   img.onerror=()=>reject(new Error("照片格式無法讀取"));
+   img.onload=()=>{
+    const side=Math.min(img.naturalWidth,img.naturalHeight);
+    const sx=Math.max(0,(img.naturalWidth-side)/2);
+    const sy=Math.max(0,(img.naturalHeight-side)/2);
+
+    const outputSize=1200;
+    const canvas=document.createElement("canvas");
+    canvas.width=outputSize;
+    canvas.height=outputSize;
+    const ctx=canvas.getContext("2d");
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    ctx.drawImage(img,sx,sy,side,side,0,0,outputSize,outputSize);
+
+    resolve({
+     name:file.name,
+     type:"image/jpeg",
+     dataUrl:canvas.toDataURL("image/jpeg",0.9)
+    });
+   };
+   img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+ });
+}
+
+async function processPhotoFiles(files){
+ const imageFiles=Array.from(files||[]).filter(file=>file.type&&file.type.startsWith("image/"));
+ if(!imageFiles.length){
+  alert("請拖入圖片檔案");
+  return;
+ }
+
+ const remaining=Math.max(0,5-currentPhotos.length);
+ if(remaining===0){
+  alert("最多只能上傳 5 張照片");
+  return;
+ }
+
+ const selected=imageFiles.slice(0,remaining);
+ const uploadBox=document.querySelector(".upload-box")||document.querySelector(".drop-zone");
+ if(uploadBox)uploadBox.classList.add("loading");
+
+ try{
+  for(const file of selected){
+   const result=await cropImageFileToSquare(file);
+   currentPhotos.push(result.dataUrl);
+  }
+  renderPhotoPreview();
+  if(imageFiles.length>remaining){
+   alert(`已上傳 ${remaining} 張；照片最多只能放 5 張`);
+  }
+ }catch(error){
+  console.error(error);
+  alert("照片處理失敗："+(error.message||"未知錯誤"));
+ }finally{
+  if(uploadBox)uploadBox.classList.remove("loading");
+ }
+}
+
+function handlePhotos(e){
+ const files=e&&e.target?e.target.files:e&&e.dataTransfer?e.dataTransfer.files:e;
+ processPhotoFiles(files);
+ if(e&&e.target&&e.target.value!==undefined)e.target.value="";
+}
+function removeCurrentPhoto(index){
+ currentPhotos.splice(index,1);
+ renderPhotoPreview();
+}
+let draggedPhotoIndex=null;
+function handlePhotoDragStart(event,index){
+ draggedPhotoIndex=index;
+ event.currentTarget.classList.add("dragging");
+ if(event.dataTransfer){
+  event.dataTransfer.effectAllowed="move";
+  event.dataTransfer.setData("text/plain",String(index));
+ }
+}
+function handlePhotoDragOver(event,index){
+ event.preventDefault();
+ if(draggedPhotoIndex===null||draggedPhotoIndex===index)return;
+ if(event.dataTransfer)event.dataTransfer.dropEffect="move";
+ document.querySelectorAll(".photo-preview-item.drag-over").forEach(el=>el.classList.remove("drag-over"));
+ event.currentTarget.classList.add("drag-over");
+}
+function handlePhotoDrop(event,targetIndex){
+ event.preventDefault();
+ event.stopPropagation();
+ const fromIndex=draggedPhotoIndex!==null?draggedPhotoIndex:Number(event.dataTransfer&&event.dataTransfer.getData("text/plain"));
+ if(Number.isInteger(fromIndex)&&fromIndex>=0&&fromIndex<currentPhotos.length&&fromIndex!==targetIndex){
+  const [moved]=currentPhotos.splice(fromIndex,1);
+  currentPhotos.splice(targetIndex,0,moved);
+ }
+ draggedPhotoIndex=null;
+ renderPhotoPreview();
+}
+function handlePhotoDragEnd(){
+ draggedPhotoIndex=null;
+ document.querySelectorAll(".photo-preview-item").forEach(el=>el.classList.remove("dragging","drag-over"));
+}
+function renderPhotoPreview(){
+ $("photoPreview").innerHTML=currentPhotos.length
+  ?currentPhotos.map((src,index)=>`<div class="photo-preview-item" draggable="true"
+    ondragstart="handlePhotoDragStart(event,${index})"
+    ondragover="handlePhotoDragOver(event,${index})"
+    ondrop="handlePhotoDrop(event,${index})"
+    ondragend="handlePhotoDragEnd()">
+    <img src="${src}" alt="活動照片預覽" draggable="false">
+    <button type="button" class="photo-remove-btn" onclick="event.stopPropagation();removeCurrentPhoto(${index})" aria-label="刪除照片">×</button>
+    <div class="photo-order-hint">拖拉排序｜第 ${index+1} 張</div>
+   </div>`).join("")
+  :`<div class="photo-empty-hint">尚未上傳照片</div>`;
+}
+function validate(){
+ if(!getSelectedStores().length){alert("請至少選擇一間百貨門市");return false}
+ for(const id of ["start","end","campaign"]){
+  if(!$(id).value.trim()){alert("請完整填寫日期與活動名稱");$(id).focus();return false}
+ }
+ if($("end").value<$("start").value){alert("結束日期不能早於開始日期");return false}
+ return true;
+}
+function saveEvent(){
+ if(!validate())return;
+ const selectedStores=getSelectedStores();
+ const audit=auditNow();
+ const common={
+  start:$("start").value,end:$("end").value,campaign:$("campaign").value.trim(),
+  products:$("products").value.split(/[,，]/).map(x=>x.trim()).filter(Boolean),note:$("note").value.trim(),photos:[...currentPhotos]
+ };
+ const wasEditing=Boolean(editingId);
+ if(editingId){
+  const selectedStore=selectedStores[0];
+  const old=events.find(e=>e.id===editingId);
+  const item={...old,...common,id:editingId,area:selectedStore.area,mall:selectedStore.name,location:selectedStore.floor,storeId:selectedStore.id,updatedBy:audit.by,updatedAt:audit.at};
+  events=events.map(e=>e.id===editingId?item:e);
+ }else{
+  const created=selectedStores.map(store=>({
+   ...common,id:crypto.randomUUID(),area:store.area,mall:store.name,location:store.floor,storeId:store.id,
+   createdBy:audit.by,createdAt:audit.at,updatedBy:audit.by,updatedAt:audit.at
+  }));
+  events.unshift(...created);
+ }
+ persist();
+ resetForm();
+ // 新增後立即重畫前台與後台活動清單，不需重新整理頁面
+ renderHome();
+ updateManageStoreFilter();
+ renderManage();
+ if(!wasEditing)showSuccessModal(selectedStores.length);
+}
+function showSuccessModal(count=1){
+ const modal=$("successModal");
+ const message=count>1
+  ?`已成功建立 ${count} 間門市活動，資料已立即顯示在下方清單。`
+  :"活動新增完成，資料已立即顯示在下方清單。";
+ if(!modal){
+  alert(message);
+  return;
+ }
+ const text=modal.querySelector(".success-text");
+ if(text)text.textContent=message;
+ // 直接設定 display，避免舊快取或其他 CSS 規則造成視窗未顯示
+ modal.style.display="flex";
+ modal.setAttribute("aria-hidden","false");
+ requestAnimationFrame(()=>modal.classList.add("show"));
+ const button=modal.querySelector("button");
+ if(button)setTimeout(()=>button.focus(),80);
+}
+function closeSuccessModal(){
+ const modal=$("successModal");
+ if(modal){
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden","true");
+  setTimeout(()=>{modal.style.display="none"},180);
+ }
+ setTimeout(()=>{const el=$("campaign");if(el)el.focus()},220);
+}
+function resetForm(){
+ editingId=null;currentPhotos=[];selectedStoreIds.clear();
+ ["location","start","end","campaign","products","note"].forEach(id=>$(id).value="");
+ $("area").value="north";$("photos").value="";$("autoStatus").value="請選擇日期";
+ $("formTitle").textContent="新增活動";$("saveBtn").textContent="＋ 新增活動";$("cancelBtn").style.display="none";
+ renderPhotoPreview();rebuildMallOptions();
+}
+function editEvent(id){
+ const e=events.find(x=>x.id===id);if(!e)return;
+ editingId=id;selectedStoreIds.clear();$("area").value=e.area;rebuildMallOptions(e.storeId||e.mall);$("location").value=e.location;
+ $("start").value=e.start;$("end").value=e.end;$("campaign").value=e.campaign;$("products").value=e.products.join(", ");
+ $("note").value=e.note;currentPhotos=e.photos||[];$("formTitle").textContent="修改活動";$("saveBtn").textContent="儲存修改";$("cancelBtn").style.display="inline-block";
+ refreshAutoStatus();renderPhotoPreview();rebuildMallOptions();window.scrollTo({top:0,behavior:"smooth"});
+}
+function deleteEvent(id){
+ if(confirm("確定刪除這筆活動？")){
+  events=events.filter(e=>e.id!==id);
+  selectedManageEventIds.delete(id);
+  persist();renderAll();
+ }
+}
+function selectManageEvent(id,checked){
+ if(checked)selectedManageEventIds.add(id);else selectedManageEventIds.delete(id);
+ updateManageBulkState();
+}
+function getVisibleManageEventIds(){
+ return Array.from(document.querySelectorAll(".manage-card-checkbox")).map(el=>el.value);
+}
+function toggleSelectAllManage(checked){
+ getVisibleManageEventIds().forEach(id=>checked?selectedManageEventIds.add(id):selectedManageEventIds.delete(id));
+ document.querySelectorAll(".manage-card-checkbox").forEach(el=>el.checked=checked);
+ updateManageBulkState();
+}
+function updateManageBulkState(){
+ selectedManageEventIds=new Set([...selectedManageEventIds].filter(id=>events.some(e=>e.id===id)));
+ const visibleIds=getVisibleManageEventIds();
+ const visibleSelected=visibleIds.filter(id=>selectedManageEventIds.has(id)).length;
+ const allBox=$("manageSelectAll");
+ if(allBox){
+  allBox.checked=visibleIds.length>0&&visibleSelected===visibleIds.length;
+  allBox.indeterminate=visibleSelected>0&&visibleSelected<visibleIds.length;
+ }
+ if($("manageSelectedCount"))$("manageSelectedCount").textContent=`已選 ${selectedManageEventIds.size} 筆`;
+ if($("manageBulkDeleteBtn"))$("manageBulkDeleteBtn").disabled=selectedManageEventIds.size===0;
+}
+function deleteSelectedEvents(){
+ const count=selectedManageEventIds.size;
+ if(!count)return;
+ if(!confirm(`確定刪除已選取的 ${count} 筆活動？刪除後無法復原。`))return;
+ events=events.filter(e=>!selectedManageEventIds.has(e.id));
+ selectedManageEventIds.clear();
+ persist();renderAll();
+}
+
+function eventCoversMonth(eventItem,selectedMonth){
+ if(!selectedMonth||selectedMonth==="all")return true;
+ const month=Number(selectedMonth);
+ if(!month)return true;
+
+ const startValue=eventItem.start||eventItem.startDate||eventItem.dateStart||eventItem.eventDate||eventItem.date;
+ const endValue=eventItem.end||eventItem.endDate||eventItem.dateEnd||startValue;
+ if(!startValue)return false;
+
+ const startDate=new Date(startValue);
+ const endDate=new Date(endValue||startValue);
+ if(Number.isNaN(startDate.getTime()))return false;
+ if(Number.isNaN(endDate.getTime()))return startDate.getMonth()+1===month;
+
+ let cursor=new Date(startDate.getFullYear(),startDate.getMonth(),1);
+ const last=new Date(endDate.getFullYear(),endDate.getMonth(),1);
+
+ while(cursor<=last){
+  if(cursor.getMonth()+1===month)return true;
+  cursor.setMonth(cursor.getMonth()+1);
+ }
+ return false;
+}
+
+function renderHome(){
+ const q=$("keyword").value.trim().toLowerCase();
+ const area=$("areaFilter").value;
+ const status=$("statusFilter").value;
+ const month=$("monthFilter")?.value||"all";
+
+ const enriched=events.map(e=>({...e,status:calcStatus(e.start,e.end)}));
+ const filtered=enriched.filter(e=>{
+  const text=[e.mall,e.location,e.campaign,e.note,...e.products].join(" ").toLowerCase();
+  return(!q||text.includes(q))
+   &&(!area||e.area===area)
+   &&(!status||e.status===status)
+   &&eventCoversMonth(e,month);
+ });
+
+ $("totalCount").textContent=enriched.length;
+ $("activeCount").textContent=enriched.filter(e=>e.status==="active").length;
+ $("upcomingCount").textContent=enriched.filter(e=>e.status==="upcoming").length;
+ $("endedCount").textContent=enriched.filter(e=>e.status==="ended").length;
+
+ const groups=new Map();
+ filtered.forEach(e=>{
+  const key=[e.area,e.mall,e.location].join("|");
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(e);
+ });
+
+ const grouped=Array.from(groups.values())
+  .map(list=>list.sort((a,b)=>String(a.start).localeCompare(String(b.start))||String(a.end).localeCompare(String(b.end))))
+  .sort((a,b)=>{
+    const firstA=a[0],firstB=b[0];
+    return String(firstA.mall).localeCompare(String(firstB.mall),"zh-Hant")
+      ||String(firstA.location).localeCompare(String(firstB.location),"zh-Hant");
+  });
+
+ $("eventList").innerHTML=grouped.length?grouped.map(group=>{
+  const first=group[0];
+  return `<details class="store-activity-group" ${group.length===1?"open":""}>
+   <summary>
+    <div>
+     <div class="store-group-title-row">
+      <span class="activity-area-label ${first.area}">${areaText[first.area]}</span>
+      <div class="store-group-name">${escapeHtml(first.mall)}</div>
+     </div>
+     <div class="store-group-sub">${escapeHtml(first.location)}｜活動依日期排序</div>
+    </div>
+    <div class="store-group-count">${group.length} 個活動 <span class="store-group-arrow">⌄</span></div>
+   </summary>
+   <div class="store-group-events">
+    ${group.map((e,index)=>`
+     <div class="store-event-sequence">第 ${index+1} 個活動</div>
+     <article class="event-row ${e.area}">
+      <button class="event-summary" onclick="toggleEvent(this)">
+       <div class="mall-name">${escapeHtml(e.campaign)}</div>
+       <div class="summary-region">${areaText[e.area]}｜${escapeHtml(e.location)}</div>
+       <div class="summary-date">${e.start} ～ ${e.end}</div>
+       <div class="summary-badges"><span class="badge ${e.area}">${areaText[e.area]}</span><span class="badge ${e.status}">${statusText[e.status]}</span></div>
+       <div class="chevron">⌄</div>
+      </button>
+      <div class="event-detail">
+       <div class="event-detail-inner">
+        <div class="meta">
+         <div class="row"><div class="label">活動名稱</div><div>${escapeHtml(e.campaign)}</div></div>
+         <div class="row"><div class="label">活動內容</div><div>${escapeHtml(e.note||"—")}</div></div>
+         <div class="row"><div class="label">主打商品</div><div class="tags">${e.products.map(p=>`<span class="tag">${escapeHtml(p)}</span>`).join("")||"—"}</div></div>
+        </div>
+        ${(e.photos||[]).length?`<div class="gallery">${e.photos.map(src=>`<img src="${src}" alt="活動照片" onclick="event.stopPropagation();openLightbox('${src}')">`).join("")}</div>`:""}
+       </div>
+      </div>
+     </article>`).join("")}
+   </div>
+  </details>`;
+ }).join(""):`<div class="empty">目前沒有符合條件的活動</div>`;
+}
+function updateManageStoreFilter(){
+ const area=$("manageAreaFilter")?.value||"";
+ const select=$("manageStoreFilter");
+ if(!select)return;
+
+ const current=select.value;
+ const availableStores=stores
+  .filter(s=>!area||s.area===area)
+  .slice()
+  .sort((a,b)=>a.name.localeCompare(b.name,"zh-Hant")||a.floor.localeCompare(b.floor,"zh-Hant"));
+
+ select.innerHTML=`<option value="">全部門市</option>`+
+  availableStores.map(s=>`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}｜${escapeHtml(s.floor)}</option>`).join("");
+
+ if(availableStores.some(s=>String(s.id)===String(current)))select.value=current;
+}
+
+function clearManageFilters(){
+ if($("manageAreaFilter"))$("manageAreaFilter").value="";
+ updateManageStoreFilter();
+ if($("manageStoreFilter"))$("manageStoreFilter").value="";
+ if($("manageStatusFilter"))$("manageStatusFilter").value="";
+ if($("manageMonthFilter"))$("manageMonthFilter").value="";
+ renderManage();
+}
+
+function renderManage(){
+ const area=$("manageAreaFilter")?.value||"";
+ const storeId=$("manageStoreFilter")?.value||"";
+ const status=$("manageStatusFilter")?.value||"";
+ const month=$("manageMonthFilter")?.value||"";
+
+ const filtered=events
+  .filter(e=>{
+   const eventStatus=calcStatus(e.start,e.end);
+   const eventMonth=e.start?Number(String(e.start).slice(5,7)):null;
+   const matchesStore=!storeId||String(e.storeId||"")===String(storeId);
+   return(!area||e.area===area)
+    &&matchesStore
+    &&(!status||eventStatus===status)
+    &&(!month||eventMonth===Number(month));
+  })
+  .slice()
+  .sort((a,b)=>String(b.start).localeCompare(String(a.start))||String(a.mall).localeCompare(String(b.mall),"zh-Hant"));
+
+ if($("manageResultCount"))$("manageResultCount").textContent=`共 ${filtered.length} 筆`;
+
+ $("manageList").innerHTML=filtered.length?filtered.map(e=>{
+  const eventStatus=calcStatus(e.start,e.end);
+  const activityContent=(e.products||[]).length
+   ?e.products.map(p=>escapeHtml(p)).join("、")
+   :"—";
+  const note=e.note?escapeHtml(e.note):"—";
+
+  return `<details class="manage-activity-card">
+   <summary>
+    <span class="manage-summary-select" onclick="event.stopPropagation()">
+     <input class="manage-card-checkbox" type="checkbox" value="${e.id}" ${selectedManageEventIds.has(e.id)?"checked":""} onchange="selectManageEvent('${e.id}',this.checked)" aria-label="選取 ${escapeHtml(e.campaign||"活動")}">
+    </span>
+    <div class="manage-summary-main">
+     <div class="manage-summary-title">${escapeHtml(e.campaign||"未命名活動")}</div>
+     <div class="manage-summary-sub">
+      <span class="activity-area-label ${e.area}">${areaText[e.area]}</span>
+      <span>${escapeHtml(e.mall)}｜${escapeHtml(e.location)}</span>
+      <span>${e.start} ～ ${e.end}</span>
+     </div>
+    </div>
+    <span class="badge ${eventStatus}">${statusText[eventStatus]}</span>
+    <span class="manage-expand-icon">⌄</span>
+   </summary>
+
+   <div class="manage-collapse-body">
+    <div class="manage-collapse-content">
+     <div class="manage-info-grid">
+      <div class="manage-info-row">
+       <div class="manage-info-label">活動內容</div>
+       <div class="manage-info-value">${activityContent}</div>
+      </div>
+      <div class="manage-info-row">
+       <div class="manage-info-label">備註</div>
+       <div class="manage-info-value manage-note">${note}</div>
+      </div>
+     </div>
+
+     ${(e.photos||[]).length?`<div class="manage-photo-strip">${
+       e.photos.map(src=>`<img src="${src}" alt="活動照片" onclick="openLightbox('${src}')">`).join("")
+     }</div>`:""}
+
+     <div class="audit">建立：${escapeHtml(e.createdBy||"舊資料")}｜最後修改：${escapeHtml(e.updatedBy||e.createdBy||"舊資料")} ${e.updatedAt?fmtDateTime(e.updatedAt):""}</div>
+    </div>
+
+    <div class="manage-actions manage-card-actions">
+     <button class="secondary" onclick="editEvent('${e.id}')">修改</button>
+     <button type="button" class="danger" onclick="deleteEvent('${e.id}')">刪除</button>
+    </div>
+   </div>
+  </details>`;
+ }).join(""):`<div class="empty">目前沒有符合篩選條件的活動</div>`;
+ updateManageBulkState();
+}
+function renderAll(){renderHome();if(sessionStorage.getItem(LOGIN_KEY)==="1"&&currentUser){updateManageStoreFilter();renderManage();checkLogin()}}
+function clearFilters(){
+ $("keyword").value="";
+ $("areaFilter").value="";
+ $("statusFilter").value="";
+ if($("monthFilter"))$("monthFilter").value="all";
+ renderHome();
+}
+function exportData(){
+ const blob=new Blob([JSON.stringify({events,stores,accounts},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="百貨活動備份.json";a.click();URL.revokeObjectURL(url);
+}
+function importData(e){
+ const file=e.target.files[0];if(!file)return;const r=new FileReader();
+ r.onload=()=>{try{
+ const d=JSON.parse(r.result);
+ if(Array.isArray(d)){events=d}
+ else if(d&&Array.isArray(d.events)){events=d.events;stores=Array.isArray(d.stores)?d.stores:stores;accounts=Array.isArray(d.accounts)?d.accounts:accounts}
+ else throw 0;
+ persist();persistStores();persistAccounts();resetForm();renderAll();renderStores();renderAccounts();alert("匯入完成")
+}catch{alert("檔案格式不正確")}};
+ r.readAsText(file);e.target.value="";
+}
+function toggleEvent(button){
+ const row=button.closest(".event-row");
+ row.classList.toggle("open");
+}
+function openLightbox(src){
+ $("lightboxImage").src=src;
+ $("lightbox").classList.add("open");
+ document.body.style.overflow="hidden";
+}
+function closeLightbox(event){
+ if(event && event.target && event.target.id==="lightboxImage")return;
+ $("lightbox").classList.remove("open");
+ $("lightboxImage").src="";
+ document.body.style.overflow="";
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeLightbox()});
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+["keyword","areaFilter","statusFilter"].forEach(id=>$(id).addEventListener("input",renderHome));
+renderAll();
+
+document.addEventListener("DOMContentLoaded",()=>{
+ const dz=document.getElementById("dropZone");
+ const fi=document.getElementById("photos");
+ if(!dz||!fi)return;
+ dz.onclick=()=>fi.click();
+ ["dragenter","dragover"].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.add("dragover");}));
+ ["dragleave","drop"].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.remove("dragover");}));
+ dz.addEventListener("drop",e=>{
+   fi.files=e.dataTransfer.files;
+   fi.dispatchEvent(new Event("change"));
+ });
+});
+
+
+let globalDragDepth=0;
+const globalDropOverlay=document.getElementById("globalDropOverlay");
+
+function containsImageFiles(dataTransfer){
+ if(!dataTransfer)return false;
+ if(dataTransfer.types&&Array.from(dataTransfer.types).includes("Files"))return true;
+ return Array.from(dataTransfer.files||[]).some(f=>f.type&&f.type.startsWith("image/"));
+}
+
+window.addEventListener("dragenter",function(e){
+ if(!containsImageFiles(e.dataTransfer))return;
+ e.preventDefault();
+ globalDragDepth++;
+ if(globalDropOverlay)globalDropOverlay.classList.add("show");
+});
+
+window.addEventListener("dragover",function(e){
+ if(!containsImageFiles(e.dataTransfer))return;
+ e.preventDefault();
+ if(e.dataTransfer)e.dataTransfer.dropEffect="copy";
+ if(globalDropOverlay)globalDropOverlay.classList.add("show");
+});
+
+window.addEventListener("dragleave",function(e){
+ if(!containsImageFiles(e.dataTransfer))return;
+ e.preventDefault();
+ globalDragDepth=Math.max(0,globalDragDepth-1);
+ if(globalDragDepth===0&&globalDropOverlay)globalDropOverlay.classList.remove("show");
+});
+
+window.addEventListener("drop",function(e){
+ if(!containsImageFiles(e.dataTransfer))return;
+ e.preventDefault();
+ e.stopPropagation();
+ globalDragDepth=0;
+ if(globalDropOverlay)globalDropOverlay.classList.remove("show");
+
+ // Only accept photos while the activity creation/edit form is available.
+ const photoInput=document.getElementById("photos")||document.querySelector('input[type="file"][accept*="image"]');
+ if(!photoInput || photoInput.disabled){
+  alert("請先進入活動新增或修改頁面，再拖拉照片上傳");
+  return;
+ }
+ processPhotoFiles(e.dataTransfer.files);
+});
+
+</script>
+
+<div id="globalDropOverlay" class="global-drop-overlay">
+  <div class="global-drop-card">
+    <div class="global-drop-icon">＋</div>
+    <div class="global-drop-title">放開即可上傳照片</div>
+    <div class="global-drop-hint">照片會自動置中裁切成 1：1</div>
+  </div>
+</div>
+
+</body>
+</html>
