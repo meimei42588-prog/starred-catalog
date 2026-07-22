@@ -1033,7 +1033,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
           <input id="importFile" type="file" accept=".json" hidden onchange="importData(event)">
         </div>
       </div>
-      <div class="note">圖片會儲存在目前瀏覽器，建議壓縮後上傳。過多或過大的照片可能超過瀏覽器儲存容量。</div>
+      <div class="note">活動與照片會儲存在 Supabase 雲端，其他電腦與手機可同步查看。</div>
     </section>
     <section class="panel">
       <div class="manage-list-heading">
@@ -1125,6 +1125,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
   <img id="lightboxImage" alt="活動照片放大">
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
 function goToActivityOverview(){
@@ -2091,6 +2092,168 @@ window.addEventListener("drop",function(e){
  processPhotoFiles(e.dataTransfer.files);
 });
 
+</script>
+
+<script>
+/* Supabase 雲端資料同步層：活動、門市、照片 */
+const SUPABASE_URL = "https://nsurxlmlurcfhkcguydk.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_1XStDPKImqiaYPIQcOC-CQ_rbl2dWnZ";
+const SUPABASE_BUCKET = "activity-images";
+const cloudDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let cloudReady = false;
+
+function setCloudBusy(isBusy, text="處理中…"){
+  const btn=$("saveBtn");
+  if(btn){
+    btn.disabled=isBusy;
+    if(isBusy){ btn.dataset.oldText=btn.textContent; btn.textContent=text; }
+    else if(btn.dataset.oldText){ btn.textContent=btn.dataset.oldText; delete btn.dataset.oldText; }
+  }
+}
+function cloudError(prefix,error){
+  console.error(prefix,error);
+  alert(`${prefix}：${error?.message||error||"未知錯誤"}`);
+}
+function eventRowToLocal(row, imageMap){
+  let products=[];
+  try{
+    const parsed=JSON.parse(row.event_content||"[]");
+    products=Array.isArray(parsed)?parsed:[];
+  }catch{
+    products=String(row.event_content||"").split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+  }
+  return {
+    id:String(row.id), area:row.region, mall:row.department, location:row.floor||"",
+    start:row.start_date, end:row.end_date, campaign:row.event_name,
+    products, note:row.remark||"", status:row.status||calcStatus(row.start_date,row.end_date),
+    storeId:row.store_id?String(row.store_id):"",
+    photos:(imageMap.get(String(row.id))||[]).map(x=>x.image_url),
+    createdAt:row.created_at, updatedAt:row.updated_at
+  };
+}
+async function loadCloudData(){
+  try{
+    const [{data:storeRows,error:storeError},{data:eventRows,error:eventError},{data:imageRows,error:imageError}]=await Promise.all([
+      cloudDb.from("department_stores").select("*").order("sort_order",{ascending:true}).order("id",{ascending:true}),
+      cloudDb.from("department_events").select("*").order("start_date",{ascending:false}).order("id",{ascending:false}),
+      cloudDb.from("event_images").select("*").order("sort_order",{ascending:true})
+    ]);
+    if(storeError)throw storeError;if(eventError)throw eventError;if(imageError)throw imageError;
+    stores=(storeRows||[]).map(r=>({id:String(r.id),area:r.region,name:r.department_name,floor:r.floor||"",builtin:false}));
+    if(!stores.length){
+      const seed=BUILTIN_STORES.map((s,i)=>({region:s.area,department_name:s.name,floor:s.floor,sort_order:i}));
+      const {error}=await cloudDb.from("department_stores").insert(seed);
+      if(error)throw error;
+      return loadCloudData();
+    }
+    const imageMap=new Map();
+    (imageRows||[]).forEach(img=>{
+      const key=String(img.event_id);if(!imageMap.has(key))imageMap.set(key,[]);imageMap.get(key).push(img);
+    });
+    events=(eventRows||[]).map(row=>eventRowToLocal(row,imageMap));
+    cloudReady=true;
+    selectedManageEventIds.clear();
+    rebuildMallOptions();renderStores();updateManageStoreFilter();renderAll();
+  }catch(error){
+    cloudReady=false;
+    cloudError("Supabase 資料載入失敗",error);
+  }
+}
+async function dataUrlToBlob(dataUrl){
+  const response=await fetch(dataUrl);return response.blob();
+}
+async function uploadEventPhotos(eventId, photoSources){
+  const imageRows=[];
+  for(let index=0;index<photoSources.length;index++){
+    const source=photoSources[index];
+    if(/^https?:\/\//i.test(source)){
+      imageRows.push({event_id:Number(eventId),image_url:source,sort_order:index});
+      continue;
+    }
+    const blob=await dataUrlToBlob(source);
+    const path=`events/${eventId}/${Date.now()}-${index}-${crypto.randomUUID()}.jpg`;
+    const {error:uploadError}=await cloudDb.storage.from(SUPABASE_BUCKET).upload(path,blob,{contentType:"image/jpeg",upsert:false});
+    if(uploadError)throw uploadError;
+    const {data}=cloudDb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+    imageRows.push({event_id:Number(eventId),image_url:data.publicUrl,sort_order:index});
+  }
+  if(imageRows.length){
+    const {error}=await cloudDb.from("event_images").insert(imageRows);if(error)throw error;
+  }
+}
+function storagePathFromPublicUrl(url){
+  const marker=`/storage/v1/object/public/${SUPABASE_BUCKET}/`;
+  const pos=String(url||"").indexOf(marker);
+  return pos<0?null:decodeURIComponent(String(url).slice(pos+marker.length));
+}
+async function removeEventPhotos(eventIds){
+  if(!eventIds.length)return;
+  const {data,error}=await cloudDb.from("event_images").select("image_url").in("event_id",eventIds.map(Number));
+  if(error)throw error;
+  const paths=(data||[]).map(x=>storagePathFromPublicUrl(x.image_url)).filter(Boolean);
+  if(paths.length){const {error:storageError}=await cloudDb.storage.from(SUPABASE_BUCKET).remove(paths);if(storageError)console.warn(storageError)}
+  const {error:deleteError}=await cloudDb.from("event_images").delete().in("event_id",eventIds.map(Number));
+  if(deleteError)throw deleteError;
+}
+
+window.saveStore=async function(){
+  const area=$("storeArea").value,name=$("storeName").value.trim(),floor=$("storeFloor").value.trim();
+  if(!name||!floor){alert("請填寫百貨名稱與樓層／櫃位");return}
+  const duplicate=stores.find(s=>String(s.id)!==String(editingStoreId)&&s.area===area&&s.name===name&&s.floor===floor);
+  if(duplicate){alert("這間百貨門市已經存在");return}
+  try{
+    if(editingStoreId){
+      const {error}=await cloudDb.from("department_stores").update({region:area,department_name:name,floor}).eq("id",Number(editingStoreId));if(error)throw error;
+    }else{
+      const {error}=await cloudDb.from("department_stores").insert({region:area,department_name:name,floor,sort_order:stores.length});if(error)throw error;
+    }
+    resetStoreForm();await loadCloudData();
+  }catch(error){cloudError("門市儲存失敗",error)}
+};
+window.deleteStore=async function(id){
+  const s=stores.find(x=>String(x.id)===String(id));if(!s)return;
+  const usedCount=events.filter(e=>String(e.storeId||"")===String(id)||(e.mall===s.name&&e.location===s.floor)).length;
+  const message=usedCount?`「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。刪除門市不會刪除既有活動，確定繼續嗎？`:`確定刪除「${s.name} ${s.floor}」嗎？`;
+  if(!confirm(message))return;
+  try{const {error}=await cloudDb.from("department_stores").delete().eq("id",Number(id));if(error)throw error;await loadCloudData()}catch(error){cloudError("門市刪除失敗",error)}
+};
+window.saveEvent=async function(){
+  if(!validate())return;
+  const selectedStores=getSelectedStores();
+  const common={start_date:$("start").value,end_date:$("end").value,event_name:$("campaign").value.trim(),event_content:JSON.stringify($("products").value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)),remark:$("note").value.trim(),status:calcStatus($("start").value,$("end").value)};
+  const wasEditing=Boolean(editingId);
+  setCloudBusy(true,wasEditing?"儲存中…":"新增中…");
+  try{
+    if(wasEditing){
+      const store=selectedStores[0];
+      const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id),updated_at:new Date().toISOString()};
+      const {error}=await cloudDb.from("department_events").update(payload).eq("id",Number(editingId));if(error)throw error;
+      await removeEventPhotos([editingId]);
+      await uploadEventPhotos(editingId,currentPhotos);
+    }else{
+      for(const store of selectedStores){
+        const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id)};
+        const {data,error}=await cloudDb.from("department_events").insert(payload).select("id").single();if(error)throw error;
+        await uploadEventPhotos(data.id,currentPhotos);
+      }
+    }
+    const count=selectedStores.length;resetForm();await loadCloudData();if(!wasEditing)showSuccessModal(count);
+  }catch(error){cloudError("活動儲存失敗",error)}finally{setCloudBusy(false)}
+};
+window.deleteEvent=async function(id){
+  if(!confirm("確定刪除這筆活動？"))return;
+  try{await removeEventPhotos([id]);const {error}=await cloudDb.from("department_events").delete().eq("id",Number(id));if(error)throw error;selectedManageEventIds.delete(String(id));await loadCloudData()}catch(error){cloudError("活動刪除失敗",error)}
+};
+window.deleteSelectedEvents=async function(){
+  const ids=[...selectedManageEventIds];if(!ids.length)return;
+  if(!confirm(`確定刪除已選取的 ${ids.length} 筆活動？刪除後無法復原。`))return;
+  try{await removeEventPhotos(ids);const {error}=await cloudDb.from("department_events").delete().in("id",ids.map(Number));if(error)throw error;selectedManageEventIds.clear();await loadCloudData()}catch(error){cloudError("批次刪除失敗",error)}
+};
+
+// 活動及門市改由 Supabase 管理；管理帳號暫時維持此瀏覽器，下一階段再改 Supabase Auth。
+persist=function(){};
+persistStores=function(){};
+window.addEventListener("load",loadCloudData,{once:true});
 </script>
 
 <div id="globalDropOverlay" class="global-drop-overlay">
