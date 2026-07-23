@@ -1504,7 +1504,10 @@ async function loadCloudAccounts(){
    persistAccounts();
    return true;
   }
- }catch(error){console.warn("管理帳號雲端載入失敗",error)}
+ }catch(error){
+  console.warn("管理帳號雲端載入失敗",error);
+  window.__accountCloudLoadError=error;
+ }
  return false;
 }
 async function login(){
@@ -1513,7 +1516,12 @@ async function login(){
  const loginBtn=event?.currentTarget;
  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent="登入中…"}
  try{
+  window.__accountCloudLoadError=null;
   await loadCloudAccounts();
+  if(window.__accountCloudLoadError){
+   alert("目前無法讀取雲端帳號資料。\n\n錯誤："+(window.__accountCloudLoadError.message||window.__accountCloudLoadError));
+   return;
+  }
   const user=accounts.find(a=>String(a.username).trim()===username&&String(a.password)===password);
   if(!user){alert("帳號或密碼錯誤");return}
   if(!user.enabled){alert("此帳號已停用");return}
@@ -1592,8 +1600,9 @@ function updateEnabledLabel(){
  const el=$("accountEnabledText");
  if(el)el.textContent=$("accountEnabled").checked?"帳號啟用":"帳號停用";
 }
-function saveAccount(){
+async function saveAccount(){
  if(!requireAdmin())return;
+ const btn=$("accountSaveBtn");
  const name=$("accountName").value.trim();
  const username=$("accountUsername").value.trim();
  const email=$("accountEmail").value.trim().toLowerCase();
@@ -1603,17 +1612,44 @@ function saveAccount(){
  if(!name||!username||!email){alert("請填寫姓名、帳號與 Email");return}
  if(!/^\S+@\S+\.\S+$/.test(email)){alert("Email 格式不正確");return}
  if(!editingAccountId&&password.length<6){alert("新帳號密碼至少需要6碼");return}
- const duplicate=accounts.find(a=>a.id!==editingAccountId&&(a.username===username||String(a.email||"").toLowerCase()===email));
+ const duplicate=accounts.find(a=>a.id!==editingAccountId&&(String(a.username).trim()===username||String(a.email||"").toLowerCase()===email));
  if(duplicate){alert("此登入帳號或 Email 已存在");return}
+
+ const previousAccounts=[...accounts];
+ let targetAccount;
+
  if(editingAccountId){
   const oldAccount=accounts.find(a=>a.id===editingAccountId);
-  accounts=accounts.map(a=>a.id===editingAccountId?{...a,name,username,email,role,enabled,password:password||a.password}:a);
-  syncAdminAccountToCloud(accounts.find(a=>a.id===editingAccountId));
+  if(!oldAccount){alert("找不到要修改的帳號");return}
+  targetAccount={...oldAccount,name,username,email,role,enabled,password:password||oldAccount.password};
  }else{
-  accounts.unshift({id:crypto.randomUUID(),name,username,email,password,role,enabled,lastLogin:""});
-  syncAdminAccountToCloud(accounts[0]);
+  targetAccount={id:crypto.randomUUID(),name,username,email,password,role,enabled,lastLogin:""};
  }
- persistAccounts();resetAccountForm();renderAccounts();
+
+ if(btn){btn.disabled=true;btn.textContent="儲存中…"}
+ try{
+  await syncAdminAccountToCloud(targetAccount);
+
+  if(editingAccountId){
+   accounts=accounts.map(a=>a.id===editingAccountId?targetAccount:a);
+  }else{
+   accounts.unshift(targetAccount);
+  }
+
+  persistAccounts();
+  resetAccountForm();
+  renderAccounts();
+  alert(editingAccountId?"帳號修改完成":"帳號新增完成，現在可以使用新帳號登入");
+ }catch(error){
+  accounts=previousAccounts;
+  console.error("管理帳號儲存失敗",error);
+  alert("帳號沒有成功存入雲端資料庫。\n\n錯誤："+(error?.message||error)+"\n\n請檢查 Supabase 的 admins 資料表權限（RLS Policy）。");
+ }finally{
+  if(btn){
+   btn.disabled=false;
+   btn.textContent=editingAccountId?"儲存修改":"新增帳號";
+  }
+ }
 }
 function editAccount(id){
  if(!requireAdmin())return;
@@ -2384,11 +2420,23 @@ function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classLi
 function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
 function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
 async function syncAdminAccountToCloud(account){
- try{
-  const payload={id:account.id,account:account.username,password:account.password,name:account.name,role:account.role,email:account.email||null,enabled:account.enabled!==false};
-  const {error}=await cloudDb.from("admins").upsert(payload,{onConflict:"id"});
-  if(error)console.warn("管理帳號雲端同步失敗",error);
- }catch(error){console.warn("管理帳號雲端同步失敗",error)}
+ const payload={
+  id:account.id,
+  account:String(account.username||"").trim(),
+  password:String(account.password||""),
+  name:account.name,
+  role:account.role,
+  email:account.email||null,
+  enabled:account.enabled!==false
+ };
+ const {data,error}=await cloudDb
+  .from("admins")
+  .upsert(payload,{onConflict:"id"})
+  .select("id,account,password,name,role,email,enabled")
+  .single();
+ if(error)throw error;
+ if(!data)throw new Error("Supabase 未回傳儲存結果");
+ return data;
 }
 async function sendPasswordOtp(){
  const email=$("resetEmail").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email)){setResetStatus(1,"請輸入正確的 Email",true);return}
