@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>v1.9｜星紅織品百貨活動管理</title>
+<title>星紅織品百貨活動管理｜手機友善版</title>
 <style>
 :root{
   --bg:#eef3f6;--card:#fff;--text:#274253;--muted:#667b88;--line:#d8e1e7;
@@ -151,7 +151,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 
 .user-chip{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
 .user-chip .meta{font-size:12px;color:var(--muted);line-height:1.35}
-.account-form{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
+.account-form{display:grid;grid-template-columns:1fr 1fr 1.2fr 1fr 1fr auto;gap:12px;align-items:end}
 .account-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
 .account-item{display:grid;grid-template-columns:1.2fr 1fr .8fr 1.2fr auto;gap:12px;align-items:center;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:12px}
 .account-item .name{font-weight:900}
@@ -800,14 +800,186 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 .manage-activity-card summary{grid-template-columns:auto minmax(0,1fr) auto auto}
 @media(max-width:650px){.manage-bulk-bar{align-items:stretch}.manage-bulk-left,.manage-bulk-right{width:100%;justify-content:space-between}.manage-bulk-delete{width:100%}.manage-activity-card summary{grid-template-columns:auto minmax(0,1fr) auto}}
 
+
+.forgot-password-btn{width:100%;margin-top:12px;border:0;background:transparent;color:#526f80;font-weight:800;padding:8px;cursor:pointer}
+.forgot-password-btn:hover{color:#274253;text-decoration:underline}
+.password-modal{position:fixed;inset:0;z-index:100001;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(27,49,62,.48);backdrop-filter:blur(5px)}
+.password-modal.show{display:flex}
+.password-dialog{width:min(460px,100%);padding:25px;border-radius:22px;background:#fff;border:1px solid #dce5e9;box-shadow:0 24px 70px rgba(25,48,62,.24)}
+.password-dialog h2{margin:0 0 8px}.password-dialog .step-text{color:#6b808c;font-size:14px;line-height:1.65;margin-bottom:16px}
+.password-dialog-actions{display:flex;gap:10px;margin-top:16px}.password-dialog-actions button{flex:1}
+.password-step{display:none}.password-step.active{display:block}
+.reset-status{display:none;margin-top:12px;padding:11px 13px;border-radius:11px;background:#eef7f2;color:#275c42;font-size:13px;font-weight:800;line-height:1.55}
+.reset-status.error{background:#faecea;color:#963d35}
+
+/* 右上角登入資訊與登出按鈕 */
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-session{position:relative;display:none;align-items:center}
+.topbar-session.show{display:flex}
+.logout-top-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:40px;padding:9px 14px;border:0;border-radius:999px;
+  background:#274253;color:#fff;font-weight:900;box-shadow:0 5px 14px rgba(39,66,83,.18)
+}
+.logout-top-btn:hover{background:#1f3745;transform:translateY(-1px)}
+.logout-top-btn:focus-visible{outline:3px solid rgba(39,66,83,.24);outline-offset:3px}
+.logout-top-icon{font-size:16px;line-height:1}
+.session-tooltip{
+  position:absolute;top:calc(100% + 10px);right:0;z-index:80;
+  width:max-content;min-width:190px;max-width:260px;padding:11px 13px;
+  border-radius:12px;background:#203946;color:#fff;
+  box-shadow:0 12px 30px rgba(24,44,56,.25);
+  opacity:0;visibility:hidden;transform:translateY(-5px);pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease,visibility .16s ease
+}
+.session-tooltip:before{
+  content:"";position:absolute;right:24px;top:-6px;width:12px;height:12px;
+  background:#203946;transform:rotate(45deg)
+}
+.topbar-session:hover .session-tooltip,
+.topbar-session:focus-within .session-tooltip{opacity:1;visibility:visible;transform:translateY(0)}
+.session-tooltip-name{font-size:14px;font-weight:900;line-height:1.4}
+.session-tooltip-role{margin-top:3px;font-size:12px;color:#d5e2e8;font-weight:700}
+@media(max-width:620px){
+  .topbar-right{gap:6px}.nav{gap:5px}.nav button{padding:8px 10px}
+  .logout-top-btn{min-width:42px;padding:9px 11px}.logout-top-text{display:none}
+  .session-tooltip{right:-4px}
+}
+
+/* ===== 手機版專用 UI（2026-07） ===== */
+@media (max-width:760px){
+  html{-webkit-text-size-adjust:100%;scroll-padding-top:124px}
+  body{background:#f3f6f8;overflow-x:hidden}
+  button,input,select,textarea{font-size:16px}
+  button{min-height:44px;touch-action:manipulation}
+
+  .topbar{position:sticky;top:0;background:rgba(255,255,255,.97);box-shadow:0 4px 18px rgba(39,66,83,.07)}
+  .topbar-inner{width:100%;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:9px 10px;align-items:center}
+  .brand{grid-column:1/-1;min-width:0}
+  .brand-home-btn{width:100%;text-align:left;font-size:18px;line-height:1.25;padding:5px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-right{grid-column:1/-1;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+  .nav{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;width:100%;min-width:0}
+  .nav button{width:100%;min-width:0;border-radius:13px!important;padding:10px 8px!important;font-size:15px;white-space:nowrap}
+  .topbar-session{align-self:stretch}
+  .logout-top-btn{height:44px;min-width:46px;border-radius:13px;padding:9px 12px}
+  .session-tooltip{position:fixed;top:116px;right:12px;max-width:calc(100vw - 24px)}
+
+  .hero{text-align:left;padding:22px 14px 15px}
+  .hero .eyebrow{font-size:11px;letter-spacing:.16em}
+  h1{font-size:25px;margin:6px 0 5px;line-height:1.25}
+  .hero p{font-size:14px;line-height:1.55}
+  .container{width:calc(100% - 20px);margin:0 auto 40px}
+
+  .panel,.toolbar,.login-box,.summary-box,.front-filter-panel{border-radius:16px!important;box-shadow:0 5px 18px rgba(39,66,83,.06)!important}
+  .panel{padding:15px;margin-bottom:12px}
+  .panel h2{font-size:20px;margin-bottom:12px}
+
+  .front-filter-panel{padding:14px!important;margin-bottom:12px!important}
+  .front-filter-heading{align-items:flex-start!important;gap:8px}
+  .front-filter-title{font-size:18px!important}
+  .front-filter-subtitle{display:none}
+  .front-filter-clear{min-height:38px;padding:7px 10px!important;white-space:nowrap}
+  .front-filter-grid{grid-template-columns:1fr!important;gap:10px!important}
+  .front-filter-search{grid-column:auto!important}
+  .front-search-box input,input,select,textarea{min-height:46px;border-radius:12px}
+
+  .summary{grid-template-columns:1fr 1fr!important;gap:9px;margin-bottom:12px}
+  .summary-box{padding:13px}
+  .summary-box b{font-size:23px}
+  .summary-box span{font-size:12px}
+
+  .events{gap:10px}
+  .event-row,.card{border-radius:16px}
+  .event-summary{grid-template-columns:minmax(0,1fr) auto!important;padding:14px!important;gap:6px 10px!important}
+  .mall-name,.mall{font-size:17px;line-height:1.35}
+  .summary-region,.summary-date,.sub{font-size:13px}
+  .summary-badges{gap:5px;margin-top:2px}
+  .badge{font-size:12px;padding:5px 8px}
+  .event-detail{padding-left:14px!important;padding-right:14px!important}
+  .event-row.open .event-detail{padding:6px 14px 15px!important}
+  .event-detail-inner{padding-top:13px}
+  .row{grid-template-columns:72px minmax(0,1fr);gap:8px;font-size:14px}
+  .gallery{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+  .gallery img{width:100%!important;height:84px!important;border-radius:9px}
+
+  .admin-tabs{display:flex;overflow-x:auto;gap:7px;margin:0 -4px 12px;padding:2px 4px 6px;scrollbar-width:none}
+  .admin-tabs::-webkit-scrollbar{display:none}
+  .admin-tabs button{flex:0 0 auto;white-space:nowrap;padding:9px 13px}
+  .form-grid,.account-grid,.account-form,.store-form{grid-template-columns:1fr!important;gap:10px!important}
+  .field,.field.wide{grid-column:auto!important}
+  .actions{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .actions button{width:100%}
+  .actions button:only-child{grid-column:1/-1}
+  .dropzone{min-height:150px;padding:20px 12px;text-align:center}
+  .dropzone .icon{font-size:34px}
+  .photo-preview{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+  .photo-preview .thumb{width:100%!important}
+  .photo-preview img{height:92px!important}
+
+  .store-toolbar{align-items:stretch}
+  .store-filter-group{display:grid;grid-template-columns:repeat(4,1fr);width:100%;gap:6px}
+  .filter-btn{padding:8px 5px;font-size:13px}
+  .store-list.compact{grid-template-columns:1fr!important}
+  .store-list.compact .store-item,.store-item,.account-item{grid-template-columns:minmax(0,1fr)!important;padding:13px!important;gap:9px!important;min-height:0}
+  .manage-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:7px}
+  .manage-actions button{width:100%}
+
+  .manage-activity-card{border-radius:15px!important}
+  .manage-activity-card summary{padding:13px!important;gap:8px!important}
+  .manage-collapse-body{grid-template-columns:1fr!important;gap:8px!important;padding:0 13px 13px!important}
+  .manage-collapse-body .manage-card-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .manage-collapse-body .manage-card-actions button{width:100%}
+  .manage-bulk-bar{position:sticky;bottom:8px;z-index:12;border-radius:15px!important;box-shadow:0 10px 28px rgba(39,66,83,.18)}
+
+  .login-wrap{min-height:360px;align-items:start;padding-top:8px}
+  .login-box{padding:19px;width:100%}
+
+  .password-modal{align-items:flex-end;padding:0}
+  .password-dialog{width:100%;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:21px 18px calc(20px + env(safe-area-inset-bottom));animation:mobileSheet .22s ease-out}
+  .password-dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+  .lightbox{padding:16px}
+  .lightbox img{max-width:96vw;max-height:84vh;border-radius:13px}
+  .lightbox-close{top:12px;right:12px}
+}
+
+@media (max-width:430px){
+  .topbar-inner{padding:9px 10px}
+  .brand-home-btn{font-size:17px}
+  .nav button{font-size:14px;padding:9px 6px!important}
+  .hero{padding:18px 11px 13px}
+  h1{font-size:23px}
+  .container{width:calc(100% - 14px)}
+  .summary{gap:7px}
+  .summary-box{padding:11px}
+  .gallery,.photo-preview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .store-filter-group{grid-template-columns:repeat(2,1fr)}
+  .actions{grid-template-columns:1fr}
+  .actions button{grid-column:1!important}
+  .password-dialog-actions{grid-template-columns:1fr}
+}
+
+@keyframes mobileSheet{from{transform:translateY(24px);opacity:.4}to{transform:translateY(0);opacity:1}}
+
 </style>
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
   <div class="brand"><button type="button" class="brand-home-btn" onclick="goToActivityOverview()">星紅織品｜百貨活動</button></div>
-  <div class="nav">
-    <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
-    <button id="adminNav" onclick="showPage('admin')">後台管理</button>
+  <div class="topbar-right">
+    <div class="nav">
+      <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
+      <button id="adminNav" onclick="showPage('admin')">後台管理</button>
+    </div>
+    <div id="topbarSession" class="topbar-session">
+      <button type="button" class="logout-top-btn" onclick="logout()" aria-label="登出目前帳號">
+        <span class="logout-top-icon">↪</span><span class="logout-top-text">登出</span>
+      </button>
+      <div class="session-tooltip" role="status">
+        <div id="currentUserName" class="session-tooltip-name">—</div>
+        <div id="currentUserRole" class="session-tooltip-role">—</div>
+      </div>
+    </div>
   </div>
 </div></div>
 
@@ -890,7 +1062,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
       <div class="field"><label>帳號</label><input id="loginAccount" autocomplete="username"></div><br>
       <div class="field"><label>密碼</label><input id="loginPassword" type="password" autocomplete="current-password"></div><br>
       <button class="primary" style="width:100%" onclick="login()">登入</button>
-      <div class="note">首次使用預設帳號：admin　預設密碼：admin123。登入後請至「管理員設定」新增主管帳號。</div>
+      <button type="button" class="forgot-password-btn" onclick="openForgotPassword()">忘記密碼？</button>
     </div>
   </div>
 
@@ -947,6 +1119,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
         <div class="account-form">
           <div class="field"><label>姓名</label><input id="accountName" placeholder="例如：王店長"></div>
           <div class="field"><label>帳號</label><input id="accountUsername" placeholder="登入帳號"></div>
+          <div class="field"><label>Email（忘記密碼使用）</label><input id="accountEmail" type="email" placeholder="name@example.com"></div>
           <div class="field"><label>密碼</label><input id="accountPassword" type="password" placeholder="至少6碼"></div>
           <div class="field"><label>權限</label>
             <select id="accountRole">
@@ -974,10 +1147,6 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
     <section class="panel">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
         <h2 id="formTitle">新增活動</h2>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="user-chip"><div>👤</div><div><strong id="currentUserName">—</strong><div class="meta" id="currentUserRole">—</div></div></div>
-          <button class="secondary" onclick="logout()">登出</button>
-        </div>
       </div>
       <div class="form-grid">
         <div class="field">
@@ -1027,10 +1196,10 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
         </div>
         <div class="activity-action-bar">
           <button class="primary activity-main-action" id="saveBtn" onclick="saveEvent()">＋ 新增活動</button>
-          <button class="secondary backup-action import-action" onclick="document.getElementById('importFile').click()">⇩ 匯入備份</button>
-          <button class="secondary backup-action" onclick="exportData()">⇧ 匯出備份</button>
+          <button class="secondary backup-action import-action" onclick="document.getElementById('importFile').click()">⇩ 匯入 Excel</button>
+          <button class="secondary backup-action" onclick="exportData()">⇧ 匯出 Excel</button>
           <button class="secondary activity-cancel-action" id="cancelBtn" style="display:none" onclick="resetForm()">取消編輯</button>
-          <input id="importFile" type="file" accept=".json" hidden onchange="importData(event)">
+          <input id="importFile" type="file" accept=".xlsx,.xls" hidden onchange="importData(event)">
         </div>
       </div>
       <div class="note">活動與照片會儲存在 Supabase 雲端，其他電腦與手機可同步查看。</div>
@@ -1120,12 +1289,40 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
   </div>
 </div>
 
+
+<div id="forgotPasswordModal" class="password-modal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeForgotPassword()">
+  <div class="password-dialog">
+    <div id="forgotStep1" class="password-step active">
+      <h2>忘記密碼</h2>
+      <div class="step-text">輸入管理帳號綁定的 Email，系統會寄出安全的密碼重設連結。</div>
+      <div class="field"><label>Email</label><input id="resetEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
+      <div id="resetStatus1" class="reset-status"></div>
+      <div class="password-dialog-actions"><button class="secondary" onclick="closeForgotPassword()">取消</button><button id="sendOtpBtn" class="primary" onclick="sendPasswordOtp()">寄送重設信</button></div>
+    </div>
+    <div id="forgotStep2" class="password-step">
+      <h2>請查看 Email</h2>
+      <div class="step-text">重設信已寄出。請點擊信件中的連結，系統會自動回到此頁設定新密碼。</div>
+      <div id="resetStatus2" class="reset-status" style="display:block">沒有收到時，請檢查垃圾郵件匣，或稍候再重新寄送。</div>
+      <div class="password-dialog-actions"><button class="secondary" onclick="closeForgotPassword()">關閉</button><button class="primary" onclick="showForgotStep(1)">重新寄送</button></div>
+    </div>
+    <div id="forgotStep3" class="password-step">
+      <h2>設定新密碼</h2>
+      <div class="step-text">Email 驗證已完成。新密碼至少 8 碼，建議包含英文與數字。</div>
+      <div class="field"><label>新密碼</label><input id="resetNewPassword" type="password" minlength="8" placeholder="至少 8 碼"></div><br>
+      <div class="field"><label>再次輸入新密碼</label><input id="resetConfirmPassword" type="password" minlength="8" placeholder="再次輸入"></div>
+      <div id="resetStatus3" class="reset-status"></div>
+      <div class="password-dialog-actions"><button class="secondary" onclick="closeForgotPassword()">取消</button><button id="updatePasswordBtn" class="primary" onclick="updateForgottenPassword()">更新密碼</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
   <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
   <img id="lightboxImage" alt="活動照片放大">
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
 function goToActivityOverview(){
@@ -1230,6 +1427,7 @@ if(!accounts.length){
    id:crypto.randomUUID(),
    name:"系統管理員",
    username:"admin",
+   email:"",
    password:"admin123",
    role:"admin",
    enabled:true,
@@ -1275,12 +1473,15 @@ function checkLogin(){
  const ok=sessionStorage.getItem(LOGIN_KEY)==="1"&&currentUser;
  $("loginSection").style.display=ok?"none":"grid";
  $("adminContent").style.display=ok?"block":"none";
+ $("topbarSession").classList.toggle("show",!!ok);
  if(ok){
-  $("currentUserName").textContent=currentUser.name;
+  $("currentUserName").textContent="正在使用："+currentUser.name;
   $("currentUserRole").textContent=currentUser.role==="admin"?"系統管理員":"主管";
   $("accountTabBtn").classList.toggle("hidden-by-role",currentUser.role!=="admin");
   rebuildMallOptions();renderManage();renderStores();renderAccounts();
  }else{
+  $("currentUserName").textContent="—";
+  $("currentUserRole").textContent="—";
   $("accountTabBtn").classList.remove("hidden-by-role");
  }
 }
@@ -1366,17 +1567,22 @@ function saveAccount(){
  if(!requireAdmin())return;
  const name=$("accountName").value.trim();
  const username=$("accountUsername").value.trim();
+ const email=$("accountEmail").value.trim().toLowerCase();
  const password=$("accountPassword").value;
  const role=$("accountRole").value;
  const enabled=$("accountEnabled").checked;
- if(!name||!username){alert("請填寫姓名與帳號");return}
+ if(!name||!username||!email){alert("請填寫姓名、帳號與 Email");return}
+ if(!/^\S+@\S+\.\S+$/.test(email)){alert("Email 格式不正確");return}
  if(!editingAccountId&&password.length<6){alert("新帳號密碼至少需要6碼");return}
- const duplicate=accounts.find(a=>a.id!==editingAccountId&&a.username===username);
- if(duplicate){alert("此登入帳號已存在");return}
+ const duplicate=accounts.find(a=>a.id!==editingAccountId&&(a.username===username||String(a.email||"").toLowerCase()===email));
+ if(duplicate){alert("此登入帳號或 Email 已存在");return}
  if(editingAccountId){
-  accounts=accounts.map(a=>a.id===editingAccountId?{...a,name,username,role,enabled,password:password||a.password}:a);
+  const oldAccount=accounts.find(a=>a.id===editingAccountId);
+  accounts=accounts.map(a=>a.id===editingAccountId?{...a,name,username,email,role,enabled,password:password||a.password}:a);
+  syncAdminAccountToCloud(accounts.find(a=>a.id===editingAccountId));
  }else{
-  accounts.unshift({id:crypto.randomUUID(),name,username,password,role,enabled,lastLogin:""});
+  accounts.unshift({id:crypto.randomUUID(),name,username,email,password,role,enabled,lastLogin:""});
+  syncAdminAccountToCloud(accounts[0]);
  }
  persistAccounts();resetAccountForm();renderAccounts();
 }
@@ -1384,7 +1590,7 @@ function editAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
  editingAccountId=id;
- $("accountName").value=a.name;$("accountUsername").value=a.username;$("accountPassword").value="";
+ $("accountName").value=a.name;$("accountUsername").value=a.username;$("accountEmail").value=a.email||"";$("accountPassword").value="";
  $("accountRole").value=a.role;$("accountEnabled").checked=a.enabled;updateEnabledLabel();
  $("accountFormTitle").textContent="修改管理帳號";
  $("accountSaveBtn").textContent="儲存修改";
@@ -1406,7 +1612,7 @@ function deleteAccount(id){
 }
 function resetAccountForm(){
  editingAccountId=null;
- $("accountName").value="";$("accountUsername").value="";$("accountPassword").value="";
+ $("accountName").value="";$("accountUsername").value="";$("accountEmail").value="";$("accountPassword").value="";
  $("accountRole").value="manager";$("accountEnabled").checked=true;updateEnabledLabel();
  $("accountFormTitle").textContent="新增管理帳號";$("accountSaveBtn").textContent="新增帳號";
  $("accountCancelBtn").style.display="none";
@@ -1418,7 +1624,7 @@ function fmtDateTime(v){
 function renderAccounts(){
  if(!currentUser||currentUser.role!=="admin")return;
  $("accountList").innerHTML=accounts.map(a=>`<div class="account-item" style="grid-template-columns:1.1fr .9fr .9fr 1.25fr 1.1fr auto">
-  <div><div class="name">${escapeHtml(a.name)}</div><div class="small">${escapeHtml(a.username)}</div></div>
+  <div><div class="name">${escapeHtml(a.name)}</div><div class="small">${escapeHtml(a.username)}</div><div class="small">${escapeHtml(a.email||"尚未綁定 Email")}</div></div>
   <div><span class="role-badge ${a.role}">${a.role==="admin"?"系統管理員":"主管"}</span></div>
   <div><span class="status-dot ${a.enabled?"":"off"}">${a.enabled?"啟用":"停用"}</span></div>
   <div class="password-cell">
@@ -1998,19 +2204,59 @@ function clearFilters(){
  renderHome();
 }
 function exportData(){
- const blob=new Blob([JSON.stringify({events,stores,accounts},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
- a.href=url;a.download="百貨活動備份.json";a.click();URL.revokeObjectURL(url);
+ if(typeof XLSX==="undefined"){alert("Excel 元件載入失敗，請重新整理後再試");return}
+ const eventRows=events.map(e=>({
+  "資料類型":"活動","ID":e.id,"區域":areaText[e.area]||e.area,"區域代碼":e.area,
+  "百貨名稱":e.mall||"","樓層／櫃位":e.location||"","開始日期":e.start||"","結束日期":e.end||"",
+  "活動名稱":e.campaign||"","主打商品":Array.isArray(e.products)?e.products.join("、"):e.products||"",
+  "優惠／備註":e.note||"","照片網址":Array.isArray(e.photos)?e.photos.join("\n"):""
+ }));
+ const storeRows=stores.map(x=>({"ID":x.id,"區域":areaText[x.area]||x.area,"區域代碼":x.area,"百貨名稱":x.name,"樓層／櫃位":x.floor||""}));
+ const accountRows=accounts.map(a=>({"ID":a.id,"姓名":a.name,"帳號":a.username,"Email":a.email||"","權限":a.role,"啟用":a.enabled?"是":"否","最後登入":a.lastLogin||""}));
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(eventRows),"活動資料");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(storeRows),"百貨門市");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(accountRows),"管理帳號");
+ XLSX.writeFile(wb,`星紅織品活動備份_${todayStr()}.xlsx`);
 }
 function importData(e){
- const file=e.target.files[0];if(!file)return;const r=new FileReader();
- r.onload=()=>{try{
- const d=JSON.parse(r.result);
- if(Array.isArray(d)){events=d}
- else if(d&&Array.isArray(d.events)){events=d.events;stores=Array.isArray(d.stores)?d.stores:stores;accounts=Array.isArray(d.accounts)?d.accounts:accounts}
- else throw 0;
- persist();persistStores();persistAccounts();resetForm();renderAll();renderStores();renderAccounts();alert("匯入完成")
-}catch{alert("檔案格式不正確")}};
- r.readAsText(file);e.target.value="";
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ if(typeof XLSX==="undefined"){alert("Excel 元件載入失敗，請重新整理後再試");e.target.value="";return}
+ const reader=new FileReader();
+ reader.onload=async ev=>{
+  try{
+   const wb=XLSX.read(ev.target.result,{type:"array",cellDates:false});
+   const eventSheet=wb.Sheets["活動資料"]||wb.Sheets[wb.SheetNames[0]];
+   const rows=XLSX.utils.sheet_to_json(eventSheet,{defval:""});
+   if(!rows.length)throw new Error("Excel 內沒有活動資料");
+   const imported=rows.filter(r=>String(r["資料類型"]||"活動")==="活動").map(r=>({
+    id:String(r["ID"]||crypto.randomUUID()),area:String(r["區域代碼"]||"")||Object.keys(areaText).find(k=>areaText[k]===r["區域"])||"central",
+    mall:String(r["百貨名稱"]||""),location:String(r["樓層／櫃位"]||""),start:excelDateText(r["開始日期"]),end:excelDateText(r["結束日期"]),
+    campaign:String(r["活動名稱"]||""),products:String(r["主打商品"]||"").split(/[、,，]/).map(x=>x.trim()).filter(Boolean),
+    note:String(r["優惠／備註"]||""),photos:String(r["照片網址"]||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean)
+   })).filter(x=>x.mall&&x.start&&x.end&&x.campaign);
+   if(!imported.length)throw new Error("找不到可匯入的有效活動，請確認百貨名稱、日期與活動名稱欄位");
+   if(!confirm(`Excel 內共有 ${imported.length} 筆有效活動，確定匯入嗎？`))return;
+   if(cloudReady){
+    for(const item of imported){
+     let store=stores.find(s=>s.name===item.mall&&s.floor===item.location);
+     if(!store){const {data,error}=await cloudDb.from("department_stores").insert({region:item.area,department_name:item.mall,floor:item.location,sort_order:stores.length}).select("id").single();if(error)throw error;store={id:String(data.id),area:item.area,name:item.mall,floor:item.location};stores.push(store)}
+     const payload={region:item.area,department:item.mall,floor:item.location,store_id:Number(store.id),start_date:item.start,end_date:item.end,event_name:item.campaign,event_content:JSON.stringify(item.products),remark:item.note,status:calcStatus(item.start,item.end)};
+     const {data,error}=await cloudDb.from("department_events").insert(payload).select("id").single();if(error)throw error;
+     await uploadEventPhotos(data.id,item.photos);
+    }
+    await loadCloudData();
+   }else{events=[...imported,...events];persist();renderAll()}
+   alert(`Excel 匯入完成，共新增 ${imported.length} 筆活動`);
+  }catch(err){alert("Excel 匯入失敗："+(err.message||err))}finally{e.target.value=""}
+ };
+ reader.readAsArrayBuffer(file);
+}
+function excelDateText(value){
+ if(!value)return "";
+ if(typeof value==="number"){const d=XLSX.SSF.parse_date_code(value);if(d)return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`}
+ const text=String(value).trim().replace(/[./]/g,"-");
+ const m=text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:text;
 }
 function toggleEvent(button){
  const row=button.closest(".event-row");
@@ -2101,6 +2347,52 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_1XStDPKImqiaYPIQcOC-CQ_rbl2dWnZ
 const SUPABASE_BUCKET = "activity-images";
 const cloudDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 let cloudReady = false;
+let resetVerifiedEmail="";
+let recoverySessionReady=false;
+function showForgotStep(step){[1,2,3].forEach(n=>$("forgotStep"+n).classList.toggle("active",n===step))}
+function setResetStatus(step,message,isError=false){const el=$("resetStatus"+step);el.textContent=message;el.style.display=message?"block":"none";el.classList.toggle("error",isError)}
+function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classList.add("show");$("resetEmail").value="";$("resetNewPassword").value="";$("resetConfirmPassword").value="";[1,2,3].forEach(n=>setResetStatus(n,""))}
+function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
+function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
+async function syncAdminAccountToCloud(account){
+ try{
+  const payload={id:account.id,account:account.username,password:account.password,name:account.name,role:account.role,email:account.email||null,enabled:account.enabled!==false};
+  const {error}=await cloudDb.from("admins").upsert(payload,{onConflict:"id"});
+  if(error)console.warn("管理帳號雲端同步失敗",error);
+ }catch(error){console.warn("管理帳號雲端同步失敗",error)}
+}
+async function sendPasswordOtp(){
+ const email=$("resetEmail").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email)){setResetStatus(1,"請輸入正確的 Email",true);return}
+ const localAccount=accounts.find(a=>String(a.email||"").toLowerCase()===email);if(!localAccount){setResetStatus(1,"找不到綁定此 Email 的管理帳號，請聯絡系統管理員確認。",true);return}
+ const btn=$("sendOtpBtn");btn.disabled=true;btn.textContent="寄送中…";
+ try{
+  await syncAdminAccountToCloud(localAccount);
+  const {error}=await cloudDb.auth.resetPasswordForEmail(email,{redirectTo:passwordResetRedirectUrl()});
+  if(error)throw error;
+  resetVerifiedEmail=email;setResetStatus(1,"密碼重設信已寄出，請查看收件匣與垃圾郵件匣。");setTimeout(()=>showForgotStep(2),500)
+ }catch(error){setResetStatus(1,"重設信寄送失敗："+(error.message||error),true)}finally{btn.disabled=false;btn.textContent="寄送重設信"}
+}
+async function updateForgottenPassword(){
+ const password=$("resetNewPassword").value,confirmPassword=$("resetConfirmPassword").value;if(password.length<8){setResetStatus(3,"新密碼至少需要 8 碼",true);return}if(password!==confirmPassword){setResetStatus(3,"兩次輸入的密碼不一致",true);return}
+ if(!recoverySessionReady){setResetStatus(3,"Email 驗證尚未完成，請重新點擊最新的密碼重設信。",true);return}
+ const btn=$("updatePasswordBtn");btn.disabled=true;btn.textContent="更新中…";
+ try{
+  const {data,error}=await cloudDb.auth.updateUser({password});if(error)throw error;
+  const email=(data?.user?.email||resetVerifiedEmail||"").toLowerCase();
+  const {error:dbError}=await cloudDb.from("admins").update({password}).ilike("email",email);if(dbError)throw dbError;
+  accounts=accounts.map(a=>String(a.email||"").toLowerCase()===email?{...a,password}:a);persistAccounts();
+  setResetStatus(3,"密碼已更新，請使用新密碼登入。");recoverySessionReady=false;resetVerifiedEmail="";
+  await cloudDb.auth.signOut();
+  if(history.replaceState)history.replaceState({},document.title,passwordResetRedirectUrl());
+  setTimeout(()=>closeForgotPassword(),1200)
+ }catch(error){setResetStatus(3,"密碼更新失敗："+(error.message||error),true)}finally{btn.disabled=false;btn.textContent="更新密碼"}
+}
+cloudDb.auth.onAuthStateChange((event,session)=>{
+ if(event==="PASSWORD_RECOVERY"){
+  recoverySessionReady=true;resetVerifiedEmail=(session?.user?.email||"").toLowerCase();
+  setTimeout(()=>{$("forgotPasswordModal").classList.add("show");showForgotStep(3);setResetStatus(3,"Email 驗證成功，請設定新密碼。")},0);
+ }
+});
 
 function setCloudBusy(isBusy, text="處理中…"){
   const btn=$("saveBtn");
