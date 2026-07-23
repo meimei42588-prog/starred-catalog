@@ -1485,18 +1485,47 @@ function checkLogin(){
   $("accountTabBtn").classList.remove("hidden-by-role");
  }
 }
-function login(){
+async function loadCloudAccounts(){
+ try{
+  if(typeof cloudDb==="undefined")return false;
+  const {data,error}=await cloudDb.from("admins").select("id,account,password,name,role,email,enabled");
+  if(error)throw error;
+  if(Array.isArray(data)&&data.length){
+   accounts=data.map(row=>({
+    id:String(row.id),
+    name:row.name||row.account||"管理員",
+    username:String(row.account||"").trim(),
+    email:row.email||"",
+    password:String(row.password||""),
+    role:row.role||"manager",
+    enabled:row.enabled!==false,
+    lastLogin:""
+   }));
+   persistAccounts();
+   return true;
+  }
+ }catch(error){console.warn("管理帳號雲端載入失敗",error)}
+ return false;
+}
+async function login(){
  const username=$("loginAccount").value.trim();
  const password=$("loginPassword").value;
- const user=accounts.find(a=>a.username===username&&a.password===password);
- if(!user){alert("帳號或密碼錯誤");return}
- if(!user.enabled){alert("此帳號已停用");return}
- user.lastLogin=new Date().toISOString();
- persistAccounts();
- currentUser={id:user.id,name:user.name,username:user.username,role:user.role};
- sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
- sessionStorage.setItem(LOGIN_KEY,"1");
- checkLogin();
+ const loginBtn=event?.currentTarget;
+ if(loginBtn){loginBtn.disabled=true;loginBtn.textContent="登入中…"}
+ try{
+  await loadCloudAccounts();
+  const user=accounts.find(a=>String(a.username).trim()===username&&String(a.password)===password);
+  if(!user){alert("帳號或密碼錯誤");return}
+  if(!user.enabled){alert("此帳號已停用");return}
+  user.lastLogin=new Date().toISOString();
+  persistAccounts();
+  currentUser={id:user.id,name:user.name,username:user.username,role:user.role};
+  sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  sessionStorage.setItem(LOGIN_KEY,"1");
+  checkLogin();
+ }finally{
+  if(loginBtn){loginBtn.disabled=false;loginBtn.textContent="登入"}
+ }
 }
 function logout(){
  sessionStorage.removeItem(LOGIN_KEY);
@@ -2545,7 +2574,7 @@ window.deleteSelectedEvents=async function(){
 // 活動及門市改由 Supabase 管理；管理帳號暫時維持此瀏覽器，下一階段再改 Supabase Auth。
 persist=function(){};
 persistStores=function(){};
-window.addEventListener("load",loadCloudData,{once:true});
+window.addEventListener("load",async()=>{await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);},{once:true});
 </script>
 
 <div id="globalDropOverlay" class="global-drop-overlay">
