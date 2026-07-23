@@ -1687,13 +1687,30 @@ function toggleAccount(id){
  if(a.id===currentUser.id&&a.enabled){alert("不能停用目前登入中的帳號");return}
  a.enabled=!a.enabled;persistAccounts();renderAccounts();
 }
-function deleteAccount(id){
+async function deleteAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
  if(a.id===currentUser.id){alert("不能刪除目前登入中的帳號");return}
  if(a.role==="admin"&&accounts.filter(x=>x.role==="admin").length===1){alert("系統至少要保留一個系統管理員");return}
- if(!confirm(`確定刪除「${a.name}」的帳號？`))return;
- accounts=accounts.filter(x=>x.id!==id);persistAccounts();renderAccounts();
+ if(!confirm(`確定刪除「${a.name}」的帳號？刪除後無法復原。`))return;
+
+ const previousAccounts=[...accounts];
+ try{
+  if(typeof cloudDb!=="undefined"){
+   const {error}=await cloudDb.from("admins").delete().eq("id",id);
+   if(error)throw error;
+  }
+  accounts=accounts.filter(x=>x.id!==id);
+  persistAccounts();
+  renderAccounts();
+  alert("帳號已永久刪除");
+ }catch(error){
+  accounts=previousAccounts;
+  persistAccounts();
+  renderAccounts();
+  console.error("管理帳號刪除失敗",error);
+  alert("帳號刪除失敗，雲端資料沒有被移除。\n\n錯誤："+(error?.message||error)+"\n\n請檢查 Supabase admins 資料表的 DELETE 權限（RLS Policy）。");
+ }
 }
 function resetAccountForm(){
  editingAccountId=null;
