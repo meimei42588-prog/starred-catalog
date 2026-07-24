@@ -4597,13 +4597,63 @@ async function verifyLineLoginWithServer(idToken){
 }
 
 
-async function starredApi(action,payload={}){
-  if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 尚未登入");
+function parseJwtPayload(token){
+  try{
+    const part=String(token||"").split(".")[1];
+    if(!part)return null;
+    const normalized=part.replace(/-/g,"+").replace(/_/g,"/");
+    const json=decodeURIComponent(atob(normalized).split("").map(c=>"%"+("00"+c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+    return JSON.parse(json);
+  }catch(_){return null}
+}
+function isLineIdTokenExpired(token,bufferSeconds=60){
+  const payload=parseJwtPayload(token);
+  if(!payload||!payload.exp)return false;
+  return Number(payload.exp)*1000 <= Date.now()+bufferSeconds*1000;
+}
+function forceLineRelogin(){
+  if(!window.liff)return false;
+  if(sessionStorage.getItem("starred_line_relogin_running")==="1")return true;
+  sessionStorage.setItem("starred_line_relogin_running","1");
+  try{if(liff.isLoggedIn())liff.logout()}catch(_){}
+  const redirectUri=location.origin+location.pathname+location.search;
+  setTimeout(()=>{
+    try{liff.login({redirectUri})}
+    catch(error){
+      sessionStorage.removeItem("starred_line_relogin_running");
+      console.error("LINE 重新登入失敗",error);
+      location.href=`https://liff.line.me/${STARRED_LIFF_ID}`;
+    }
+  },80);
+  return true;
+}
+async function getFreshLineIdToken(){
+  if(!window.liff)throw new Error("LINE 登入程式尚未載入");
+  if(!liff.isLoggedIn()){
+    forceLineRelogin();
+    throw new Error("LINE 尚未登入，正在重新登入…");
+  }
   const idToken=liff.getIDToken();
-  if(!idToken)throw new Error("無法取得 LINE ID Token");
+  if(!idToken||isLineIdTokenExpired(idToken)){
+    forceLineRelogin();
+    throw new Error("LINE 登入已過期，正在重新登入…");
+  }
+  return idToken;
+}
+async function starredApi(action,payload={}){
+  const idToken=await getFreshLineIdToken();
   const response=await fetch(STARRED_LINE_API_URL,{method:"POST",headers:{"Content-Type":"application/json","apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,"Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`},body:JSON.stringify({idToken,action,...payload})});
   const result=await response.json().catch(()=>({success:false,error:"伺服器回傳格式錯誤"}));
-  if(!response.ok||!result.success){const e=new Error(result.error||`雲端操作失敗（${response.status}）`);e.blocked=!!result.blocked;throw e}
+  if(!response.ok||!result.success){
+    const message=String(result.error||`雲端操作失敗（${response.status}）`);
+    if(/idtoken\s*expired|token\s*expired|expired\s*token/i.test(message)){
+      forceLineRelogin();
+      const expiredError=new Error("LINE 登入已過期，正在重新登入…");
+      expiredError.relogin=true;
+      throw expiredError;
+    }
+    const e=new Error(message);e.blocked=!!result.blocked;throw e;
+  }
   return result;
 }
 function cloudStoreToLocal(s){return{id:String(s.id),area:String(s.region||"central"),name:String(s.name||""),floor:String(s.floor||"")}}
@@ -4633,8 +4683,12 @@ async function initializeStarredLiff(){
       return;
     }
 
+    sessionStorage.removeItem("starred_line_relogin_running");
     const idToken=liff.getIDToken();
-    if(!idToken)throw new Error("無法取得 LINE ID Token，請確認 LIFF 已勾選 openid scope");
+    if(!idToken||isLineIdTokenExpired(idToken)){
+      forceLineRelogin();
+      return;
+    }
 
     const verified=await verifyLineLoginWithServer(idToken);
     const normalized={
