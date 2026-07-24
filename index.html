@@ -99,6 +99,20 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 .event-row.open .chevron{transform:rotate(180deg)}
 .event-detail{max-height:0;overflow:hidden;opacity:0;padding:0 18px;transition:max-height .48s cubic-bezier(.22,.61,.36,1),opacity .3s ease,padding .35s ease}
 .event-row.open .event-detail{max-height:1000px;opacity:1;padding:8px 18px 18px}
+
+.event-row.open .event-summary{
+  background:#274253 !important;
+  color:#fff !important;
+}
+.event-row.open .mall-name,
+.event-row.open .summary-region,
+.event-row.open .summary-date{
+  color:#fff !important;
+}
+.event-row.open .summary-badges .badge{
+  border:1px solid rgba(255,255,255,.18);
+}
+
 .event-detail-inner{border-top:1px solid var(--line);padding-top:16px}
 @media(max-width:760px){
  .event-summary{grid-template-columns:1fr auto;gap:8px}
@@ -981,6 +995,1364 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 
 @keyframes mobileSheet{from{transform:translateY(24px);opacity:.4}to{transform:translateY(0);opacity:1}}
 
+
+.lightbox{z-index:400000!important}#orderActionModal{z-index:300000!important}.order-edit-modal{z-index:200000!important}.order-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}.order-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.order-form-grid .wide{grid-column:1/-1}.order-submit-row{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:12px}.order-red-note{color:#c62828;font-weight:900}.order-filter-grid,.order-admin-filter{display:grid;grid-template-columns:1fr 170px;gap:8px;margin:10px 0}.order-card-list,.order-admin-list{display:flex;flex-direction:column;gap:7px}.order-card{border:1px solid var(--line);border-radius:12px;overflow:hidden}.order-card-summary{width:100%;display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:10px;border:0;background:#fff;text-align:left}.order-card-detail{display:none;padding:8px;border-top:1px solid var(--line)}.order-card.open .order-card-detail{display:block}.customer-block{border:1px solid #d8e1e7;border-radius:10px;overflow:hidden}.customer-title{padding:7px 9px;background:#f6f8f9;font-weight:900;font-size:13px}.customer-grid{display:grid;grid-template-columns:1fr 1fr}.customer-grid>div{padding:7px 9px;border-top:1px solid #e5ebee;border-right:1px solid #e5ebee}.customer-grid .wide{grid-column:1/-1;border-right:0}.customer-grid span{display:block;font-size:10px;color:var(--muted)}.customer-grid b{font-size:13px}.ship-line{display:flex;justify-content:space-between;margin-top:7px;padding:7px 9px;border:1px solid #cfe0d5;border-radius:9px}.photo-open-only{margin-top:7px;padding:7px 10px;border:1px solid #ccd8de;border-radius:9px;background:#fff;font-weight:800}.order-big-checkbox{width:30px!important;height:30px!important}.order-bulk-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px}.order-admin-card{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px}.order-edit-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:18px}.order-edit-modal.show{display:flex}.order-edit-dialog{width:min(900px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:18px}.order-edit-head,.order-edit-actions{display:flex;justify-content:space-between}.order-edit-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.order-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.order-edit-grid .wide{grid-column:1/-1}.original-box{background:#f6f8f9;padding:12px;border-radius:12px}.order-status{font-size:11px;font-weight:900;padding:4px 7px;border-radius:999px}.order-status.pending{background:#fff3d8}.order-status.shipped{background:#e6f4eb}.order-status.cancelled{background:#f7e4e2}@media(max-width:800px){.order-layout,.order-edit-columns{grid-template-columns:1fr}}@media(max-width:620px){.order-form-grid,.customer-grid,.order-edit-grid{grid-template-columns:1fr}.order-form-grid .wide,.customer-grid .wide,.order-edit-grid .wide{grid-column:auto}.order-card-summary{grid-template-columns:1fr auto}.order-card-summary span:last-child{display:none}}
+
+.delivery-photo-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;margin-top:8px}
+.delivery-inline{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:8px 10px;border:1px solid #e5ebee;border-radius:9px;background:#fff}
+.delivery-inline span{font-size:10px;color:var(--muted);margin-bottom:2px}
+.delivery-inline b{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-inline-btn{margin-top:0!important;min-width:112px;height:100%;align-self:stretch}
+@media(max-width:620px){.delivery-photo-row{grid-template-columns:minmax(0,1fr) auto;gap:7px}.photo-inline-btn{min-width:102px;padding:7px 9px}.delivery-inline{padding:7px 8px}}
+
+
+.order-photo-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.order-photo-actions .photo-open-only{margin-top:0}
+.order-photo-delete{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border:1px solid #e0b9b5;border-radius:9px;background:#fff;color:#a33e35;font-weight:900;cursor:pointer}
+.order-photo-delete:hover{background:#fff4f2;border-color:#c8766e}
+@media(max-width:620px){.order-photo-actions{display:grid;grid-template-columns:1fr 1fr}.order-photo-actions button{width:100%;min-height:44px}}
+
+
+.sent-order-filter{grid-template-columns:minmax(220px,1fr) 150px 160px auto!important}.sent-date-clear{white-space:nowrap}.order-title-row:has(h2:first-child:last-child){align-items:flex-start}@media(max-width:760px){.sent-order-filter{grid-template-columns:1fr 1fr!important}.sent-order-filter #orderKeyword{grid-column:1/-1}.sent-date-clear{width:100%}}@media(max-width:430px){.sent-order-filter{grid-template-columns:1fr!important}.sent-order-filter #orderKeyword{grid-column:auto}}
+
+/* 本次訂單介面調整 */
+.vertical-resize{resize:vertical!important;min-height:110px;max-width:100%;overflow-x:hidden}
+.order-fixed-date{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 13px;padding:10px 12px;border:1px solid #d8e1e7;border-radius:12px;background:#f7fafb}.order-fixed-meta{display:flex;align-items:center;gap:10px;min-width:0}.order-fixed-meta+ .order-fixed-meta{padding-left:12px;border-left:1px solid #d8e1e7}.order-fixed-date span{font-size:12px;color:#667b88;white-space:nowrap}.order-fixed-date b{font-size:15px;color:#274253;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sent-order-filter{grid-template-columns:minmax(210px,1fr) 150px 150px 150px auto!important}.sent-date-field label,.compact-date-field label{display:block;margin-bottom:5px;font-size:11px;font-weight:800;color:#6d818d}
+.order-card{transition:border-color .2s,box-shadow .2s,transform .2s}.order-card.open{border-color:#274253;box-shadow:0 9px 24px rgba(39,66,83,.16);transform:translateY(-1px)}.order-card.open>.order-card-summary{background:linear-gradient(135deg,#274253,#365d72);color:#fff}.order-card.open>.order-card-summary b,.order-card.open>.order-card-summary span,.order-card.open>.order-card-summary small{color:#fff}.order-card.open>.order-card-summary .order-status.pending{background:#fff3d8;color:#8b5c00}.order-card.open>.order-card-summary .order-status.shipped{background:#e4f4ea;color:#26704f}.order-card.open>.order-card-summary .order-status.cancelled{background:#f7e4e2;color:#9a352e}.sent-summary-main{min-width:0}.sent-summary-main b,.sent-summary-main span,.sent-summary-main small{display:block}.sent-summary-main span{font-size:12px;color:#617884;margin-top:2px}.sent-summary-main small{font-size:11px;color:#82939c;margin-top:2px}.order-chevron{font-size:18px;transition:transform .2s}.order-card.open .order-chevron{transform:rotate(180deg)}
+.compact-order-admin{padding:16px!important}.admin-order-status-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:12px 0}.admin-status-btn{border:1px solid #d8e1e7;border-radius:10px;padding:9px 8px;background:#fff;color:#274253;font-weight:900}.admin-status-btn b{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#edf2f5}.admin-status-btn.active{background:#274253;color:#fff;border-color:#274253}.admin-status-btn.active b{background:rgba(255,255,255,.2);color:#fff}.admin-status-btn.pending.active{background:#98640f;border-color:#98640f}.admin-status-btn.shipped.active{background:#26704f;border-color:#26704f}.admin-status-btn.cancelled.active{background:#963c34;border-color:#963c34}.compact-filter{grid-template-columns:minmax(200px,1fr) 145px 145px auto!important;margin:0 0 9px!important}.compact-btn{height:42px;padding:8px 12px!important}.compact-batch-panel{padding:10px;border:1px solid #dce5e9;border-radius:12px;background:#f8fafb;margin-bottom:12px}.compact-select-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.compact-select-row label{display:flex;align-items:center;gap:8px;font-weight:900}.compact-process-row{display:grid;grid-template-columns:minmax(140px,1fr) 145px repeat(5,auto);gap:7px;align-items:center}.compact-action{min-height:40px;padding:8px 11px!important;white-space:nowrap}.cancel-action{background:#f7e4e2!important;color:#963c34!important}.clean-admin-list{gap:7px!important}.clean-admin-card{grid-template-columns:auto minmax(0,1fr) auto!important;align-items:center!important;padding:10px 11px!important}.clean-admin-card.selected{border-color:#274253!important;background:#f2f6f8!important}.admin-check-wrap{display:flex}.admin-customer-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.admin-customer-head b{font-size:16px}.admin-customer-head time{margin-left:auto;font-size:11px;color:#758a96}.admin-contact-line{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;margin-top:5px;font-size:13px}.admin-contact-line span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-edit-compact{padding:8px 11px!important;white-space:nowrap}.edit-history-box{margin:10px 0;padding:9px;border:1px solid #dce5e9;border-radius:10px;background:#fff}.edit-history-box p{font-size:11px;line-height:1.5;color:#667b88}
+@media(max-width:900px){.sent-order-filter{grid-template-columns:1fr 1fr!important}.sent-order-filter>input:first-child{grid-column:1/-1}.sent-date-clear{grid-column:1/-1}.admin-order-status-buttons{grid-template-columns:repeat(2,1fr)}.compact-filter{grid-template-columns:1fr 1fr!important}.compact-filter>input:first-child{grid-column:1/-1}.compact-filter>button{grid-column:1/-1}.compact-process-row{grid-template-columns:1fr 1fr}.compact-process-row button{width:100%}.admin-contact-line{grid-template-columns:1fr}}
+@media(max-width:620px){.order-fixed-date{grid-template-columns:1fr}.order-fixed-meta+ .order-fixed-meta{padding-left:0;padding-top:9px;border-left:0;border-top:1px solid #d8e1e7}.sent-order-filter,.compact-filter,.compact-process-row{grid-template-columns:1fr!important}.sent-order-filter>input:first-child,.sent-date-clear,.compact-filter>input:first-child,.compact-filter>button{grid-column:auto}.admin-order-status-buttons{gap:5px}.admin-status-btn{font-size:12px;padding:8px 5px}.clean-admin-card{grid-template-columns:auto minmax(0,1fr)!important}.admin-edit-compact{grid-column:1/-1;width:100%}.admin-customer-head time{width:100%;margin-left:0}.compact-select-row{position:sticky;top:64px;z-index:8;background:#f8fafb;padding:4px 0}.order-big-checkbox{width:34px!important;height:34px!important}.vertical-resize{min-height:120px}}
+
+
+/* 訂單寄出管理：門市篩選與雙欄客戶資料 */
+.compact-filter{grid-template-columns:minmax(190px,1.35fr) minmax(150px,.8fr) minmax(145px,.75fr) minmax(145px,.75fr) auto}
+.admin-order-main{min-width:0;display:flex;flex-direction:column;gap:12px}
+.clean-admin-card{grid-template-columns:auto minmax(0,1fr)!important;align-items:flex-start!important}
+.admin-order-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid #e2e9ed}
+.admin-customer-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.admin-customer-head>b{font-size:18px;color:#203d4e}.admin-customer-head time{font-size:12px;color:#758994}
+.admin-order-columns{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:14px}
+.admin-customer-block,.admin-product-block{border:1px solid #dce5e9;border-radius:13px;background:#f9fbfc;padding:13px 15px}
+.admin-customer-block{display:grid;gap:11px}.admin-customer-block>div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:start}
+.admin-customer-block span,.admin-product-block>span{font-size:12px;font-weight:800;color:#748894}
+.admin-customer-block b,.admin-product-block>b{font-size:15px;line-height:1.55;color:#2f4b5a;white-space:pre-wrap;overflow-wrap:anywhere}
+.admin-product-block{display:flex;flex-direction:column;gap:8px;min-height:100%}
+.admin-product-block>b{font-size:16px}
+.admin-order-footer{display:flex;justify-content:flex-end;gap:18px;flex-wrap:wrap;padding-top:1px;font-size:12px;color:#728691}
+.admin-order-footer b{color:#274253;font-size:13px}
+.admin-edit-compact{flex:0 0 auto}
+#confirmShipBtn.needs-handler{box-shadow:0 0 0 3px rgba(39,66,83,.10)}
+@media(max-width:900px){.compact-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.compact-filter .compact-btn{grid-column:1/-1}.admin-order-columns{grid-template-columns:1fr}}
+@media(max-width:620px){.compact-filter{grid-template-columns:1fr}.compact-filter .compact-btn{grid-column:auto}.admin-order-top{align-items:flex-start}.admin-edit-compact{width:auto!important}.admin-order-footer{justify-content:flex-start;gap:10px}.admin-customer-block>div{grid-template-columns:42px minmax(0,1fr)}}
+
+.order-conditional-fields{display:contents}.pickup-fields{grid-column:1/-1;grid-template-columns:1fr 1fr;gap:10px}.pickup-store-alert{color:#c62828!important;font-weight:900!important}.delivery-pickup-badge{display:inline-flex;margin-left:7px;padding:3px 7px;border-radius:999px;background:#fff0f0;color:#c62828;font-size:11px;font-weight:900}.order-admin-filter.compact-filter{grid-template-columns:minmax(180px,1fr) 150px 150px 145px 145px auto}
+@media(max-width:900px){.order-admin-filter.compact-filter{grid-template-columns:1fr 1fr}.pickup-fields{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.pickup-fields{grid-template-columns:1fr}.order-admin-filter.compact-filter{grid-template-columns:1fr}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style id="premium-ui-enhancement">
+/* ===== 全站響應式介面優化：僅改外觀與排列，不改展示、收合、按鈕與資料邏輯 ===== */
+:root{
+  --ui-ink:#203541;--ui-sub:#647985;--ui-line:#d4dfe4;--ui-soft:#f3f7f9;
+  --ui-brand:#274253;--ui-brand-2:#3c667b;--ui-good:#2e7b57;--ui-warn:#a36a12;--ui-bad:#a33e35;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+body{word-break:normal;overflow-wrap:anywhere}
+img,svg,video,canvas{max-width:100%}
+button,input,select,textarea{font:inherit;max-width:100%}
+button{touch-action:manipulation}
+.container,.topbar-inner{max-width:1180px}
+.panel,.login-box,.event-card,.order-card,.order-admin-card,.store-item,.account-item,.manage-activity-card{min-width:0}
+
+/* 共用視覺 */
+.panel,.login-box{
+  border:1px solid var(--ui-line);border-radius:18px;background:#fff;
+  box-shadow:0 9px 28px rgba(31,52,65,.07)
+}
+.panel{padding:20px}
+h1,h2,h3,h4,p{max-width:100%}
+h2{font-size:22px;line-height:1.35;color:var(--ui-ink)}
+.note,.muted,.field label{color:var(--ui-sub)}
+.field,.field.wide,.form-grid>*{min-width:0}
+.field label,.order-edit-grid label{font-weight:800;font-size:13px;line-height:1.35}
+input,select,textarea{
+  width:100%;min-width:0;min-height:44px;border:1.5px solid var(--ui-line);border-radius:11px;
+  padding:10px 11px;background:#fff;color:var(--ui-ink)
+}
+textarea{min-height:92px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--ui-brand);box-shadow:0 0 0 3px rgba(39,66,83,.12)}
+button,.btn{
+  min-height:42px;border-radius:10px;font-weight:800;line-height:1.25;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;
+  white-space:normal
+}
+button.primary,.btn.primary{background:linear-gradient(135deg,var(--ui-brand),var(--ui-brand-2));color:#fff;border:0}
+button.secondary,.btn.secondary{background:#fff;color:var(--ui-brand);border:1.5px solid #bdcbd3}
+button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(--ui-bad)!important;border:1.5px solid #e5b9b3!important}
+.actions,.order-edit-actions,.manage-actions,.manage-card-actions,.order-photo-actions{align-items:stretch}
+.actions>button,.order-edit-actions>button,.manage-actions>button,.manage-card-actions>button,.order-photo-actions>button{height:auto}
+
+/* 頂部導覽 */
+.topbar-inner{gap:12px}
+.brand,.topbar-right,.nav{min-width:0}
+.nav button,.logout-top-btn{min-height:42px}
+
+/* 前台活動總覽：保留店點分組與收合邏輯 */
+.toolbar,.front-filter-grid{align-items:end}
+.summary{gap:10px}
+.event-card,.manage-activity-card{overflow:hidden;border:1px solid var(--ui-line);border-radius:15px;background:#fff}
+.event-summary{min-width:0}
+.event-summary>*{min-width:0}
+.event-summary .event-title,.event-summary .event-store,.event-summary .event-date{overflow-wrap:anywhere}
+.card-body{min-width:0}
+.row>*{min-width:0}
+.gallery{min-width:0}
+.gallery img{max-width:100%;object-fit:cover}
+.store-group-title-row,.activity-store-title,.manage-summary-main{min-width:0}
+
+/* 訂單頁與後台 */
+#orderPage,#adminPage{color:var(--ui-ink)}
+#orderPage .panel,#adminPage .panel,#adminPage .login-box{overflow:visible}
+#orderPage .order-card,#adminPage .order-admin-card,#adminPage .store-item,#adminPage .account-item{
+  border:1px solid var(--ui-line);border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(31,52,65,.05)
+}
+#orderPage .order-card-summary{padding:13px 14px}
+#orderPage .order-fixed-date{border-color:var(--ui-line);background:linear-gradient(135deg,#f8fafb,#eef4f7)}
+#adminPage .admin-tabs{padding:5px;background:#edf3f6;border:1px solid var(--ui-line);border-radius:14px;gap:5px}
+#adminPage .admin-tabs button{border-radius:9px;background:transparent;color:#526b79;box-shadow:none}
+#adminPage .admin-tabs button.active{background:#fff;color:var(--ui-brand);box-shadow:0 3px 10px rgba(31,52,65,.1)}
+#adminPage .admin-order-status-buttons{padding:5px;background:#f2f6f8;border:1px solid var(--ui-line);border-radius:12px;gap:6px}
+#adminPage .admin-status-btn{min-width:0;border-radius:9px;padding:9px 6px}
+#adminPage .compact-batch-panel,#adminPage .manage-filter-bar,#adminPage .manage-bulk-bar{border-color:var(--ui-line);background:#f5f8fa;border-radius:13px}
+#adminPage .clean-admin-card{padding:13px!important}
+#adminPage .admin-customer-block,#adminPage .admin-product-block{background:#f7fafb;border-color:#d8e2e7;border-radius:12px}
+#adminPage .store-item>* ,#adminPage .account-item>* ,#adminPage .order-admin-card>*{min-width:0}
+.clean-admin-card,.admin-order-main,.admin-order-columns,.admin-customer-block,.admin-product-block{min-width:0}
+.admin-customer-block>div>*{min-width:0}
+
+/* 彈窗 */
+.order-edit-modal{background:rgba(18,34,44,.58);backdrop-filter:blur(7px);padding:12px}
+.order-edit-dialog{width:min(920px,100%);max-width:100%;border:1px solid #d2dde3;box-shadow:0 26px 80px rgba(16,31,40,.3);border-radius:20px}
+.order-edit-head{align-items:center;padding-bottom:12px;border-bottom:1px solid #e1e8ec}
+.order-edit-head>button{flex:0 0 42px;width:42px;height:42px;border-radius:50%;border:1px solid #cbd7de;background:#f6f9fa;color:#274253;font-size:23px;padding:0}
+.order-edit-actions{gap:9px;padding-top:14px;border-top:1px solid #e1e8ec}
+.order-edit-actions button{min-width:120px}
+.success-dialog,.password-dialog{max-width:calc(100vw - 24px)}
+
+/* 平板 */
+@media(max-width:900px){
+  .container{width:calc(100% - 22px)}
+  .toolbar{grid-template-columns:1fr 1fr!important}
+  .toolbar>input:first-child,.toolbar>.wide{grid-column:1/-1}
+  .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .field.wide{grid-column:span 2}
+  .account-grid,.account-form,.store-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .sent-order-filter,.compact-filter,.order-admin-filter.compact-filter{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .sent-order-filter>input:first-child,.compact-filter>input:first-child{grid-column:1/-1}
+  .admin-order-columns{grid-template-columns:1fr!important}
+  .store-list.compact{grid-template-columns:1fr!important}
+}
+
+/* 手機 */
+@media(max-width:760px){
+  body{font-size:15px}
+  .topbar{position:relative}
+  .topbar-inner{width:100%;padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+  .brand{grid-column:1/-1}
+  .brand-home-btn{width:100%;min-width:0;text-align:left;font-size:18px;line-height:1.25;padding:4px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-right{grid-column:1/-1;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+  .nav{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;width:100%}
+  .nav button{width:100%;min-width:0;padding:9px 6px!important;font-size:14px;border-radius:11px!important}
+  .logout-top-btn{min-width:44px;width:44px;padding:8px}
+  .logout-top-text{display:none}
+  .container{width:calc(100% - 14px);margin:0 auto 32px}
+  .panel{padding:13px;border-radius:14px}
+  h2{font-size:19px;margin-top:0}
+
+  .toolbar,.front-filter-grid,.form-grid,.account-grid,.account-form,.store-form,
+  .sent-order-filter,.compact-filter,.order-admin-filter.compact-filter,
+  .order-layout,.order-form-grid,.pickup-fields{
+    display:grid!important;grid-template-columns:1fr!important;gap:9px!important
+  }
+  .toolbar>*,.front-filter-grid>*,.form-grid>*,.account-grid>*,.account-form>*,.store-form>*,
+  .sent-order-filter>*,.compact-filter>*,.order-admin-filter.compact-filter>*,.field.wide{
+    grid-column:auto!important;min-width:0!important
+  }
+
+  .summary{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px}
+  .summary>*{min-width:0;padding:10px!important}
+
+  /* 活動卡片在手機改為清楚直排，但不改收合或店點歸屬 */
+  .event-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:6px 8px!important;padding:12px!important;align-items:center}
+  .event-summary>*{min-width:0}
+  .event-summary .event-title,.event-summary .event-store,.event-summary .event-date{grid-column:1/2}
+  .event-summary .event-status,.event-summary .event-arrow,.event-summary .chevron{grid-column:2/3;grid-row:1/span 3;align-self:center}
+  .card-body{padding:13px!important}
+  .row{grid-template-columns:68px minmax(0,1fr)!important;gap:7px;font-size:14px}
+  .gallery,.photo-preview{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+  .gallery img,.photo-preview img{width:100%!important;height:82px!important;min-width:0;object-fit:cover;border-radius:8px}
+
+  .admin-tabs{display:flex!important;overflow-x:auto!important;flex-wrap:nowrap!important;gap:5px!important;margin:0 -2px 10px;padding:4px!important;scrollbar-width:none}
+  .admin-tabs::-webkit-scrollbar{display:none}
+  .admin-tabs button{flex:0 0 auto!important;min-width:max-content!important;min-height:40px;padding:8px 11px}
+
+  .actions,.manage-actions,.manage-card-actions,.order-photo-actions,.order-submit-row,.order-edit-actions{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;width:100%
+  }
+  .actions>button,.manage-actions>button,.manage-card-actions>button,.order-photo-actions>button,.order-submit-row>button,.order-edit-actions>button{
+    width:100%!important;min-width:0!important;min-height:44px;padding:9px 7px
+  }
+
+  .store-filter-group{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px;width:100%}
+  .store-list.compact,.events{grid-template-columns:1fr!important}
+  .store-list.compact .store-item,.store-item,.account-item{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;padding:11px!important}
+  .store-item .actions,.account-item .actions{margin-top:3px}
+
+  .manage-activity-card summary{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:8px!important;padding:12px!important}
+  .manage-collapse-body{grid-template-columns:1fr!important;gap:8px!important;padding:0 12px 12px!important}
+  .manage-bulk-bar{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+  .manage-bulk-left,.manage-bulk-right{width:100%;display:flex;flex-wrap:wrap;gap:7px}
+  .manage-bulk-delete{width:100%}
+
+  .admin-order-status-buttons{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .clean-admin-card{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:9px!important;padding:11px!important}
+  .admin-order-top,.admin-order-footer{gap:8px;flex-wrap:wrap}
+  .admin-order-footer>*{min-width:0}
+  .admin-edit-compact{width:auto!important}
+  .admin-customer-block>div{grid-template-columns:54px minmax(0,1fr)!important;gap:7px!important}
+
+  .delivery-photo-row{grid-template-columns:1fr!important}
+  .photo-inline-btn{width:100%!important;min-width:0!important}
+  .order-fixed-date{align-items:flex-start;flex-wrap:wrap}
+  .order-fixed-date small{width:100%;margin-left:0}
+
+  .order-edit-modal{align-items:flex-end!important;padding:0!important}
+  .order-edit-dialog{width:100%!important;max-width:100%!important;max-height:94vh!important;margin:0!important;border-radius:18px 18px 0 0!important;padding:14px!important;overflow:auto!important}
+  .order-edit-head{position:sticky;top:-14px;z-index:5;background:#fff;padding:12px 0 10px}
+  .order-edit-actions{position:sticky;bottom:-14px;z-index:5;background:#fff;padding:11px 0 calc(11px + env(safe-area-inset-bottom))}
+  .password-dialog{width:100%;max-height:90vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 15px calc(18px + env(safe-area-inset-bottom))}
+  .lightbox img{max-width:96vw;max-height:84vh;border-radius:12px}
+}
+
+@media(max-width:430px){
+  .container{width:calc(100% - 10px)}
+  .panel{padding:11px}
+  .summary{grid-template-columns:1fr 1fr!important}
+  .gallery,.photo-preview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .actions,.manage-actions,.manage-card-actions,.order-photo-actions,.order-submit-row,.order-edit-actions{grid-template-columns:1fr!important}
+  .admin-order-status-buttons{grid-template-columns:1fr 1fr!important}
+  .row{grid-template-columns:62px minmax(0,1fr)!important}
+  .event-summary{padding:10px!important}
+  button,.btn{font-size:14px}
+}
+</style>
+
+
+
+<style id="desktop-ui-priority-fix">
+/* ===== 電腦版 UI 優先修正：僅調整排版與視覺，不改任何功能與展示邏輯 ===== */
+@media (min-width: 901px){
+  html,body{overflow-x:auto}
+  body{min-width:1180px;background:#eef3f6}
+  .topbar-inner,.container{width:min(1380px,calc(100% - 48px))!important;max-width:1380px!important;margin-left:auto!important;margin-right:auto!important}
+  .topbar-inner{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:20px!important;padding:12px 0!important}
+  .brand{flex:0 0 auto;min-width:210px}
+  .topbar-right{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:12px!important;min-width:0}
+  .nav{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:8px!important}
+  .nav button,.logout-top-btn{width:auto!important;min-width:92px!important;min-height:42px!important;white-space:nowrap!important;padding:9px 14px!important}
+  .logout-top-btn{min-width:88px!important}
+
+  .hero{padding:30px 20px 20px!important}
+  .panel{padding:22px!important;border-radius:18px!important}
+  .panel + .panel{margin-top:18px}
+  h2{margin:0 0 16px;font-size:22px;line-height:1.35}
+
+  input,select,textarea,button,.btn{font-size:14px}
+  input,select{height:44px!important;min-height:44px!important}
+  textarea{min-height:96px}
+  button,.btn{min-height:42px!important;padding:9px 14px!important;white-space:nowrap!important}
+
+  /* 前台篩選與摘要 */
+  .toolbar{display:grid!important;grid-template-columns:minmax(280px,1.6fr) minmax(180px,.8fr) minmax(180px,.8fr) auto!important;gap:12px!important;align-items:end!important;padding:16px!important}
+  .toolbar>*{min-width:0!important;grid-column:auto!important}
+  .front-filter-grid{display:grid!important;grid-template-columns:minmax(260px,1.4fr) repeat(3,minmax(150px,.7fr)) auto!important;gap:12px!important;align-items:end!important}
+  .front-filter-grid>*{min-width:0!important;grid-column:auto!important}
+  .summary{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+  .summary>*{min-width:0!important}
+
+  /* 前台活動清單：保留店點分組及收合 */
+  .events{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+  .event-card{min-width:0!important}
+  .event-summary{display:grid!important;grid-template-columns:minmax(0,1.7fr) minmax(150px,.65fr) minmax(145px,.62fr) auto!important;gap:12px!important;align-items:center!important;padding:15px 16px!important}
+  .event-summary>*{min-width:0!important}
+  .card-body{padding:16px!important}
+  .gallery{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:9px!important}
+  .gallery img{width:100%!important;height:120px!important;object-fit:cover!important}
+
+  /* 新增活動 */
+  .form-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;align-items:start!important}
+  .form-grid>*{min-width:0!important}
+  .field.wide{grid-column:span 2!important}
+  .store-picker-field{grid-column:span 2!important}
+  .actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-start!important;align-items:center!important;gap:10px!important;width:auto!important}
+  .actions>button{width:auto!important;min-width:120px!important}
+  .photo-preview{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:10px!important}
+  .photo-preview img{height:120px!important}
+
+  /* 門市與帳號管理 */
+  .store-form{display:grid!important;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(240px,1.4fr) auto!important;gap:12px!important;align-items:end!important}
+  .account-form{display:grid!important;grid-template-columns:minmax(150px,.8fr) minmax(160px,.9fr) minmax(220px,1.15fr) minmax(150px,.8fr) minmax(150px,.8fr) auto!important;gap:12px!important;align-items:end!important}
+  .store-item{display:grid!important;grid-template-columns:minmax(220px,1.4fr) minmax(150px,.8fr) minmax(180px,.9fr) auto!important;gap:14px!important;align-items:center!important;padding:14px 16px!important}
+  .account-item{display:grid!important;grid-template-columns:minmax(180px,1.1fr) minmax(180px,1fr) minmax(120px,.65fr) minmax(190px,1.1fr) auto!important;gap:14px!important;align-items:center!important;padding:14px 16px!important}
+  .store-item>*,.account-item>*{min-width:0!important}
+  .store-list.compact{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  .store-list.compact .store-item{grid-template-columns:minmax(0,1fr) auto!important}
+  .manage-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:nowrap!important;width:auto!important}
+  .manage-actions button{width:auto!important;min-width:86px!important}
+
+  /* 後台頁籤與活動管理 */
+  #adminPage .admin-tabs{display:flex!important;flex-wrap:wrap!important;overflow:visible!important;gap:6px!important;padding:6px!important}
+  #adminPage .admin-tabs button{flex:0 0 auto!important;min-width:120px!important;width:auto!important}
+  .manage-filter-bar{display:grid!important;grid-template-columns:minmax(220px,1.3fr) repeat(3,minmax(150px,.8fr)) auto!important;gap:12px!important;align-items:end!important}
+  .manage-filter-bar>*{min-width:0!important;grid-column:auto!important}
+  .manage-bulk-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;flex-wrap:wrap!important;padding:12px 14px!important}
+  .manage-bulk-left,.manage-bulk-right{display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;width:auto!important}
+  .manage-activity-card summary{display:grid!important;grid-template-columns:auto minmax(0,1.5fr) minmax(150px,.6fr) minmax(145px,.6fr) auto!important;gap:12px!important;align-items:center!important;padding:15px 16px!important}
+  .manage-collapse-body{display:grid!important;grid-template-columns:minmax(0,1.5fr) minmax(260px,.65fr)!important;gap:16px!important;padding:0 16px 16px!important}
+  .manage-card-actions{display:flex!important;flex-direction:column!important;gap:8px!important;width:100%!important}
+  .manage-card-actions button{width:100%!important;min-width:0!important}
+
+  /* 訂單前台 */
+  .order-layout{display:grid!important;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr)!important;gap:18px!important;align-items:start!important}
+  .order-form-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  .order-form-grid .wide{grid-column:1/-1!important}
+  .order-submit-row{grid-template-columns:minmax(150px,.6fr) minmax(240px,1.4fr)!important;gap:10px!important}
+  .sent-order-filter{display:grid!important;grid-template-columns:minmax(250px,1.4fr) repeat(3,minmax(145px,.65fr)) auto!important;gap:10px!important;align-items:end!important}
+  .sent-order-filter>*{min-width:0!important;grid-column:auto!important}
+
+  /* 訂單後台 */
+  .admin-order-status-buttons{display:grid!important;grid-template-columns:repeat(4,minmax(120px,1fr))!important;gap:8px!important}
+  .compact-filter,.order-admin-filter.compact-filter{display:grid!important;grid-template-columns:minmax(240px,1.3fr) repeat(3,minmax(145px,.7fr)) auto!important;gap:10px!important;align-items:end!important}
+  .compact-filter>*,.order-admin-filter.compact-filter>*{min-width:0!important;grid-column:auto!important}
+  .compact-process-row{display:grid!important;grid-template-columns:repeat(4,minmax(130px,1fr))!important;gap:8px!important}
+  .clean-admin-card{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:14px!important;align-items:start!important;padding:15px!important}
+  .admin-order-main{min-width:0!important}
+  .admin-order-columns{display:grid!important;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)!important;gap:14px!important}
+  .admin-edit-compact{grid-column:auto!important;width:auto!important;min-width:92px!important}
+  .admin-order-top,.admin-order-footer{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;flex-wrap:wrap!important}
+  .admin-customer-head{min-width:0!important}
+  .admin-customer-head time{margin-left:auto!important;width:auto!important}
+  .admin-contact-line{display:grid!important;grid-template-columns:160px minmax(0,1fr)!important;gap:10px!important}
+
+  /* 編輯彈窗 */
+  .order-edit-modal{padding:24px!important;align-items:center!important}
+  .order-edit-dialog{width:min(1040px,calc(100vw - 64px))!important;max-width:1040px!important;max-height:calc(100vh - 48px)!important;overflow:auto!important;padding:22px!important;border-radius:20px!important}
+  .order-edit-columns{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(320px,.75fr)!important;gap:18px!important}
+  .order-edit-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  .order-edit-grid .wide{grid-column:1/-1!important}
+  .order-edit-actions{display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:10px!important}
+  .order-edit-actions button{width:auto!important;min-width:130px!important}
+
+  /* 避免文字與元件撐破欄位 */
+  .event-summary>*,.manage-activity-card summary>*,.admin-order-columns>*,.order-edit-columns>*,
+  .store-item>*,.account-item>*,.clean-admin-card>*,.form-grid>*,.toolbar>*{min-width:0!important}
+  .event-title,.event-store,.event-date,.manage-summary-main,.admin-order-main,
+  .store-name,.store-sub,.account-item .name,.account-item .small{overflow-wrap:anywhere}
+}
+
+@media (min-width:901px) and (max-width:1199px){
+  body{min-width:1000px}
+  .topbar-inner,.container{width:calc(100% - 28px)!important}
+  .events{grid-template-columns:1fr!important}
+  .front-filter-grid{grid-template-columns:minmax(220px,1.2fr) repeat(2,minmax(145px,.7fr))!important}
+  .front-filter-grid>*:last-child{grid-column:auto!important}
+  .account-form{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .account-form .actions{grid-column:1/-1!important}
+  .manage-filter-bar{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .order-layout{grid-template-columns:1fr!important}
+  .order-edit-columns{grid-template-columns:1fr!important}
+}
+</style>
+
+
+<style id="desktop-order-page-alignment-fix">
+/* 訂單回傳頁：桌機版欄位對齊與防溢出修正，不變更任何功能邏輯 */
+*,*::before,*::after{box-sizing:border-box}
+
+@media (min-width:901px){
+  #orderPage{overflow:visible!important}
+  #orderPage .order-layout{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:18px!important;
+    align-items:start!important;
+  }
+  #orderPage .order-layout>.panel{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  #orderPage .order-form-grid,
+  #orderPage .order-filter-grid{
+    width:100%!important;
+    min-width:0!important;
+  }
+  #orderPage .field,
+  #orderPage .sent-date-field{
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  #orderPage .field label,
+  #orderPage .sent-date-field label{
+    display:block!important;
+    width:100%!important;
+    margin:0 0 6px!important;
+    line-height:1.25!important;
+  }
+  #orderPage input,
+  #orderPage select,
+  #orderPage textarea{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  #orderPage textarea{resize:vertical!important}
+
+  #orderPage .order-fixed-date{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:auto minmax(100px,1fr) auto!important;
+    align-items:center!important;
+    gap:10px!important;
+    margin-bottom:14px!important;
+  }
+  #orderPage .order-fixed-date small{
+    min-width:0!important;
+    text-align:right!important;
+    white-space:normal!important;
+  }
+
+  #orderPage .order-form-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    column-gap:12px!important;
+    row-gap:13px!important;
+    align-items:start!important;
+  }
+  #orderPage .order-form-grid>.wide,
+  #orderPage .order-form-grid>.order-conditional-fields{
+    grid-column:1/-1!important;
+  }
+  #orderPage .order-conditional-fields{
+    width:100%!important;
+    min-width:0!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:12px!important;
+  }
+  #orderPage .order-submit-row{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:minmax(150px,.42fr) minmax(240px,1fr)!important;
+    gap:10px!important;
+    margin-top:14px!important;
+  }
+  #orderPage .order-submit-row button{
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+
+  /* 右側搜尋列改為規整的兩列，避免五個元件硬塞而超出卡片 */
+  #orderPage .sent-order-filter{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 118px!important;
+    gap:10px!important;
+    align-items:end!important;
+    margin:14px 0 12px!important;
+  }
+  #orderPage .sent-order-filter>*{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    grid-column:auto!important;
+    margin:0!important;
+  }
+  #orderPage .sent-order-filter>#orderKeyword{grid-column:1/3!important;grid-row:1!important}
+  #orderPage .sent-order-filter>#orderStatusFilter{grid-column:3!important;grid-row:1!important}
+  #orderPage .sent-order-filter>.sent-date-field:first-of-type{grid-column:1!important;grid-row:2!important}
+  #orderPage .sent-order-filter>.sent-date-field:nth-of-type(2){grid-column:2!important;grid-row:2!important}
+  #orderPage .sent-order-filter>.sent-date-clear{
+    grid-column:3!important;
+    grid-row:2!important;
+    width:100%!important;
+    min-width:0!important;
+    height:44px!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  #orderPage .order-card-list{width:100%!important;min-width:0!important}
+  #orderPage .order-card,
+  #orderPage .order-card-summary{width:100%!important;min-width:0!important;max-width:100%!important}
+  #orderPage .order-card-summary{
+    grid-template-columns:minmax(0,1fr) auto 20px!important;
+    align-items:center!important;
+  }
+  #orderPage .sent-summary-main{min-width:0!important}
+  #orderPage .sent-summary-main b,
+  #orderPage .sent-summary-main span,
+  #orderPage .sent-summary-main small{
+    display:block!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+}
+
+@media (min-width:901px) and (max-width:1199px){
+  #orderPage .order-layout{grid-template-columns:1fr!important}
+}
+</style>
+
+
+<style id="desktop-front-activity-date-fix">
+/* 電腦版活動總覽修正：日期完整顯示、欄位對齊，不更動任何功能與收合邏輯 */
+@media (min-width:901px){
+  #homePage .events{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:18px!important;
+    align-items:start!important;
+  }
+  #homePage .store-activity-group{
+    min-width:0!important;
+    margin-bottom:0!important;
+    border-radius:18px!important;
+  }
+  #homePage .store-activity-group>summary{
+    min-height:82px;
+    padding:16px 18px!important;
+  }
+  #homePage .store-group-events{
+    min-width:0;
+    padding:4px 14px 14px!important;
+  }
+  #homePage .event-row{
+    min-width:0!important;
+    width:100%!important;
+  }
+  #homePage .event-summary{
+    width:100%!important;
+    min-width:0!important;
+    display:grid!important;
+    grid-template-columns:minmax(150px,1.25fr) minmax(100px,.72fr) minmax(188px,1fr) auto 24px!important;
+    gap:8px!important;
+    align-items:center!important;
+    padding:15px 14px!important;
+    overflow:hidden!important;
+  }
+  #homePage .event-summary>*{min-width:0!important}
+  #homePage .mall-name{
+    font-size:16px!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+  #homePage .summary-region{
+    font-size:13px!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+  #homePage .summary-date{
+    font-size:13px!important;
+    line-height:1.35!important;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  #homePage .summary-badges{
+    display:flex!important;
+    justify-content:flex-end!important;
+    flex-wrap:nowrap!important;
+    gap:5px!important;
+    white-space:nowrap!important;
+  }
+  #homePage .summary-badges .badge{
+    flex:0 0 auto!important;
+    padding:5px 8px!important;
+    font-size:12px!important;
+  }
+  #homePage .chevron{
+    width:24px!important;
+    font-size:17px!important;
+    justify-self:end!important;
+  }
+}
+@media (min-width:901px) and (max-width:1280px){
+  #homePage .events{grid-template-columns:1fr!important}
+  #homePage .event-summary{
+    grid-template-columns:minmax(190px,1.4fr) minmax(130px,.7fr) minmax(200px,.85fr) auto 24px!important;
+  }
+}
+</style>
+
+
+<style id="desktop-front-activity-expand-layout-fix">
+/* 電腦版：多活動店點展開時改為整列顯示，避免左右欄高度不一產生大片空白 */
+@media (min-width:901px){
+  #homePage .multi-activity-group[open]{
+    grid-column:1 / -1!important;
+    border-color:#c8d6dd!important;
+    box-shadow:0 12px 28px rgba(39,66,83,.10)!important;
+  }
+  #homePage .multi-activity-group[open]>summary{
+    min-height:76px!important;
+    background:linear-gradient(180deg,#f7fafb 0%,#f1f6f8 100%)!important;
+    border-bottom:1px solid #dce5e9;
+  }
+  #homePage .multi-activity-group[open] .store-group-events{
+    padding:8px 18px 18px!important;
+  }
+  #homePage .multi-activity-group[open] .store-event-sequence{
+    justify-content:flex-start;
+    gap:0;
+    margin:14px 0 7px;
+    color:#6f838f;
+  }
+  #homePage .multi-activity-group[open] .store-event-sequence:before{
+    content:"";
+    flex:0 0 4px;
+    width:4px;
+    height:18px;
+    margin-right:8px;
+    border-radius:999px;
+    background:#c3841b;
+  }
+  #homePage .multi-activity-group[open] .store-event-sequence:after{display:none}
+  #homePage .multi-activity-group[open] .event-row{
+    margin-top:0!important;
+    border-radius:13px!important;
+    box-shadow:none!important;
+  }
+  #homePage .multi-activity-group[open] .event-summary{
+    grid-template-columns:minmax(190px,1.35fr) minmax(110px,.65fr) minmax(230px,1fr) auto 24px!important;
+    padding:16px 18px!important;
+  }
+  #homePage .multi-activity-group[open] .summary-date{
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+
+  /* 活動照片改為小型縮圖，點擊仍使用原本燈箱放大 */
+  #homePage .multi-activity-group[open] .gallery{
+    display:grid!important;
+    grid-template-columns:repeat(auto-fill,minmax(140px,160px))!important;
+    justify-content:start!important;
+    gap:10px!important;
+    margin-top:14px!important;
+  }
+  #homePage .multi-activity-group[open] .gallery img{
+    width:160px!important;
+    height:108px!important;
+    max-width:100%!important;
+    object-fit:cover!important;
+    border-radius:10px!important;
+    cursor:zoom-in!important;
+    box-shadow:0 3px 10px rgba(39,66,83,.08)!important;
+  }
+  #homePage .multi-activity-group[open] .gallery img:hover{
+    transform:translateY(-2px) scale(1.02)!important;
+    box-shadow:0 8px 18px rgba(39,66,83,.16)!important;
+  }
+}
+@media (max-width:900px){
+  #homePage .gallery{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  #homePage .gallery img{
+    width:100%!important;
+    height:88px!important;
+  }
+}
+@media (max-width:480px){
+  #homePage .gallery{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+</style>
+
+
+<style id="store-accordion-order-effect">
+/* 前台門市展開效果：沿用訂單卡片的藍底白字與單一展開視覺 */
+#homePage .store-activity-group{
+  transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;
+}
+#homePage .store-activity-group[open]{
+  border-color:#274253!important;
+  box-shadow:0 9px 24px rgba(39,66,83,.16)!important;
+  transform:translateY(-1px);
+}
+#homePage .store-activity-group[open]>summary{
+  background:linear-gradient(135deg,#274253,#365d72)!important;
+  color:#fff!important;
+}
+#homePage .store-activity-group[open]>summary:hover{
+  background:linear-gradient(135deg,#274253,#365d72)!important;
+}
+#homePage .store-activity-group[open] .store-group-name,
+#homePage .store-activity-group[open] .store-group-sub,
+#homePage .store-activity-group[open] .store-group-arrow{
+  color:#fff!important;
+}
+#homePage .store-activity-group[open] .store-group-count{
+  background:rgba(255,255,255,.16)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.25);
+}
+#homePage .store-activity-group[open] .activity-area-label{
+  background:#fff!important;
+}
+#homePage .store-activity-group[open] .activity-area-label.north{color:#315f79!important}
+#homePage .store-activity-group[open] .activity-area-label.central{color:#a76b00!important}
+#homePage .store-activity-group[open] .activity-area-label.south{color:#a54a3d!important}
+#homePage .store-activity-group[open] .activity-area-label.east{color:#3f7552!important}
+</style>
+
+<style id="order-edit-modal-polish-v2">
+/* 修改訂單彈窗：配送置於地址上方，並提升資訊層級與操作性 */
+#orderEditModal{padding:28px!important;background:rgba(22,40,51,.62)!important;backdrop-filter:blur(8px)}
+#orderEditModal .order-edit-dialog{
+  width:min(1080px,calc(100vw - 56px))!important;max-width:1080px!important;
+  max-height:calc(100vh - 56px)!important;padding:0!important;overflow:hidden!important;
+  border:1px solid rgba(210,221,227,.95)!important;border-radius:24px!important;
+  background:#fff!important;box-shadow:0 30px 90px rgba(13,29,39,.34)!important
+}
+#orderEditModal .order-edit-head{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:18px!important;padding:22px 26px 18px!important;border-bottom:1px solid #e0e8ec!important;
+  background:linear-gradient(180deg,#fff 0%,#fbfcfd 100%)
+}
+#orderEditModal .order-edit-head h2{margin:0!important;font-size:27px!important;line-height:1.2;color:#203d4e}
+#orderEditModal .order-edit-head p{margin:7px 0 0;color:#718590;font-size:13px;line-height:1.5}
+#orderEditModal .order-edit-head>button{
+  flex:0 0 46px!important;width:46px!important;height:46px!important;min-height:46px!important;
+  border:1px solid #cbd8df!important;border-radius:50%!important;background:#f7fafb!important;
+  color:#274253!important;font-size:27px!important;font-weight:500!important;line-height:1!important;padding:0!important
+}
+#orderEditModal .order-edit-head>button:hover{background:#eaf1f4!important;border-color:#9fb3be!important}
+#orderEditModal .order-edit-columns{
+  display:grid!important;grid-template-columns:minmax(0,1.25fr) minmax(310px,.75fr)!important;
+  gap:18px!important;padding:20px 26px!important;overflow:auto!important;max-height:calc(100vh - 194px)!important;
+  background:#f7fafb
+}
+#orderEditModal .current-order-box,#orderEditModal .original-box{
+  min-width:0;padding:19px!important;border:1px solid #dce5e9!important;border-radius:17px!important;background:#fff!important;
+  box-shadow:0 5px 16px rgba(39,66,83,.05)
+}
+#orderEditModal section>h3{margin:0 0 15px!important;font-size:19px;color:#274253}
+#orderEditModal .order-edit-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:13px!important}
+#orderEditModal .order-edit-grid label{display:flex;flex-direction:column;gap:7px;min-width:0;color:#385361;font-size:13px;font-weight:900}
+#orderEditModal .order-edit-grid input,#orderEditModal .order-edit-grid select,#orderEditModal .order-edit-grid textarea{
+  min-width:0;width:100%;border:1px solid #cbd9e0!important;border-radius:12px!important;background:#fff!important;
+  color:#203d4e!important;padding:12px 13px!important;font-weight:700;outline:none;transition:.16s ease
+}
+#orderEditModal .order-edit-grid input,#orderEditModal .order-edit-grid select{height:48px!important}
+#orderEditModal .order-edit-grid textarea{min-height:150px!important;line-height:1.6!important;resize:vertical!important}
+#orderEditModal .order-edit-grid input:focus,#orderEditModal .order-edit-grid select:focus,#orderEditModal .order-edit-grid textarea:focus{
+  border-color:#274253!important;box-shadow:0 0 0 3px rgba(39,66,83,.11)!important
+}
+#orderEditModal .order-edit-grid .wide{grid-column:1/-1!important}
+#orderEditModal #editOriginalData{display:flex;flex-direction:column;gap:0}
+#orderEditModal #editOriginalData>p{margin:0!important;padding:11px 0!important;border-bottom:1px dashed #dfe7eb!important;line-height:1.55;color:#4e6674;overflow-wrap:anywhere}
+#orderEditModal #editOriginalData>p:last-of-type{border-bottom:0!important}
+#orderEditModal #editOriginalData>p b{display:inline-block;min-width:86px;color:#274253}
+#orderEditModal #editOriginalData>.photo-open-only{width:100%;min-height:45px;margin-top:14px!important;border-radius:11px!important}
+#orderEditModal .edit-history-box{margin:14px 0 0!important;background:#f7fafb!important}
+#orderEditModal .order-edit-actions{
+  display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:11px!important;
+  padding:16px 26px 20px!important;border-top:1px solid #e0e8ec!important;background:#fff!important
+}
+#orderEditModal .order-edit-actions button{width:160px!important;min-width:160px!important;height:48px!important;border-radius:12px!important}
+@media(max-width:800px){
+ #orderEditModal{padding:0!important;align-items:flex-end!important}
+ #orderEditModal .order-edit-dialog{width:100%!important;max-width:none!important;max-height:94vh!important;border-radius:22px 22px 0 0!important}
+ #orderEditModal .order-edit-head{padding:18px 16px 14px!important}
+ #orderEditModal .order-edit-head h2{font-size:22px!important}
+ #orderEditModal .order-edit-head p{display:none}
+ #orderEditModal .order-edit-columns{grid-template-columns:1fr!important;padding:14px!important;gap:12px!important;max-height:calc(94vh - 151px)!important}
+ #orderEditModal .current-order-box,#orderEditModal .original-box{padding:15px!important;border-radius:14px!important}
+ #orderEditModal .order-edit-grid{grid-template-columns:1fr!important;gap:11px!important}
+ #orderEditModal .order-edit-grid .wide{grid-column:auto!important}
+ #orderEditModal .order-edit-actions{padding:12px 14px calc(14px + env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:1fr 1fr!important}
+ #orderEditModal .order-edit-actions button{width:100%!important;min-width:0!important}
+}
+</style>
+
+<style>
+/* 活動照片區修正：避免電腦版縮圖與排序文字被壓縮 */
+@media (min-width:721px){
+  .photo-workspace{
+    grid-template-columns:minmax(300px,34%) minmax(0,1fr)!important;
+    gap:18px!important;
+  }
+  .photo-workspace .photo-preview{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(118px,1fr))!important;
+    gap:12px!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+  .photo-workspace .photo-preview-item{
+    min-width:0!important;
+    aspect-ratio:auto!important;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  .photo-workspace .photo-preview-item img{
+    width:100%!important;
+    height:auto!important;
+    aspect-ratio:1 / 1!important;
+    object-fit:cover!important;
+    display:block!important;
+    flex:0 0 auto!important;
+  }
+  .photo-workspace .photo-order-hint{
+    width:100%!important;
+    min-height:34px!important;
+    margin-top:7px!important;
+    padding:0 2px!important;
+    font-size:12px!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+}
+@media (min-width:721px) and (max-width:1180px){
+  .photo-workspace .photo-preview{
+    grid-template-columns:repeat(3,minmax(125px,1fr))!important;
+  }
+}
+@media (max-width:720px){
+  .photo-workspace .photo-preview-item{aspect-ratio:auto!important}
+  .photo-workspace .photo-preview-item img{
+    width:100%!important;
+    height:auto!important;
+    aspect-ratio:1 / 1!important;
+    object-fit:cover!important;
+  }
+  .photo-workspace .photo-order-hint{
+    white-space:normal!important;
+    line-height:1.35!important;
+  }
+}
+</style>
+
+<style>
+/* ===== 本次修正：照片底框完整包覆＋大量活動清單緊湊重排 ===== */
+
+/* 照片預覽區不得被縮圖內容撐出底框 */
+.photo-workspace,
+.photo-workspace > *{min-width:0!important}
+.photo-workspace .photo-preview{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+}
+.photo-workspace .photo-preview-item{
+  width:auto!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+.photo-workspace .photo-preview-item img{
+  width:100%!important;
+  max-width:100%!important;
+}
+.photo-workspace .photo-order-hint{
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* 活動清單改為緊湊表格式，活動增加時仍容易掃讀 */
+.manage-list{gap:8px!important}
+.manage-column-head{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr) 150px 42px;
+  gap:12px;
+  align-items:center;
+  padding:0 15px 8px;
+  color:#788b96;
+  font-size:12px;
+  font-weight:800;
+}
+.manage-column-head span:nth-child(3),
+.manage-column-head span:nth-child(4){text-align:center}
+.manage-activity-card{
+  margin:0!important;
+  border-radius:13px!important;
+  box-shadow:0 2px 8px rgba(39,66,83,.035)!important;
+}
+.manage-activity-card summary{
+  grid-template-columns:30px minmax(0,1fr) 150px 42px!important;
+  gap:12px!important;
+  min-height:72px;
+  padding:11px 15px!important;
+}
+.manage-activity-card summary:hover{background:#f6f9fa!important}
+.manage-summary-select{width:30px}
+.manage-card-checkbox{width:20px!important;height:20px!important}
+.manage-summary-title{
+  font-size:16px!important;
+  line-height:1.35!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.manage-summary-sub{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:5px 10px!important;
+  margin-top:5px!important;
+  line-height:1.35;
+}
+.manage-summary-sub .activity-area-label{
+  min-width:48px!important;
+  padding:4px 8px!important;
+  border-radius:8px!important;
+  font-size:11px!important;
+}
+.manage-activity-card summary > .badge{
+  justify-self:stretch!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  padding:7px 10px!important;
+}
+.manage-expand-icon{
+  width:38px;height:38px;
+  display:grid;place-items:center;
+  border-radius:10px;
+  background:#f0f4f6;
+  font-size:18px!important;
+}
+.manage-activity-card[open] summary{
+  background:#274253!important;
+}
+.manage-activity-card[open] .manage-summary-title,
+.manage-activity-card[open] .manage-summary-sub,
+.manage-activity-card[open] .manage-summary-sub span:not(.activity-area-label),
+.manage-activity-card[open] .manage-expand-icon{color:#fff!important}
+.manage-activity-card[open] .manage-expand-icon{background:rgba(255,255,255,.14)}
+.manage-collapse-body{
+  grid-template-columns:minmax(0,1fr) 112px!important;
+  gap:14px!important;
+  padding:0 15px 15px!important;
+}
+.manage-collapse-content{padding-top:12px!important}
+.manage-info-row{padding:8px 0!important}
+.manage-card-actions{padding-top:12px!important}
+.manage-card-actions button{height:40px!important}
+.manage-photo-strip img{width:62px!important;height:62px!important}
+
+@media (min-width:721px) and (max-width:1180px){
+  .photo-workspace .photo-preview{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+}
+@media (max-width:720px){
+  .photo-workspace .photo-preview{
+    overflow:hidden!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+  .manage-column-head{display:none}
+  .manage-activity-card summary{
+    grid-template-columns:28px minmax(0,1fr) 38px!important;
+    min-height:0;
+    padding:12px!important;
+  }
+  .manage-activity-card summary > .badge{
+    grid-column:2/3!important;
+    justify-self:start!important;
+    width:auto!important;
+  }
+  .manage-expand-icon{grid-column:3!important;grid-row:1/3!important}
+  .manage-collapse-body{grid-template-columns:1fr!important;padding:0 12px 12px!important}
+}
+@media (max-width:430px){
+  .photo-workspace .photo-preview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+</style>
+
+
+<style id="order-font-weight-refinement">
+/* 訂單明細與寄出管理：降低一般資料文字粗細，保留標題與狀態層級 */
+.order-card-detail .customer-grid b,
+.order-card-detail .delivery-inline b{
+  font-weight:500!important;
+  color:#334e5d;
+  line-height:1.7;
+}
+.order-card-detail .customer-grid>div:first-child b{
+  font-weight:600!important;
+}
+.order-card-detail .ship-line b{
+  font-weight:600!important;
+}
+
+.admin-order-columns .admin-customer-block b,
+.admin-order-columns .admin-product-block>b{
+  font-weight:500!important;
+  color:#334e5d;
+  line-height:1.7;
+}
+.admin-order-footer b{
+  font-weight:600!important;
+}
+.admin-customer-head>b,
+.customer-title,
+.admin-customer-block span,
+.admin-product-block>span,
+.order-status,
+.admin-edit-compact,
+.photo-open-only{
+  font-weight:800;
+}
+</style>
+
+<style id="account-list-layout-fix">
+/* 管理帳號清單：重新排列，避免欄位與按鈕跑位 */
+#accountList.account-list{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+  margin-top:16px!important;
+}
+#accountList .account-item{
+  display:grid!important;
+  grid-template-columns:minmax(230px,1.35fr) 130px 105px 150px minmax(190px,.9fr) auto!important;
+  grid-template-areas:"identity role status password login actions"!important;
+  align-items:center!important;
+  gap:14px!important;
+  width:100%!important;
+  min-height:104px!important;
+  padding:18px 20px!important;
+  border:1px solid #d8e3e8!important;
+  border-radius:16px!important;
+  background:#fff!important;
+  box-shadow:0 3px 12px rgba(39,66,83,.045)!important;
+}
+#accountList .account-item>div:nth-child(1){grid-area:identity;min-width:0}
+#accountList .account-item>div:nth-child(2){grid-area:role}
+#accountList .account-item>div:nth-child(3){grid-area:status}
+#accountList .account-item>div:nth-child(4){grid-area:password}
+#accountList .account-item>div:nth-child(5){grid-area:login;min-width:0;text-align:left}
+#accountList .account-item>div:nth-child(6){grid-area:actions}
+#accountList .account-item .name{font-size:17px!important;line-height:1.35!important;margin-bottom:3px!important}
+#accountList .account-item .small{font-size:13px!important;line-height:1.55!important;color:#687f8c!important;overflow-wrap:anywhere}
+#accountList .role-badge{justify-content:center;min-width:70px}
+#accountList .password-cell{justify-content:flex-start!important}
+#accountList .password-text{min-width:112px!important;text-align:center!important}
+#accountList .manage-actions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:nowrap!important;
+  gap:8px!important;
+  width:auto!important;
+  margin:0!important;
+}
+#accountList .manage-actions button{
+  width:auto!important;
+  min-width:72px!important;
+  height:42px!important;
+  min-height:42px!important;
+  padding:8px 14px!important;
+  border-radius:11px!important;
+}
+@media (max-width:1350px) and (min-width:901px){
+  #accountList .account-item{
+    grid-template-columns:minmax(230px,1.3fr) 120px 100px 140px minmax(170px,.85fr)!important;
+    grid-template-areas:
+      "identity role status password login"
+      "identity actions actions actions actions"!important;
+    row-gap:12px!important;
+  }
+  #accountList .manage-actions{justify-content:flex-start!important}
+}
+@media (max-width:900px){
+  #accountList .account-item{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    grid-template-areas:
+      "identity identity"
+      "role status"
+      "password login"
+      "actions actions"!important;
+    gap:12px!important;
+    padding:15px!important;
+  }
+  #accountList .account-item>div:nth-child(5){text-align:right}
+  #accountList .manage-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important}
+  #accountList .manage-actions button{width:100%!important;min-width:0!important}
+}
+@media (max-width:520px){
+  #accountList .account-item{
+    grid-template-columns:1fr!important;
+    grid-template-areas:"identity" "role" "status" "password" "login" "actions"!important;
+  }
+  #accountList .account-item>div:nth-child(5){text-align:left}
+  #accountList .manage-actions{grid-template-columns:1fr!important}
+}
+</style>
+
+
+<style id="order-system-ui-typography-unify">
+/* 訂單系統 UI 字重統一：保留姓名、標題、狀態為重點，其餘資料改為較舒適的中等字重 */
+#orderPage .sent-summary-main b{
+  font-weight:700!important;
+  color:#203d4e;
+}
+#orderPage .sent-summary-main span{
+  font-weight:500!important;
+  color:#5f7683!important;
+}
+#orderPage .sent-summary-main small{
+  font-weight:500!important;
+  color:#7b8f9a!important;
+}
+#orderPage .order-card-summary .order-status,
+#orderPage .order-chevron{
+  font-weight:700!important;
+}
+
+#orderPage .customer-title{
+  font-weight:700!important;
+}
+#orderPage .customer-grid span,
+#orderPage .delivery-inline span{
+  font-weight:500!important;
+  color:#718693!important;
+}
+#orderPage .customer-grid b,
+#orderPage .delivery-inline b{
+  font-weight:500!important;
+  color:#334e5d!important;
+  line-height:1.7!important;
+}
+#orderPage .customer-grid>div:first-child b{
+  font-weight:600!important;
+}
+#orderPage .ship-line b,
+#orderPage .ship-line span{
+  font-weight:500!important;
+}
+
+#adminPage .admin-customer-head>b{
+  font-weight:700!important;
+}
+#adminPage .admin-customer-head time{
+  font-weight:500!important;
+  color:#7b8f9a!important;
+}
+#adminPage .admin-customer-block span,
+#adminPage .admin-product-block>span,
+#adminPage .admin-order-footer>span{
+  font-weight:500!important;
+  color:#718693!important;
+}
+#adminPage .admin-customer-block b,
+#adminPage .admin-product-block>b{
+  font-weight:500!important;
+  color:#334e5d!important;
+  line-height:1.7!important;
+}
+#adminPage .admin-order-footer b{
+  font-weight:600!important;
+  color:#334e5d!important;
+}
+#adminPage .order-status,
+#adminPage .admin-edit-compact,
+#adminPage .admin-status-btn,
+#adminPage .compact-select-row label,
+#adminPage .compact-action{
+  font-weight:700!important;
+}
+
+/* 修改訂單彈窗：欄位名稱略醒目，資料內容維持一般字重 */
+.order-edit-dialog label,
+.order-edit-dialog .field label,
+.order-edit-dialog .original-box>p>b,
+.order-edit-dialog .edit-history-box>b{
+  font-weight:700!important;
+}
+.order-edit-dialog input,
+.order-edit-dialog select,
+.order-edit-dialog textarea,
+.order-edit-dialog .original-box p,
+.order-edit-dialog .edit-history-box p{
+  font-weight:500!important;
+}
+
+/* 按鈕不使用過度粗體，維持清楚但不厚重 */
+#orderPage button,
+#adminPage button,
+.order-edit-dialog button{
+  font-weight:700;
+}
+
+/* 手機版維持清楚層級，避免小畫面字體過重 */
+@media(max-width:760px){
+  #orderPage .sent-summary-main b,
+  #adminPage .admin-customer-head>b{font-weight:700!important}
+  #orderPage .sent-summary-main span,
+  #orderPage .sent-summary-main small,
+  #orderPage .customer-grid b,
+  #orderPage .delivery-inline b,
+  #adminPage .admin-customer-block b,
+  #adminPage .admin-product-block>b{font-weight:500!important}
+}
+</style>
+
+
+<style id="order-pagination-polish">
+/* 傳送資料分頁：配合全站藍灰色系，縮小體積並保持好按 */
+#orderPagination.order-pagination{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-areas:
+    "prev numbers next"
+    "info info info";
+  align-items:center;
+  gap:8px 10px;
+  width:100%;
+  margin-top:auto;
+  padding:13px 12px 10px;
+  border-top:1px solid #dce5e9;
+  border-radius:0 0 14px 14px;
+  background:linear-gradient(180deg,#f8fafb 0%,#f1f5f7 100%);
+}
+#orderPagination .order-page-nav,
+#orderPagination .order-page-number{
+  min-height:38px!important;
+  height:38px;
+  border:1px solid #c9d6dd;
+  border-radius:10px;
+  background:#fff;
+  color:#274253;
+  font-size:13px;
+  font-weight:800;
+  line-height:1;
+  box-shadow:0 2px 6px rgba(39,66,83,.05);
+  transition:.16s ease;
+}
+#orderPagination .order-page-nav{
+  min-width:88px!important;
+  padding:0 12px!important;
+}
+#orderPagination .order-page-nav:first-child{grid-area:prev}
+#orderPagination .order-page-nav:nth-of-type(2){grid-area:next}
+#orderPagination .order-page-numbers{
+  grid-area:numbers;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  width:auto!important;
+  min-width:0;
+  order:initial!important;
+}
+#orderPagination .order-page-number{
+  min-width:38px!important;
+  padding:0 9px!important;
+}
+#orderPagination .order-page-nav:not(:disabled):hover,
+#orderPagination .order-page-number:hover{
+  border-color:#78909d;
+  background:#eef4f7;
+  transform:translateY(-1px);
+}
+#orderPagination .order-page-number.active{
+  border-color:#274253;
+  background:#274253;
+  color:#fff;
+  box-shadow:0 4px 10px rgba(39,66,83,.20);
+}
+#orderPagination .order-page-nav:disabled{
+  opacity:.42;
+  background:#edf1f3;
+  color:#82939c;
+  box-shadow:none;
+}
+#orderPagination .order-page-info{
+  grid-area:info;
+  width:auto!important;
+  padding-top:2px;
+  text-align:center;
+  color:#6c818d;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.01em;
+}
+#orderPagination .order-page-dots{color:#82939c}
+@media(max-width:520px){
+  #orderPagination.order-pagination{
+    grid-template-columns:1fr auto 1fr;
+    gap:7px;
+    padding:11px 9px 9px;
+  }
+  #orderPagination .order-page-nav{
+    min-width:0!important;
+    width:100%;
+    padding:0 8px!important;
+  }
+  #orderPagination .order-page-number{
+    min-width:36px!important;
+    height:36px;
+  }
+}
+</style>
+
+
+<style id="order-panel-fixed-equal-height-fix">
+/* 訂單頁左右欄固定等高；傳送資料不足時保留空白區域 */
+@media (min-width:801px){
+  #orderPage .order-layout{align-items:stretch!important;}
+  #orderPage .order-entry-panel,
+  #orderPage .order-sent-panel{
+    height:900px!important;
+    min-height:900px!important;
+    margin-bottom:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  #orderPage .order-sent-panel .order-card-list{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    padding-right:4px;
+  }
+  #orderPage .order-sent-panel #orderPagination{
+    flex:0 0 auto;
+  }
+}
+@media (max-width:800px){
+  #orderPage .order-entry-panel,
+  #orderPage .order-sent-panel{height:auto!important;min-height:0!important;}
+}
+</style>
+
+<style id="line-user-management-style">
+.line-user-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}.line-user-item{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(170px,1fr) minmax(150px,.8fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:13px 15px;border:1px solid var(--line);border-radius:13px;background:#fff}.line-user-name{font-weight:900;color:#274253}.line-user-sub{margin-top:3px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.line-user-status{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800}.line-user-status:before{content:"";width:9px;height:9px;border-radius:50%;background:#4d9b68}.line-user-status.disabled:before{background:#a9b1b6}.line-user-actions{display:flex;gap:7px;justify-content:flex-end}.line-user-actions button{min-width:72px}.line-user-empty{padding:24px;text-align:center;border:1px dashed var(--line);border-radius:13px;background:#f8fafb;color:var(--muted)}.line-access-block{position:fixed;inset:0;z-index:500000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(28,48,60,.78);backdrop-filter:blur(7px)}.line-access-block.show{display:flex}.line-access-dialog{width:min(440px,100%);padding:28px 24px;border-radius:20px;background:#fff;text-align:center;box-shadow:0 25px 70px rgba(0,0,0,.28)}.line-access-icon{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 14px;border-radius:50%;background:#f6e6e3;color:#9a352e;font-size:30px;font-weight:900}.line-access-dialog h2{margin:0 0 8px}.line-access-dialog p{margin:0;color:#667b88;line-height:1.65}@media(max-width:850px){.line-user-item{grid-template-columns:1fr 1fr}.line-user-actions{grid-column:1/-1;justify-content:flex-start}}@media(max-width:560px){.line-user-item{grid-template-columns:1fr}.line-user-actions{display:grid;grid-template-columns:1fr}.line-user-actions button{width:100%}}
 </style>
 </head>
 <body>
@@ -989,6 +2361,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
   <div class="topbar-right">
     <div class="nav">
       <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
+      <button id="orderNav" onclick="showPage('order')">訂單回傳</button>
       <button id="adminNav" onclick="showPage('admin')">後台管理</button>
     </div>
     <div id="topbarSession" class="topbar-session">
@@ -1002,12 +2375,6 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
     </div>
   </div>
 </div></div>
-
-<header class="hero">
-  <div class="eyebrow">STAR RED TEXTILE</div>
-  <h1 id="pageTitle">百貨活動總覽</h1>
-  <p id="pageDesc">快速查看北、中、南、東各地活動日期、櫃位、商品與活動照片。</p>
-</header>
 
 <main class="container">
 <section id="homePage" class="page active">
@@ -1075,6 +2442,27 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
   <div id="eventList" class="events"></div>
 </section>
 
+
+<section id="orderPage" class="page">
+<div class="order-layout">
+<section class="panel order-entry-panel"><div class="order-title-row"><div><h2>新增客訂資料</h2><div class="order-red-note">只須填寫收件人資料，購買人無須填寫</div></div></div>
+<div class="order-fixed-date"><div class="order-fixed-meta"><span>訂單日期</span><b id="orderFixedDate"></b></div><div class="order-fixed-meta"><span>回傳人員</span><b id="orderReturnPerson">（登入後自動帶入）</b></div></div><div class="order-form-grid">
+<div class="field"><label>區域 *</label><select id="orderArea" onchange="rebuildOrderStoreOptions()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div>
+<div class="field"><label>門市 *</label><select id="orderStore"><option value="">請先選擇區域</option></select></div>
+<div class="field"><label>收件人姓名 *</label><input id="orderName"></div><div class="field"><label>電話 *</label><input id="orderPhone"></div>
+<div class="field wide"><label>配送方式 *</label><select id="orderDelivery" onchange="toggleOrderDeliveryFields()"><option selected>總公司寄出</option><option>門市自取</option></select></div>
+<div id="orderAddressFields" class="order-conditional-fields">
+<div class="field"><label>縣市 *</label><select id="orderCounty" onchange="rebuildOrderDistrictOptions()"><option value="">請選擇縣市</option></select></div><div class="field"><label>行政區 *</label><select id="orderDistrict"><option value="">請先選擇縣市</option></select></div>
+<div class="field wide"><label>詳細地址 *</label><input id="orderAddressDetail"></div></div>
+<div id="orderPickupFields" class="order-conditional-fields pickup-fields" style="display:none">
+<div class="field"><label>取件區域 *</label><select id="orderPickupArea" onchange="rebuildOrderPickupStoreOptions()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div>
+<div class="field"><label>取件門市 *</label><select id="orderPickupStore"><option value="">請先選擇區域</option></select></div></div>
+
+<div class="field wide"><label>訂購商品／品項＋備註 *</label><textarea id="orderItems" rows="4" class="vertical-resize"></textarea></div>
+<div class="field wide"><label>訂購單照片 *</label><input id="orderPhoto" type="file" accept="image/*" capture="environment" onchange="previewOrderPhoto(event)"><div id="orderPhotoPreview"></div></div>
+</div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button class="primary" onclick="submitOrder()">確認傳送</button></div></section>
+<section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期區間查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option></select><div class="sent-date-field"><label>開始日期</label><input id="orderDateFrom" type="date" onchange="resetOrderPageAndRender()"></div><div class="sent-date-field"><label>結束日期</label><input id="orderDateTo" type="date" onchange="resetOrderPageAndRender()"></div><button type="button" class="secondary sent-date-clear" onclick="clearSentOrderDate()">清除日期</button></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
+</div></section>
 <section id="adminPage" class="page">
   <div id="loginSection" class="login-wrap">
     <div class="login-box">
@@ -1091,7 +2479,9 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
     <div class="admin-tabs">
       <button id="activityTabBtn" class="active" onclick="showAdminTab('activity')">活動清單</button>
       <button id="storeTabBtn" onclick="showAdminTab('store')">百貨門市管理</button>
+      <button id="orderAdminTabBtn" onclick="showAdminTab('orderAdmin')">訂單管理</button>
       <button id="accountTabBtn" onclick="showAdminTab('account')">管理員設定</button>
+      <button id="lineUserTabBtn" onclick="showAdminTab('lineUser')">LINE 使用者</button>
     </div>
 
 
@@ -1133,7 +2523,16 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
       </section>
     </div>
 
-    <div id="accountTab" class="admin-tab-panel">
+    <div id="orderAdminTab" class="admin-tab-panel"><section class="panel compact-order-admin"><div class="order-title-row"><div><h2>訂單寄出管理</h2><div class="note">依狀態或訂單日期篩選，再勾選訂單批次處理。</div></div></div>
+<div class="admin-order-status-buttons">
+<button type="button" class="admin-status-btn active" data-status="" onclick="setAdminOrderStatus('')">全部 <b id="adminStatusAll">0</b></button>
+<button type="button" class="admin-status-btn pending" data-status="pending" onclick="setAdminOrderStatus('pending')">待寄出 <b id="adminStatusPending">0</b></button>
+<button type="button" class="admin-status-btn shipped" data-status="shipped" onclick="setAdminOrderStatus('shipped')">已寄出 <b id="adminStatusShipped">0</b></button>
+<button type="button" class="admin-status-btn cancelled" data-status="cancelled" onclick="setAdminOrderStatus('cancelled')">取消訂單 <b id="adminStatusCancelled">0</b></button>
+</div><input id="adminOrderStatus" type="hidden" value="">
+<div class="order-admin-filter compact-filter"><input id="adminOrderKeyword" placeholder="搜尋姓名、電話、地址、商品" oninput="renderOrderAdmin()"><select id="adminOrderStoreFilter" onchange="renderOrderAdmin()"><option value="">全部門市</option></select><select id="adminOrderDeliveryFilter" onchange="renderOrderAdmin()"><option value="">全部配送方式</option><option value="總公司寄出">公司寄出</option><option value="門市自取">門市自取</option></select><div class="compact-date-field"><label>訂單日起</label><input id="adminOrderDateFrom" type="date" onchange="renderOrderAdmin()"></div><div class="compact-date-field"><label>訂單日迄</label><input id="adminOrderDateTo" type="date" onchange="renderOrderAdmin()"></div><button type="button" class="secondary compact-btn" onclick="clearAdminOrderFilters()">清除</button></div>
+<div class="compact-batch-panel"><div class="compact-select-row"><label><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" onchange="toggleAllOrders(this.checked)"> 全選目前結果</label><b id="orderSelectedCount">已選 0 筆</b></div><div class="compact-process-row"><select id="orderHandler" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button class="secondary compact-action" onclick="exportOrdersExcel()">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
+<div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div><div id="accountTab" class="admin-tab-panel">
       <section class="panel">
         <h2 id="accountFormTitle">新增管理帳號</h2>
         <div class="account-form">
@@ -1161,6 +2560,12 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
       <section class="panel">
         <h2>管理帳號清單</h2>
         <div id="accountList" class="account-list"></div>
+      </section>
+    </div>
+    <div id="lineUserTab" class="admin-tab-panel">
+      <section class="panel">
+        <div class="manage-list-heading"><div><h2>LINE 使用者</h2><div class="manage-list-description">LINE 登入串接後，使用者姓名會自動出現在這裡。停用後，該 LINE 身分將無法開啟系統。</div></div><div id="lineUserCount" class="manage-result-count">0 位</div></div>
+        <div id="lineUserList" class="line-user-list"></div>
       </section>
     </div>
     <div id="activityTab" class="admin-tab-panel active">
@@ -1292,6 +2697,12 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
         </div>
       </div>
 
+      <div class="manage-column-head" aria-hidden="true">
+        <span></span>
+        <span>活動／門市／日期</span>
+        <span>狀態</span>
+        <span>展開</span>
+      </div>
       <div id="manageList" class="manage-list"></div>
     </section>
     </div>
@@ -1300,7 +2711,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 </main>
 
 
-<div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
+<div id="orderActionModal" class="success-modal"><div class="success-dialog"><div class="success-icon">✓</div><div id="orderActionTitle" class="success-title"></div><div id="orderActionText" class="success-text"></div><button class="primary" onclick="closeOrderActionModal()">確認</button></div></div><div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2>修改訂單</h2><p>調整客戶資料後，原始內容與修改紀錄仍會保留。</p></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><label class="wide">地址<input id="editOrderAddress"></label><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button class="secondary" onclick="closeOrderEditModal()">取消</button><button class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
   <div class="success-dialog">
     <div class="success-icon">✓</div>
     <div id="successTitle" class="success-title">活動建立成功</div>
@@ -1342,6 +2753,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
@@ -1370,8 +2782,11 @@ const STORAGE_KEY="starred_events_v4";
 const LOGIN_KEY="starred_admin_logged_in";
 const STORE_KEY="starred_department_stores_v1";
 const ACCOUNTS_KEY="starred_admin_accounts_v2";
+const LINE_USERS_KEY="starred_line_users_v1";
+const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
+const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
 let editingId=null;
 let selectedManageEventIds=new Set();
@@ -1380,10 +2795,12 @@ let selectedStoreIds=new Set();
 let stores=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");
 let editingStoreId=null;
 let accounts=JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||"[]");
+let lineUsers=JSON.parse(localStorage.getItem(LINE_USERS_KEY)||"[]");
 let currentUser=JSON.parse(sessionStorage.getItem(CURRENT_USER_KEY)||"null");
 let editingAccountId=null;
 let storeFilter="all";
 let deletedStoreKeys=new Set(JSON.parse(localStorage.getItem(DELETED_STORES_KEY)||"[]"));
+let orders=JSON.parse(localStorage.getItem(ORDER_KEY)||"[]");let orderPhotoData="";let selectedOrderIds=new Set();let orderPageCurrent=1;const ORDER_PAGE_SIZE=5;
 const areaText={north:"北部",central:"中部",south:"南部",east:"東部／離島"};
 const statusText={active:"活動中",upcoming:"即將開始",ended:"已結束"};
 
@@ -1458,7 +2875,9 @@ if(!accounts.length){
 function $(id){return document.getElementById(id)}
 function persist(){localStorage.setItem(STORAGE_KEY,JSON.stringify(events))}
 function persistStores(){localStorage.setItem(STORE_KEY,JSON.stringify(stores))}
-function persistAccounts(){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(accounts))}
+function persistAccounts(){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(accounts));renderOrderHandlerOptions()}
+function persistLineUsers(){localStorage.setItem(LINE_USERS_KEY,JSON.stringify(lineUsers))}
+function persistOrders(){try{localStorage.setItem(ORDER_KEY,JSON.stringify(orders));return true}catch(e){alert("訂單文字儲存失敗，請重新整理後再試");return false}}
 function todayStr(){return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})}
 function calcStatus(start,end){
  const t=todayStr();
@@ -1467,27 +2886,27 @@ function calcStatus(start,end){
  if(t>end)return "ended";
  return "active";
 }
-function showPage(page){
- $("homePage").classList.toggle("active",page==="home");
- $("adminPage").classList.toggle("active",page==="admin");
- $("homeNav").classList.toggle("active",page==="home");
- $("adminNav").classList.toggle("active",page==="admin");
- $("pageTitle").textContent=page==="home"?"百貨活動總覽":"百貨活動後台";
- $("pageDesc").textContent=page==="home"?"快速查看北、中、南、東各地活動日期、櫃位、商品與活動照片。":"登入後新增、修改、刪除活動資料。";
- if(page==="admin")checkLogin();
+function showPage(page){if(!enforceLineUserAccess())return;$("homePage").classList.toggle("active",page==="home");$("orderPage").classList.toggle("active",page==="order");$("adminPage").classList.toggle("active",page==="admin");$("homeNav").classList.toggle("active",page==="home");$("orderNav").classList.toggle("active",page==="order");$("adminNav").classList.toggle("active",page==="admin");if(page==="order"){rebuildOrderStoreOptions();renderOrderCards()}if(page==="admin")checkLogin();
 setTimeout(()=>{const x=$("accountEnabled");if(x){x.addEventListener("change",updateEnabledLabel);updateEnabledLabel()}},0);
 }
+function escapeLineHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]))}
+function getCurrentLineUser(){try{return JSON.parse(localStorage.getItem(CURRENT_LINE_USER_KEY)||sessionStorage.getItem(CURRENT_LINE_USER_KEY)||"null")}catch(e){return null}}
+function syncCurrentLineUser(profile){if(!profile||!profile.id)return null;const id=String(profile.id),now=new Date().toISOString();let user=lineUsers.find(x=>String(x.id)===id);if(!user){user={id,name:profile.name||profile.displayName||"LINE 使用者",pictureUrl:profile.pictureUrl||"",enabled:true,createdAt:now,lastLogin:now};lineUsers.unshift(user)}else{user.name=profile.name||profile.displayName||user.name;user.pictureUrl=profile.pictureUrl||user.pictureUrl||"";user.lastLogin=now}persistLineUsers();return user}
+function isCurrentLineUserEnabled(){const profile=getCurrentLineUser();if(!profile||!profile.id)return true;const user=lineUsers.find(x=>String(x.id)===String(profile.id));return !user||user.enabled!==false}
+function enforceLineUserAccess(){const block=$("lineAccessBlock");if(!block)return true;const enabled=isCurrentLineUserEnabled();block.classList.toggle("show",!enabled);document.body.style.overflow=enabled?"":"hidden";return enabled}
+function renderLineUsers(){const list=$("lineUserList"),count=$("lineUserCount");if(!list)return;count.textContent=`${lineUsers.length} 位`;if(!lineUsers.length){list.innerHTML='<div class="line-user-empty">目前尚無 LINE 使用者。完成 LINE Login 串接後，首次登入的姓名會自動加入這裡。</div>';return}list.innerHTML=lineUsers.map(u=>`<div class="line-user-item"><div><div class="line-user-name">${escapeLineHtml(u.name||"未命名")}</div><div class="line-user-sub">LINE 使用者</div></div><div><div class="line-user-sub">LINE 識別碼</div><div>${escapeLineHtml(u.id||"—")}</div></div><div><span class="line-user-status ${u.enabled===false?'disabled':''}">${u.enabled===false?'已停用':'已啟用'}</span></div><div><div class="line-user-sub">最後登入</div><div>${u.lastLogin?new Date(u.lastLogin).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}):'尚無紀錄'}</div></div><div class="line-user-actions"><button class="${u.enabled===false?'primary':'secondary'}" onclick="toggleLineUser('${String(u.id).replace(/'/g,"\\'")}')">${u.enabled===false?'啟用':'停用'}</button></div></div>`).join('')}
+function toggleLineUser(id){if(!currentUser||currentUser.role!=="admin"){alert("只有系統管理員可以啟用或停用 LINE 使用者");return}const user=lineUsers.find(x=>String(x.id)===String(id));if(!user)return;const next=user.enabled===false;if(!next&&!confirm(`確定要停用「${user.name||'此使用者'}」嗎？\n停用後，這個 LINE 帳號將無法開啟系統。`))return;user.enabled=next;persistLineUsers();renderLineUsers();enforceLineUserAccess()}
 function showAdminTab(tab){
- if(tab==="account"&&(!currentUser||currentUser.role!=="admin")){alert("只有系統管理員可以管理帳號");return}
+ if((tab==="account"||tab==="lineUser")&&(!currentUser||currentUser.role!=="admin")){alert("只有系統管理員可以管理帳號");return}
  $("activityTab").classList.toggle("active",tab==="activity");
  $("storeTab").classList.toggle("active",tab==="store");
- $("accountTab").classList.toggle("active",tab==="account");
+ $("accountTab").classList.toggle("active",tab==="account");$("lineUserTab").classList.toggle("active",tab==="lineUser");$("orderAdminTab").classList.toggle("active",tab==="orderAdmin");
  $("activityTabBtn").classList.toggle("active",tab==="activity");
  $("storeTabBtn").classList.toggle("active",tab==="store");
- $("accountTabBtn").classList.toggle("active",tab==="account");
+ $("accountTabBtn").classList.toggle("active",tab==="account");$("lineUserTabBtn").classList.toggle("active",tab==="lineUser");$("orderAdminTabBtn").classList.toggle("active",tab==="orderAdmin");
  if(tab==="store")renderStores();
  if(tab==="activity")rebuildMallOptions();
- if(tab==="account")renderAccounts();
+ if(tab==="account")renderAccounts();if(tab==="lineUser")renderLineUsers();if(tab==="orderAdmin"){renderOrderHandlerOptions();renderOrderAdmin();}
 }
 function checkLogin(){
  const ok=sessionStorage.getItem(LOGIN_KEY)==="1"&&currentUser;
@@ -1498,11 +2917,13 @@ function checkLogin(){
   $("currentUserName").textContent="正在使用："+currentUser.name;
   $("currentUserRole").textContent=currentUser.role==="admin"?"系統管理員":"主管";
   $("accountTabBtn").classList.toggle("hidden-by-role",currentUser.role!=="admin");
-  rebuildMallOptions();renderManage();renderStores();renderAccounts();
+  $("lineUserTabBtn").classList.toggle("hidden-by-role",currentUser.role!=="admin");
+  rebuildMallOptions();renderManage();renderStores();renderAccounts();renderLineUsers();renderOrderHandlerOptions();renderOrderAdmin();
  }else{
   $("currentUserName").textContent="—";
   $("currentUserRole").textContent="—";
   $("accountTabBtn").classList.remove("hidden-by-role");
+  $("lineUserTabBtn").classList.remove("hidden-by-role");
  }
 }
 async function loadCloudAccounts(){
@@ -1687,30 +3108,13 @@ function toggleAccount(id){
  if(a.id===currentUser.id&&a.enabled){alert("不能停用目前登入中的帳號");return}
  a.enabled=!a.enabled;persistAccounts();renderAccounts();
 }
-async function deleteAccount(id){
+function deleteAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
  if(a.id===currentUser.id){alert("不能刪除目前登入中的帳號");return}
  if(a.role==="admin"&&accounts.filter(x=>x.role==="admin").length===1){alert("系統至少要保留一個系統管理員");return}
- if(!confirm(`確定刪除「${a.name}」的帳號？刪除後無法復原。`))return;
-
- const previousAccounts=[...accounts];
- try{
-  if(typeof cloudDb!=="undefined"){
-   const {error}=await cloudDb.from("admins").delete().eq("id",id);
-   if(error)throw error;
-  }
-  accounts=accounts.filter(x=>x.id!==id);
-  persistAccounts();
-  renderAccounts();
-  alert("帳號已永久刪除");
- }catch(error){
-  accounts=previousAccounts;
-  persistAccounts();
-  renderAccounts();
-  console.error("管理帳號刪除失敗",error);
-  alert("帳號刪除失敗，雲端資料沒有被移除。\n\n錯誤："+(error?.message||error)+"\n\n請檢查 Supabase admins 資料表的 DELETE 權限（RLS Policy）。");
- }
+ if(!confirm(`確定刪除「${a.name}」的帳號？`))return;
+ accounts=accounts.filter(x=>x.id!==id);persistAccounts();renderAccounts();
 }
 function resetAccountForm(){
  editingAccountId=null;
@@ -1725,7 +3129,7 @@ function fmtDateTime(v){
 }
 function renderAccounts(){
  if(!currentUser||currentUser.role!=="admin")return;
- $("accountList").innerHTML=accounts.map(a=>`<div class="account-item" style="grid-template-columns:1.1fr .9fr .9fr 1.25fr 1.1fr auto">
+ $("accountList").innerHTML=accounts.map(a=>`<div class="account-item">
   <div><div class="name">${escapeHtml(a.name)}</div><div class="small">${escapeHtml(a.username)}</div><div class="small">${escapeHtml(a.email||"尚未綁定 Email")}</div></div>
   <div><span class="role-badge ${a.role}">${a.role==="admin"?"系統管理員":"主管"}</span></div>
   <div><span class="status-dot ${a.enabled?"":"off"}">${a.enabled?"啟用":"停用"}</span></div>
@@ -1753,7 +3157,7 @@ function saveStore(){
  if(duplicate){alert("這間百貨門市已經存在");return}
  const item={id:editingStoreId||crypto.randomUUID(),area,name,floor};
  if(editingStoreId)stores=stores.map(s=>s.id===editingStoreId?item:s);else stores.unshift(item);
- persistStores();resetStoreForm();renderStores();rebuildMallOptions();
+ persistStores();resetStoreForm();renderStores();rebuildMallOptions();rebuildOrderStoreOptions();
 }
 function editStore(id){
  const s=stores.find(x=>x.id===id);if(!s)return;
@@ -2160,7 +3564,7 @@ function renderHome(){
 
  $("eventList").innerHTML=grouped.length?grouped.map(group=>{
   const first=group[0];
-  return `<details class="store-activity-group" ${group.length===1?"open":""}>
+  return `<details class="store-activity-group ${group.length>1?"multi-activity-group":""}">
    <summary>
     <div>
      <div class="store-group-title-row">
@@ -2196,6 +3600,16 @@ function renderHome(){
    </div>
   </details>`;
  }).join(""):`<div class="empty">目前沒有符合條件的活動</div>`;
+ setupStoreActivityAccordion();
+}
+function setupStoreActivityAccordion(){
+ const groups=[...document.querySelectorAll("#homePage .store-activity-group")];
+ groups.forEach(group=>{
+  group.addEventListener("toggle",()=>{
+   if(!group.open)return;
+   groups.forEach(other=>{if(other!==group)other.open=false});
+  });
+ });
 }
 function updateManageStoreFilter(){
  const area=$("manageAreaFilter")?.value||"";
@@ -2440,6 +3854,9 @@ window.addEventListener("drop",function(e){
  processPhotoFiles(e.dataTransfer.files);
 });
 
+
+document.addEventListener("DOMContentLoaded",()=>{const profile=getCurrentLineUser();if(profile&&profile.id)syncCurrentLineUser(profile);renderLineUsers();enforceLineUserAccess()});
+window.registerLineLoginUser=function(profile){const user=syncCurrentLineUser(profile);if(profile&&profile.id)localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify({id:String(profile.id),name:profile.name||profile.displayName||user?.name||"LINE 使用者",pictureUrl:profile.pictureUrl||""}));enforceLineUserAccess();renderLineUsers();return user};
 </script>
 
 <script>
@@ -2508,6 +3925,283 @@ cloudDb.auth.onAuthStateChange((event,session)=>{
  }
 });
 
+
+const taiwanAddressData={
+"臺北市":["中正區","大同區","中山區","松山區","大安區","萬華區","信義區","士林區","北投區","內湖區","南港區","文山區"],
+"基隆市":["仁愛區","信義區","中正區","中山區","安樂區","暖暖區","七堵區"],
+"新北市":["萬里區","金山區","板橋區","汐止區","深坑區","石碇區","瑞芳區","平溪區","雙溪區","貢寮區","新店區","坪林區","烏來區","永和區","中和區","土城區","三峽區","樹林區","鶯歌區","三重區","新莊區","泰山區","林口區","蘆洲區","五股區","八里區","淡水區","三芝區","石門區"],
+"桃園市":["中壢區","平鎮區","龍潭區","楊梅區","新屋區","觀音區","桃園區","龜山區","八德區","大溪區","復興區","大園區","蘆竹區"],
+"新竹市":["東區","北區","香山區"],
+"新竹縣":["竹北市","湖口鄉","新豐鄉","新埔鎮","關西鎮","芎林鄉","寶山鄉","竹東鎮","五峰鄉","橫山鄉","尖石鄉","北埔鄉","峨眉鄉"],
+"苗栗縣":["竹南鎮","頭份市","三灣鄉","南庄鄉","獅潭鄉","後龍鎮","通霄鎮","苑裡鎮","苗栗市","造橋鄉","頭屋鄉","公館鄉","大湖鄉","泰安鄉","銅鑼鄉","三義鄉","西湖鄉","卓蘭鎮"],
+"臺中市":["中區","東區","南區","西區","北區","北屯區","西屯區","南屯區","太平區","大里區","霧峰區","烏日區","豐原區","后里區","石岡區","東勢區","和平區","新社區","潭子區","大雅區","神岡區","大肚區","沙鹿區","龍井區","梧棲區","清水區","大甲區","外埔區","大安區"],
+"彰化縣":["彰化市","芬園鄉","花壇鄉","秀水鄉","鹿港鎮","福興鄉","線西鄉","和美鎮","伸港鄉","員林市","社頭鄉","永靖鄉","埔心鄉","溪湖鎮","大村鄉","埔鹽鄉","田中鎮","北斗鎮","田尾鄉","埤頭鄉","溪州鄉","竹塘鄉","二林鎮","大城鄉","芳苑鄉","二水鄉"],
+"南投縣":["南投市","中寮鄉","草屯鎮","國姓鄉","埔里鎮","仁愛鄉","名間鄉","集集鎮","水里鄉","魚池鄉","信義鄉","竹山鎮","鹿谷鄉"],
+"雲林縣":["斗南鎮","大埤鄉","虎尾鎮","土庫鎮","褒忠鄉","東勢鄉","臺西鄉","崙背鄉","麥寮鄉","斗六市","林內鄉","古坑鄉","莿桐鄉","西螺鎮","二崙鄉","北港鎮","水林鄉","口湖鄉","四湖鄉","元長鄉"],
+"嘉義市":["東區","西區"],
+"嘉義縣":["番路鄉","梅山鄉","竹崎鄉","阿里山鄉","中埔鄉","大埔鄉","水上鄉","鹿草鄉","太保市","朴子市","東石鄉","六腳鄉","新港鄉","民雄鄉","大林鎮","溪口鄉","義竹鄉","布袋鎮"],
+"臺南市":["中西區","東區","南區","北區","安平區","安南區","永康區","歸仁區","新化區","左鎮區","玉井區","楠西區","南化區","仁德區","關廟區","龍崎區","官田區","麻豆區","佳里區","西港區","七股區","將軍區","學甲區","北門區","新營區","後壁區","白河區","東山區","六甲區","下營區","柳營區","鹽水區","善化區","大內區","山上區","新市區","安定區"],
+"高雄市":["新興區","前金區","苓雅區","鹽埕區","鼓山區","旗津區","前鎮區","三民區","楠梓區","小港區","左營區","仁武區","大社區","岡山區","路竹區","阿蓮區","田寮區","燕巢區","橋頭區","梓官區","彌陀區","永安區","湖內區","鳳山區","大寮區","林園區","鳥松區","大樹區","旗山區","美濃區","六龜區","內門區","杉林區","甲仙區","桃源區","那瑪夏區","茂林區","茄萣區"],
+"屏東縣":["屏東市","三地門鄉","霧臺鄉","瑪家鄉","九如鄉","里港鄉","高樹鄉","鹽埔鄉","長治鄉","麟洛鄉","竹田鄉","內埔鄉","萬丹鄉","潮州鎮","泰武鄉","來義鄉","萬巒鄉","崁頂鄉","新埤鄉","南州鄉","林邊鄉","東港鎮","琉球鄉","佳冬鄉","新園鄉","枋寮鄉","枋山鄉","春日鄉","獅子鄉","車城鄉","牡丹鄉","恆春鎮","滿州鄉"],
+"宜蘭縣":["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","三星鄉","大同鄉","五結鄉","冬山鄉","蘇澳鎮","南澳鄉","釣魚臺列嶼"],
+"花蓮縣":["花蓮市","新城鄉","秀林鄉","吉安鄉","壽豐鄉","鳳林鎮","光復鄉","豐濱鄉","瑞穗鄉","萬榮鄉","玉里鎮","卓溪鄉","富里鄉"],
+"臺東縣":["臺東市","綠島鄉","蘭嶼鄉","延平鄉","卑南鄉","鹿野鄉","關山鎮","海端鄉","池上鄉","東河鄉","成功鎮","長濱鄉","太麻里鄉","金峰鄉","大武鄉","達仁鄉"],
+"澎湖縣":["馬公市","西嶼鄉","望安鄉","七美鄉","白沙鄉","湖西鄉"],
+"金門縣":["金沙鎮","金湖鎮","金寧鄉","金城鎮","烈嶼鄉","烏坵鄉"],
+"連江縣":["南竿鄉","北竿鄉","莒光鄉","東引鄉"]
+};
+function initOrderAddress(){const e=$("orderCounty");if(e)e.innerHTML='<option value="">請選擇縣市</option>'+Object.keys(taiwanAddressData).map(x=>`<option>${x}</option>`).join('')}
+function rebuildOrderDistrictOptions(){const c=$("orderCounty").value;$("orderDistrict").innerHTML='<option value="">請選擇行政區</option>'+(taiwanAddressData[c]||[]).map(x=>`<option>${x}</option>`).join('')}
+function rebuildOrderStoreOptions(){
+ const a=$("orderArea")?.value||'',el=$("orderStore");if(!el)return;
+ const current=el.value,list=stores.filter(x=>!a||x.area===a);
+ el.innerHTML=`<option value="">${a?(list.length?'請選擇門市':'此區域尚未建立門市'):'請先選擇區域'}</option>`+list.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');
+ if(list.some(x=>String(x.id)===String(current)))el.value=current;
+}
+function rebuildOrderPickupStoreOptions(){const area=$("orderPickupArea")?.value||'';const e=$("orderPickupStore");if(!e)return;const list=stores.filter(x=>x.area===area&&x.enabled!==false);e.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.name)}</option>`).join('')}
+function toggleOrderDeliveryFields(){const pickup=$("orderDelivery")?.value==='門市自取';const address=$("orderAddressFields"),pickupBox=$("orderPickupFields");if(address)address.style.display=pickup?'none':'contents';if(pickupBox)pickupBox.style.display=pickup?'grid':'none'}
+
+function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open('starred_order_photos',1);r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function savePhoto(key,data){const d=await db();return new Promise((res,rej)=>{const t=d.transaction('photos','readwrite');t.objectStore('photos').put(data,key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function getPhoto(key){if(!key)return '';const d=await db();return new Promise((res,rej)=>{const r=d.transaction('photos').objectStore('photos').get(key);r.onsuccess=()=>res(r.result||'');r.onerror=()=>rej(r.error)})}
+async function viewOrderPhoto(key){try{const photo=await getPhoto(key);if(!photo){showOrderAction('找不到照片','此筆訂單的原始照片不存在或尚未成功儲存。');return}openLightbox(photo)}catch(err){console.error(err);showOrderAction('照片開啟失敗','無法讀取原始照片，請重新整理頁面後再試。')}}
+function editPickupAreaFromOrder(o){if(o&&o.pickupArea)return o.pickupArea;const name=(o&&o.pickupStore)||String((o&&o.address)||'').replace(/^取件門市：/,'');const st=stores.find(x=>x.name===name);return st?st.area:''}
+function renderEditPickupStores(selected=''){const sel=$("editOrderPickupStore");if(!sel)return;const list=stores.filter(x=>x.enabled!==false&&x.active!==false);sel.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');if(selected)sel.value=selected}
+function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.value==='門市自取',m=$("editOrderPickupStoreWrap"),addr=$("editOrderAddress")?.closest('label');if(m)m.style.display=pickup?'flex':'none';if(addr)addr.style.display=pickup?'none':'flex';if(pickup)renderEditPickupStores($("editOrderPickupStore")?.value||'')}
+
+function previewOrderPhoto(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas'),sc=Math.min(1,1000/Math.max(i.width,i.height));c.width=Math.max(1,Math.round(i.width*sc));c.height=Math.max(1,Math.round(i.height*sc));c.getContext('2d').drawImage(i,0,0,c.width,c.height);orderPhotoData=c.toDataURL('image/jpeg',.68);$("orderPhotoPreview").innerHTML='<div class="order-photo-actions"><button type="button" class="photo-open-only" onclick="openLightbox(orderPhotoData)">查看已上傳照片</button><button type="button" class="order-photo-delete" onclick="removeOrderPhoto()">刪除照片</button></div>'};i.src=r.result};r.readAsDataURL(f)}
+function removeOrderPhoto(){orderPhotoData='';const input=$("orderPhoto");if(input)input.value='';const preview=$("orderPhotoPreview");if(preview)preview.innerHTML='';showOrderAction('照片已刪除','請重新選擇或拍攝正確的訂購單照片。')}
+function showOrderAction(t,x){$("orderActionTitle").textContent=t;$("orderActionText").textContent=x;$("orderActionModal").classList.add('show')}function closeOrderActionModal(){$("orderActionModal").classList.remove('show')}
+function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function resetOrderForm(){['orderName','orderPhone','orderAddressDetail','orderItems'].forEach(id=>$(id).value='');$("orderArea").value='';$("orderStore").innerHTML='<option value="">請先選區域</option>';$("orderCounty").value='';$("orderDistrict").innerHTML='<option value="">請先選縣市</option>';$("orderDelivery").value='總公司寄出';$("orderPickupArea").value='';$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>';toggleOrderDeliveryFields();$("orderPhoto").value='';$("orderPhotoPreview").innerHTML='';orderPhotoData=''}
+async function submitOrder(){
+ const miss=[];
+ [['orderArea','區域'],['orderStore','門市'],['orderName','姓名'],['orderPhone','電話'],['orderItems','商品']].forEach(([i,n])=>{if(!String($(i)?.value||'').trim())miss.push(n)});
+ const delivery=$("orderDelivery").value,pickup=delivery==='門市自取';
+ if(pickup){if(!$("orderPickupArea").value)miss.push('取件區域');if(!$("orderPickupStore").value)miss.push('取件門市')}else{[['orderCounty','縣市'],['orderDistrict','行政區'],['orderAddressDetail','詳細地址']].forEach(([i,n])=>{if(!String($(i)?.value||'').trim())miss.push(n)})}
+ if(!orderPhotoData)miss.push('照片');
+ if(miss.length){showOrderAction('資料未完成','請補寫：'+miss.join('、'));return}
+ const st=stores.find(x=>String(x.id)===String($("orderStore").value));
+ if(!st){showOrderAction('門市資料錯誤','找不到選擇的門市，請重新選擇區域與門市。');return}
+ const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
+ if(pickup&&!pickupSt){showOrderAction('取件門市錯誤','找不到選擇的取件門市，請重新選擇。');return}
+ const id='o_'+Date.now()+'_'+Math.random().toString(36).slice(2),photoKey='p_'+id;
+ try{await savePhoto(photoKey,orderPhotoData)}catch(e){showOrderAction('照片儲存失敗','照片無法儲存，請重新選擇照片後再試。');return}
+ const address=pickup?`取件門市：${pickupSt.name}`:$("orderCounty").value+$("orderDistrict").value+$("orderAddressDetail").value.trim();
+ const now=new Date(),createdDate=todayStr();
+ const lineProfile=getCurrentLineUser()||{};
+ const returnPerson=String(lineProfile.name||lineProfile.displayName||'（尚未取得 LINE 姓名）');
+ const o={id,photoKey,returnPerson,createdByLineId:String(lineProfile.id||''),store:st.name,name:$("orderName").value.trim(),phone:$("orderPhone").value.trim(),address,delivery,items:$("orderItems").value.trim(),pickupArea:pickup?$("orderPickupArea").value:'',pickupStore:pickup?pickupSt.name:'',createdAt:now.toLocaleString('zh-TW',{hour12:false}),createdDate,status:'pending',handler:'',shippedDate:'',original:null,history:[]};
+ o.original={returnPerson:o.returnPerson,createdByLineId:o.createdByLineId,name:o.name,phone:o.phone,address:o.address,delivery:o.delivery,items:o.items,pickupArea:o.pickupArea,pickupStore:o.pickupStore,photoKey,createdAt:o.createdAt,createdDate:o.createdDate};
+ orders.unshift(o);
+ if(!persistOrders()){orders=orders.filter(x=>x.id!==id);return}
+ resetOrderForm();
+ const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
+ if(keyword)keyword.value='';if(status)status.value='';if(from)from.value='';if(to)to.value='';
+ renderOrderCards();renderOrderAdmin();
+ showOrderAction('完成','客訂資料已成功傳送，按下確認後即可進行下一筆。');
+}
+function orderDateValue(o){
+ if(o?.createdDate)return String(o.createdDate).slice(0,10);
+ const raw=String(o?.createdAt||'').trim();
+ const m=raw.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+ if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+ return '';
+}
+function match(o,keyword,status){
+ const currentStatus=o?.status||'pending';
+ if(status&&currentStatus!==status)return false;
+ const q=String(keyword||'').trim().toLowerCase();
+ if(!q)return true;
+ return [o?.name,o?.phone,o?.store,o?.address,o?.delivery,o?.items,o?.pickupStore,orderDateValue(o)].some(v=>String(v||'').toLowerCase().includes(q));
+}
+function clearSentOrderDate(){const f=$("orderDateFrom"),t=$("orderDateTo");if(f)f.value='';if(t)t.value='';resetOrderPageAndRender()}
+function resetOrderPageAndRender(){orderPageCurrent=1;renderOrderCards()}
+function changeOrderPage(page){orderPageCurrent=page;renderOrderCards();$("orderCardList")?.scrollTo({top:0,behavior:"smooth"})}
+function toggleOrderCard(button){
+  const card=button.closest('.order-card');
+  const list=card.closest('.order-card-list');
+  const savedScrollTop=list?list.scrollTop:0;
+  const willOpen=!card.classList.contains('open');
+  document.querySelectorAll('.order-card.open').forEach(x=>x.classList.remove('open'));
+  if(willOpen)card.classList.add('open');
+  // 固定傳送資料清單目前位置，避免展開下方訂單時上方客戶資料被自動捲走
+  if(list){
+    list.scrollTop=savedScrollTop;
+    requestAnimationFrame(()=>{list.scrollTop=savedScrollTop;});
+  }
+}
+function renderOrderPagination(totalPages,totalItems){
+ const box=$("orderPagination");if(!box)return;
+ if(totalPages<=1){box.innerHTML=totalItems?`<span class="order-page-info">共 ${totalItems} 筆</span>`:'';return}
+ const pages=[];for(let p=1;p<=totalPages;p++){if(p===1||p===totalPages||Math.abs(p-orderPageCurrent)<=1)pages.push(p);else if(pages[pages.length-1]!==0)pages.push(0)}
+ box.innerHTML=`<button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent-1})" ${orderPageCurrent===1?'disabled':''}>‹ 上一頁</button><div class="order-page-numbers">${pages.map(p=>p===0?'<span class="order-page-dots">…</span>':`<button type="button" class="order-page-number ${p===orderPageCurrent?'active':''}" onclick="changeOrderPage(${p})">${p}</button>`).join('')}</div><button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent+1})" ${orderPageCurrent===totalPages?'disabled':''}>下一頁 ›</button><span class="order-page-info">第 ${orderPageCurrent} / ${totalPages} 頁・共 ${totalItems} 筆</span>`
+}
+function renderOrderCards(){
+ const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'';
+ const list=orders.filter(o=>{const d=orderDateValue(o);return match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!from||d>=from)&&(!to||d<=to)});
+ const totalPages=Math.max(1,Math.ceil(list.length/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
+ const pageList=list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
+ $("orderCardList").innerHTML=pageList.length?pageList.map(o=>`<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small></div><span class="order-status ${o.status}">${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button></div>${o.status==='shipped'?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}</div></article>`).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
+ renderOrderPagination(totalPages,list.length)
+}
+function setAdminOrderStatus(status){$("adminOrderStatus").value=status;document.querySelectorAll('.admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===status));selectedOrderIds.clear();updateCancelDeleteOrderButton();renderOrderAdmin()}
+function clearAdminOrderFilters(){$("adminOrderKeyword").value='';$("adminOrderStoreFilter").value='';$("adminOrderDateFrom").value='';$("adminOrderDateTo").value='';setAdminOrderStatus('')}
+function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("adminOrderDateTo")?.value||'',st=$("adminOrderStatus")?.value||'',store=$("adminOrderStoreFilter")?.value||'',delivery=$("adminOrderDeliveryFilter")?.value||'';return orders.filter(o=>{const d=orderDateValue(o);return match(o,$("adminOrderKeyword")?.value,st)&&(!store||o.store===store)&&(!delivery||o.delivery===delivery)&&(!f||d>=f)&&(!t||d<=t)})}
+function updateAdminStatusCounts(){const status=o=>o.status||'pending';$("adminStatusAll").textContent=orders.length;$("adminStatusPending").textContent=orders.filter(o=>status(o)==='pending').length;$("adminStatusShipped").textContent=orders.filter(o=>status(o)==='shipped').length;$("adminStatusCancelled").textContent=orders.filter(o=>status(o)==='cancelled').length}
+function renderAdminOrderStoreOptions(){const e=$("adminOrderStoreFilter");if(!e)return;const old=e.value;const names=[...new Set([...stores.map(s=>s.name),...orders.map(o=>o.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));e.innerHTML='<option value="">全部門市</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))e.value=old}
+function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("orderHandler");if(!e)return;const old=e.value;e.innerHTML='<option value="">請選擇處理人</option>'+accounts.filter(a=>a.enabled!==false).map(a=>`<option value="${escapeHtml(a.name||a.username)}">${escapeHtml(a.name||a.username)}</option>`).join('');if([...e.options].some(x=>x.value===old))e.value=old;updateConfirmShipButton()}
+function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${st}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml(o.handler||'—')}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
+function toggleOrderSelection(id,c){c?selectedOrderIds.add(id):selectedOrderIds.delete(id);renderOrderAdmin()}
+function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.add(o.id):selectedOrderIds.delete(o.id));renderOrderAdmin()}
+function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}updateConfirmShipButton()}
+function updateConfirmShipButton(){const b=$("confirmShipBtn");if(b){b.disabled=false;b.classList.toggle("needs-handler",selectedOrderIds.size>0&&!$("orderHandler").value)}}
+function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
+function markSelectedOrdersShipped(){if(!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const count=selectedOrderIds.size;orders=orders.map(o=>selectedOrderIds.has(o.id)?{...o,status:'shipped',handler:h,shippedDate:date}:o);if(!persistOrders())return;selectedOrderIds.clear();renderOrderAdmin();renderOrderCards();showOrderAction('確認寄出完成',`已將 ${count} 筆訂單標記為已寄出。`)}
+function markSelectedOrdersPending(){if(!ensureSelected())return;const count=selectedOrderIds.size;orders=orders.map(o=>selectedOrderIds.has(o.id)?{...o,status:'pending',handler:'',shippedDate:''}:o);if(!persistOrders())return;selectedOrderIds.clear();renderOrderAdmin();renderOrderCards();showOrderAction('狀態修改完成',`已將 ${count} 筆訂單改回待寄出。`)}
+function updateCancelDeleteOrderButton(){const btn=$("cancelDeleteOrderBtn");if(!btn)return;const isCancelled=$("adminOrderStatus")?.value==='cancelled';if(isCancelled){btn.textContent='刪除訂單';btn.style.display=currentUser?.role==='admin'?'':'none'}else{btn.textContent='取消訂單';btn.style.display=''}}
+function handleCancelDeleteSelectedOrders(){if($("adminOrderStatus")?.value==='cancelled'){deleteSelectedCancelledOrders();return}requestCancelSelectedOrders()}
+function deleteSelectedCancelledOrders(){if(!currentUser||currentUser.role!=='admin'){showOrderAction('權限不足','只有系統管理員可以刪除訂單。');return}if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>(o.status||'pending')!=='cancelled')){showOrderAction('無法刪除','只能刪除「取消訂單」狀態內的訂單。');return}const count=selected.length;if(!window.confirm(`確定要永久刪除選取的 ${count} 筆訂單嗎？\n刪除後無法復原。`))return;orders=orders.filter(o=>!selectedOrderIds.has(o.id));if(!persistOrders())return;selectedOrderIds.clear();renderOrderAdmin();renderOrderCards();showOrderAction('刪除訂單完成',`已刪除 ${count} 筆訂單。`)}
+function requestCancelSelectedOrders(){if(!ensureSelected())return;if(!window.confirm(`確定要取消選取的 ${selectedOrderIds.size} 筆訂單嗎？\n取消後仍可在「取消訂單」狀態中查看。`))return;markSelectedOrdersCancelled()}
+function markSelectedOrdersCancelled(){const count=selectedOrderIds.size;orders=orders.map(o=>selectedOrderIds.has(o.id)?{...o,status:'cancelled',handler:'',shippedDate:''}:o);if(!persistOrders())return;selectedOrderIds.clear();renderOrderAdmin();renderOrderCards();showOrderAction('取消訂單完成',`已取消 ${count} 筆訂單。`)}
+function selectedOrdersForExport(){return orders.filter(o=>selectedOrderIds.has(o.id))}
+function getEditNote(o){if(!o.history?.length)return '';return o.history.map((h,i)=>{const b=h.before||{};return `第${i+1}次修改（${h.editedAt||''}）：姓名 ${b.name||''}；電話 ${b.phone||''}；地址 ${b.address||''}；配送 ${b.delivery||''}；商品 ${b.items||''}`}).join('｜')}
+function exportOrdersExcel(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const rows=list.map(o=>({訂單日期:orderDateValue(o),姓名:o.name,電話:o.phone,地址:o.address,配送:o.delivery,商品:o.items,狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出',處理人:o.handler||'',寄出日期:o.shippedDate||'',備註:getEditNote(o)}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'訂單');XLSX.writeFile(wb,'訂單.xlsx');showOrderAction('Excel 匯出完成',`已匯出 ${list.length} 筆訂單。`)}
+async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const pages=[];for(let i=0;i<list.length;i++){const o=list[i],photo=await getPhoto(o.photoKey),note=getEditNote(o);pages.push(`<section class="pick-page"><h1>星紅織品｜揀貨單</h1><div class="pick-date">訂單日期：${escapeHtml(orderDateValue(o))}</div><div class="pick-photo">${photo?`<img src="${photo}">`:'無照片'}</div><div class="pick-grid"><div><span>收件人</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div><span>狀態</span><b>${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出'}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${note?`<div class="wide edit-note"><span>修改前資料備註</span><b>${escapeHtml(note)}</b></div>`:''}</div><footer>核對人：________________</footer></section>`)}const w=window.open('','_blank');if(!w){showOrderAction('無法開啟揀貨單','請允許彈出式視窗。');return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}body{font-family:"Microsoft JhengHei";margin:0}.pick-page{width:194mm;min-height:281mm;padding:5mm;page-break-after:always}.pick-page:last-child{page-break-after:auto}h1{text-align:center;margin:0}.pick-date{text-align:center;margin:2mm 0 4mm}.pick-photo{height:120mm;border:1px solid #000;display:flex;align-items:center;justify-content:center}.pick-photo img{max-width:100%;max-height:100%;object-fit:contain}.pick-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}.pick-grid>div{padding:3mm;border-right:1px solid #000;border-bottom:1px solid #000}.pick-grid>div:nth-child(even){border-right:0}.pick-grid .wide{grid-column:1/-1;border-right:0}.pick-grid span{display:block;font-size:10px}.pick-grid b{font-size:13px;line-height:1.45}.edit-note b{font-size:11px;font-weight:500}footer{text-align:right;margin-top:7mm;font-size:15px}
+/* 調整訂單清單摘要字重 */
+.sent-summary-main b{font-weight:700!important;}
+.sent-summary-main span,
+.sent-summary-main small{
+  font-weight:500!important;
+  color:#6f8593!important;
+}
+
+</style>
+<style id="sent-order-expand-scroll-stability-fix">
+/* 展開下方客戶資料時，固定清單捲動位置，避免上方資料跳走 */
+#orderPage .order-sent-panel .order-card-list{
+  overflow-anchor:none!important;
+  scroll-behavior:auto!important;
+}
+#orderPage .order-sent-panel .order-card{overflow-anchor:none}
+</style>
+</head><body>${pages.join('')}<script>onload=()=>setTimeout(()=>print(),400)<\/script>
+<style>
+/* 展開後訂單卡片標題文字提高對比 */
+.order-card.open>.order-card-summary .sent-summary-main b{
+    color:#FFFFFF !important;
+}
+.order-card.open>.order-card-summary .sent-summary-main span,
+.order-card.open>.order-card-summary .sent-summary-main small{
+    color:#F2F8FC !important;
+    font-weight:600 !important;
+    text-shadow:0 1px 1px rgba(0,0,0,.15);
+}
+</style>
+
+<style>
+/* 傳送資料：展開標題全白字、左右欄同高與友善分頁 */
+@media(min-width:801px){
+  #orderPage .order-layout{align-items:stretch}
+  #orderPage .order-entry-panel,#orderPage .order-sent-panel{height:790px;display:flex;flex-direction:column}
+  #orderPage .order-sent-panel .order-card-list{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+}
+.order-card.open>.order-card-summary,.order-card.open>.order-card-summary *{color:#fff!important}
+.order-card.open>.order-card-summary .order-status.pending{color:#8b5c00!important}
+.order-card.open>.order-card-summary .order-status.shipped{color:#26704f!important}
+.order-card.open>.order-card-summary .order-status.cancelled{color:#9a352e!important}
+.order-pagination{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding:14px 0 0;border-top:1px solid #e1e8ec}
+.order-page-nav,.order-page-number{border:1.5px solid #bdcbd3;background:#fff;color:#274253;font-weight:900;min-height:44px;border-radius:11px;padding:9px 14px}
+.order-page-nav{min-width:112px}
+.order-page-number{min-width:44px;padding:9px}
+.order-page-number.active{background:#274253;color:#fff;border-color:#274253;box-shadow:0 5px 12px rgba(39,66,83,.18)}
+.order-page-nav:disabled{opacity:.38;cursor:not-allowed}
+.order-page-numbers{display:flex;align-items:center;gap:6px}
+.order-page-dots{padding:0 2px;color:#718693;font-weight:900}
+.order-page-info{width:100%;text-align:center;font-size:12px;color:#6d818d;font-weight:700}
+@media(max-width:800px){
+  #orderPage .order-entry-panel,#orderPage .order-sent-panel{height:auto}
+  .order-page-nav{flex:1;min-width:0}
+  .order-page-numbers{order:3;width:100%;justify-content:center}
+}
+</style>
+
+
+<style id="desktop-front-activity-ultra-compact-20260724">
+/* 前台活動總覽電腦版：進一步縮減空白，只改外觀與動畫，不更動資訊及展開邏輯 */
+@media (min-width:901px){
+  #homePage .summary{gap:7px!important;margin-bottom:9px!important}
+  #homePage .summary-box{padding:9px 11px!important;min-height:56px!important}
+  #homePage .summary-box b{font-size:20px!important;line-height:1.1!important}
+  #homePage .summary-box span{font-size:11px!important;line-height:1.2!important}
+
+  #homePage .front-filter-panel{margin:8px 0 10px!important;padding:9px 10px!important;border-radius:12px!important}
+  #homePage .front-filter-heading{margin-bottom:7px!important;align-items:center!important}
+  #homePage .front-filter-title{font-size:15px!important}
+  #homePage .front-filter-subtitle{font-size:11px!important;margin-top:1px!important}
+  #homePage .front-filter-grid{gap:6px!important}
+  #homePage .front-filter-field{gap:3px!important}
+  #homePage .front-filter-field>span{font-size:11px!important}
+  #homePage .front-filter-field select,
+  #homePage .front-filter-field input{height:34px!important;min-height:34px!important;border-radius:9px!important;padding-top:0!important;padding-bottom:0!important;font-size:13px!important}
+  #homePage .front-filter-clear{height:32px!important;min-height:32px!important;padding:0 10px!important;border-radius:9px!important;font-size:12px!important}
+
+  #homePage .events{gap:7px!important}
+  #homePage .store-activity-group{margin-bottom:7px!important;border-radius:11px!important;box-shadow:0 3px 10px rgba(39,66,83,.045)!important}
+  #homePage .store-activity-group>summary{min-height:52px!important;padding:8px 11px!important;gap:8px!important}
+  #homePage .store-group-title-row{gap:8px!important}
+  #homePage .activity-area-label{min-width:50px!important;padding:4px 7px!important;border-radius:8px!important;font-size:11px!important}
+  #homePage .store-group-name{font-size:15px!important;line-height:1.2!important}
+  #homePage .store-group-sub{font-size:11px!important;line-height:1.2!important;margin-top:2px!important}
+  #homePage .store-group-count{padding:5px 8px!important;font-size:11px!important;gap:4px!important}
+
+  #homePage .store-group-events{padding:2px 8px 8px!important}
+  #homePage .store-group-events .event-row{margin-top:5px!important}
+  #homePage .store-event-sequence{margin:6px 2px 3px!important;font-size:11px!important;line-height:1.2!important}
+  #homePage .store-event-sequence:before,
+  #homePage .store-event-sequence:after{opacity:.55!important}
+
+  #homePage .event-row{border-radius:9px!important;border-left-width:4px!important}
+  #homePage .event-summary{padding:8px 10px!important;gap:6px!important;min-height:48px!important}
+  #homePage .mall-name{font-size:14px!important;line-height:1.25!important}
+  #homePage .summary-region,
+  #homePage .summary-date{font-size:11px!important;line-height:1.2!important}
+  #homePage .summary-badges{gap:4px!important}
+  #homePage .summary-badges .badge{padding:3px 6px!important;font-size:10px!important;line-height:1.15!important}
+  #homePage .chevron{width:18px!important;font-size:14px!important}
+
+  #homePage .multi-activity-group[open]>summary{min-height:54px!important}
+  #homePage .multi-activity-group[open] .store-group-events{padding:5px 10px 10px!important}
+  #homePage .multi-activity-group[open] .store-event-sequence{margin:7px 0 4px!important}
+  #homePage .multi-activity-group[open] .store-event-sequence:before{height:14px!important;width:3px!important;flex-basis:3px!important;margin-right:6px!important}
+  #homePage .multi-activity-group[open] .event-summary{padding:9px 11px!important}
+
+  #homePage .event-row.open .event-detail{padding:4px 9px 9px!important}
+  #homePage .event-detail-inner{padding-top:7px!important}
+  #homePage .meta{gap:6px!important}
+  #homePage .row{grid-template-columns:68px minmax(0,1fr)!important;gap:6px!important;line-height:1.35!important}
+  #homePage .label{font-size:11px!important}
+  #homePage .front-activity-content{font-size:13px!important;line-height:1.42!important}
+  #homePage .front-activity-note{padding:6px 8px!important;font-size:12px!important;line-height:1.4!important;border-radius:8px!important}
+  #homePage .tags{gap:5px!important}
+  #homePage .tag{padding:4px 7px!important;font-size:11px!important}
+  #homePage .gallery{gap:6px!important;margin-top:7px!important}
+  #homePage .gallery img{width:112px!important;height:76px!important;border-radius:7px!important}
+  #homePage .multi-activity-group[open] .gallery{grid-template-columns:repeat(auto-fill,minmax(105px,120px))!important;gap:7px!important;margin-top:8px!important}
+  #homePage .multi-activity-group[open] .gallery img{width:120px!important;height:80px!important;border-radius:8px!important}
+
+  #homePage .store-activity-group:hover{box-shadow:0 5px 14px rgba(39,66,83,.08)!important}
+  #homePage .store-activity-group[open]{transform:none!important;box-shadow:0 7px 18px rgba(39,66,83,.13)!important}
+  #homePage .event-summary:hover{background:#f4f8fa!important}
+  #homePage .event-row.open>.event-summary:hover{background:linear-gradient(135deg,#274253,#365d72)!important}
+}
+</style>
+
+</body></html>`);w.document.close();showOrderAction('揀貨單已開啟',`已建立 ${list.length} 張揀貨單。`)}
+async function openOrderEdit(id){const o=orders.find(x=>x.id===id);if(!o)return;$("editOrderId").value=id;$("editOrderName").value=o.name;$("editOrderPhone").value=o.phone;$("editOrderAddress").value=o.address;$("editOrderDelivery").value=o.delivery;$("editOrderItems").value=o.items;const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();const x=o.original||o,originalPhotoKey=x.photoKey||o.photoKey||'';$("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${o.history?.length?`<div class="edit-history-box"><b>修改紀錄</b>${o.history.map((h,i)=>`<p>${i+1}. ${escapeHtml(h.editedAt||'')}｜修改前：${escapeHtml(JSON.stringify(h.before||{}))}</p>`).join('')}</div>`:''}<button type="button" class="photo-open-only" onclick="viewOrderPhoto('${originalPhotoKey}')">查看原始照片</button>`;$("orderEditModal").classList.add('show')}
+function closeOrderEditModal(){$("orderEditModal").classList.remove('show')}
+function saveOrderEdit(){const o=orders.find(x=>x.id===$("editOrderId").value);if(!o)return;const delivery=$("editOrderDelivery").value,pickup=delivery==='門市自取',pickupStore=$("editOrderPickupStore")?.value||'';const pickupStoreData=pickup?stores.find(x=>x.name===pickupStore):null,pickupArea=pickupStoreData?.area||'';const next={name:$("editOrderName").value.trim(),phone:$("editOrderPhone").value.trim(),address:pickup?`取件門市：${pickupStore}`:$("editOrderAddress").value.trim(),delivery,items:$("editOrderItems").value.trim(),pickupArea:pickup?pickupArea:'',pickupStore:pickup?pickupStore:''};if(!next.name||!next.phone||!next.items||(!pickup&&!next.address)){showOrderAction('資料未完成','姓名、電話、地址與商品都必須填寫。');return}if(pickup&&!pickupStore){showOrderAction('資料未完成','請選擇取件門市。');return}o.original=o.original||{name:o.name,phone:o.phone,address:o.address,delivery:o.delivery,items:o.items,pickupArea:o.pickupArea||'',pickupStore:o.pickupStore||'',photoKey:o.photoKey,createdAt:o.createdAt};o.history=o.history||[];o.history.push({editedAt:new Date().toLocaleString('zh-TW',{hour12:false}),before:{name:o.name,phone:o.phone,address:o.address,delivery:o.delivery,items:o.items,pickupArea:o.pickupArea||'',pickupStore:o.pickupStore||''}});Object.assign(o,next);if(!persistOrders()){o.history.pop();return}closeOrderEditModal();renderOrderAdmin();renderOrderCards();showOrderAction('訂單修改完成','目前資料已更新，原始資料與修改紀錄已保留。')}
+
 function setCloudBusy(isBusy, text="處理中…"){
   const btn=$("saveBtn");
   if(btn){
@@ -2559,7 +4253,7 @@ async function loadCloudData(){
     events=(eventRows||[]).map(row=>eventRowToLocal(row,imageMap));
     cloudReady=true;
     selectedManageEventIds.clear();
-    rebuildMallOptions();renderStores();updateManageStoreFilter();renderAll();
+    rebuildMallOptions();rebuildOrderStoreOptions();renderStores();updateManageStoreFilter();renderAll();
   }catch(error){
     cloudReady=false;
     cloudError("Supabase 資料載入失敗",error);
@@ -2660,6 +4354,8 @@ window.deleteSelectedEvents=async function(){
 persist=function(){};
 persistStores=function(){};
 window.addEventListener("load",async()=>{await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);},{once:true});
+
+document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();});
 </script>
 
 <div id="globalDropOverlay" class="global-drop-overlay">
@@ -2670,5 +4366,248 @@ window.addEventListener("load",async()=>{await Promise.allSettled([loadCloudData
   </div>
 </div>
 
+
+<style>
+/* 展開後訂單卡片標題文字提高對比 */
+.order-card.open>.order-card-summary .sent-summary-main b{
+    color:#FFFFFF !important;
+}
+.order-card.open>.order-card-summary .sent-summary-main span,
+.order-card.open>.order-card-summary .sent-summary-main small{
+    color:#F2F8FC !important;
+    font-weight:600 !important;
+    text-shadow:0 1px 1px rgba(0,0,0,.15);
+}
+</style>
+
+
+<style id="sent-order-summary-full-visible-fix">
+/* 傳送資料：清單捲動時，每筆標題三行資料保持完整，不被上下裁切 */
+#orderPage .order-sent-panel .order-card-list{
+  scroll-padding-top:8px!important;
+  scroll-padding-bottom:8px!important;
+}
+#orderPage .order-sent-panel .order-card{
+  flex:0 0 auto!important;
+  height:auto!important;
+  min-height:0!important;
+}
+#orderPage .order-sent-panel .order-card-summary{
+  height:auto!important;
+  min-height:94px!important;
+  padding:13px 14px!important;
+  overflow:visible!important;
+}
+#orderPage .order-sent-panel .sent-summary-main{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  gap:3px!important;
+  min-height:66px!important;
+  overflow:visible!important;
+}
+#orderPage .order-sent-panel .sent-summary-main b,
+#orderPage .order-sent-panel .sent-summary-main span,
+#orderPage .order-sent-panel .sent-summary-main small{
+  position:static!important;
+  margin:0!important;
+  padding:0!important;
+  line-height:1.35!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+}
+#orderPage .order-sent-panel .sent-summary-main b{font-size:17px!important;}
+#orderPage .order-sent-panel .sent-summary-main span{font-size:14px!important;}
+#orderPage .order-sent-panel .sent-summary-main small{font-size:12px!important;}
+</style>
+
+<style id="desktop-global-compact-ui-20260724">
+/* 電腦版全面緊湊化：只調整畫面樣式、間距與特效，不改資訊及操作邏輯 */
+@media (min-width:901px){
+  :root{--shadow:0 6px 18px rgba(39,66,83,.075)}
+  body{background:linear-gradient(180deg,#fff,#f7fafb 210px,#eef3f6)}
+  .topbar-inner,.container{width:min(1480px,calc(100% - 30px))!important}
+  .topbar-inner{padding:8px 0!important}
+  .brand-home-btn{font-size:15px!important;letter-spacing:.045em!important}
+  .nav{gap:5px!important}.nav button{padding:7px 11px!important;min-height:34px!important;font-size:13px!important}
+  .logout-top-btn{min-height:34px!important;padding:7px 11px!important;font-size:13px!important}
+  .hero{padding:17px 18px 11px!important}.hero .eyebrow{font-size:11px!important}.hero h1{font-size:28px!important;margin:4px 0!important}.hero p{font-size:13px!important;line-height:1.45!important}
+  .container{margin-bottom:30px!important}
+
+  .panel,.toolbar,.login-box,.summary-box,.front-filter-panel{border-radius:14px!important;box-shadow:var(--shadow)!important}
+  .panel{padding:14px!important;margin-bottom:12px!important}
+  .panel h2{font-size:20px!important;margin:0 0 8px!important;line-height:1.3!important}
+  .note{font-size:12px!important;line-height:1.45!important;margin-top:4px!important}
+  input,select,textarea{padding:8px 10px!important;border-radius:9px!important;font-size:14px!important}
+  input,select{min-height:38px!important;height:38px!important}
+  textarea{min-height:82px!important;line-height:1.45!important}
+  button.primary,button.secondary{padding:8px 13px!important;min-height:38px!important;border-radius:9px!important;font-size:14px!important}
+  button.danger{padding:7px 10px!important;border-radius:8px!important;font-size:13px!important}
+  .field{gap:4px!important}.field label{font-size:12px!important;line-height:1.25!important}
+
+  .toolbar{padding:10px!important;gap:8px!important;margin-bottom:12px!important}
+  .summary{gap:9px!important;margin-bottom:12px!important}.summary-box{padding:12px!important}.summary-box b{font-size:23px!important}.summary-box span{font-size:12px!important}
+  .front-filter-panel{margin:12px 0!important;padding:12px!important}.front-filter-heading{margin-bottom:10px!important}.front-filter-title{font-size:16px!important}.front-filter-subtitle{font-size:12px!important}.front-filter-grid{gap:8px!important}.front-filter-field{gap:4px!important}.front-filter-field select,.front-filter-field input{height:38px!important}
+  .front-filter-clear{height:36px!important;padding:0 11px!important}
+
+  .events{gap:10px!important}.store-activity-group{margin-bottom:10px!important;border-radius:13px!important}.store-activity-group summary{padding:11px 13px!important;min-height:58px!important}.store-group-name{font-size:16px!important}.store-group-sub{font-size:12px!important;margin-top:2px!important}.store-group-count{padding:6px 9px!important;font-size:12px!important}.store-group-events{padding:0 10px 10px!important}.store-group-events .event-row{margin-top:8px!important}
+  .event-row{border-radius:11px!important}.event-summary{padding:10px 12px!important;gap:8px!important}.mall-name{font-size:15px!important}.summary-region,.summary-date{font-size:12px!important}.badge{padding:4px 7px!important;font-size:11px!important}.event-row.open .event-detail{padding:5px 12px 12px!important}.event-detail-inner{padding-top:10px!important}.row{grid-template-columns:76px 1fr!important;gap:7px!important;line-height:1.45!important}.label{font-size:12px!important}.front-activity-content{font-size:14px!important;line-height:1.55!important}.front-activity-note{padding:7px 9px!important;font-size:13px!important}.gallery{gap:7px!important;margin-top:10px!important}.gallery img{height:92px!important;border-radius:8px!important}
+
+  .admin-tabs{gap:5px!important;margin-bottom:10px!important}.admin-tabs button{padding:7px 11px!important;min-height:36px!important;font-size:13px!important}
+  .form-grid,.account-form,.store-form{gap:9px!important}.actions{gap:7px!important}.actions>button{min-width:105px!important}
+  .activity-action-bar{gap:8px!important;padding-top:10px!important;margin-top:1px!important}.activity-action-bar button{height:38px!important;min-width:118px!important;padding:0 13px!important}.activity-action-bar .activity-main-action{min-width:145px!important}
+  .dropzone{min-height:150px!important;border-radius:13px!important}.photo-workspace{gap:10px!important}.photo-workspace .photo-upload-zone,.photo-workspace .photo-preview{min-height:160px!important}.photo-workspace .photo-preview{padding:8px!important;gap:8px!important}.photo-preview-item img{border-radius:9px!important}.photo-order-hint{font-size:11px!important}
+
+  .store-toolbar{margin-bottom:8px!important}.store-filter-group{gap:5px!important}.filter-btn{padding:6px 10px!important;font-size:12px!important}.store-list,.account-list{gap:7px!important;margin-top:10px!important}.store-list.compact{gap:8px!important}.store-list.compact .store-item,.store-item,.account-item{min-height:68px!important;padding:9px 11px!important;border-radius:11px!important;gap:9px!important}.store-list.compact .store-info{grid-template-columns:55px minmax(0,1fr)!important;column-gap:9px!important}.store-area-block{min-height:46px!important;border-radius:9px!important;font-size:12px!important}.store-list.compact .store-name{font-size:14px!important}.store-floor-row{margin-top:3px!important}.manage-actions{gap:5px!important}.manage-actions button{height:34px!important;min-width:62px!important;padding:6px 9px!important;font-size:12px!important}
+  .account-item .name{font-size:14px!important}.account-item .small,.audit{font-size:11px!important}.role-badge{padding:3px 6px!important;font-size:11px!important}
+
+  .manage-list-heading{margin-bottom:9px!important}.manage-list-description{font-size:12px!important}.manage-result-count{padding:5px 9px!important;font-size:12px!important}.manage-filter-bar{padding:10px!important;gap:8px!important;margin-bottom:10px!important}.manage-bulk-bar{padding:8px 10px!important;margin-bottom:9px!important}.manage-activity-card{margin-bottom:8px!important;border-radius:11px!important}.manage-activity-card summary{padding:10px 12px!important;gap:8px!important}.manage-summary-title{font-size:15px!important}.manage-summary-sub{margin-top:3px!important;font-size:12px!important}.manage-collapse-body{gap:10px!important;padding:0 12px 12px!important}.manage-collapse-content,.manage-collapse-body .manage-card-actions{padding-top:9px!important}.manage-info-row{padding:7px 0!important;grid-template-columns:75px 1fr!important}.manage-info-label{font-size:12px!important}.manage-info-value{font-size:13px!important;line-height:1.45!important}.manage-photo-strip{margin-top:8px!important}.manage-photo-strip img{width:58px!important;height:58px!important}
+
+  /* 訂單頁：縮短上下空白、按鈕與卡片高度 */
+  #orderPage .order-layout{gap:12px!important}
+  #orderPage .order-layout>.panel{padding:13px!important}
+  #orderPage .order-title-row{margin-bottom:6px!important}
+  #orderPage .order-red-note{font-size:13px!important;line-height:1.35!important}
+  #orderPage .order-fixed-date{padding:7px 9px!important;margin:6px 0 9px!important;min-height:38px!important;border-radius:9px!important}
+  #orderPage .order-form-grid{column-gap:9px!important;row-gap:8px!important}
+  #orderPage .order-form-grid textarea{min-height:72px!important}
+  #orderPage .vertical-resize{min-height:72px!important}
+  #orderPage .order-submit-row{gap:7px!important;margin-top:9px!important}
+  #orderPage .sent-order-filter{gap:7px!important;margin:9px 0!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 105px!important}
+  #orderPage .sent-order-filter .sent-date-clear{height:38px!important}
+  #orderPage .sent-date-field label{margin-bottom:3px!important;font-size:10px!important}
+  #orderPage .order-card-list{gap:5px!important}
+  #orderPage .order-card{border-radius:9px!important}
+  #orderPage .order-card-summary{padding:8px 10px!important;min-height:63px!important;gap:6px!important}
+  #orderPage .sent-summary-main b{font-size:14px!important;line-height:1.2!important}
+  #orderPage .sent-summary-main span{font-size:11px!important;margin-top:1px!important;line-height:1.2!important}
+  #orderPage .sent-summary-main small{font-size:10px!important;margin-top:1px!important;line-height:1.2!important}
+  #orderPage .order-card-detail{padding:7px!important}.customer-title{padding:6px 8px!important;font-size:12px!important}.customer-grid>div{padding:6px 8px!important}.customer-grid span{font-size:9px!important}.customer-grid b{font-size:12px!important;line-height:1.4!important}.delivery-photo-row{gap:7px!important;margin-top:6px!important}.delivery-inline{padding:6px 8px!important}.photo-inline-btn{min-width:92px!important;padding:6px 8px!important}.ship-line{margin-top:5px!important;padding:6px 8px!important}
+  #orderPage .order-pagination{padding:10px 8px!important;margin-top:8px!important;min-height:82px!important}.order-pagination button{min-width:40px!important;height:38px!important;padding:6px 10px!important}.order-pagination .pagination-info{font-size:12px!important;margin-top:7px!important}
+
+  /* 訂單後台與彈窗 */
+  .compact-order-admin{padding:12px!important}.admin-order-status-buttons{gap:5px!important;margin:8px 0!important}.admin-status-btn{padding:6px!important;min-height:36px!important;font-size:12px!important}.admin-status-btn b{height:20px!important;min-width:20px!important;font-size:11px!important}.compact-filter{gap:7px!important;margin-bottom:7px!important}.compact-batch-panel{padding:7px!important;margin-bottom:8px!important}.compact-select-row{margin-bottom:5px!important}.compact-process-row{gap:5px!important}.compact-action{min-height:34px!important;padding:6px 8px!important;font-size:12px!important}.clean-admin-list{gap:5px!important}.clean-admin-card{padding:8px 9px!important;gap:8px!important;border-radius:9px!important}.admin-order-main{gap:7px!important}.admin-order-top{padding-bottom:6px!important}.admin-customer-head>b{font-size:15px!important}.admin-customer-head time{font-size:10px!important}.admin-order-columns{gap:8px!important}.admin-info-block{padding:8px!important}.admin-contact-line{margin-top:3px!important;font-size:12px!important}.admin-order-footer{padding-top:6px!important}.admin-edit-compact{padding:6px 9px!important;min-height:34px!important;font-size:12px!important}.order-big-checkbox{width:25px!important;height:25px!important}
+  .order-edit-modal{padding:16px!important}.order-edit-dialog{width:min(1020px,calc(100vw - 32px))!important;max-height:calc(100vh - 32px)!important;padding:14px!important;border-radius:14px!important}.order-edit-head{margin-bottom:8px!important}.order-edit-head h2{font-size:19px!important}.order-edit-columns{gap:10px!important}.order-edit-grid{gap:8px!important}.original-box{padding:9px!important}.order-edit-actions{gap:7px!important;margin-top:9px!important}.order-edit-actions button{min-width:108px!important}
+
+  /* 所有常見空白區再收斂 */
+  .empty{padding:25px!important;border-radius:12px!important}.login-wrap{min-height:360px!important}.login-box{padding:18px!important}.photo-preview{margin-top:9px!important}.password-dialog{padding:18px!important}.success-dialog{padding:22px 20px 18px!important}.success-icon{width:52px!important;height:52px!important;margin-bottom:10px!important}
+
+  /* 輕量互動特效 */
+  button,.event-summary,.store-activity-group summary,.manage-activity-card summary,.order-card-summary{transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease!important}
+  button:hover{transform:translateY(-1px)}
+  input:focus,select:focus,textarea:focus{border-color:#7895a5!important;box-shadow:0 0 0 3px rgba(39,66,83,.08)!important;outline:none!important}
+}
+</style>
+
+
+<script>
+/* ===== LINE LIFF + Supabase line-api：僅處理登入資料，不修改任何版面 ===== */
+const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
+const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
+const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
+
+/* 請把 Supabase「Publishable key」完整貼到下面引號內；不要放 Secret key。 */
+const STARRED_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_uxp_jErpZrRFYX4SXNmpkA_x9U86GSP";
+
+function setLineReturnPerson(profile){
+  const el=document.getElementById("orderReturnPerson");
+  if(el) el.textContent=(profile&&profile.name)||"（尚未取得 LINE 姓名）";
+}
+
+function showLineAccessBlocked(message){
+  const block=document.getElementById("lineAccessBlock");
+  if(!block)return;
+  const p=block.querySelector("p");
+  if(p&&message)p.textContent=message;
+  block.classList.add("show");
+  block.style.display="flex";
+}
+
+function hasSupabasePublishableKey(){
+  return STARRED_SUPABASE_PUBLISHABLE_KEY &&
+    !STARRED_SUPABASE_PUBLISHABLE_KEY.includes("請貼上_") &&
+    STARRED_SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
+}
+
+async function verifyLineLoginWithServer(idToken){
+  if(!hasSupabasePublishableKey()){
+    throw new Error("尚未填入 Supabase Publishable key");
+  }
+  const response=await fetch(STARRED_LINE_API_URL,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,
+      "Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`
+    },
+    body:JSON.stringify({idToken})
+  });
+  let result={};
+  try{result=await response.json()}catch(_){result={success:false,error:"伺服器回傳格式錯誤"}}
+  if(!response.ok||!result.success){
+    const error=new Error(result.error||`LINE 驗證失敗（${response.status}）`);
+    error.blocked=Boolean(result.blocked);
+    throw error;
+  }
+  return result.user;
+}
+
+async function initializeStarredLiff(){
+  try{
+    if(!window.liff){
+      console.error("LIFF SDK 載入失敗");
+      return;
+    }
+    await liff.init({liffId:STARRED_LIFF_ID});
+    if(!liff.isLoggedIn()){
+      if(/^https?:$/i.test(location.protocol)){
+        liff.login({redirectUri:location.href.split("#")[0]});
+      }
+      return;
+    }
+
+    const idToken=liff.getIDToken();
+    if(!idToken)throw new Error("無法取得 LINE ID Token，請確認 LIFF 已勾選 openid scope");
+
+    const verified=await verifyLineLoginWithServer(idToken);
+    const normalized={
+      id:String(verified.lineUserId||""),
+      name:verified.employeeName||verified.lineDisplayName||"LINE 使用者",
+      displayName:verified.lineDisplayName||"LINE 使用者",
+      pictureUrl:verified.pictureUrl||"",
+      role:verified.role||"staff",
+      storeId:verified.storeId||"",
+      enabled:verified.isEnabled!==false,
+      verified:true
+    };
+
+    window.starredVerifiedLineUser=verified;
+    localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
+    sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
+    if(typeof window.registerLineLoginUser==="function")window.registerLineLoginUser(normalized);
+    setLineReturnPerson(normalized);
+  }catch(error){
+    console.error("LIFF／line-api 初始化失敗：",error);
+    if(error&&error.blocked){
+      showLineAccessBlocked(error.message);
+      return;
+    }
+    const cached=getCurrentLineUser();
+    if(cached)setLineReturnPerson(cached);
+    if(String(error&&error.message||"").includes("Publishable key")){
+      console.warn("請先在 HTML 的 STARRED_SUPABASE_PUBLISHABLE_KEY 填入 Publishable key。");
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const cached=getCurrentLineUser();
+  if(cached)setLineReturnPerson(cached);
+  initializeStarredLiff();
+});
+</script>
+
+<div id="lineAccessBlock" class="line-access-block" role="alertdialog" aria-modal="true"><div class="line-access-dialog"><div class="line-access-icon">!</div><h2>帳號已停用</h2><p>此 LINE 帳號目前無法開啟系統，請聯絡系統管理員協助啟用。</p></div></div>
 </body>
 </html>
