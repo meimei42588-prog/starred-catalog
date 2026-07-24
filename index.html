@@ -3985,21 +3985,18 @@ async function submitOrder(){
  if(!st){showOrderAction('門市資料錯誤','找不到選擇的門市，請重新選擇區域與門市。');return}
  const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
  if(pickup&&!pickupSt){showOrderAction('取件門市錯誤','找不到選擇的取件門市，請重新選擇。');return}
- const id='o_'+Date.now()+'_'+Math.random().toString(36).slice(2),photoKey='p_'+id;
- try{await savePhoto(photoKey,orderPhotoData)}catch(e){showOrderAction('照片儲存失敗','照片無法儲存，請重新選擇照片後再試。');return}
  const address=pickup?`取件門市：${pickupSt.name}`:$("orderCounty").value+$("orderDistrict").value+$("orderAddressDetail").value.trim();
- const now=new Date(),createdDate=todayStr();
  const lineProfile=getCurrentLineUser()||{};
  const returnPerson=String(lineProfile.name||lineProfile.displayName||'（尚未取得 LINE 姓名）');
- const o={id,photoKey,returnPerson,createdByLineId:String(lineProfile.id||''),store:st.name,name:$("orderName").value.trim(),phone:$("orderPhone").value.trim(),address,delivery,items:$("orderItems").value.trim(),pickupArea:pickup?$("orderPickupArea").value:'',pickupStore:pickup?pickupSt.name:'',createdAt:now.toLocaleString('zh-TW',{hour12:false}),createdDate,status:'pending',handler:'',shippedDate:'',original:null,history:[]};
- o.original={returnPerson:o.returnPerson,createdByLineId:o.createdByLineId,name:o.name,phone:o.phone,address:o.address,delivery:o.delivery,items:o.items,pickupArea:o.pickupArea,pickupStore:o.pickupStore,photoKey,createdAt:o.createdAt,createdDate:o.createdDate};
- orders.unshift(o);
- if(!persistOrders()){orders=orders.filter(x=>x.id!==id);return}
- resetOrderForm();
- const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
- if(keyword)keyword.value='';if(status)status.value='';if(from)from.value='';if(to)to.value='';
- renderOrderCards();renderOrderAdmin();
- showOrderAction('完成','客訂資料已成功傳送，按下確認後即可進行下一筆。');
+ try{
+  const result=await starredApi("create_order",{order:{storeId:String(st.id),returnPerson,orderDate:todayStr(),customerName:$("orderName").value.trim(),customerPhone:$("orderPhone").value.trim(),customerAddress:address,productContent:$("orderItems").value.trim(),deliveryMethod:pickup?"store_pickup":"company_shipping",pickupStoreId:pickup?String(pickupSt.id):null},photoData:orderPhotoData});
+  await loadStarredCloudData();
+  resetOrderForm();
+  const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
+  if(keyword)keyword.value='';if(status)status.value='';if(from)from.value='';if(to)to.value='';
+  renderOrderCards();renderOrderAdmin();
+  showOrderAction('完成',`客訂資料已成功傳送到雲端${result.order?.order_number?`（${result.order.order_number}）`:''}。`);
+ }catch(error){showOrderAction('雲端傳送失敗',error&&error.message?error.message:'請稍後再試');}
 }
 function orderDateValue(o){
  if(o?.createdDate)return String(o.createdDate).slice(0,10);
@@ -4541,7 +4538,7 @@ async function verifyLineLoginWithServer(idToken){
       "apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,
       "Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`
     },
-    body:JSON.stringify({idToken})
+    body:JSON.stringify({idToken,action:"verify"})
   });
   let result={};
   try{result=await response.json()}catch(_){result={success:false,error:"伺服器回傳格式錯誤"}}
@@ -4551,6 +4548,29 @@ async function verifyLineLoginWithServer(idToken){
     throw error;
   }
   return result.user;
+}
+
+
+async function starredApi(action,payload={}){
+  if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 尚未登入");
+  const idToken=liff.getIDToken();
+  if(!idToken)throw new Error("無法取得 LINE ID Token");
+  const response=await fetch(STARRED_LINE_API_URL,{method:"POST",headers:{"Content-Type":"application/json","apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,"Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`},body:JSON.stringify({idToken,action,...payload})});
+  const result=await response.json().catch(()=>({success:false,error:"伺服器回傳格式錯誤"}));
+  if(!response.ok||!result.success){const e=new Error(result.error||`雲端操作失敗（${response.status}）`);e.blocked=!!result.blocked;throw e}
+  return result;
+}
+function cloudStoreToLocal(s){return{id:String(s.id),area:String(s.region||"central"),name:String(s.name||""),floor:String(s.floor||"")}}
+function cloudUserToLocal(u){return{id:String(u.line_user_id||u.id||""),dbId:String(u.id||""),name:String(u.employee_name||u.line_display_name||"LINE 使用者"),displayName:String(u.line_display_name||"LINE 使用者"),pictureUrl:String(u.picture_url||""),storeId:String(u.store_id||""),role:String(u.role||"staff"),enabled:u.is_enabled!==false,lastLogin:u.last_login_at||""}}
+function cloudOrderToLocal(o){const pickup=o.delivery_method==="store_pickup";return{id:String(o.id),orderNumber:String(o.order_number||""),photoKey:String(o.photo_url||""),photoUrl:String(o.photo_url||""),returnPerson:String(o.return_person||""),createdByLineId:String(o.creator_line_user_id||""),store:String(o.store?.name||""),storeId:String(o.store_id||""),name:String(o.customer_name||""),phone:String(o.customer_phone||""),address:String(o.customer_address||""),delivery:pickup?"門市自取":"總公司寄出",items:String(o.product_content||o.note||""),pickupArea:String(o.pickup_store?.region||""),pickupStore:String(o.pickup_store?.name||""),pickupStoreId:String(o.pickup_store_id||""),createdAt:o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",createdDate:String(o.order_date||"").slice(0,10),status:o.status==="processing"?"pending":String(o.status||"pending"),handler:String(o.processor_name||""),shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",original:null,history:[]}}
+async function loadStarredCloudData(){
+  const data=await starredApi("bootstrap");
+  stores=(data.stores||[]).map(cloudStoreToLocal);
+  lineUsers=(data.lineUsers||[]).map(cloudUserToLocal);
+  orders=(data.orders||[]).map(cloudOrderToLocal);
+  persistStores();persistLineUsers();persistOrders();
+  rebuildMallOptions();rebuildOrderStoreOptions();renderStores();renderLineUsers();renderOrderCards();renderOrderAdmin();
+  return data;
 }
 
 async function initializeStarredLiff(){
@@ -4587,6 +4607,7 @@ async function initializeStarredLiff(){
     sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
     if(typeof window.registerLineLoginUser==="function")window.registerLineLoginUser(normalized);
     setLineReturnPerson(normalized);
+    await loadStarredCloudData();
   }catch(error){
     console.error("LIFF／line-api 初始化失敗：",error);
     if(error&&error.blocked){
