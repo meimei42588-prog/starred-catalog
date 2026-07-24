@@ -2460,7 +2460,7 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 
 <div class="field wide"><label>訂購商品／品項＋備註 *</label><textarea id="orderItems" rows="4" class="vertical-resize"></textarea></div>
 <div class="field wide"><label>訂購單照片 *</label><input id="orderPhoto" type="file" accept="image/*" capture="environment" onchange="previewOrderPhoto(event)"><div id="orderPhotoPreview"></div></div>
-</div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button class="primary" onclick="submitOrder()">確認傳送</button></div></section>
+</div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button id="orderSubmitButton" type="button" class="primary" onclick="submitOrder(event)">確認傳送</button></div></section>
 <section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期區間查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option></select><div class="sent-date-field"><label>開始日期</label><input id="orderDateFrom" type="date" onchange="resetOrderPageAndRender()"></div><div class="sent-date-field"><label>結束日期</label><input id="orderDateTo" type="date" onchange="resetOrderPageAndRender()"></div><button type="button" class="secondary sent-date-clear" onclick="clearSentOrderDate()">清除日期</button></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
 </div></section>
 <section id="adminPage" class="page">
@@ -3971,32 +3971,78 @@ function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.va
 
 function previewOrderPhoto(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas'),sc=Math.min(1,1000/Math.max(i.width,i.height));c.width=Math.max(1,Math.round(i.width*sc));c.height=Math.max(1,Math.round(i.height*sc));c.getContext('2d').drawImage(i,0,0,c.width,c.height);orderPhotoData=c.toDataURL('image/jpeg',.68);$("orderPhotoPreview").innerHTML='<div class="order-photo-actions"><button type="button" class="photo-open-only" onclick="openLightbox(orderPhotoData)">查看已上傳照片</button><button type="button" class="order-photo-delete" onclick="removeOrderPhoto()">刪除照片</button></div>'};i.src=r.result};r.readAsDataURL(f)}
 function removeOrderPhoto(){orderPhotoData='';const input=$("orderPhoto");if(input)input.value='';const preview=$("orderPhotoPreview");if(preview)preview.innerHTML='';showOrderAction('照片已刪除','請重新選擇或拍攝正確的訂購單照片。')}
-function showOrderAction(t,x){$("orderActionTitle").textContent=t;$("orderActionText").textContent=x;$("orderActionModal").classList.add('show')}function closeOrderActionModal(){$("orderActionModal").classList.remove('show')}
+function showOrderAction(t,x){
+ const title=$("orderActionTitle"),text=$("orderActionText"),modal=$("orderActionModal");
+ if(title&&text&&modal){title.textContent=t;text.textContent=x;modal.classList.add('show');return}
+ alert(`${t}\n\n${x}`);
+}
+function closeOrderActionModal(){const modal=$("orderActionModal");if(modal)modal.classList.remove('show')}
 function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function resetOrderForm(){['orderName','orderPhone','orderAddressDetail','orderItems'].forEach(id=>$(id).value='');$("orderArea").value='';$("orderStore").innerHTML='<option value="">請先選區域</option>';$("orderCounty").value='';$("orderDistrict").innerHTML='<option value="">請先選縣市</option>';$("orderDelivery").value='總公司寄出';$("orderPickupArea").value='';$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>';toggleOrderDeliveryFields();$("orderPhoto").value='';$("orderPhotoPreview").innerHTML='';orderPhotoData=''}
-async function submitOrder(){
- const miss=[];
- [['orderArea','區域'],['orderStore','門市'],['orderName','姓名'],['orderPhone','電話'],['orderItems','商品']].forEach(([i,n])=>{if(!String($(i)?.value||'').trim())miss.push(n)});
- const delivery=$("orderDelivery").value,pickup=delivery==='門市自取';
- if(pickup){if(!$("orderPickupArea").value)miss.push('取件區域');if(!$("orderPickupStore").value)miss.push('取件門市')}else{[['orderCounty','縣市'],['orderDistrict','行政區'],['orderAddressDetail','詳細地址']].forEach(([i,n])=>{if(!String($(i)?.value||'').trim())miss.push(n)})}
- if(!orderPhotoData)miss.push('照片');
- if(miss.length){showOrderAction('資料未完成','請補寫：'+miss.join('、'));return}
- const st=stores.find(x=>String(x.id)===String($("orderStore").value));
- if(!st){showOrderAction('門市資料錯誤','找不到選擇的門市，請重新選擇區域與門市。');return}
- const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
- if(pickup&&!pickupSt){showOrderAction('取件門市錯誤','找不到選擇的取件門市，請重新選擇。');return}
- const address=pickup?`取件門市：${pickupSt.name}`:$("orderCounty").value+$("orderDistrict").value+$("orderAddressDetail").value.trim();
- const lineProfile=getCurrentLineUser()||{};
- const returnPerson=String(lineProfile.name||lineProfile.displayName||'（尚未取得 LINE 姓名）');
+async function submitOrder(event){
+ if(event?.preventDefault)event.preventDefault();
+ const submitButton=$("orderSubmitButton")||event?.currentTarget;
+ const originalText=submitButton?.textContent||"確認傳送";
  try{
-  const result=await starredApi("create_order",{order:{storeId:String(st.id),returnPerson,orderDate:todayStr(),customerName:$("orderName").value.trim(),customerPhone:$("orderPhone").value.trim(),customerAddress:address,productContent:$("orderItems").value.trim(),deliveryMethod:pickup?"store_pickup":"company_shipping",pickupStoreId:pickup?String(pickupSt.id):null},photoData:orderPhotoData});
-  await loadStarredCloudData();
+  if(submitButton){submitButton.disabled=true;submitButton.textContent="傳送中…";submitButton.setAttribute("aria-busy","true")}
+
+  const requiredIds=["orderArea","orderStore","orderName","orderPhone","orderItems","orderDelivery"];
+  const missingElement=requiredIds.find(id=>!$(id));
+  if(missingElement)throw new Error(`頁面欄位載入不完整（${missingElement}），請按 Ctrl+F5 重新整理後再試。`);
+
+  const miss=[];
+  [["orderArea","區域"],["orderStore","門市"],["orderName","姓名"],["orderPhone","電話"],["orderItems","商品"]]
+    .forEach(([id,name])=>{if(!String($(id)?.value||"").trim())miss.push(name)});
+
+  const delivery=$("orderDelivery").value;
+  const pickup=delivery==="門市自取";
+  if(pickup){
+   if(!$("orderPickupArea")?.value)miss.push("取件區域");
+   if(!$("orderPickupStore")?.value)miss.push("取件門市");
+  }else{
+   [["orderCounty","縣市"],["orderDistrict","行政區"],["orderAddressDetail","詳細地址"]]
+    .forEach(([id,name])=>{if(!String($(id)?.value||"").trim())miss.push(name)});
+  }
+  if(!orderPhotoData)miss.push("照片");
+  if(miss.length){showOrderAction("資料未完成","請補寫："+miss.join("、"));return}
+
+  if(typeof starredApi!=="function")throw new Error("雲端連線程式尚未載入，請按 Ctrl+F5 強制重新整理。");
+  if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 登入狀態已失效，請關閉頁面後由 LIFF 連結重新進入。");
+
+  const st=stores.find(x=>String(x.id)===String($("orderStore").value));
+  if(!st){showOrderAction("門市資料錯誤","找不到選擇的門市，請重新選擇區域與門市。");return}
+  const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
+  if(pickup&&!pickupSt){showOrderAction("取件門市錯誤","找不到選擇的取件門市，請重新選擇。");return}
+
+  const address=pickup?`取件門市：${pickupSt.name}`:$("orderCounty").value+$("orderDistrict").value+$("orderAddressDetail").value.trim();
+  const lineProfile=getCurrentLineUser()||{};
+  const returnPerson=String(lineProfile.name||lineProfile.displayName||"（尚未取得 LINE 姓名）");
+  const payload={
+   order:{
+    storeId:String(st.id),returnPerson,orderDate:todayStr(),
+    customerName:$("orderName").value.trim(),customerPhone:$("orderPhone").value.trim(),
+    customerAddress:address,productContent:$("orderItems").value.trim(),
+    deliveryMethod:pickup?"store_pickup":"company_shipping",
+    pickupStoreId:pickup?String(pickupSt.id):null
+   },
+   photoData:orderPhotoData
+  };
+
+  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("傳送逾時，請確認網路後再試一次。")),45000));
+  const result=await Promise.race([starredApi("create_order",payload),timeout]);
+
+  try{await loadStarredCloudData()}catch(refreshError){console.warn("訂單已建立，但重新整理清單失敗：",refreshError)}
   resetOrderForm();
   const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
-  if(keyword)keyword.value='';if(status)status.value='';if(from)from.value='';if(to)to.value='';
+  if(keyword)keyword.value="";if(status)status.value="";if(from)from.value="";if(to)to.value="";
   renderOrderCards();renderOrderAdmin();
-  showOrderAction('完成',`客訂資料已成功傳送到雲端${result.order?.order_number?`（${result.order.order_number}）`:''}。`);
- }catch(error){showOrderAction('雲端傳送失敗',error&&error.message?error.message:'請稍後再試');}
+  showOrderAction("完成",`客訂資料已成功傳送到雲端${result?.order?.order_number?`（${result.order.order_number}）`:""}。`);
+ }catch(error){
+  console.error("submitOrder failed:",error);
+  showOrderAction("雲端傳送失敗",error?.message||String(error)||"請稍後再試");
+ }finally{
+  if(submitButton){submitButton.disabled=false;submitButton.textContent=originalText;submitButton.removeAttribute("aria-busy")}
+ }
 }
 function orderDateValue(o){
  if(o?.createdDate)return String(o.createdDate).slice(0,10);
