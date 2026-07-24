@@ -3963,7 +3963,18 @@ function toggleOrderDeliveryFields(){const pickup=$("orderDelivery")?.value==='�
 
 function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open('starred_order_photos',1);r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function savePhoto(key,data){const d=await db();return new Promise((res,rej)=>{const t=d.transaction('photos','readwrite');t.objectStore('photos').put(data,key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
-async function getPhoto(key){if(!key)return '';const d=await db();return new Promise((res,rej)=>{const r=d.transaction('photos').objectStore('photos').get(key);r.onsuccess=()=>res(r.result||'');r.onerror=()=>rej(r.error)})}
+async function getPhoto(key){
+  if(!key)return '';
+  const value=String(key).trim();
+  // 雲端照片會是 Supabase signed URL；舊版照片才存於 IndexedDB。
+  if(/^https?:\/\//i.test(value)||/^data:image\//i.test(value)||/^blob:/i.test(value)) return value;
+  const d=await db();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('photos').objectStore('photos').get(value);
+    r.onsuccess=()=>res(r.result||'');
+    r.onerror=()=>rej(r.error);
+  });
+}
 async function viewOrderPhoto(key){try{const photo=await getPhoto(key);if(!photo){showOrderAction('找不到照片','此筆訂單的原始照片不存在或尚未成功儲存。');return}openLightbox(photo)}catch(err){console.error(err);showOrderAction('照片開啟失敗','無法讀取原始照片，請重新整理頁面後再試。')}}
 function editPickupAreaFromOrder(o){if(o&&o.pickupArea)return o.pickupArea;const name=(o&&o.pickupStore)||String((o&&o.address)||'').replace(/^取件門市：/,'');const st=stores.find(x=>x.name===name);return st?st.area:''}
 function renderEditPickupStores(selected=''){const sel=$("editOrderPickupStore");if(!sel)return;const list=stores.filter(x=>x.enabled!==false&&x.active!==false);sel.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');if(selected)sel.value=selected}
