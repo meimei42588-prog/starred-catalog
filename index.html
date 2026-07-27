@@ -2356,6 +2356,8 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 </style>
 </head>
 <body>
+<!-- V2：移除舊式帳號密碼管理，統一使用 LINE 使用者與權限 -->
+
 <div class="topbar"><div class="topbar-inner">
   <div class="brand"><button type="button" class="brand-home-btn" onclick="goToActivityOverview()">星紅織品｜百貨活動</button></div>
   <div class="topbar-right">
@@ -2480,8 +2482,7 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
       <button id="activityTabBtn" class="active" onclick="showAdminTab('activity')">活動清單</button>
       <button id="storeTabBtn" onclick="showAdminTab('store')">百貨門市管理</button>
       <button id="orderAdminTabBtn" onclick="showAdminTab('orderAdmin')">訂單管理</button>
-      <button id="accountTabBtn" onclick="showAdminTab('account')">管理員設定</button>
-      <button id="lineUserTabBtn" onclick="showAdminTab('lineUser')">LINE 使用者</button>
+      <button id="lineUserTabBtn" onclick="showAdminTab('lineUser')">LINE 權限管理</button>
     </div>
 
 
@@ -2532,39 +2533,9 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 </div><input id="adminOrderStatus" type="hidden" value="">
 <div class="order-admin-filter compact-filter"><input id="adminOrderKeyword" placeholder="搜尋姓名、電話、地址、商品" oninput="renderOrderAdmin()"><select id="adminOrderStoreFilter" onchange="renderOrderAdmin()"><option value="">全部門市</option></select><select id="adminOrderDeliveryFilter" onchange="renderOrderAdmin()"><option value="">全部配送方式</option><option value="總公司寄出">公司寄出</option><option value="門市自取">門市自取</option></select><div class="compact-date-field"><label>訂單日起</label><input id="adminOrderDateFrom" type="date" onchange="renderOrderAdmin()"></div><div class="compact-date-field"><label>訂單日迄</label><input id="adminOrderDateTo" type="date" onchange="renderOrderAdmin()"></div><button type="button" class="secondary compact-btn" onclick="clearAdminOrderFilters()">清除</button></div>
 <div class="compact-batch-panel"><div class="compact-select-row"><label><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" onchange="toggleAllOrders(this.checked)"> 全選目前結果</label><b id="orderSelectedCount">已選 0 筆</b></div><div class="compact-process-row"><select id="orderHandler" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button class="secondary compact-action" onclick="exportOrdersExcel()">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
-<div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div><div id="accountTab" class="admin-tab-panel">
+<div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div><div id="lineUserTab" class="admin-tab-panel">
       <section class="panel">
-        <h2 id="accountFormTitle">新增管理帳號</h2>
-        <div class="account-form">
-          <div class="field"><label>姓名</label><input id="accountName" placeholder="例如：王店長"></div>
-          <div class="field"><label>帳號</label><input id="accountUsername" placeholder="登入帳號"></div>
-          <div class="field"><label>Email（忘記密碼使用）</label><input id="accountEmail" type="email" placeholder="name@example.com"></div>
-          <div class="field"><label>密碼</label><input id="accountPassword" type="password" placeholder="至少6碼"></div>
-          <div class="field"><label>權限</label>
-            <select id="accountRole">
-              <option value="manager">主管</option>
-              <option value="admin">系統管理員</option>
-            </select>
-          </div>
-          <button class="primary" id="accountSaveBtn" onclick="saveAccount()">新增帳號</button>
-        </div>
-        <div class="actions" style="margin-top:12px">
-          <label class="toggle-wrap">
-  <input id="accountEnabled" type="checkbox" checked>
-  <span class="toggle-ui"></span>
-  <span id="accountEnabledText">帳號啟用</span>
-</label>
-          <button class="secondary" id="accountCancelBtn" style="display:none" onclick="resetAccountForm()">取消編輯</button>
-        </div>
-      </section>
-      <section class="panel">
-        <h2>管理帳號清單</h2>
-        <div id="accountList" class="account-list"></div>
-      </section>
-    </div>
-    <div id="lineUserTab" class="admin-tab-panel">
-      <section class="panel">
-        <div class="manage-list-heading"><div><h2>LINE 使用者</h2><div class="manage-list-description">LINE 登入串接後，使用者姓名會自動出現在這裡。停用後，該 LINE 身分將無法開啟系統。</div></div><div id="lineUserCount" class="manage-result-count">0 位</div></div>
+        <div class="manage-list-heading"><div><h2>LINE 權限管理</h2><div class="manage-list-description">員工第一次使用 LINE 登入後會自動出現在這裡。系統管理員可設定員工姓名、所屬門市、權限與啟用狀態。</div></div><div id="lineUserCount" class="manage-result-count">0 位</div></div>
         <div id="lineUserSaveStatus" class="line-user-save-status"></div>
 <div id="lineUserList" class="line-user-list"></div>
       </section>
@@ -2927,12 +2898,17 @@ function checkLogin(){
   $("lineUserTabBtn").classList.remove("hidden-by-role");
  }
 }
+function normalizeEnabledValue(value){
+ if(value===false||value===0||value==="0")return false;
+ const text=String(value??"").trim().toLowerCase();
+ if(["false","off","disabled","停用","否","no"].includes(text))return false;
+ return true;
+}
 async function loadCloudAccounts(){
  try{
-  if(typeof cloudDb==="undefined")return false;
-  const {data,error}=await cloudDb.from("admins").select("id,account,password,name,role,email,enabled");
-  if(error)throw error;
-  if(Array.isArray(data)&&data.length){
+  const result=await starredApi("list_admin_accounts");
+  const data=Array.isArray(result.accounts)?result.accounts:[];
+  if(data.length){
    accounts=data.map(row=>({
     id:String(row.id),
     name:row.name||row.account||"管理員",
@@ -2940,8 +2916,8 @@ async function loadCloudAccounts(){
     email:row.email||"",
     password:String(row.password||""),
     role:row.role||"manager",
-    enabled:row.enabled!==false,
-    lastLogin:""
+    enabled:normalizeEnabledValue(row.enabled),
+    lastLogin:row.last_login_at||""
    }));
    persistAccounts();
    return true;
@@ -3098,24 +3074,47 @@ function editAccount(id){
  const a=accounts.find(x=>x.id===id);if(!a)return;
  editingAccountId=id;
  $("accountName").value=a.name;$("accountUsername").value=a.username;$("accountEmail").value=a.email||"";$("accountPassword").value="";
- $("accountRole").value=a.role;$("accountEnabled").checked=a.enabled;updateEnabledLabel();
+ $("accountRole").value=a.role;$("accountEnabled").checked=normalizeEnabledValue(a.enabled);updateEnabledLabel();
  $("accountFormTitle").textContent="修改管理帳號";
  $("accountSaveBtn").textContent="儲存修改";
  $("accountCancelBtn").style.display="inline-block";
 }
-function toggleAccount(id){
+async function toggleAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
- if(a.id===currentUser.id&&a.enabled){alert("不能停用目前登入中的帳號");return}
- a.enabled=!a.enabled;persistAccounts();renderAccounts();
+ const currentlyEnabled=normalizeEnabledValue(a.enabled);
+ if(a.id===currentUser.id&&currentlyEnabled){alert("不能停用目前登入中的帳號");return}
+ const previous=currentlyEnabled;
+ a.enabled=!currentlyEnabled;
+ persistAccounts();
+ renderAccounts();
+ try{
+  await syncAdminAccountToCloud(a);
+  await loadCloudAccounts();
+  renderAccounts();
+ }catch(error){
+  a.enabled=previous;
+  persistAccounts();
+  renderAccounts();
+  console.error("管理帳號狀態更新失敗",error);
+  alert("帳號狀態沒有成功儲存到雲端。\n\n錯誤："+(error?.message||error));
+ }
 }
-function deleteAccount(id){
+async function deleteAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
  if(a.id===currentUser.id){alert("不能刪除目前登入中的帳號");return}
  if(a.role==="admin"&&accounts.filter(x=>x.role==="admin").length===1){alert("系統至少要保留一個系統管理員");return}
  if(!confirm(`確定刪除「${a.name}」的帳號？`))return;
- accounts=accounts.filter(x=>x.id!==id);persistAccounts();renderAccounts();
+ try{
+  await starredApi("delete_admin_account",{adminId:String(id)});
+  accounts=accounts.filter(x=>x.id!==id);
+  persistAccounts();
+  renderAccounts();
+ }catch(error){
+  console.error("刪除管理帳號失敗",error);
+  alert("管理帳號刪除失敗：\n"+(error?.message||error));
+ }
 }
 function resetAccountForm(){
  editingAccountId=null;
@@ -3875,23 +3874,19 @@ function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classLi
 function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
 function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
 async function syncAdminAccountToCloud(account){
- const payload={
-  id:account.id,
-  account:String(account.username||"").trim(),
-  password:String(account.password||""),
-  name:account.name,
-  role:account.role,
-  email:account.email||null,
-  enabled:account.enabled!==false
- };
- const {data,error}=await cloudDb
-  .from("admins")
-  .upsert(payload,{onConflict:"id"})
-  .select("id,account,password,name,role,email,enabled")
-  .single();
- if(error)throw error;
- if(!data)throw new Error("Supabase 未回傳儲存結果");
- return data;
+ const result=await starredApi("upsert_admin_account",{
+  adminAccount:{
+   id:account.id,
+   account:String(account.username||"").trim(),
+   password:String(account.password||""),
+   name:String(account.name||"").trim(),
+   role:String(account.role||"manager"),
+   email:account.email||null,
+   enabled:normalizeEnabledValue(account.enabled)
+  }
+ });
+ if(!result.account)throw new Error("伺服器未回傳管理帳號資料");
+ return result.account;
 }
 async function sendPasswordOtp(){
  const email=$("resetEmail").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email)){setResetStatus(1,"請輸入正確的 Email",true);return}
