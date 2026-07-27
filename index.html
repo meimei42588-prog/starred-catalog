@@ -1051,10 +1051,13 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 @media(max-width:620px){.pickup-fields{grid-template-columns:1fr}.order-admin-filter.compact-filter{grid-template-columns:1fr}}
 
 /* 傳送資料：標示本人回傳、可編輯的訂單 */
-.order-summary-badges{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
-.order-editable-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border:1px solid #9fcbb0;border-radius:999px;background:#e8f6ed;color:#26704f;font-size:11px;font-weight:900;white-space:nowrap}
+.order-summary-badges{display:grid;grid-template-columns:74px 78px;align-items:center;justify-content:end;gap:6px;flex:0 0 158px}
+.order-summary-badges .order-status{display:inline-flex;align-items:center;justify-content:center;min-width:74px;height:27px;padding:4px 9px;text-align:center;white-space:nowrap}
+.order-editable-badge{display:inline-flex;align-items:center;justify-content:center;min-width:78px;height:27px;padding:4px 8px;border:1px solid #e0a6a6;border-radius:999px;background:#fff1f1;color:#c62828;font-size:11px;font-weight:900;white-space:nowrap}
 .order-editable-badge::before{content:"✎";margin-right:4px;font-size:11px}
-.order-card.open>.order-card-summary .order-editable-badge{background:#fff;color:#26704f!important;border-color:#c8e7d3}
+.order-editable-placeholder{display:block;width:78px;height:27px}
+.order-card.open>.order-card-summary .order-editable-badge{background:#fff;color:#d32f2f!important;border-color:#f0b7b7}
+@media(max-width:620px){.order-summary-badges{grid-template-columns:68px 72px;flex-basis:146px}.order-summary-badges .order-status{min-width:68px}.order-editable-badge,.order-editable-placeholder{min-width:72px;width:72px}}
 @media(max-width:620px){.order-summary-badges{gap:4px}.order-editable-badge{padding:3px 6px;font-size:10px}.order-editable-badge::before{margin-right:3px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -4492,12 +4495,16 @@ function renderOrderCards(){
  const totalPages=Math.max(1,Math.ceil(list.length/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
  const pageList=list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
  $("orderCardList").innerHTML=pageList.length?pageList.map(o=>{
-   const canEdit=canCurrentLineUserEditOrder(o);
+   const shipped=isOrderShipped(o);
+   const canEdit=!shipped&&canCurrentLineUserEditOrder(o);
    const updated=escapeHtml(orderLastUpdatedValue(o));
-   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${o.status}">${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出'}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':''}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button></div>${o.status==='shipped'?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${canEdit?`<div class="front-order-edit-row"><button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">修改這筆訂單</button></div>`:`<div class="front-order-edit-note">${o.status==='shipped'?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`}</div></article>`;
+   const statusClass=shipped?'shipped':o.status==='cancelled'?'cancelled':'pending';
+   const statusLabel=shipped?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出';
+   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${canEdit?`<div class="front-order-edit-row"><button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">修改這筆訂單</button></div>`:`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`}</div></article>`;
  }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
  renderOrderPagination(totalPages,list.length)
 }
+
 function setAdminOrderStatus(status){$("adminOrderStatus").value=status;document.querySelectorAll('.admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===status));selectedOrderIds.clear();updateCancelDeleteOrderButton();renderOrderAdmin()}
 function clearAdminOrderFilters(){$("adminOrderKeyword").value='';$("adminOrderStoreFilter").value='';$("adminOrderDateFrom").value='';$("adminOrderDateTo").value='';setAdminOrderStatus('')}
 function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("adminOrderDateTo")?.value||'',st=$("adminOrderStatus")?.value||'',store=$("adminOrderStoreFilter")?.value||'',delivery=$("adminOrderDeliveryFilter")?.value||'';return orders.filter(o=>{const d=orderDateValue(o);return match(o,$("adminOrderKeyword")?.value,st)&&(!store||o.store===store)&&(!delivery||o.delivery===delivery)&&(!f||d>=f)&&(!t||d<=t)})}
@@ -4780,10 +4787,14 @@ function getCurrentVerifiedLineId(){
  const profile=getCurrentLineUser();
  return String(window.starredVerifiedLineUser?.lineUserId||window.starredVerifiedLineUser?.id||profile?.id||"");
 }
+function isOrderShipped(o){
+ const status=String(o?.status||"").trim().toLowerCase();
+ return status==="shipped"||status==="已寄出";
+}
 function canCurrentLineUserEditOrder(o){
  const currentId=getCurrentVerifiedLineId();
  // 前台僅限原回傳人員，且已寄出的訂單不可再修改
- return !!(o&&o.status!=="shipped"&&currentId&&String(o.createdByLineId||"")===currentId);
+ return !!(o&&!isOrderShipped(o)&&currentId&&String(o.createdByLineId||"")===currentId);
 }
 function orderLastUpdatedValue(o){return String(o?.updatedAt||o?.createdAt||"")}
 function getOrderEditSnapshot(){
@@ -4810,7 +4821,7 @@ function bindOrderEditDirtyTracking(){
 async function openOrderEdit(id,source="admin"){
  const o=orders.find(x=>String(x.id)===String(id));if(!o)return;
  if(source==="front"&&!canCurrentLineUserEditOrder(o)){
-  showOrderAction("無法修改",o.status==="shipped"?"此訂單已寄出，前台不可再修改。":"只有這筆訂單的原回傳人員可以修改。");
+  showOrderAction("無法修改",isOrderShipped(o)?"此訂單已寄出，前台不可再修改。":"只有這筆訂單的原回傳人員可以修改。");
   return;
  }
  orderEditSource=source;
