@@ -2354,6 +2354,37 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 <style id="line-user-management-style">
 .line-user-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}.line-user-item{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(170px,1fr) minmax(150px,.8fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:13px 15px;border:1px solid var(--line);border-radius:13px;background:#fff}.line-user-name{font-weight:900;color:#274253}.line-user-sub{margin-top:3px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.line-user-status{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800}.line-user-status:before{content:"";width:9px;height:9px;border-radius:50%;background:#4d9b68}.line-user-status.disabled:before{background:#a9b1b6}.line-user-actions{display:flex;gap:7px;justify-content:flex-end}.line-user-actions button{min-width:72px}.line-user-empty{padding:24px;text-align:center;border:1px dashed var(--line);border-radius:13px;background:#f8fafb;color:var(--muted)}.line-access-block{position:fixed;inset:0;z-index:500000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(28,48,60,.78);backdrop-filter:blur(7px)}.line-access-block.show{display:flex}.line-access-dialog{width:min(440px,100%);padding:28px 24px;border-radius:20px;background:#fff;text-align:center;box-shadow:0 25px 70px rgba(0,0,0,.28)}.line-access-icon{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 14px;border-radius:50%;background:#f6e6e3;color:#9a352e;font-size:30px;font-weight:900}.line-access-dialog h2{margin:0 0 8px}.line-access-dialog p{margin:0;color:#667b88;line-height:1.65}@media(max-width:850px){.line-user-item{grid-template-columns:1fr 1fr}.line-user-actions{grid-column:1/-1;justify-content:flex-start}}@media(max-width:560px){.line-user-item{grid-template-columns:1fr}.line-user-actions{display:grid;grid-template-columns:1fr}.line-user-actions button{width:100%}}
 </style>
+
+<style id="cloud-line-user-editor-style">
+.line-user-item.cloud-editor{
+  display:grid;
+  grid-template-columns:minmax(170px,1.2fr) minmax(150px,1fr) minmax(160px,1fr) minmax(150px,1fr) minmax(125px,.8fr) auto;
+  gap:10px;
+  align-items:end;
+}
+.line-user-item.cloud-editor .line-user-identity{align-self:center;min-width:0}
+.line-user-item.cloud-editor .line-user-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.line-user-item.cloud-editor .line-user-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.line-user-item.cloud-editor .line-user-field label{font-size:11px;font-weight:800;color:var(--muted)}
+.line-user-item.cloud-editor input,
+.line-user-item.cloud-editor select{height:40px;padding:7px 9px;border-radius:10px;font-size:14px}
+.line-user-item.cloud-editor .line-user-login{align-self:center;font-size:12px;color:var(--muted);line-height:1.5}
+.line-user-item.cloud-editor .line-user-actions{align-self:end;display:grid;grid-template-columns:1fr;gap:6px}
+.line-user-item.cloud-editor .line-user-actions button{height:40px;min-width:78px;padding:7px 10px}
+.line-user-save-status{display:none;margin:0 0 12px;padding:10px 13px;border-radius:11px;background:#eef7f2;color:#275c42;font-size:13px;font-weight:800}
+.line-user-save-status.error{background:#faecea;color:#963d35}
+@media(max-width:1100px){
+  .line-user-item.cloud-editor{grid-template-columns:1fr 1fr 1fr}
+  .line-user-item.cloud-editor .line-user-identity{grid-column:1/-1}
+  .line-user-item.cloud-editor .line-user-actions{grid-column:1/-1;grid-template-columns:1fr 1fr}
+}
+@media(max-width:680px){
+  .line-user-item.cloud-editor{grid-template-columns:1fr}
+  .line-user-item.cloud-editor .line-user-identity,
+  .line-user-item.cloud-editor .line-user-actions{grid-column:auto}
+}
+</style>
+
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
@@ -2565,6 +2596,7 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
     <div id="lineUserTab" class="admin-tab-panel">
       <section class="panel">
         <div class="manage-list-heading"><div><h2>LINE 使用者</h2><div class="manage-list-description">LINE 登入串接後，使用者姓名會自動出現在這裡。停用後，該 LINE 身分將無法開啟系統。</div></div><div id="lineUserCount" class="manage-result-count">0 位</div></div>
+        <div id="lineUserSaveStatus" class="line-user-save-status"></div>
         <div id="lineUserList" class="line-user-list"></div>
       </section>
     </div>
@@ -4251,6 +4283,133 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
   #homePage .event-row.open>.event-summary:hover{background:linear-gradient(135deg,#274253,#365d72)!important}
 }
 </style>
+
+
+<script id="cloud-line-user-management">
+(function(){
+  function escAttr(value){
+    return String(value ?? "").replace(/[&<>"']/g, function(ch){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch];
+    });
+  }
+  function roleLabel(role){
+    return role === "system_admin" ? "系統管理員" : role === "manager" ? "主管" : "門市人員";
+  }
+  function showLineUserStatus(message, isError){
+    const box = document.getElementById("lineUserSaveStatus");
+    if(!box) return;
+    box.textContent = message;
+    box.classList.toggle("error", !!isError);
+    box.style.display = "block";
+    clearTimeout(showLineUserStatus.timer);
+    showLineUserStatus.timer = setTimeout(()=>box.style.display="none", 3500);
+  }
+  function storeOptions(selectedId){
+    const first = '<option value="">未指定門市</option>';
+    return first + (window.stores || []).map(function(store){
+      const id = String(store.id || "");
+      const label = [store.name, store.floor].filter(Boolean).join(" ");
+      return '<option value="'+escAttr(id)+'" '+(id===String(selectedId||"")?'selected':'')+'>'+escAttr(label)+'</option>';
+    }).join("");
+  }
+
+  window.renderLineUsers = function(){
+    const list = document.getElementById("lineUserList");
+    const count = document.getElementById("lineUserCount");
+    if(!list) return;
+    const users = window.lineUsers || lineUsers || [];
+    if(count) count.textContent = users.length + " 位";
+    if(!users.length){
+      list.innerHTML = '<div class="line-user-empty">目前尚無 LINE 使用者。員工第一次使用 LINE 登入後，帳號會自動出現在這裡。</div>';
+      return;
+    }
+    list.innerHTML = users.map(function(u){
+      const id = String(u.id || "");
+      const safeId = escAttr(id);
+      const login = u.lastLogin ? new Date(u.lastLogin).toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false}) : "尚無紀錄";
+      return '<div class="line-user-item cloud-editor" data-line-user-id="'+safeId+'">'+
+        '<div class="line-user-identity">'+
+          '<div class="line-user-name">'+escAttr(u.displayName || u.name || "LINE 使用者")+'</div>'+
+          '<div class="line-user-sub">LINE ID：'+escAttr(id || "—")+'</div>'+
+          '<div class="line-user-sub">目前：'+escAttr(roleLabel(u.role))+'／'+(u.enabled===false?'已停用':'已啟用')+'</div>'+
+        '</div>'+
+        '<div class="line-user-field"><label>員工姓名</label><input class="line-user-employee" value="'+escAttr(u.name || "")+'" placeholder="請輸入員工姓名"></div>'+
+        '<div class="line-user-field"><label>所屬門市</label><select class="line-user-store">'+storeOptions(u.storeId)+'</select></div>'+
+        '<div class="line-user-field"><label>權限</label><select class="line-user-role">'+
+          '<option value="staff" '+(u.role==="staff"?'selected':'')+'>門市人員</option>'+
+          '<option value="manager" '+(u.role==="manager"?'selected':'')+'>主管</option>'+
+          '<option value="system_admin" '+(u.role==="system_admin"?'selected':'')+'>系統管理員</option>'+
+        '</select></div>'+
+        '<div class="line-user-field"><label>帳號狀態</label><select class="line-user-enabled">'+
+          '<option value="true" '+(u.enabled!==false?'selected':'')+'>啟用</option>'+
+          '<option value="false" '+(u.enabled===false?'selected':'')+'>停用</option>'+
+        '</select></div>'+
+        '<div class="line-user-actions">'+
+          '<button class="primary" onclick="saveCloudLineUser(\''+id.replace(/\\/g,"\\\\").replace(/'/g,"\\'")+'\')">儲存</button>'+
+          '<div class="line-user-login">最後登入<br>'+escAttr(login)+'</div>'+
+        '</div>'+
+      '</div>';
+    }).join("");
+  };
+
+  window.saveCloudLineUser = async function(lineUserId){
+    const row = document.querySelector('.line-user-item.cloud-editor[data-line-user-id="'+CSS.escape(String(lineUserId))+'"]');
+    if(!row) return;
+    const employeeName = row.querySelector(".line-user-employee").value.trim();
+    const storeId = row.querySelector(".line-user-store").value || null;
+    const role = row.querySelector(".line-user-role").value;
+    const enabled = row.querySelector(".line-user-enabled").value === "true";
+    if(!employeeName){
+      showLineUserStatus("請輸入員工姓名。", true);
+      row.querySelector(".line-user-employee").focus();
+      return;
+    }
+    const button = row.querySelector(".line-user-actions button");
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "儲存中…";
+    try{
+      await starredApi("update_line_user", {
+        lineUserId,
+        employeeName,
+        storeId,
+        role,
+        enabled
+      });
+      await loadStarredCloudData();
+      showLineUserStatus("LINE 使用者資料已儲存。", false);
+    }catch(error){
+      console.error(error);
+      showLineUserStatus(error && error.message ? error.message : "儲存失敗，請稍後再試。", true);
+    }finally{
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  };
+
+  window.toggleLineUser = async function(id){
+    const user = (window.lineUsers || lineUsers || []).find(x=>String(x.id)===String(id));
+    if(!user) return;
+    const next = user.enabled === false;
+    if(!next && !confirm('確定要停用「'+(user.name||user.displayName||"此使用者")+'」嗎？')){
+      return;
+    }
+    try{
+      await starredApi("update_line_user", {
+        lineUserId: String(id),
+        employeeName: String(user.name || user.displayName || "LINE 使用者"),
+        storeId: user.storeId || null,
+        role: user.role || "staff",
+        enabled: next
+      });
+      await loadStarredCloudData();
+      showLineUserStatus(next ? "帳號已啟用。" : "帳號已停用。", false);
+    }catch(error){
+      showLineUserStatus(error && error.message ? error.message : "更新失敗。", true);
+    }
+  };
+})();
+</script>
 
 </body></html>`);w.document.close();showOrderAction('揀貨單已開啟',`已建立 ${list.length} 張揀貨單。`)}
 async function openOrderEdit(id){const o=orders.find(x=>x.id===id);if(!o)return;$("editOrderId").value=id;$("editOrderName").value=o.name;$("editOrderPhone").value=o.phone;$("editOrderAddress").value=o.address;$("editOrderDelivery").value=o.delivery;$("editOrderItems").value=o.items;const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();const x=o.original||o,originalPhotoKey=x.photoKey||o.photoKey||'';$("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${o.history?.length?`<div class="edit-history-box"><b>修改紀錄</b>${o.history.map((h,i)=>`<p>${i+1}. ${escapeHtml(h.editedAt||'')}｜修改前：${escapeHtml(JSON.stringify(h.before||{}))}</p>`).join('')}</div>`:''}<button type="button" class="photo-open-only" onclick="viewOrderPhoto('${originalPhotoKey}')">查看原始照片</button>`;$("orderEditModal").classList.add('show')}
