@@ -2734,6 +2734,223 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 }
 </style>
 
+
+<style id="unified-responsive-ui">
+/* ===== 手機版／電腦版 UI 一致化 ===== */
+:root{
+  --ui-radius:14px;
+  --ui-radius-lg:18px;
+  --ui-control-h:44px;
+  --ui-gap:12px;
+  --ui-border:#d7e1e7;
+  --ui-soft:#f5f8fa;
+  --ui-hover:#edf3f6;
+  --ui-text:#274253;
+  --ui-muted:#6c818d;
+  --ui-shadow:0 6px 20px rgba(39,66,83,.07);
+}
+
+/* 統一文字、輸入框、按鈕 */
+body{
+  color:var(--ui-text);
+  line-height:1.5;
+}
+input,select,textarea{
+  min-height:var(--ui-control-h);
+  border:1px solid var(--ui-border);
+  border-radius:12px;
+  background:#fff;
+  color:var(--ui-text);
+  box-shadow:none;
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:#7894a4;
+  box-shadow:0 0 0 3px rgba(39,66,83,.09);
+}
+textarea{line-height:1.6}
+.field{gap:7px}
+.field label,
+.order-form-grid label,
+.order-edit-grid label{
+  color:#607784;
+  font-weight:800;
+  font-size:13px;
+}
+button.primary,
+button.secondary,
+button.danger,
+.photo-open-only,
+.order-photo-delete,
+.admin-status-btn{
+  min-height:42px;
+  border-radius:11px;
+  font-weight:800;
+}
+button.primary{box-shadow:0 4px 12px rgba(39,66,83,.14)}
+button.secondary{border:1px solid #d7e1e7;background:#edf3f6}
+button.danger{border:1px solid #e6c0bc;background:#fff4f2}
+
+/* 統一卡片與區塊 */
+.panel,.toolbar,.login-box,.summary-box,.card,
+.order-card,.customer-block,.order-edit-dialog,
+.compact-batch-panel,.front-filter-panel{
+  border-color:var(--ui-border);
+  box-shadow:var(--ui-shadow);
+}
+.panel{
+  border-radius:var(--ui-radius-lg);
+  padding:18px;
+  margin-bottom:14px;
+}
+.panel h2{
+  font-size:20px;
+  line-height:1.3;
+  margin:0 0 14px;
+}
+.order-layout{gap:14px}
+.order-form-grid,.order-edit-grid{gap:11px}
+.order-card{border-radius:14px}
+.order-card-summary{min-height:52px;padding:12px 14px}
+.order-card-detail{padding:12px}
+.customer-block{border-radius:12px;box-shadow:none}
+.customer-title{padding:9px 11px;background:var(--ui-soft)}
+.customer-grid>div{padding:9px 11px}
+.delivery-inline{border-radius:11px;background:var(--ui-soft)}
+.order-fixed-date{border-radius:12px;background:var(--ui-soft)}
+.order-submit-row{gap:10px}
+.order-edit-dialog{border-radius:20px}
+.original-box{border:1px solid var(--ui-border);background:var(--ui-soft)}
+
+/* 導覽列與頁籤採相同視覺 */
+.nav button,.admin-tabs button,.filter-btn{
+  border:1px solid transparent;
+  transition:background .16s ease,color .16s ease,border-color .16s ease;
+}
+.nav button,.admin-tabs button{
+  background:#e9f0f4;
+}
+.nav button.active,.admin-tabs button.active,.filter-btn.active{
+  background:#274253;
+  color:#fff;
+  border-color:#274253;
+}
+
+/* 表單顯示／隱藏時不殘留空白 */
+.order-delivery-field[hidden],
+.order-pickup-field[hidden],
+[hidden]{
+  display:none!important;
+}
+
+/* 電腦版：內容更緊湊、排列整齊 */
+@media(min-width:761px){
+  .container{width:min(1240px,calc(100% - 36px))}
+  .topbar-inner{width:min(1240px,calc(100% - 36px))}
+  .order-layout{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    align-items:start;
+  }
+  .order-form-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .order-form-grid .wide{grid-column:1/-1}
+  .order-edit-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .order-edit-grid .wide{grid-column:1/-1}
+  .order-submit-row{
+    grid-template-columns:minmax(120px,.75fr) minmax(220px,1.5fr);
+  }
+}
+
+/* 手機版：沿用相同卡片、色彩與元件比例，只改排列 */
+@media(max-width:760px){
+  body{background:#f4f7f9}
+  .container{width:calc(100% - 20px)}
+  .panel{
+    padding:14px;
+    border-radius:16px;
+    margin-bottom:12px;
+  }
+  .panel h2{font-size:19px;margin-bottom:12px}
+  .order-layout,.order-form-grid,.order-edit-columns,.order-edit-grid{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+  .order-form-grid .wide,.order-edit-grid .wide{grid-column:auto!important}
+  .order-submit-row{
+    grid-template-columns:1fr!important;
+    gap:8px;
+  }
+  .order-submit-row button{width:100%}
+  .order-card-summary{padding:12px}
+  .order-card-detail{padding:10px}
+  .customer-grid{
+    grid-template-columns:1fr!important;
+  }
+  .customer-grid .wide{grid-column:auto!important}
+  .customer-grid>div{
+    border-right:0;
+  }
+  .delivery-photo-row{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+  }
+  .photo-inline-btn{
+    min-width:104px;
+    border-radius:11px;
+  }
+  .order-photo-actions{
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .order-photo-actions button{width:100%}
+  .order-edit-modal{
+    align-items:flex-end;
+    padding:0;
+  }
+  .order-edit-dialog{
+    width:100%;
+    max-height:92vh;
+    border-radius:20px 20px 0 0;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom));
+  }
+  .order-edit-head{
+    position:sticky;
+    top:-16px;
+    z-index:4;
+    margin:-16px -14px 12px;
+    padding:14px;
+    background:#fff;
+    border-bottom:1px solid var(--ui-border);
+  }
+  .order-edit-actions{
+    position:sticky;
+    bottom:calc(-16px - env(safe-area-inset-bottom));
+    z-index:4;
+    margin:14px -14px calc(-16px - env(safe-area-inset-bottom));
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    gap:8px;
+    background:#fff;
+    border-top:1px solid var(--ui-border);
+  }
+  .order-edit-actions button{flex:1}
+  input,select,textarea{
+    font-size:16px;
+  }
+}
+
+/* 小螢幕避免按鈕過擠 */
+@media(max-width:430px){
+  .order-photo-actions{grid-template-columns:1fr}
+  .delivery-photo-row{grid-template-columns:1fr}
+  .photo-inline-btn{width:100%}
+  .order-edit-actions{display:grid;grid-template-columns:1fr}
+}
+</style>
+
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
