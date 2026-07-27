@@ -5621,5 +5621,44 @@ document.addEventListener("keydown",event=>{
 });
 </script>
 
+
+<style id="pickup-fields-visibility-fix">
+/* 手機版總公司寄出：隱藏取件區域與取件門市 */
+#orderPickupFields[hidden],#orderPickupFields.is-hidden{display:none!important}
+#orderAddressFields[hidden],#orderAddressFields.is-hidden{display:none!important}
+</style>
+<script id="pickup-fields-visibility-fix-js">
+(function(){
+  function syncDeliveryFields(){
+    var delivery=document.getElementById('orderDelivery');
+    var address=document.getElementById('orderAddressFields');
+    var pickup=document.getElementById('orderPickupFields');
+    var isPickup=delivery&&delivery.value==='門市自取';
+    if(address){
+      address.hidden=isPickup;
+      address.classList.toggle('is-hidden',isPickup);
+      address.style.setProperty('display',isPickup?'none':'contents','important');
+    }
+    if(pickup){
+      pickup.hidden=!isPickup;
+      pickup.classList.toggle('is-hidden',!isPickup);
+      pickup.style.setProperty('display',isPickup?'grid':'none','important');
+    }
+    if(!isPickup){
+      var area=document.getElementById('orderPickupArea');
+      var store=document.getElementById('orderPickupStore');
+      if(area)area.value='';
+      if(store)store.innerHTML='<option value="">請先選擇區域</option>';
+    }
+  }
+  window.toggleOrderDeliveryFields=syncDeliveryFields;
+  document.addEventListener('DOMContentLoaded',function(){
+    var delivery=document.getElementById('orderDelivery');
+    if(delivery)delivery.addEventListener('change',syncDeliveryFields);
+    syncDeliveryFields();
+  });
+  window.addEventListener('pageshow',syncDeliveryFields);
+})();
+</script>
 </body>
 </html>
