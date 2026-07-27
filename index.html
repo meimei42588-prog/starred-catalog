@@ -4518,25 +4518,121 @@ async function removeEventPhotos(eventIds){
 }
 
 window.saveStore=async function(){
-  const area=$("storeArea").value,name=$("storeName").value.trim(),floor=$("storeFloor").value.trim();
-  if(!name||!floor){alert("請填寫百貨名稱與樓層／櫃位");return}
-  const duplicate=stores.find(s=>String(s.id)!==String(editingStoreId)&&s.area===area&&s.name===name&&s.floor===floor);
-  if(duplicate){alert("這間百貨門市已經存在");return}
+  const area=$("storeArea").value;
+  const name=$("storeName").value.trim();
+  const floor=$("storeFloor").value.trim();
+
+  if(!name||!floor){
+    alert("請填寫百貨名稱與樓層／櫃位");
+    return;
+  }
+
+  const currentEditingId=String(editingStoreId||"");
+  const duplicate=stores.find(s=>
+    String(s.id)!==currentEditingId &&
+    s.area===area &&
+    String(s.name||"").trim()===name &&
+    String(s.floor||"").trim()===floor
+  );
+  if(duplicate){
+    alert("這間百貨門市已經存在");
+    return;
+  }
+
+  const btn=$("storeSaveBtn");
+  const oldText=btn?.textContent||"新增門市";
+  if(btn){
+    btn.disabled=true;
+    btn.textContent="儲存中…";
+  }
+
   try{
-    if(editingStoreId){
-      const {error}=await cloudDb.from("department_stores").update({region:area,department_name:name,floor}).eq("id",Number(editingStoreId));if(error)throw error;
-    }else{
-      const {error}=await cloudDb.from("department_stores").insert({region:area,department_name:name,floor,sort_order:stores.length});if(error)throw error;
+    await starredApi("upsert_store",{
+      store:{
+        id:currentEditingId||null,
+        region:area,
+        name,
+        floor
+      }
+    });
+
+    /*
+      重新載入訂單系統的 stores，確保：
+      1. 百貨門市管理清單立即顯示
+      2. 重新整理後仍保留
+      3. 新增客訂資料門市選單立即同步
+    */
+    await loadStarredCloudData();
+
+    /*
+      再重新載入活動系統資料。
+      loadCloudData() 會把訂單系統 stores 合併進活動門市，
+      因此新增活動的門市選單也會立即顯示。
+    */
+    await loadCloudData();
+
+    resetStoreForm();
+    renderStores();
+    rebuildMallOptions();
+    rebuildOrderStoreOptions();
+    updateManageStoreFilter();
+    renderAll();
+
+    alert(currentEditingId?"門市修改完成":"門市新增完成");
+  }catch(error){
+    console.error("saveStore cloud error",error);
+    alert("門市儲存失敗：\n"+(error?.message||error));
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent=oldText;
     }
-    resetStoreForm();await loadCloudData();
-  }catch(error){cloudError("門市儲存失敗",error)}
+  }
 };
 window.deleteStore=async function(id){
-  const s=stores.find(x=>String(x.id)===String(id));if(!s)return;
-  const usedCount=events.filter(e=>String(e.storeId||"")===String(id)||(e.mall===s.name&&e.location===s.floor)).length;
-  const message=usedCount?`「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。刪除門市不會刪除既有活動，確定繼續嗎？`:`確定刪除「${s.name} ${s.floor}」嗎？`;
-  if(!confirm(message))return;
-  try{const {error}=await cloudDb.from("department_stores").delete().eq("id",Number(id));if(error)throw error;await loadCloudData()}catch(error){cloudError("門市刪除失敗",error)}
+  try{
+    id=String(id||"");
+    const s=stores.find(x=>String(x.id)===id);
+    if(!s){
+      alert("找不到這筆門市資料，請重新整理後再試。");
+      return;
+    }
+
+    const usedCount=events.filter(e=>
+      String(e.storeId||"")===id ||
+      (String(e.mall||"")===String(s.name||"") &&
+       String(e.location||"")===String(s.floor||""))
+    ).length;
+
+    const message=usedCount>0
+      ? `「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。停用門市不會刪除既有活動，確定繼續嗎？`
+      : `確定停用「${s.name} ${s.floor}」嗎？`;
+
+    if(!confirm(message))return;
+
+    const realStoreId=id.startsWith("order:")?id.slice(6):id;
+    await starredApi("delete_store",{storeId:realStoreId});
+
+    await loadStarredCloudData();
+    await loadCloudData();
+
+    if(String(editingStoreId||"")===id)resetStoreForm();
+    renderStores();
+    rebuildMallOptions();
+    rebuildOrderStoreOptions();
+    updateManageStoreFilter();
+    renderAll();
+
+    const status=document.getElementById("storeDeleteStatus");
+    if(status){
+      status.textContent=`已停用：${s.name} ${s.floor}`;
+      status.style.display="block";
+      setTimeout(()=>status.style.display="none",2500);
+    }
+  }catch(error){
+    console.error("deleteStore cloud error",error);
+    alert("門市停用失敗：\n"+(error?.message||error));
+  }
 };
 window.saveEventCloud=async function(){
   if(!validate())return;
