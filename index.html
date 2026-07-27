@@ -4942,6 +4942,47 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
   }
 }
 </style>
+
+<style id="mobile-editable-badge-final-fix-20260727">
+/* 手機版最終修正：狀態與可編輯標示固定完整顯示，不再被舊規則裁切 */
+@media (max-width:900px){
+  #orderPage .order-card-summary{
+    grid-template-columns:minmax(0,1fr) 82px!important;
+    column-gap:10px!important;
+    overflow:visible!important;
+  }
+  #orderPage .order-card-summary > .sent-summary-main{grid-column:1!important;min-width:0!important}
+  #orderPage .order-card-summary > .order-summary-badges{
+    grid-column:2!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:center!important;
+    gap:5px!important;
+    width:82px!important;
+    min-width:82px!important;
+    max-width:82px!important;
+    overflow:visible!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-status,
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-badge{
+    display:flex!important;
+    width:82px!important;
+    min-width:82px!important;
+    max-width:82px!important;
+    height:28px!important;
+    margin:0!important;
+    visibility:visible!important;
+    opacity:1!important;
+    overflow:visible!important;
+    position:relative!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-placeholder{
+    display:none!important;
+  }
+  #orderPage .order-card-summary > .order-chevron{display:none!important}
+}
+</style>
 </head><body>${pages.join('')}<script>onload=()=>setTimeout(()=>print(),400)<\/script>
 <style>
 /* 展開後訂單卡片標題文字提高對比 */
