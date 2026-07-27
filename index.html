@@ -2416,6 +2416,69 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 }
 </style>
 
+
+<style id="edit-history-readable-fix">
+/* 訂單修改紀錄：改為可閱讀欄位，不顯示 JSON 原始碼 */
+.edit-history-box{
+  margin-top:16px!important;
+  padding:14px!important;
+  border:1px solid #d8e1e7!important;
+  border-radius:14px!important;
+  background:#f7fafb!important;
+}
+.edit-history-box>b{
+  display:block;
+  margin-bottom:10px;
+  font-size:18px;
+  color:#274253;
+}
+.edit-history-entry{
+  padding:12px;
+  margin-top:10px;
+  border:1px solid #dce5e9;
+  border-radius:12px;
+  background:#fff;
+}
+.edit-history-title{
+  margin-bottom:9px;
+  font-size:13px;
+  font-weight:900;
+  color:#607784;
+}
+.edit-history-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.edit-history-grid>div{
+  min-width:0;
+  padding:8px 10px;
+  border-radius:9px;
+  background:#f5f8f9;
+}
+.edit-history-grid .wide{
+  grid-column:1/-1;
+}
+.edit-history-grid span{
+  display:block;
+  margin-bottom:3px;
+  font-size:11px;
+  color:#7a8d97;
+}
+.edit-history-grid b{
+  display:block;
+  color:#274253;
+  font-size:14px;
+  line-height:1.55;
+  word-break:break-word;
+  white-space:pre-wrap;
+}
+@media(max-width:620px){
+  .edit-history-grid{grid-template-columns:1fr}
+  .edit-history-grid .wide{grid-column:auto}
+}
+</style>
+
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
@@ -4330,7 +4393,19 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
 </style>
 
 </body></html>`);w.document.close();showOrderAction('揀貨單已開啟',`已建立 ${list.length} 張揀貨單。`)}
-async function openOrderEdit(id){const o=orders.find(x=>x.id===id);if(!o)return;$("editOrderId").value=id;$("editOrderName").value=o.name;$("editOrderPhone").value=o.phone;$("editOrderAddress").value=o.address;$("editOrderDelivery").value=o.delivery;$("editOrderItems").value=o.items;const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();const x=o.original||o,originalPhotoKey=x.photoKey||o.photoKey||'';$("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${o.history?.length?`<div class="edit-history-box"><b>修改紀錄</b>${o.history.map((h,i)=>`<p>${i+1}. ${escapeHtml(h.editedAt||'')}｜修改前：${escapeHtml(JSON.stringify(h.before||{}))}</p>`).join('')}</div>`:''}<button type="button" class="photo-open-only" onclick="viewOrderPhoto('${originalPhotoKey}')">查看原始照片</button>`;$("orderEditModal").classList.add('show')}
+async function openOrderEdit(id){const o=orders.find(x=>x.id===id);if(!o)return;$("editOrderId").value=id;$("editOrderName").value=o.name;$("editOrderPhone").value=o.phone;$("editOrderAddress").value=o.address;$("editOrderDelivery").value=o.delivery;$("editOrderItems").value=o.items;const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();const x=o.original||o,originalPhotoKey=x.photoKey||o.photoKey||'';$("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${o.history?.length?`<div class="edit-history-box"><b>修改紀錄</b>${o.history.map((h,i)=>{
+  const b=h.before||{};
+  return `<div class="edit-history-entry">
+    <div class="edit-history-title">${i+1}. ${escapeHtml(h.editedAt||'')}</div>
+    <div class="edit-history-grid">
+      <div><span>姓名</span><b>${escapeHtml(b.name||'—')}</b></div>
+      <div><span>電話</span><b>${escapeHtml(b.phone||'—')}</b></div>
+      <div class="wide"><span>地址</span><b>${escapeHtml(b.address||'—')}</b></div>
+      <div><span>配送</span><b>${escapeHtml(b.delivery||'—')}</b></div>
+      <div class="wide"><span>商品</span><b>${escapeHtml(b.items||'—')}</b></div>
+    </div>
+  </div>`;
+}).join('')}</div>`:''}<button type="button" class="photo-open-only" onclick="viewOrderPhoto('${originalPhotoKey}')">查看原始照片</button>`;$("orderEditModal").classList.add('show')}
 function closeOrderEditModal(){$("orderEditModal").classList.remove('show')}
 async function saveOrderEdit(){const orderId=$("editOrderId").value;const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;const delivery=$("editOrderDelivery").value,pickup=delivery==='門市自取',pickupStore=$("editOrderPickupStore")?.value||'';const pickupStoreData=pickup?stores.find(x=>x.name===pickupStore):null;const next={customerName:$("editOrderName").value.trim(),customerPhone:$("editOrderPhone").value.trim(),customerAddress:pickup?`取件門市：${pickupStore}`:$("editOrderAddress").value.trim(),productContent:$("editOrderItems").value.trim(),deliveryMethod:pickup?'store_pickup':'company_shipping',pickupStoreId:pickup?(pickupStoreData?.id||''):null};if(!next.customerName||!next.customerPhone||!next.productContent||(!pickup&&!next.customerAddress)){showOrderAction('資料未完成','姓名、電話、地址與商品都必須填寫。');return}if(pickup&&!pickupStoreData){showOrderAction('資料未完成','請選擇取件門市。');return}try{await starredApi("update_order",{orderId,order:next});closeOrderEditModal();await loadStarredCloudData();showOrderAction('訂單修改完成','目前資料已更新，原始資料與修改紀錄已保留。')}catch(error){cloudError('訂單修改失敗',error)}}
 function setCloudBusy(isBusy, text="處理中…"){
