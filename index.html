@@ -4030,11 +4030,12 @@ async function submitOrder(event){
   const returnPerson=String(lineProfile.name||lineProfile.displayName||"（尚未取得 LINE 姓名）");
   const payload={
    order:{
-    storeId:String(st.id),returnPerson,orderDate:todayStr(),
+    storeId:String(st.id),storeName:String(st.name||""),returnPerson,orderDate:todayStr(),
     customerName:$("orderName").value.trim(),customerPhone:$("orderPhone").value.trim(),
     customerAddress:address,productContent:$("orderItems").value.trim(),
     deliveryMethod:pickup?"store_pickup":"company_shipping",
-    pickupStoreId:pickup?String(pickupSt.id):null
+    pickupStoreId:pickup?String(pickupSt.id):null,
+    pickupStoreName:pickup?String(pickupSt.name||""):null
    },
    photoData:orderPhotoData
   };
