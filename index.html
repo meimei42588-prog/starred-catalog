@@ -3482,11 +3482,32 @@ function editAccount(id){
  $("accountSaveBtn").textContent="儲存修改";
  $("accountCancelBtn").style.display="inline-block";
 }
-function toggleAccount(id){
+async function toggleAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
  if(a.id===currentUser.id&&a.enabled){alert("不能停用目前登入中的帳號");return}
- a.enabled=!a.enabled;persistAccounts();renderAccounts();
+
+ const nextEnabled=!a.enabled;
+ const actionText=nextEnabled?"啟用":"停用";
+ if(!nextEnabled&&!confirm(`確定要停用「${a.name}」嗎？\n停用後，此帳號將無法登入系統。`))return;
+
+ const previousEnabled=a.enabled;
+ a.enabled=nextEnabled;
+ persistAccounts();
+ renderAccounts();
+
+ try{
+  await syncAdminAccountToCloud(a);
+  await loadCloudAccounts();
+  renderAccounts();
+  alert(`帳號已${actionText}`);
+ }catch(error){
+  a.enabled=previousEnabled;
+  persistAccounts();
+  renderAccounts();
+  console.error("帳號啟用狀態同步失敗",error);
+  alert(`帳號${actionText}失敗，雲端資料未更新。\n\n錯誤：${error?.message||error}\n\n請檢查 Supabase admins 資料表的更新權限（RLS Policy）。`);
+ }
 }
 function deleteAccount(id){
  if(!requireAdmin())return;
