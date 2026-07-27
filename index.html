@@ -4494,7 +4494,7 @@ function renderOrderCards(){
  $("orderCardList").innerHTML=pageList.length?pageList.map(o=>{
    const canEdit=canCurrentLineUserEditOrder(o);
    const updated=escapeHtml(orderLastUpdatedValue(o));
-   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${o.status}">${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出'}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':''}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button></div>${o.status==='shipped'?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${canEdit?`<div class="front-order-edit-row"><button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">修改這筆訂單</button></div>`:`<div class="front-order-edit-note">只有原回傳人員可以從此頁修改這筆訂單。</div>`}</div></article>`;
+   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${o.status}">${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出'}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':''}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button></div>${o.status==='shipped'?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${canEdit?`<div class="front-order-edit-row"><button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">修改這筆訂單</button></div>`:`<div class="front-order-edit-note">${o.status==='shipped'?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`}</div></article>`;
  }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
  renderOrderPagination(totalPages,list.length)
 }
@@ -4782,7 +4782,8 @@ function getCurrentVerifiedLineId(){
 }
 function canCurrentLineUserEditOrder(o){
  const currentId=getCurrentVerifiedLineId();
- return !!(o&&currentId&&String(o.createdByLineId||"")===currentId);
+ // 前台僅限原回傳人員，且已寄出的訂單不可再修改
+ return !!(o&&o.status!=="shipped"&&currentId&&String(o.createdByLineId||"")===currentId);
 }
 function orderLastUpdatedValue(o){return String(o?.updatedAt||o?.createdAt||"")}
 function getOrderEditSnapshot(){
@@ -4809,7 +4810,7 @@ function bindOrderEditDirtyTracking(){
 async function openOrderEdit(id,source="admin"){
  const o=orders.find(x=>String(x.id)===String(id));if(!o)return;
  if(source==="front"&&!canCurrentLineUserEditOrder(o)){
-  showOrderAction("無法修改","只有這筆訂單的原回傳人員可以修改。");
+  showOrderAction("無法修改",o.status==="shipped"?"此訂單已寄出，前台不可再修改。":"只有這筆訂單的原回傳人員可以修改。");
   return;
  }
  orderEditSource=source;
