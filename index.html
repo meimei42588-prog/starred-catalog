@@ -2354,6 +2354,68 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 <style id="line-user-management-style">
 .line-user-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}.line-user-item{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(170px,1fr) minmax(150px,.8fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:13px 15px;border:1px solid var(--line);border-radius:13px;background:#fff}.line-user-name{font-weight:900;color:#274253}.line-user-sub{margin-top:3px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.line-user-status{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800}.line-user-status:before{content:"";width:9px;height:9px;border-radius:50%;background:#4d9b68}.line-user-status.disabled:before{background:#a9b1b6}.line-user-actions{display:flex;gap:7px;justify-content:flex-end}.line-user-actions button{min-width:72px}.line-user-empty{padding:24px;text-align:center;border:1px dashed var(--line);border-radius:13px;background:#f8fafb;color:var(--muted)}.line-access-block{position:fixed;inset:0;z-index:500000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(28,48,60,.78);backdrop-filter:blur(7px)}.line-access-block.show{display:flex}.line-access-dialog{width:min(440px,100%);padding:28px 24px;border-radius:20px;background:#fff;text-align:center;box-shadow:0 25px 70px rgba(0,0,0,.28)}.line-access-icon{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 14px;border-radius:50%;background:#f6e6e3;color:#9a352e;font-size:30px;font-weight:900}.line-access-dialog h2{margin:0 0 8px}.line-access-dialog p{margin:0;color:#667b88;line-height:1.65}@media(max-width:850px){.line-user-item{grid-template-columns:1fr 1fr}.line-user-actions{grid-column:1/-1;justify-content:flex-start}}@media(max-width:560px){.line-user-item{grid-template-columns:1fr}.line-user-actions{display:grid;grid-template-columns:1fr}.line-user-actions button{width:100%}}
 </style>
+
+<style id="front-activity-photo-size-fix">
+/* 前台活動照片：固定縮圖尺寸，多張橫向排列，保留點擊放大 */
+#homePage .gallery,
+#homePage .multi-activity-group[open] .gallery{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  grid-template-columns:none!important;
+  gap:14px!important;
+  margin-top:14px!important;
+}
+
+#homePage .gallery img,
+#homePage .multi-activity-group[open] .gallery img{
+  flex:0 0 220px!important;
+  width:220px!important;
+  height:150px!important;
+  max-width:220px!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  border-radius:12px!important;
+  border:1px solid #d8e1e7!important;
+  background:#f7fafc!important;
+  box-shadow:0 3px 10px rgba(39,66,83,.09)!important;
+  cursor:zoom-in!important;
+}
+
+#homePage .gallery img:hover,
+#homePage .multi-activity-group[open] .gallery img:hover{
+  transform:translateY(-2px) scale(1.015)!important;
+  box-shadow:0 8px 18px rgba(39,66,83,.15)!important;
+}
+
+@media(max-width:760px){
+  #homePage .gallery,
+  #homePage .multi-activity-group[open] .gallery{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+
+  #homePage .gallery img,
+  #homePage .multi-activity-group[open] .gallery img{
+    width:100%!important;
+    max-width:none!important;
+    height:auto!important;
+    aspect-ratio:3/2!important;
+    flex:none!important;
+    border-radius:9px!important;
+  }
+}
+
+@media(max-width:380px){
+  #homePage .gallery,
+  #homePage .multi-activity-group[open] .gallery{
+    grid-template-columns:1fr!important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
@@ -4062,7 +4124,7 @@ async function submitOrder(event){
   const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
   if(keyword)keyword.value="";if(status)status.value="";if(from)from.value="";if(to)to.value="";
   renderOrderCards();renderOrderAdmin();
-  showOrderAction("完成",`客訂資料已成功傳送到雲端${result?.order?.order_number?`（${result.order.order_number}）`:""}。`);
+  showOrderAction("完成","客訂資料已成功傳送到雲端。");
  }catch(error){
   console.error("submitOrder failed:",error);
   showOrderAction("雲端傳送失敗",error?.message||String(error)||"請稍後再試");
