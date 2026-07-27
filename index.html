@@ -2565,8 +2565,7 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
     <div id="lineUserTab" class="admin-tab-panel">
       <section class="panel">
         <div class="manage-list-heading"><div><h2>LINE 使用者</h2><div class="manage-list-description">LINE 登入串接後，使用者姓名會自動出現在這裡。停用後，該 LINE 身分將無法開啟系統。</div></div><div id="lineUserCount" class="manage-result-count">0 位</div></div>
-        <div id="lineUserSaveStatus" class="line-user-save-status"></div>
-<div id="lineUserList" class="line-user-list"></div>
+        <div id="lineUserList" class="line-user-list"></div>
       </section>
     </div>
     <div id="activityTab" class="admin-tab-panel active">
@@ -2927,17 +2926,12 @@ function checkLogin(){
   $("lineUserTabBtn").classList.remove("hidden-by-role");
  }
 }
-function normalizeEnabledValue(value){
- if(value===false||value===0||value==="0")return false;
- const text=String(value??"").trim().toLowerCase();
- if(["false","off","disabled","停用","否","no"].includes(text))return false;
- return true;
-}
 async function loadCloudAccounts(){
  try{
-  const result=await starredApi("list_admin_accounts");
-  const data=Array.isArray(result.accounts)?result.accounts:[];
-  if(data.length){
+  if(typeof cloudDb==="undefined")return false;
+  const {data,error}=await cloudDb.from("admins").select("id,account,password,name,role,email,enabled");
+  if(error)throw error;
+  if(Array.isArray(data)&&data.length){
    accounts=data.map(row=>({
     id:String(row.id),
     name:row.name||row.account||"管理員",
@@ -2945,8 +2939,8 @@ async function loadCloudAccounts(){
     email:row.email||"",
     password:String(row.password||""),
     role:row.role||"manager",
-    enabled:normalizeEnabledValue(row.enabled),
-    lastLogin:row.last_login_at||""
+    enabled:row.enabled!==false,
+    lastLogin:""
    }));
    persistAccounts();
    return true;
@@ -3103,47 +3097,24 @@ function editAccount(id){
  const a=accounts.find(x=>x.id===id);if(!a)return;
  editingAccountId=id;
  $("accountName").value=a.name;$("accountUsername").value=a.username;$("accountEmail").value=a.email||"";$("accountPassword").value="";
- $("accountRole").value=a.role;$("accountEnabled").checked=normalizeEnabledValue(a.enabled);updateEnabledLabel();
+ $("accountRole").value=a.role;$("accountEnabled").checked=a.enabled;updateEnabledLabel();
  $("accountFormTitle").textContent="修改管理帳號";
  $("accountSaveBtn").textContent="儲存修改";
  $("accountCancelBtn").style.display="inline-block";
 }
-async function toggleAccount(id){
+function toggleAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
- const currentlyEnabled=normalizeEnabledValue(a.enabled);
- if(a.id===currentUser.id&&currentlyEnabled){alert("不能停用目前登入中的帳號");return}
- const previous=currentlyEnabled;
- a.enabled=!currentlyEnabled;
- persistAccounts();
- renderAccounts();
- try{
-  await syncAdminAccountToCloud(a);
-  await loadCloudAccounts();
-  renderAccounts();
- }catch(error){
-  a.enabled=previous;
-  persistAccounts();
-  renderAccounts();
-  console.error("管理帳號狀態更新失敗",error);
-  alert("帳號狀態沒有成功儲存到雲端。\n\n錯誤："+(error?.message||error));
- }
+ if(a.id===currentUser.id&&a.enabled){alert("不能停用目前登入中的帳號");return}
+ a.enabled=!a.enabled;persistAccounts();renderAccounts();
 }
-async function deleteAccount(id){
+function deleteAccount(id){
  if(!requireAdmin())return;
  const a=accounts.find(x=>x.id===id);if(!a)return;
  if(a.id===currentUser.id){alert("不能刪除目前登入中的帳號");return}
  if(a.role==="admin"&&accounts.filter(x=>x.role==="admin").length===1){alert("系統至少要保留一個系統管理員");return}
  if(!confirm(`確定刪除「${a.name}」的帳號？`))return;
- try{
-  await starredApi("delete_admin_account",{adminId:String(id)});
-  accounts=accounts.filter(x=>x.id!==id);
-  persistAccounts();
-  renderAccounts();
- }catch(error){
-  console.error("刪除管理帳號失敗",error);
-  alert("管理帳號刪除失敗：\n"+(error?.message||error));
- }
+ accounts=accounts.filter(x=>x.id!==id);persistAccounts();renderAccounts();
 }
 function resetAccountForm(){
  editingAccountId=null;
@@ -3903,19 +3874,23 @@ function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classLi
 function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
 function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
 async function syncAdminAccountToCloud(account){
- const result=await starredApi("upsert_admin_account",{
-  adminAccount:{
-   id:account.id,
-   account:String(account.username||"").trim(),
-   password:String(account.password||""),
-   name:String(account.name||"").trim(),
-   role:String(account.role||"manager"),
-   email:account.email||null,
-   enabled:normalizeEnabledValue(account.enabled)
-  }
- });
- if(!result.account)throw new Error("伺服器未回傳管理帳號資料");
- return result.account;
+ const payload={
+  id:account.id,
+  account:String(account.username||"").trim(),
+  password:String(account.password||""),
+  name:account.name,
+  role:account.role,
+  email:account.email||null,
+  enabled:account.enabled!==false
+ };
+ const {data,error}=await cloudDb
+  .from("admins")
+  .upsert(payload,{onConflict:"id"})
+  .select("id,account,password,name,role,email,enabled")
+  .single();
+ if(error)throw error;
+ if(!data)throw new Error("Supabase 未回傳儲存結果");
+ return data;
 }
 async function sendPasswordOtp(){
  const email=$("resetEmail").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email)){setResetStatus(1,"請輸入正確的 Email",true);return}
@@ -4165,22 +4140,6 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
 }
 #orderPage .order-sent-panel .order-card{overflow-anchor:none}
 </style>
-
-<style id="cloud-line-user-editor-style">
-.line-user-item.cloud-editor{display:grid;grid-template-columns:minmax(170px,1.2fr) minmax(150px,1fr) minmax(160px,1fr) minmax(150px,1fr) minmax(125px,.8fr) auto;gap:10px;align-items:end}
-.line-user-item.cloud-editor .line-user-identity{align-self:center;min-width:0}
-.line-user-item.cloud-editor .line-user-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.line-user-item.cloud-editor .line-user-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.line-user-item.cloud-editor .line-user-field label{font-size:11px;font-weight:800;color:var(--muted)}
-.line-user-item.cloud-editor input,.line-user-item.cloud-editor select{height:40px;padding:7px 9px;border-radius:10px;font-size:14px}
-.line-user-item.cloud-editor .line-user-login{align-self:center;font-size:12px;color:var(--muted);line-height:1.5}
-.line-user-item.cloud-editor .line-user-actions{align-self:end;display:grid;gap:6px}
-.line-user-save-status{display:none;margin:0 0 12px;padding:10px 13px;border-radius:11px;background:#eef7f2;color:#275c42;font-size:13px;font-weight:800}
-.line-user-save-status.error{background:#faecea;color:#963d35}
-@media(max-width:1100px){.line-user-item.cloud-editor{grid-template-columns:1fr 1fr 1fr}.line-user-item.cloud-editor .line-user-identity,.line-user-item.cloud-editor .line-user-actions{grid-column:1/-1}}
-@media(max-width:680px){.line-user-item.cloud-editor{grid-template-columns:1fr}.line-user-item.cloud-editor .line-user-identity,.line-user-item.cloud-editor .line-user-actions{grid-column:auto}}
-</style>
-
 </head><body>${pages.join('')}<script>onload=()=>setTimeout(()=>print(),400)<\/script>
 <style>
 /* 展開後訂單卡片標題文字提高對比 */
@@ -4782,55 +4741,5 @@ document.addEventListener("DOMContentLoaded",()=>{
 </script>
 
 <div id="lineAccessBlock" class="line-access-block" role="alertdialog" aria-modal="true"><div class="line-access-dialog"><div class="line-access-icon">!</div><h2>帳號已停用</h2><p>此 LINE 帳號目前無法開啟系統，請聯絡系統管理員協助啟用。</p></div></div>
-
-<script id="cloud-line-user-management">
-(function(){
-  function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
-  function users(){try{return Array.isArray(lineUsers)?lineUsers:[]}catch(e){return []}}
-  function shops(){try{return Array.isArray(stores)?stores:[]}catch(e){return []}}
-  function roleLabel(r){return r==="system_admin"?"系統管理員":r==="manager"?"主管":"門市人員"}
-  function status(msg,err){
-    const box=document.getElementById("lineUserSaveStatus"); if(!box)return;
-    box.textContent=msg; box.classList.toggle("error",!!err); box.style.display="block";
-    clearTimeout(status.t); status.t=setTimeout(()=>box.style.display="none",3500);
-  }
-  function storeOptions(selected){
-    return '<option value="">未指定門市</option>'+shops().map(s=>{
-      const id=String(s.id||""); const label=[s.name,s.floor].filter(Boolean).join(" ");
-      return '<option value="'+esc(id)+'" '+(id===String(selected||"")?'selected':'')+'>'+esc(label)+'</option>';
-    }).join("");
-  }
-  window.renderLineUsers=function(){
-    const list=document.getElementById("lineUserList"), count=document.getElementById("lineUserCount");
-    if(!list)return; const arr=users(); if(count)count.textContent=arr.length+" 位";
-    if(!arr.length){list.innerHTML='<div class="line-user-empty">目前尚無 LINE 使用者。</div>';return;}
-    list.innerHTML=arr.map(u=>{
-      const id=String(u.id||"");
-      const login=u.lastLogin?new Date(u.lastLogin).toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false}):"尚無紀錄";
-      return '<div class="line-user-item cloud-editor" data-line-user-id="'+esc(id)+'">'+
-      '<div class="line-user-identity"><div class="line-user-name">'+esc(u.displayName||u.name||"LINE 使用者")+'</div><div class="line-user-sub">LINE ID：'+esc(id||"—")+'</div><div class="line-user-sub">目前：'+esc(roleLabel(u.role))+'／'+(u.enabled===false?'已停用':'已啟用')+'</div></div>'+
-      '<div class="line-user-field"><label>員工姓名</label><input class="line-user-employee" value="'+esc(u.name||"")+'"></div>'+
-      '<div class="line-user-field"><label>所屬門市</label><select class="line-user-store">'+storeOptions(u.storeId)+'</select></div>'+
-      '<div class="line-user-field"><label>權限</label><select class="line-user-role"><option value="staff" '+(u.role==="staff"?'selected':'')+'>門市人員</option><option value="manager" '+(u.role==="manager"?'selected':'')+'>主管</option><option value="system_admin" '+(u.role==="system_admin"?'selected':'')+'>系統管理員</option></select></div>'+
-      '<div class="line-user-field"><label>帳號狀態</label><select class="line-user-enabled"><option value="true" '+(u.enabled!==false?'selected':'')+'>啟用</option><option value="false" '+(u.enabled===false?'selected':'')+'>停用</option></select></div>'+
-      '<div class="line-user-actions"><button class="primary line-user-save-btn">儲存</button><div class="line-user-login">最後登入<br>'+esc(login)+'</div></div></div>';
-    }).join("");
-    list.querySelectorAll(".line-user-save-btn").forEach(btn=>btn.addEventListener("click",()=>saveCloudLineUser(btn.closest(".line-user-item").dataset.lineUserId)));
-  };
-  window.saveCloudLineUser=async function(id){
-    const row=[...document.querySelectorAll(".line-user-item.cloud-editor")].find(x=>x.dataset.lineUserId===String(id)); if(!row)return;
-    const employeeName=row.querySelector(".line-user-employee").value.trim();
-    const storeId=row.querySelector(".line-user-store").value||null;
-    const role=row.querySelector(".line-user-role").value;
-    const enabled=row.querySelector(".line-user-enabled").value==="true";
-    if(!employeeName){status("請輸入員工姓名。",true);return;}
-    const btn=row.querySelector(".line-user-save-btn"), old=btn.textContent; btn.disabled=true; btn.textContent="儲存中…";
-    try{await starredApi("update_line_user",{lineUserId:id,employeeName,storeId,role,enabled});await loadStarredCloudData();status("LINE 使用者資料已儲存。",false)}
-    catch(e){console.error(e);status(e&&e.message?e.message:"儲存失敗。",true)}
-    finally{btn.disabled=false;btn.textContent=old}
-  };
-})();
-</script>
-
 </body>
 </html>
