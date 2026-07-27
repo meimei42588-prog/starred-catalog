@@ -2620,7 +2620,7 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
           </div>
         </div>
         <div class="activity-action-bar">
-          <button class="primary activity-main-action" id="saveBtn" onclick="saveEvent()">＋ 新增活動</button>
+          <button class="primary activity-main-action" id="saveBtn" onclick="saveEventCloud()">＋ 新增活動</button><div id="activityCloudSaveStatus" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:#eef7f2;color:#275c42;font-weight:800"></div>
           <button class="secondary backup-action import-action" onclick="document.getElementById('importFile').click()">⇩ 匯入 Excel</button>
           <button class="secondary backup-action" onclick="exportData()">⇧ 匯出 Excel</button>
           <button class="secondary activity-cancel-action" id="cancelBtn" style="display:none" onclick="resetForm()">取消編輯</button>
@@ -4391,7 +4391,14 @@ async function loadCloudData(){
         virtual:true,
         sortOrder:s.sortOrder
       }));
-    stores=[...activityStores,...virtualStores];
+    const mergedStoreMap=new Map();
+    [...activityStores,...virtualStores].forEach(store=>{
+      const key=[String(store.area||""),String(store.name||"").trim(),String(store.floor||"").trim()].join("|");
+      if(!mergedStoreMap.has(key)||mergedStoreMap.get(key).virtual){
+        mergedStoreMap.set(key,store);
+      }
+    });
+    stores=[...mergedStoreMap.values()];
     if(!stores.length){
       const seed=BUILTIN_STORES.map((s,i)=>({region:s.area,department_name:s.name,floor:s.floor,sort_order:i}));
       const {error}=await cloudDb.from("department_stores").insert(seed);
@@ -4469,7 +4476,7 @@ window.deleteStore=async function(id){
   if(!confirm(message))return;
   try{const {error}=await cloudDb.from("department_stores").delete().eq("id",Number(id));if(error)throw error;await loadCloudData()}catch(error){cloudError("門市刪除失敗",error)}
 };
-window.saveEvent=async function(){
+window.saveEventCloud=async function(){
   if(!validate())return;
   const selectedStores=getSelectedStores();
   const common={start_date:$("start").value,end_date:$("end").value,event_name:$("campaign").value.trim(),event_content:JSON.stringify($("products").value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)),remark:$("note").value.trim(),status:calcStatus($("start").value,$("end").value)};
@@ -4494,8 +4501,19 @@ window.saveEvent=async function(){
         await uploadEventPhotos(data.id,currentPhotos);
       }
     }
-    const count=resolvedStores.length;resetForm();await loadCloudData();if(!wasEditing)showSuccessModal(count);
-  }catch(error){cloudError("活動儲存失敗",error)}finally{setCloudBusy(false)}
+    const count=resolvedStores.length;
+    resetForm();
+    await loadCloudData();
+    renderHome();
+    updateManageStoreFilter();
+    renderManage();
+    if(!wasEditing)showSuccessModal(count);
+  }catch(error){
+    console.error("活動儲存失敗",error);
+    cloudError("活動儲存失敗",error);
+  }finally{
+    setCloudBusy(false);
+  }
 };
 window.deleteEvent=async function(id){
   if(!confirm("確定刪除這筆活動？"))return;
