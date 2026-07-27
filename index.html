@@ -4306,6 +4306,126 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
 }
 #orderPage .order-sent-panel .order-card{overflow-anchor:none}
 </style>
+
+<style id="order-edit-fixed-footer-compact-original-v3">
+/* 修改訂單：原始資料緊湊、內容區可捲動、底部按鈕永遠可操作 */
+#orderEditModal .order-edit-dialog{
+  display:flex!important;
+  flex-direction:column!important;
+  height:min(900px,calc(100vh - 40px))!important;
+  max-height:calc(100vh - 40px)!important;
+  overflow:hidden!important;
+  padding:0!important;
+}
+#orderEditModal .order-edit-head{
+  flex:0 0 auto!important;
+}
+#orderEditModal .order-edit-columns{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  align-items:start!important;
+}
+#orderEditModal .current-order-box,
+#orderEditModal .original-box{
+  align-self:start!important;
+}
+#orderEditModal .original-box{
+  padding:14px!important;
+}
+#orderEditModal .original-box>h3{
+  margin-bottom:8px!important;
+}
+#orderEditModal #editOriginalData>p{
+  display:grid!important;
+  grid-template-columns:84px minmax(0,1fr)!important;
+  gap:8px!important;
+  margin:0!important;
+  padding:6px 0!important;
+  min-height:0!important;
+  border-bottom:1px dashed #e2e9ed!important;
+  line-height:1.35!important;
+  font-size:13px!important;
+}
+#orderEditModal #editOriginalData>p b{
+  min-width:0!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+  white-space:nowrap!important;
+}
+#orderEditModal .edit-history-box{
+  margin-top:9px!important;
+  padding:8px!important;
+}
+#orderEditModal .edit-history-box>b{
+  margin-bottom:6px!important;
+  font-size:14px!important;
+}
+#orderEditModal .edit-history-list{
+  max-height:132px!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#orderEditModal .edit-history-row{
+  grid-template-columns:112px minmax(0,1fr)!important;
+  padding:6px 8px!important;
+  gap:4px 8px!important;
+}
+#orderEditModal .edit-history-row time{
+  font-size:10px!important;
+}
+#orderEditModal .edit-history-row>div{
+  grid-template-columns:38px minmax(0,1fr)!important;
+  gap:4px!important;
+}
+#orderEditModal .edit-history-row span{font-size:10px!important}
+#orderEditModal .edit-history-row b{font-size:11px!important;line-height:1.35!important}
+#orderEditModal #editOriginalData>.photo-open-only{
+  min-height:40px!important;
+  margin-top:9px!important;
+}
+#orderEditModal .order-edit-actions{
+  position:relative!important;
+  bottom:auto!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:12px 26px 14px!important;
+  border-top:1px solid #dce5e9!important;
+  background:#fff!important;
+  box-shadow:0 -8px 20px rgba(39,66,83,.08)!important;
+  z-index:20!important;
+}
+@media(max-width:800px){
+  #orderEditModal .order-edit-dialog{
+    height:94vh!important;
+    max-height:94vh!important;
+  }
+  #orderEditModal .order-edit-columns{
+    padding:12px!important;
+  }
+  #orderEditModal .original-box{padding:12px!important}
+  #orderEditModal #editOriginalData>p{
+    grid-template-columns:76px minmax(0,1fr)!important;
+    padding:5px 0!important;
+    font-size:12px!important;
+  }
+  #orderEditModal #editOriginalData>p b{font-size:12px!important}
+  #orderEditModal .edit-history-list{max-height:118px!important}
+  #orderEditModal .edit-history-row{
+    grid-template-columns:1fr!important;
+    padding:6px!important;
+  }
+  #orderEditModal .edit-history-row time{
+    padding-bottom:3px!important;
+  }
+  #orderEditModal .order-edit-actions{
+    padding:10px 12px calc(12px + env(safe-area-inset-bottom))!important;
+  }
+}
+</style>
 </head><body>${pages.join('')}<script>onload=()=>setTimeout(()=>print(),400)<\/script>
 <style>
 /* 展開後訂單卡片標題文字提高對比 */
