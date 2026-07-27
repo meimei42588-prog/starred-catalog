@@ -3169,7 +3169,6 @@ async function saveStore(){
     floor
    }
   });
-  await syncOrderStoresToActivityCloud();
   await loadStarredCloudData();
   resetStoreForm();
   renderStores();
@@ -4302,56 +4301,97 @@ function eventRowToLocal(row, imageMap){
   };
 }
 
-async function syncOrderStoresToActivityCloud(){
+async function getOrderCloudStores(){
   try{
     const result=await starredApi("bootstrap");
-    const orderStores=Array.isArray(result.stores)?result.stores:[];
-    if(!orderStores.length)return;
-
-    const {data:activityStores,error:activityStoreError}=await cloudDb
-      .from("department_stores")
-      .select("id,region,department_name,floor");
-    if(activityStoreError)throw activityStoreError;
-
-    const existingKeys=new Set((activityStores||[]).map(row=>
-      [String(row.region||""),String(row.department_name||"").trim(),String(row.floor||"").trim()].join("|")
-    ));
-
-    const missing=orderStores
+    return (Array.isArray(result.stores)?result.stores:[])
       .filter(store=>store&&store.is_enabled!==false)
-      .map((store,index)=>({
-        region:String(store.region||""),
-        department_name:String(store.name||"").trim(),
+      .map(store=>({
+        sourceId:String(store.id||""),
+        area:String(store.region||""),
+        name:String(store.name||"").trim(),
         floor:String(store.floor||"").trim(),
-        sort_order:Number(store.sort_order||1000+index)
+        sortOrder:Number(store.sort_order||9999)
       }))
-      .filter(store=>store.region&&store.department_name&&store.floor)
-      .filter(store=>{
-        const key=[store.region,store.department_name,store.floor].join("|");
-        if(existingKeys.has(key))return false;
-        existingKeys.add(key);
-        return true;
-      });
-
-    if(missing.length){
-      const {error:insertError}=await cloudDb.from("department_stores").insert(missing);
-      if(insertError)throw insertError;
-    }
+      .filter(store=>store.area&&store.name&&store.floor);
   }catch(error){
-    console.warn("訂單門市同步到活動門市失敗",error);
+    console.warn("讀取訂單門市失敗",error);
+    return [];
   }
+}
+
+async function ensureActivityStore(store){
+  const numericId=Number(store?.id);
+  if(Number.isFinite(numericId)&&numericId>0)return {...store,id:String(numericId)};
+
+  const {data:existingRows,error:findError}=await cloudDb
+    .from("department_stores")
+    .select("id,region,department_name,floor")
+    .eq("region",String(store.area||""))
+    .eq("department_name",String(store.name||""))
+    .eq("floor",String(store.floor||""))
+    .limit(1);
+  if(findError)throw findError;
+
+  if(existingRows&&existingRows[0]){
+    return {
+      id:String(existingRows[0].id),
+      area:existingRows[0].region,
+      name:existingRows[0].department_name,
+      floor:existingRows[0].floor||""
+    };
+  }
+
+  const {data,error}=await cloudDb
+    .from("department_stores")
+    .insert({
+      region:String(store.area||""),
+      department_name:String(store.name||""),
+      floor:String(store.floor||""),
+      sort_order:stores.length
+    })
+    .select("id,region,department_name,floor")
+    .single();
+  if(error)throw error;
+
+  return {
+    id:String(data.id),
+    area:data.region,
+    name:data.department_name,
+    floor:data.floor||""
+  };
 }
 
 async function loadCloudData(){
   try{
-    await syncOrderStoresToActivityCloud();
-    const [{data:storeRows,error:storeError},{data:eventRows,error:eventError},{data:imageRows,error:imageError}]=await Promise.all([
+    const [orderCloudStores,cloudResults]=await Promise.all([
+      getOrderCloudStores(),
+      Promise.all([
+
       cloudDb.from("department_stores").select("*").order("sort_order",{ascending:true}).order("id",{ascending:true}),
       cloudDb.from("department_events").select("*").order("start_date",{ascending:false}).order("id",{ascending:false}),
       cloudDb.from("event_images").select("*").order("sort_order",{ascending:true})
+      ])
     ]);
+    const [{data:storeRows,error:storeError},{data:eventRows,error:eventError},{data:imageRows,error:imageError}]=cloudResults;
     if(storeError)throw storeError;if(eventError)throw eventError;if(imageError)throw imageError;
-    stores=(storeRows||[]).map(r=>({id:String(r.id),area:r.region,name:r.department_name,floor:r.floor||"",builtin:false}));
+
+    const activityStores=(storeRows||[]).map(r=>({
+      id:String(r.id),area:r.region,name:r.department_name,floor:r.floor||"",builtin:false
+    }));
+    const existingKeys=new Set(activityStores.map(s=>[s.area,s.name,s.floor].join("|")));
+    const virtualStores=orderCloudStores
+      .filter(s=>!existingKeys.has([s.area,s.name,s.floor].join("|")))
+      .map(s=>({
+        id:"order:"+s.sourceId,
+        area:s.area,
+        name:s.name,
+        floor:s.floor,
+        builtin:false,
+        virtual:true,
+        sortOrder:s.sortOrder
+      }));
+    stores=[...activityStores,...virtualStores];
     if(!stores.length){
       const seed=BUILTIN_STORES.map((s,i)=>({region:s.area,department_name:s.name,floor:s.floor,sort_order:i}));
       const {error}=await cloudDb.from("department_stores").insert(seed);
@@ -4436,20 +4476,25 @@ window.saveEvent=async function(){
   const wasEditing=Boolean(editingId);
   setCloudBusy(true,wasEditing?"儲存中…":"新增中…");
   try{
+    const resolvedStores=[];
+    for(const selectedStore of selectedStores){
+      resolvedStores.push(await ensureActivityStore(selectedStore));
+    }
+
     if(wasEditing){
-      const store=selectedStores[0];
+      const store=resolvedStores[0];
       const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id),updated_at:new Date().toISOString()};
       const {error}=await cloudDb.from("department_events").update(payload).eq("id",Number(editingId));if(error)throw error;
       await removeEventPhotos([editingId]);
       await uploadEventPhotos(editingId,currentPhotos);
     }else{
-      for(const store of selectedStores){
+      for(const store of resolvedStores){
         const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id)};
         const {data,error}=await cloudDb.from("department_events").insert(payload).select("id").single();if(error)throw error;
         await uploadEventPhotos(data.id,currentPhotos);
       }
     }
-    const count=selectedStores.length;resetForm();await loadCloudData();if(!wasEditing)showSuccessModal(count);
+    const count=resolvedStores.length;resetForm();await loadCloudData();if(!wasEditing)showSuccessModal(count);
   }catch(error){cloudError("活動儲存失敗",error)}finally{setCloudBusy(false)}
 };
 window.deleteEvent=async function(id){
