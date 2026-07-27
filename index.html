@@ -3169,6 +3169,7 @@ async function saveStore(){
     floor
    }
   });
+  await syncOrderStoresToActivityCloud();
   await loadStarredCloudData();
   resetStoreForm();
   renderStores();
@@ -4300,8 +4301,50 @@ function eventRowToLocal(row, imageMap){
     createdAt:row.created_at, updatedAt:row.updated_at
   };
 }
+
+async function syncOrderStoresToActivityCloud(){
+  try{
+    const result=await starredApi("bootstrap");
+    const orderStores=Array.isArray(result.stores)?result.stores:[];
+    if(!orderStores.length)return;
+
+    const {data:activityStores,error:activityStoreError}=await cloudDb
+      .from("department_stores")
+      .select("id,region,department_name,floor");
+    if(activityStoreError)throw activityStoreError;
+
+    const existingKeys=new Set((activityStores||[]).map(row=>
+      [String(row.region||""),String(row.department_name||"").trim(),String(row.floor||"").trim()].join("|")
+    ));
+
+    const missing=orderStores
+      .filter(store=>store&&store.is_enabled!==false)
+      .map((store,index)=>({
+        region:String(store.region||""),
+        department_name:String(store.name||"").trim(),
+        floor:String(store.floor||"").trim(),
+        sort_order:Number(store.sort_order||1000+index)
+      }))
+      .filter(store=>store.region&&store.department_name&&store.floor)
+      .filter(store=>{
+        const key=[store.region,store.department_name,store.floor].join("|");
+        if(existingKeys.has(key))return false;
+        existingKeys.add(key);
+        return true;
+      });
+
+    if(missing.length){
+      const {error:insertError}=await cloudDb.from("department_stores").insert(missing);
+      if(insertError)throw insertError;
+    }
+  }catch(error){
+    console.warn("訂單門市同步到活動門市失敗",error);
+  }
+}
+
 async function loadCloudData(){
   try{
+    await syncOrderStoresToActivityCloud();
     const [{data:storeRows,error:storeError},{data:eventRows,error:eventError},{data:imageRows,error:imageError}]=await Promise.all([
       cloudDb.from("department_stores").select("*").order("sort_order",{ascending:true}).order("id",{ascending:true}),
       cloudDb.from("department_events").select("*").order("start_date",{ascending:false}).order("id",{ascending:false}),
