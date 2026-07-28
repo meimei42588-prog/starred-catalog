@@ -2951,10 +2951,36 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 }
 </style>
 
+
+<style id="front-order-edit-delete-mobile-fix-20260728">
+.front-order-action-group{display:grid;grid-template-columns:auto auto;gap:8px;align-items:stretch}
+.front-order-edit-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:8px 13px;border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:900;white-space:nowrap}
+.front-order-edit-btn:hover{background:#1d4ed8}
+.order-edit-delete-btn{margin-right:auto!important}
+.front-delete-modal{z-index:350000!important}
+.front-delete-dialog{width:min(440px,100%);padding:24px;border-radius:20px;background:#fff;box-shadow:0 24px 70px rgba(25,48,62,.25)}
+.front-delete-dialog h2{margin:0 0 8px}.front-delete-dialog p{margin:0 0 16px;color:#687e8a;line-height:1.55}
+.front-delete-dialog label{display:flex;flex-direction:column;gap:7px;margin-top:12px;font-size:13px;font-weight:900;color:#385361}
+.front-delete-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.front-delete-actions button{min-height:46px}
+@media(max-width:760px){
+ #orderPage .order-card-summary{grid-template-columns:minmax(0,1fr) 88px!important}
+ #orderPage .order-card-summary>.order-summary-badges{width:88px!important;min-width:88px!important;max-width:88px!important}
+ #orderPage .order-card-summary .order-summary-badges>.order-status,#orderPage .order-card-summary .order-summary-badges>.order-editable-badge{width:88px!important;min-width:88px!important;max-width:88px!important;font-size:11px!important}
+ #orderPage .order-card-detail{overflow:visible!important}
+ #orderPage .delivery-photo-row{grid-template-columns:1fr!important}
+ #orderPage .front-order-action-group{grid-template-columns:1fr 1fr!important;width:100%}
+ #orderPage .front-order-action-group button{width:100%!important;min-width:0!important;min-height:46px!important}
+ #orderEditModal .order-edit-actions{grid-template-columns:1fr 1fr!important}
+ #orderEditModal .order-edit-actions .order-edit-delete-btn{grid-column:1/-1!important;width:100%!important}
+ .front-delete-modal{align-items:flex-end!important;padding:0!important}
+ .front-delete-dialog{width:100%;border-radius:22px 22px 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom))}
+}
+@media(max-width:430px){#orderPage .front-order-action-group{grid-template-columns:1fr!important}.front-delete-actions{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
-  <div class="brand"><button type="button" class="brand-home-btn" onclick="goToActivityOverview()">星紅織品｜百貨活動</button></div>
+  <div class="brand"><button type="button" class="brand-home-btn" onclick="goToActivityOverview()">星紅織品｜門市營用管理系統</button></div>
   <div class="topbar-right">
     <div class="nav">
       <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
@@ -3308,7 +3334,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </main>
 
 
-<div id="orderActionModal" class="success-modal"><div class="success-dialog"><div class="success-icon">✓</div><div id="orderActionTitle" class="success-title"></div><div id="orderActionText" class="success-text"></div><button class="primary" onclick="closeOrderActionModal()">確認</button></div></div><div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2>修改訂單</h2><p>調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button class="secondary" onclick="closeOrderEditModal()">取消</button><button class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
+<div id="orderActionModal" class="success-modal"><div class="success-dialog"><div class="success-icon">✓</div><div id="orderActionTitle" class="success-title"></div><div id="orderActionText" class="success-text"></div><button class="primary" onclick="closeOrderActionModal()">確認</button></div></div><div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2>修改訂單</h2><p>調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button id="frontDeleteOrderBtn" type="button" class="danger order-edit-delete-btn" onclick="openFrontDeleteReasonModal()">刪除訂單</button><button class="secondary" onclick="closeOrderEditModal()">取消</button><button class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="frontDeleteReasonModal" class="order-edit-modal front-delete-modal" onclick="if(event.target===this)closeFrontDeleteReasonModal()"><div class="front-delete-dialog"><h2>刪除這筆訂單</h2><p>請先選擇刪除原因，確認後此筆訂單將被刪除。</p><label>刪除原因<select id="frontDeleteReason" onchange="toggleFrontDeleteOtherReason()"><option value="客人取消">客人取消</option><option value="其他">其他</option></select></label><label id="frontDeleteOtherWrap" style="display:none">其他原因<textarea id="frontDeleteOtherReason" rows="3" placeholder="請輸入刪除原因"></textarea></label><div class="front-delete-actions"><button type="button" class="secondary" onclick="closeFrontDeleteReasonModal()">返回</button><button type="button" class="danger" onclick="confirmFrontDeleteOrder()">確認刪除</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
   <div class="success-dialog">
     <div class="success-icon">✓</div>
     <div id="successTitle" class="success-title">活動建立成功</div>
@@ -4738,7 +4764,7 @@ function renderOrderCards(){
    const updated=escapeHtml(orderLastUpdatedValue(o));
    const statusClass=shipped?'shipped':o.status==='cancelled'?'cancelled':'pending';
    const statusLabel=shipped?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出';
-   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${canEdit?`<div class="front-order-edit-row"><button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">修改這筆訂單</button></div>`:`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`}</div></article>`;
+   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group"><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button>${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">修改這筆訂單</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:''}</div></article>`;
  }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
  renderOrderPagination(totalPages,list.length)
 }
@@ -5099,6 +5125,35 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
 let orderEditDirty=false;
 let orderEditInitialSnapshot="";
 let orderEditSource="admin";
+let frontDeleteOrderId="";
+function openFrontDeleteReasonModal(){
+ const id=$("editOrderId")?.value||"";
+ if(!id)return;
+ frontDeleteOrderId=id;
+ const reason=$("frontDeleteReason"),other=$("frontDeleteOtherReason");
+ if(reason)reason.value="客人取消";if(other)other.value="";
+ toggleFrontDeleteOtherReason();
+ $("frontDeleteReasonModal")?.classList.add("show");
+}
+function closeFrontDeleteReasonModal(){$("frontDeleteReasonModal")?.classList.remove("show")}
+function toggleFrontDeleteOtherReason(){
+ const other=$("frontDeleteReason")?.value==="其他";
+ const wrap=$("frontDeleteOtherWrap");if(wrap)wrap.style.display=other?"flex":"none";
+}
+async function confirmFrontDeleteOrder(){
+ const orderId=frontDeleteOrderId||$("editOrderId")?.value||"";
+ const reason=$("frontDeleteReason")?.value||"";
+ const other=$("frontDeleteOtherReason")?.value.trim()||"";
+ if(reason==="其他"&&!other){showOrderAction("請填寫原因","選擇其他時，請輸入刪除原因。");return}
+ const reasonText=reason==="其他"?other:reason;
+ try{
+  await starredApi("delete_orders",{orderIds:[orderId],reason:reasonText});
+  closeFrontDeleteReasonModal();orderEditDirty=false;closeOrderEditModal(true);
+  await loadStarredCloudData();
+  showOrderAction("訂單已刪除",`刪除原因：${reasonText}`);
+ }catch(error){cloudError("刪除訂單失敗",error)}
+}
+
 
 function getCurrentVerifiedLineId(){
  const profile=getCurrentLineUser();
@@ -5142,6 +5197,7 @@ async function openOrderEdit(id,source="admin"){
   return;
  }
  orderEditSource=source;
+ const deleteBtn=$("frontDeleteOrderBtn");if(deleteBtn)deleteBtn.style.display=source==="front"?"inline-flex":"none";
  $("editOrderId").value=id;$("editOrderName").value=o.name;$("editOrderPhone").value=o.phone;
  $("editOrderDelivery").value=o.delivery;$("editOrderItems").value=o.items;initEditOrderAddress();
  const parsed=splitTaiwanAddress(o.delivery==='門市自取'?'':o.address);
