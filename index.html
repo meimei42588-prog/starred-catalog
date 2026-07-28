@@ -3173,7 +3173,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <button type="button" class="admin-status-btn returned" data-status="returned" onclick="setAdminOrderStatus('returned')">退貨 <b id="adminStatusReturned">0</b></button>
 </div><input id="adminOrderStatus" type="hidden" value="">
 <div class="order-admin-filter compact-filter"><input id="adminOrderKeyword" placeholder="搜尋姓名、電話、地址、商品" oninput="renderOrderAdmin()"><select id="adminOrderStoreFilter" onchange="renderOrderAdmin()"><option value="">全部門市</option></select><select id="adminOrderDeliveryFilter" onchange="renderOrderAdmin()"><option value="">全部配送方式</option><option value="總公司寄出">公司寄出</option><option value="門市自取">門市自取</option></select><div class="compact-date-field"><label>訂單日起</label><input id="adminOrderDateFrom" type="date" onchange="renderOrderAdmin()"></div><div class="compact-date-field"><label>訂單日迄</label><input id="adminOrderDateTo" type="date" onchange="renderOrderAdmin()"></div><button type="button" class="secondary compact-btn" onclick="clearAdminOrderFilters()">清除</button></div>
-<div class="compact-batch-panel"><div class="compact-select-row"><label><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" onchange="toggleAllOrders(this.checked)"> 全選目前結果</label><b id="orderSelectedCount">已選 0 筆</b></div><div class="compact-process-row"><select id="orderHandler" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button id="markPendingBtn" class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="approveChangeRequestBtn" class="secondary compact-action" style="display:none;background:#f5e7f4;color:#8a3f84" onclick="approveSelectedChangeRequests()">確認申請</button><button id="returnOrderBtn" class="secondary compact-action" style="background:#fff0dc;color:#a85a00" onclick="markSelectedOrdersReturned()">退貨</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button class="secondary compact-action" onclick="exportOrdersExcel()">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
+<div class="compact-batch-panel"><div class="compact-select-row"><label><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" onchange="toggleAllOrders(this.checked)"> 全選目前結果</label><b id="orderSelectedCount">已選 0 筆</b></div><div class="compact-process-row"><select id="orderHandler" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button id="markPendingBtn" class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="approveChangeRequestBtn" class="secondary compact-action" style="display:none;background:#f5e7f4;color:#8a3f84" onclick="approveSelectedChangeRequests()">確認申請</button><button id="returnOrderBtn" class="secondary compact-action" style="background:#fff0dc;color:#a85a00" onclick="markSelectedOrdersReturned()">退貨</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button type="button" class="secondary compact-action" onclick="exportOrdersExcel(event)">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
 <div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div><div id="accountTab" class="admin-tab-panel">
       <section class="panel">
         <h2 id="accountFormTitle">新增管理帳號</h2>
@@ -4925,16 +4925,44 @@ async function markSelectedOrdersCancelled(){const ids=[...selectedOrderIds];rem
 async function markSelectedOrdersReturned(){if(!ensureSelected())return;const ids=[...selectedOrderIds];const handler=getCurrentAdminDisplayName();removeLocalProcessingOrderIds(ids);orders.forEach(o=>{if(ids.includes(String(o.id))){o.status='returned';o.handler=handler;o.shippedDate=''}});persistOrders();renderOrderCards();renderOrderAdmin();try{await starredApi("bulk_order_status",{orderIds:ids,status:"returned",handler,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showPage('admin');showAdminTab('orderAdmin');setAdminOrderStatus('returned');showOrderAction('退貨完成',`已將 ${ids.length} 筆訂單改為退貨。`)}catch(error){cloudError('退貨設定失敗',error)}}
 function selectedOrdersForExport(){return orders.filter(o=>selectedOrderIds.has(o.id))}
 function getEditNote(o){if(!o.history?.length)return '';return o.history.map((h,i)=>{const b=h.before||{};return `第${i+1}次修改（${h.editedAt||''}）：姓名 ${b.name||''}；電話 ${b.phone||''}；地址 ${b.address||''}；配送 ${b.delivery||''}；商品 ${b.items||''}`}).join('｜')}
-async function exportOrdersExcel(){
+async function exportOrdersExcel(event){
+ if(event){event.preventDefault();event.stopPropagation()}
  const keepAdminPage=$("adminPage")?.classList.contains('active');
  const keepOrderAdminTab=$("orderAdminTab")?.classList.contains('active');
  const keepAdminStatus=$("adminOrderStatus")?.value||'';
  const list=selectedOrdersForExport();
  if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}
  const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
- const rows=list.map(o=>({訂單日期:orderDateValue(o),姓名:o.name,電話:o.phone,地址:o.address,配送:o.delivery,商品:o.items,狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?'退貨':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出',處理人:((o.status||'pending')==='pending'?'':(o.handler||((o.status||'pending')==='cancelled'?getLocalCancelHandler(o.id):''))),寄出日期:o.shippedDate||'',備註:getEditNote(o)}));
+ const rows=list.map(o=>({
+  訂單日期:orderDateValue(o),姓名:o.name||'',電話:o.phone||'',地址:o.address||'',配送:o.delivery||'',商品:o.items||'',
+  狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?'退貨':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出',
+  處理人:((o.status||'pending')==='pending'?'':(o.handler||((o.status||'pending')==='cancelled'?getLocalCancelHandler(o.id):''))),
+  寄出日期:o.shippedDate||'',備註:getEditNote(o)
+ }));
 
- // 先將待寄出改為處理中，再執行下載，避免瀏覽器下載流程中斷後續狀態更新。
+ // 先完成檔案下載，再同步狀態，避免網路或畫面重繪阻擋下載。
+ try{
+  if(typeof XLSX!=="undefined"&&XLSX?.utils?.json_to_sheet&&XLSX?.writeFile){
+   const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();
+   XLSX.utils.book_append_sheet(wb,ws,'訂單');
+   XLSX.writeFile(wb,`訂單_${todayStr()}.xlsx`);
+  }else{
+   // CDN 載入失敗時自動改用 Excel 可直接開啟的 UTF-8 CSV，確保按鈕仍可使用。
+   const headers=Object.keys(rows[0]||{});
+   const csvEscape=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+   const csv='\ufeff'+[headers.map(csvEscape).join(','),...rows.map(row=>headers.map(h=>csvEscape(row[h])).join(','))].join('\r\n');
+   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+   const url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download=`訂單_${todayStr()}.csv`;a.style.display='none';
+   document.body.appendChild(a);a.click();a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }
+ }catch(error){
+  console.error('訂單 Excel 匯出失敗：',error);
+  showOrderAction('Excel 匯出失敗',error?.message||String(error)||'請稍後再試');
+  return;
+ }
+
  if(pendingIds.length){
   addLocalProcessingOrderIds(pendingIds);
   orders.forEach(o=>{if(pendingIds.includes(String(o.id))){o.status='processing';o.handler='';o.shippedDate=''}});
@@ -4943,25 +4971,18 @@ async function exportOrdersExcel(){
   renderOrderCards();
   renderOrderAdmin();
   try{
-   // 雲端資料庫仍以 pending + 專用標記保存，讀取時會顯示為 processing。
    await starredApi('bulk_order_status',{orderIds:pendingIds,status:'pending',handler:STARRED_PROCESSING_MARKER,shippedDate:null});
    await loadStarredCloudData();
-   if(keepAdminPage){showPage('admin');if(keepOrderAdminTab)showAdminTab('orderAdmin');setAdminOrderStatus(keepAdminStatus||'processing')}
   }catch(error){
-   // 雲端暫時失敗時保留本機處理中狀態，避免訂單回到待寄出造成重複出貨。
    console.warn('匯出後同步處理中狀態失敗，已保留本機狀態：',error);
   }
  }
 
- try{
-  const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'訂單');
-  XLSX.writeFile(wb,'訂單.xlsx');
- }catch(error){
-  showOrderAction('Excel 匯出失敗',error?.message||String(error)||'請稍後再試');
-  return;
+ if(keepAdminPage){
+  showPage('admin');
+  if(keepOrderAdminTab)showAdminTab('orderAdmin');
+  setAdminOrderStatus(keepAdminStatus||($('adminOrderStatus')?.value||''));
  }
- if(keepAdminPage){showPage('admin');if(keepOrderAdminTab)showAdminTab('orderAdmin');setAdminOrderStatus(keepAdminStatus||($('adminOrderStatus')?.value||''))}
  showOrderAction('Excel 匯出完成',pendingIds.length
   ?`已匯出 ${list.length} 筆訂單，其中 ${pendingIds.length} 筆待寄出訂單已自動移到處理中，避免重複出貨。`
   :`已匯出 ${list.length} 筆訂單。`);
