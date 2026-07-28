@@ -4816,7 +4816,7 @@ function updateConfirmShipButton(){const b=$("confirmShipBtn");if(b){b.disabled=
 function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
 async function markSelectedOrdersShipped(){if(!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
 async function markSelectedOrdersPending(){if(!ensureSelected())return;const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:"",shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出。`)}catch(error){cloudError('狀態修改失敗',error)}}
-async function approveSelectedChangeRequests(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"processing"});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('更改確認完成',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){cloudError('確認更改失敗',error)}}
+async function approveSelectedChangeRequests(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:STARRED_PROCESSING_MARKER,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('更改確認完成',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){cloudError('確認更改失敗',error)}}
 function updateCancelDeleteOrderButton(){const btn=$("cancelDeleteOrderBtn"),approve=$("approveChangeRequestBtn");if(!btn)return;const current=$("adminOrderStatus")?.value||'',isCancelled=current==='cancelled',isChange=current==='change_request';const role=window.starredVerifiedLineUser?.role||currentUser?.role||'';if(approve)approve.style.display=isChange?'':'none';if(isCancelled){btn.textContent='刪除訂單';btn.style.display=(role==='system_admin'||role==='admin')?'':'none'}else{btn.textContent='取消訂單';btn.style.display=isChange?'none':''}}
 function handleCancelDeleteSelectedOrders(){if($("adminOrderStatus")?.value==='cancelled'){deleteSelectedCancelledOrders();return}requestCancelSelectedOrders()}
 async function deleteSelectedCancelledOrders(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>(o.status||'pending')!=='cancelled')){showOrderAction('無法刪除','只能刪除「取消訂單」狀態內的訂單。');return}const ids=[...selectedOrderIds];if(!window.confirm(`確定要永久刪除選取的 ${ids.length} 筆訂單嗎？
@@ -4843,7 +4843,7 @@ async function exportOrdersExcel(){
   return;
  }
  try{
-  await starredApi('bulk_order_status',{orderIds:pendingIds,status:'processing'});
+  await starredApi('bulk_order_status',{orderIds:pendingIds,status:'pending',handler:STARRED_PROCESSING_MARKER,shippedDate:null});
   selectedOrderIds.clear();
   await loadStarredCloudData();
   showOrderAction('Excel 匯出完成',`已匯出 ${list.length} 筆訂單，其中 ${pendingIds.length} 筆待寄出訂單已自動改為處理中，避免重複出貨。`);
@@ -5895,6 +5895,7 @@ async function starredApi(action,payload={}){
   }
   return result;
 }
+const STARRED_PROCESSING_MARKER="__STARRED_PROCESSING__";
 function cloudStoreToLocal(s){return{id:String(s.id),area:String(s.region||"central"),name:String(s.name||""),floor:String(s.floor||"")}}
 function cloudUserToLocal(u){return{id:String(u.line_user_id||u.id||""),dbId:String(u.id||""),name:String(u.employee_name||u.line_display_name||"LINE 使用者"),displayName:String(u.line_display_name||"LINE 使用者"),pictureUrl:String(u.picture_url||""),storeId:String(u.store_id||""),role:String(u.role||"staff"),enabled:u.is_enabled!==false,lastLogin:u.last_login_at||""}}
 function cloudOrderToLocal(o){
@@ -5908,8 +5909,8 @@ function cloudOrderToLocal(o){
   pickupStore:String(o.pickup_store?.name||""),pickupStoreId:String(o.pickup_store_id||""),
   createdAt:o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",
   updatedAt:o.updated_at?new Date(o.updated_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):(o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):""),
-  createdDate:String(o.order_date||"").slice(0,10),status:o.status==="processing"?"pending":String(o.status||"pending"),
-  handler:String(o.processor_name||""),shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
+  createdDate:String(o.order_date||"").slice(0,10),status:(o.status==="processing"||((o.status||"pending")==="pending"&&String(o.processor_name||"")===STARRED_PROCESSING_MARKER))?"processing":String(o.status||"pending"),
+  handler:String(o.processor_name||"")===STARRED_PROCESSING_MARKER?"":String(o.processor_name||""),shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
   original:createLog?.after_data?{name:createLog.after_data.customer_name,phone:createLog.after_data.customer_phone,address:createLog.after_data.customer_address,delivery:createLog.after_data.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:createLog.after_data.product_content,photoKey:String(o.photo_url||""),createdAt:o.created_at}:null,
   history:updateLogs.map(x=>({editedAt:x.created_at?new Date(x.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",editedBy:x.actor_name||"",before:{name:x.before_data?.customer_name,phone:x.before_data?.customer_phone,address:x.before_data?.customer_address,delivery:x.before_data?.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:x.before_data?.product_content}}))
  }
