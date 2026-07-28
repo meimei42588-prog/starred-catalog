@@ -5001,6 +5001,8 @@ async function exportOrdersExcel(event){
    訂單日期:'col-date',姓名:'col-name',電話:'col-phone',地址:'col-address',配送:'col-delivery',商品:'col-items',
    狀態:'col-status',處理人:'col-handler',寄出日期:'col-ship-date',備註:'col-note'
   };
+  // Excel HTML 匯出必須同時寫入 width 屬性，Excel 才會確實保留欄寬。
+  const excelColumnWidth={訂單日期:105,姓名:90,電話:125,地址:260,配送:105,商品:330,狀態:100,處理人:95,寄出日期:105,備註:290};
   const tableHtml=`<table class="report-table"><colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}">`).join('')}</colgroup><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((row,rowIndex)=>`<tr class="${rowIndex%2?'even-row':'odd-row'}">${headers.map(h=>`<td class="${columnClass[h]||''}">${h==='狀態'?`<span class="status-pill status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}">${esc(row[h])}</span>`:esc(row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const reportHeader=`<div class="report-header"><div><div class="brand-mark">STAR RED TEXTILE</div><h1>星紅織品｜訂單匯出報表</h1><p>匯出時間：${esc(exportDate)}</p></div><div class="report-summary"><b>${rows.length}</b><span>本次匯出筆數</span></div></div><div class="summary-strip"><span>報表狀態摘要</span><b>${summaryText||'無資料'}</b></div>`;
   const excelRows=rows.map((row,rowIndex)=>`<tr>${headers.map(h=>`<td class="${columnClass[h]||''}">${esc(row[h])}</td>`).join('')}</tr>`).join('');
@@ -5015,33 +5017,33 @@ async function exportOrdersExcel(event){
 </xml><![endif]-->
 <style>
 html,body{margin:0;padding:0;background:#fff}
-table{border-collapse:collapse;table-layout:fixed;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#000}
-td,th{border:1px solid #808080;padding:5px 6px;vertical-align:middle;white-space:pre-wrap;word-break:break-word;line-height:1.35;mso-number-format:"\@"}
+table{border-collapse:collapse;table-layout:fixed;width:1525px;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#000;mso-displayed-decimal-separator:"\.";mso-displayed-thousand-separator:","}
+td,th{border:1px solid #808080;padding:6px 7px;vertical-align:middle;white-space:normal;word-break:normal;line-height:1.35;mso-number-format:"\@";mso-wrap-style:wrap}
 .title{font-size:16pt;font-weight:700;text-align:center;border:0;height:34px}
 .subtitle{font-size:13pt;font-weight:700;text-align:center;border:0;height:28px}
-.info-label{font-weight:700;background:#f2f2f2;text-align:center}
-.info-value{text-align:left}
+.info-label{font-weight:700;background:#f2f2f2;text-align:center;white-space:nowrap;height:34px}
+.info-value{text-align:left;white-space:nowrap;height:34px}
 .blank-row td{height:7px;border:0}
-.header{font-weight:700;text-align:center;background:#d9d9d9;border:1px solid #666;height:28px}
-.data-row td{background:#fff;vertical-align:top;height:28px}
+.header{font-weight:700;text-align:center;background:#d9d9d9;border:1px solid #666;height:38px;white-space:nowrap;mso-wrap-style:none}
+.data-row td{background:#fff;vertical-align:top;height:42px;white-space:normal;mso-wrap-style:wrap}
 .total-label{font-weight:700;text-align:right;background:#f2f2f2}
 .total-value{font-weight:700;text-align:center;background:#f2f2f2}
-.col-date{width:95px;text-align:center}.col-name{width:90px}.col-phone{width:115px}.col-address{width:230px}.col-delivery{width:110px}.col-items{width:310px}.col-status{width:100px;text-align:center}.col-handler{width:100px}.col-ship-date{width:100px;text-align:center}.col-note{width:270px}
+.col-date{width:105px;text-align:center;white-space:nowrap}.col-name{width:90px}.col-phone{width:125px;white-space:nowrap}.col-address{width:260px}.col-delivery{width:105px;text-align:center}.col-items{width:330px}.col-status{width:100px;text-align:center;white-space:nowrap}.col-handler{width:95px;text-align:center;white-space:nowrap}.col-ship-date{width:105px;text-align:center;white-space:nowrap}.col-note{width:290px}
 </style>
 </head>
 <body>
 <table>
-<colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}">`).join('')}</colgroup>
+<colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}" width="${excelColumnWidth[h]||120}">`).join('')}</colgroup>
 <tr><td class="title" colspan="${headers.length}">星紅織品</td></tr>
 <tr><td class="subtitle" colspan="${headers.length}">訂單出貨明細表</td></tr>
 <tr>
 <td class="info-label">匯出日期</td><td class="info-value" colspan="3">${esc(exportDate)}</td>
-<td class="info-label">匯出筆數</td><td class="info-value" colspan="2">${rows.length} 筆</td>
-<td class="info-label">狀態摘要</td><td class="info-value" colspan="${Math.max(1,headers.length-8)}">${summaryText||'無資料'}</td>
+<td class="info-label">匯出筆數</td><td class="info-value">${rows.length} 筆</td>
+<td class="info-label">狀態摘要</td><td class="info-value" colspan="3">${summaryText||'無資料'}</td>
 </tr>
 <tr class="blank-row"><td colspan="${headers.length}"></td></tr>
-<tr>${headers.map(h=>`<th class="header ${columnClass[h]||''}">${esc(h)}</th>`).join('')}</tr>
-${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass[h]||''}">${esc(row[h])}</td>`).join('')}</tr>`).join('')}
+<tr>${headers.map(h=>`<th class="header ${columnClass[h]||''}" width="${excelColumnWidth[h]||120}" style="width:${excelColumnWidth[h]||120}px">${esc(h)}</th>`).join('')}</tr>
+${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass[h]||''}" width="${excelColumnWidth[h]||120}" style="width:${excelColumnWidth[h]||120}px">${esc(row[h])}</td>`).join('')}</tr>`).join('')}
 <tr><td class="total-label" colspan="${headers.length-1}">合計</td><td class="total-value">共 ${rows.length} 筆</td></tr>
 </table>
 </body></html>`;
