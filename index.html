@@ -4826,7 +4826,7 @@ function updateConfirmShipButton(){const b=$("confirmShipBtn");if(b){b.disabled=
 function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
 async function markSelectedOrdersShipped(){if(!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
 async function markSelectedOrdersPending(){if(!ensureSelected())return;const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:"",shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出。`)}catch(error){cloudError('狀態修改失敗',error)}}
-async function approveSelectedChangeRequests(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"processing",handler:"",shippedDate:null});removeLocalProcessingOrderIds(ids);selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('申請確認完成',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){cloudError('確認申請失敗',error)}}
+async function approveSelectedChangeRequests(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{addLocalProcessingOrderIds(ids);await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:STARRED_PROCESSING_MARKER,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('申請確認完成',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){removeLocalProcessingOrderIds(ids);cloudError('確認申請失敗',error)}}
 function updateCancelDeleteOrderButton(){const btn=$("cancelDeleteOrderBtn"),approve=$("approveChangeRequestBtn");if(!btn)return;const current=$("adminOrderStatus")?.value||'',isCancelled=current==='cancelled',isChange=current==='change_request';const role=window.starredVerifiedLineUser?.role||currentUser?.role||'';if(approve)approve.style.display=isChange?'':'none';if(isCancelled){btn.textContent='刪除訂單';btn.style.display=(role==='system_admin'||role==='admin')?'':'none'}else{btn.textContent='取消訂單';btn.style.display=isChange?'none':''}}
 function handleCancelDeleteSelectedOrders(){if($("adminOrderStatus")?.value==='cancelled'){deleteSelectedCancelledOrders();return}requestCancelSelectedOrders()}
 async function deleteSelectedCancelledOrders(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>(o.status||'pending')!=='cancelled')){showOrderAction('無法刪除','只能刪除「取消訂單」狀態內的訂單。');return}const ids=[...selectedOrderIds];if(!window.confirm(`確定要永久刪除選取的 ${ids.length} 筆訂單嗎？
@@ -5333,17 +5333,17 @@ async function saveOrderEdit(){
  const submitBtn=$("orderEditSubmitBtn"),oldText=submitBtn?.textContent||"";
  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送出中…"}
  try{
-  // 前台處理中的訂單送出時，必須完成「資料更新 + 狀態切換」兩件事。
-  // 舊資料可能以 pending + 處理中標記呈現，因此先把雲端狀態正規化為 processing，
-  // 儲存本次正式送出的修改後，再切換為 change_request。
+  // 畫面上的「處理中」在雲端實際保存為 pending + 專用處理中標記。
+  // 因此不可送出不存在於後端流程的 processing 狀態，否則會出現「訂單狀態不正確」。
+  // 正確順序：先以雲端真實狀態 pending 儲存正式修改，再切換為 change_request。
   const isFrontChangeSubmit=orderEditSource==="front"&&originalStatus==="processing";
   if(isFrontChangeSubmit){
-   await starredApi("bulk_order_status",{orderIds:[orderId],status:"processing",handler:o.handler||"",shippedDate:o.shippedDate||null});
-   await starredApi("update_order",{orderId,order:{...next,status:"processing"}});
-   await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:o.handler||"",shippedDate:o.shippedDate||null});
+   await starredApi("update_order",{orderId,order:{...next,status:"pending"}});
+   await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:"",shippedDate:null});
    removeLocalProcessingOrderIds([orderId]);
   }else{
-   await starredApi("update_order",{orderId,order:{...next,status:originalStatus}});
+   const cloudStatus=originalStatus==="processing"?"pending":originalStatus;
+   await starredApi("update_order",{orderId,order:{...next,status:cloudStatus}});
   }
   orderEditDirty=false;closeOrderEditModal(true);
   await loadStarredCloudData();
