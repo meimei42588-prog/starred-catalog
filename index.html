@@ -2993,8 +2993,8 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
   <div class="brand"><button type="button" class="brand-home-btn" onclick="goToOrderReturnPage()">星紅織品｜門市營用管理系統</button></div>
   <div class="topbar-right">
     <div class="nav">
-      <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
-      <button id="orderNav" onclick="showPage('order')">訂單回傳</button>
+      <button id="homeNav" onclick="showPage('home')">活動總覽</button>
+      <button id="orderNav" class="active" onclick="showPage('order')">訂單回傳</button>
       <button id="adminNav" onclick="showPage('admin')">後台管理</button>
     </div>
     <div id="topbarSession" class="topbar-session">
@@ -3010,7 +3010,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </div></div>
 
 <main class="container">
-<section id="homePage" class="page active">
+<section id="homePage" class="page">
   
 <div class="front-filter-panel">
   <div class="front-filter-heading">
@@ -3076,7 +3076,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </section>
 
 
-<section id="orderPage" class="page">
+<section id="orderPage" class="page active">
 <div class="order-layout">
 <section class="panel order-entry-panel"><div class="order-title-row"><div><h2>新增客訂資料</h2><div class="order-red-note">只須填寫收件人資料，購買人無須填寫</div></div></div>
 <div class="order-fixed-date"><div class="order-fixed-meta"><span>訂單日期</span><b id="orderFixedDate"></b></div><div class="order-fixed-meta"><span>回傳人員</span><b id="orderReturnPerson">（登入後自動帶入）</b></div></div><div class="order-form-grid">
@@ -4859,7 +4859,7 @@ function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("a
 function updateAdminStatusCounts(){const status=o=>o.status||'pending';$("adminStatusAll").textContent=orders.length;$("adminStatusPending").textContent=orders.filter(o=>status(o)==='pending').length;$("adminStatusProcessing").textContent=orders.filter(o=>status(o)==='processing').length;$("adminStatusChangeRequest").textContent=orders.filter(o=>status(o)==='change_request').length;$("adminStatusShipped").textContent=orders.filter(o=>status(o)==='shipped').length;$("adminStatusCancelled").textContent=orders.filter(o=>status(o)==='cancelled').length}
 function renderAdminOrderStoreOptions(){const e=$("adminOrderStoreFilter");if(!e)return;const old=e.value;const names=[...new Set([...stores.map(s=>s.name),...orders.map(o=>o.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));e.innerHTML='<option value="">全部門市</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))e.value=old}
 function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("orderHandler");if(!e)return;const old=e.value;e.innerHTML='<option value="">請選擇處理人</option>'+accounts.filter(a=>a.enabled!==false).map(a=>`<option value="${escapeHtml(a.name||a.username)}">${escapeHtml(a.name||a.username)}</option>`).join('');if([...e.options].some(x=>x.value===old))e.value=old;updateConfirmShipButton()}
-function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${st}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml(o.handler||'—')}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
+function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${st}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='cancelled'?'管理員':(o.handler||'—'))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
 function toggleOrderSelection(id,c){c?selectedOrderIds.add(id):selectedOrderIds.delete(id);renderOrderAdmin()}
 function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.add(o.id):selectedOrderIds.delete(o.id));renderOrderAdmin()}
 function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}updateConfirmShipButton()}
@@ -4873,14 +4873,14 @@ function handleCancelDeleteSelectedOrders(){if($("adminOrderStatus")?.value==='c
 async function deleteSelectedCancelledOrders(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>(o.status||'pending')!=='cancelled')){showOrderAction('無法刪除','只能刪除「取消訂單」狀態內的訂單。');return}const ids=[...selectedOrderIds];if(!window.confirm(`確定要永久刪除選取的 ${ids.length} 筆訂單嗎？
 刪除後無法復原。`))return;try{await starredApi("delete_orders",{orderIds:ids});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('刪除訂單完成',`已刪除 ${ids.length} 筆訂單。`)}catch(error){cloudError('刪除訂單失敗',error)}}
 function requestCancelSelectedOrders(){if(!ensureSelected())return;if(!window.confirm(`確定要取消選取的 ${selectedOrderIds.size} 筆訂單嗎？\n取消後仍可在「取消訂單」狀態中查看。`))return;markSelectedOrdersCancelled()}
-async function markSelectedOrdersCancelled(){const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);const handler=currentUser?.name||"";try{await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單。`)}catch(error){cloudError('取消訂單失敗',error)}}
+async function markSelectedOrdersCancelled(){const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);const handler="管理員";try{await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單。`)}catch(error){cloudError('取消訂單失敗',error)}}
 function selectedOrdersForExport(){return orders.filter(o=>selectedOrderIds.has(o.id))}
 function getEditNote(o){if(!o.history?.length)return '';return o.history.map((h,i)=>{const b=h.before||{};return `第${i+1}次修改（${h.editedAt||''}）：姓名 ${b.name||''}；電話 ${b.phone||''}；地址 ${b.address||''}；配送 ${b.delivery||''}；商品 ${b.items||''}`}).join('｜')}
 async function exportOrdersExcel(){
  const list=selectedOrdersForExport();
  if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}
  const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
- const rows=list.map(o=>({訂單日期:orderDateValue(o),姓名:o.name,電話:o.phone,地址:o.address,配送:o.delivery,商品:o.items,狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出',處理人:o.handler||'',寄出日期:o.shippedDate||'',備註:getEditNote(o)}));
+ const rows=list.map(o=>({訂單日期:orderDateValue(o),姓名:o.name,電話:o.phone,地址:o.address,配送:o.delivery,商品:o.items,狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出',處理人:(o.status==='cancelled'?'管理員':(o.handler||'')),寄出日期:o.shippedDate||'',備註:getEditNote(o)}));
 
  // 先將待寄出改為處理中，再執行下載，避免瀏覽器下載流程中斷後續狀態更新。
  if(pendingIds.length){
@@ -5748,7 +5748,7 @@ persist=function(){};
 persistStores=function(){};
 window.addEventListener("load",async()=>{await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);},{once:true});
 
-document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();});
+document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();showPage("order");});
 </script>
 
 <div id="globalDropOverlay" class="global-drop-overlay">
