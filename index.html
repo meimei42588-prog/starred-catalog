@@ -5333,20 +5333,12 @@ async function saveOrderEdit(){
  const submitBtn=$("orderEditSubmitBtn"),oldText=submitBtn?.textContent||"";
  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送出中…"}
  try{
-  // 前台「處理中」訂單：必須先成功切換成更改申請，才真正寫入編輯資料。
-  // 這樣櫃姐尚未按下「送出更改申請」前，輸入中的內容不會寫入雲端，也不會產生修改紀錄。
-  if(orderEditSource==="front"&&originalStatus==="processing"){
-   // 匯出後的處理中可能是 pending + 處理中標記；先正規化成真正的 processing。
-   await starredApi("bulk_order_status",{orderIds:[orderId],status:"processing",handler:o.handler||STARRED_PROCESSING_MARKER,shippedDate:o.shippedDate||null});
-   // 狀態成功後再移到更改申請區。
-   await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:o.handler||"",shippedDate:o.shippedDate||null});
-   // 最後才儲存本次編輯，只有正式送出才新增修改紀錄。
-   await starredApi("update_order",{orderId,order:{...next}});
-   removeLocalProcessingOrderIds([orderId]);
-  }else{
-   // 待寄出直接修改、或已在更改申請中的再次更新。
-   await starredApi("update_order",{orderId,order:{...next}});
-  }
+  // 「處理中」目前是由雲端 pending 狀態搭配處理中標記呈現。
+  // 若先呼叫 bulk_order_status，後端會把這筆視為 pending，因而回傳「訂單狀態不正確」。
+  // 改為一次透過 update_order 同時儲存編輯內容並將狀態切換成 change_request。
+  const submitStatus=(orderEditSource==="front"&&originalStatus==="processing")?"change_request":originalStatus;
+  await starredApi("update_order",{orderId,order:{...next,status:submitStatus}});
+  if(submitStatus==="change_request")removeLocalProcessingOrderIds([orderId]);
   orderEditDirty=false;closeOrderEditModal(true);
   await loadStarredCloudData();
   if(orderEditSource==="front"&&originalStatus==="processing"){
