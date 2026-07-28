@@ -3407,6 +3407,8 @@ const STORE_KEY="starred_department_stores_v1";
 const ACCOUNTS_KEY="starred_admin_accounts_v2";
 const LINE_USERS_KEY="starred_line_users_v1";
 const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
+const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
+const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
@@ -3419,7 +3421,12 @@ let stores=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");
 let editingStoreId=null;
 let accounts=JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||"[]");
 let lineUsers=JSON.parse(localStorage.getItem(LINE_USERS_KEY)||"[]");
-let currentUser=JSON.parse(sessionStorage.getItem(CURRENT_USER_KEY)||"null");
+let currentUser=(()=>{try{
+ const expiry=Number(localStorage.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0);
+ if(expiry>Date.now())return JSON.parse(localStorage.getItem(CURRENT_USER_KEY)||sessionStorage.getItem(CURRENT_USER_KEY)||"null");
+ localStorage.removeItem(CURRENT_USER_KEY);localStorage.removeItem(ADMIN_LOGIN_EXPIRY_KEY);sessionStorage.removeItem(CURRENT_USER_KEY);sessionStorage.removeItem(LOGIN_KEY);
+ return null;
+}catch(e){return null}})();
 let editingAccountId=null;
 let storeFilter="all";
 let deletedStoreKeys=new Set(JSON.parse(localStorage.getItem(DELETED_STORES_KEY)||"[]"));
@@ -3502,6 +3509,16 @@ function persistAccounts(){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(acco
 function persistLineUsers(){localStorage.setItem(LINE_USERS_KEY,JSON.stringify(lineUsers))}
 function persistOrders(){try{localStorage.setItem(ORDER_KEY,JSON.stringify(orders));return true}catch(e){alert("訂單文字儲存失敗，請重新整理後再試");return false}}
 function todayStr(){return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})}
+function taipeiEndOfDayTimestamp(){
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const get=t=>Number(parts.find(x=>x.type===t)?.value||0);
+ return Date.UTC(get("year"),get("month")-1,get("day"),15,59,59,999);
+}
+function isAdminLoginValid(){return !!(currentUser&&Number(localStorage.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0)>Date.now())}
+function saveDailyOrderStore(area,storeId){if(!area||!storeId)return;localStorage.setItem(ORDER_DAILY_STORE_KEY,JSON.stringify({date:todayStr(),area:String(area),storeId:String(storeId)}))}
+function getDailyOrderStore(){try{const x=JSON.parse(localStorage.getItem(ORDER_DAILY_STORE_KEY)||"null");if(!x||x.date!==todayStr()){localStorage.removeItem(ORDER_DAILY_STORE_KEY);return null}return x}catch(e){return null}}
+function applyDailyOrderStore(){const x=getDailyOrderStore();if(!x||!$("orderArea")||!$("orderStore"))return;$("orderArea").value=x.area;rebuildOrderStoreOptions();if([...$("orderStore").options].some(o=>String(o.value)===String(x.storeId)))$("orderStore").value=x.storeId}
+function bindDailyOrderStoreMemory(){const area=$("orderArea"),store=$("orderStore");if(!area||!store||area.dataset.dailyBound)return;area.dataset.dailyBound="1";area.addEventListener("change",()=>{rebuildOrderStoreOptions();const remembered=getDailyOrderStore();if(remembered&&remembered.area===area.value&&[...store.options].some(o=>String(o.value)===String(remembered.storeId)))store.value=remembered.storeId});store.addEventListener("change",()=>saveDailyOrderStore(area.value,store.value));applyDailyOrderStore()}
 function calcStatus(start,end){
  const t=todayStr();
  if(!start||!end)return "";
@@ -3532,7 +3549,7 @@ function showAdminTab(tab){
  if(tab==="account")renderAccounts();if(tab==="lineUser")renderLineUsers();if(tab==="orderAdmin"){renderOrderHandlerOptions();renderOrderAdmin();}
 }
 function checkLogin(){
- const ok=sessionStorage.getItem(LOGIN_KEY)==="1"&&currentUser;
+ const ok=isAdminLoginValid();
  $("loginSection").style.display=ok?"none":"grid";
  $("adminContent").style.display=ok?"block":"none";
  $("topbarSession").classList.toggle("show",!!ok);
@@ -3594,6 +3611,8 @@ async function login(){
   currentUser={id:user.id,name:user.name,username:user.username,role:user.role};
   sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
   sessionStorage.setItem(LOGIN_KEY,"1");
+  localStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  localStorage.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(taipeiEndOfDayTimestamp()));
   checkLogin();
  }finally{
   if(loginBtn){loginBtn.disabled=false;loginBtn.textContent="登入"}
@@ -3602,6 +3621,8 @@ async function login(){
 function logout(){
  sessionStorage.removeItem(LOGIN_KEY);
  sessionStorage.removeItem(CURRENT_USER_KEY);
+ localStorage.removeItem(CURRENT_USER_KEY);
+ localStorage.removeItem(ADMIN_LOGIN_EXPIRY_KEY);
  currentUser=null;
  showAdminTab("activity");
  checkLogin();
@@ -4615,6 +4636,7 @@ function rebuildOrderStoreOptions(){
  const current=el.value,list=stores.filter(x=>!a||x.area===a);
  el.innerHTML=`<option value="">${a?(list.length?'請選擇門市':'此區域尚未建立門市'):'請先選擇區域'}</option>`+list.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');
  if(list.some(x=>String(x.id)===String(current)))el.value=current;
+ else{const remembered=getDailyOrderStore();if(remembered&&remembered.area===a&&list.some(x=>String(x.id)===String(remembered.storeId)))el.value=remembered.storeId}
 }
 function rebuildOrderPickupStoreOptions(){const area=$("orderPickupArea")?.value||'';const e=$("orderPickupStore");if(!e)return;const list=stores.filter(x=>x.area===area&&x.enabled!==false);e.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.name)}</option>`).join('')}
 function toggleOrderDeliveryFields(){const pickup=$("orderDelivery")?.value==='門市自取';const address=$("orderAddressFields"),pickupBox=$("orderPickupFields");if(address){address.hidden=pickup;address.style.display=pickup?'none':'contents'}if(pickupBox){pickupBox.hidden=!pickup;pickupBox.style.display=pickup?'grid':'none'}if(!pickup){if($("orderPickupArea"))$("orderPickupArea").value='';if($("orderPickupStore"))$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>'}}
@@ -4650,7 +4672,7 @@ function showOrderAction(t,x){
 }
 function closeOrderActionModal(){const modal=$("orderActionModal");if(modal)modal.classList.remove('show')}
 function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function resetOrderForm(){['orderName','orderPhone','orderAddressDetail','orderItems'].forEach(id=>$(id).value='');$("orderArea").value='';$("orderStore").innerHTML='<option value="">請先選區域</option>';$("orderCounty").value='';$("orderDistrict").innerHTML='<option value="">請先選縣市</option>';$("orderDelivery").value='總公司寄出';$("orderPickupArea").value='';$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>';toggleOrderDeliveryFields();$("orderPhoto").value='';$("orderPhotoPreview").innerHTML='';orderPhotoData=''}
+function resetOrderForm(){['orderName','orderPhone','orderAddressDetail','orderItems'].forEach(id=>$(id).value='');$("orderCounty").value='';$("orderDistrict").innerHTML='<option value="">請先選縣市</option>';$("orderDelivery").value='總公司寄出';$("orderPickupArea").value='';$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>';toggleOrderDeliveryFields();$("orderPhoto").value='';$("orderPhotoPreview").innerHTML='';orderPhotoData='';applyDailyOrderStore()}
 async function submitOrder(event){
  if(event?.preventDefault)event.preventDefault();
  const submitButton=$("orderSubmitButton")||event?.currentTarget;
@@ -4682,6 +4704,7 @@ async function submitOrder(event){
   if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 登入狀態已失效，請關閉頁面後由 LIFF 連結重新進入。");
 
   const st=stores.find(x=>String(x.id)===String($("orderStore").value));
+  saveDailyOrderStore($("orderArea").value,$("orderStore").value);
   if(!st){showOrderAction("門市資料錯誤","找不到選擇的門市，請重新選擇區域與門市。");return}
   const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
   if(pickup&&!pickupSt){showOrderAction("取件門市錯誤","找不到選擇的取件門市，請重新選擇。");return}
@@ -4782,13 +4805,13 @@ function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=vis
 function updateConfirmShipButton(){const b=$("confirmShipBtn");if(b){b.disabled=false;b.classList.toggle("needs-handler",selectedOrderIds.size>0&&!$("orderHandler").value)}}
 function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
 async function markSelectedOrdersShipped(){if(!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
-async function markSelectedOrdersPending(){if(!ensureSelected())return;const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending"});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出。`)}catch(error){cloudError('狀態修改失敗',error)}}
+async function markSelectedOrdersPending(){if(!ensureSelected())return;const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:"",shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出。`)}catch(error){cloudError('狀態修改失敗',error)}}
 function updateCancelDeleteOrderButton(){const btn=$("cancelDeleteOrderBtn");if(!btn)return;const isCancelled=$("adminOrderStatus")?.value==='cancelled';const role=window.starredVerifiedLineUser?.role||currentUser?.role||'';if(isCancelled){btn.textContent='刪除訂單';btn.style.display=(role==='system_admin'||role==='admin')?'':'none'}else{btn.textContent='取消訂單';btn.style.display=''}}
 function handleCancelDeleteSelectedOrders(){if($("adminOrderStatus")?.value==='cancelled'){deleteSelectedCancelledOrders();return}requestCancelSelectedOrders()}
 async function deleteSelectedCancelledOrders(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>(o.status||'pending')!=='cancelled')){showOrderAction('無法刪除','只能刪除「取消訂單」狀態內的訂單。');return}const ids=[...selectedOrderIds];if(!window.confirm(`確定要永久刪除選取的 ${ids.length} 筆訂單嗎？
 刪除後無法復原。`))return;try{await starredApi("delete_orders",{orderIds:ids});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('刪除訂單完成',`已刪除 ${ids.length} 筆訂單。`)}catch(error){cloudError('刪除訂單失敗',error)}}
 function requestCancelSelectedOrders(){if(!ensureSelected())return;if(!window.confirm(`確定要取消選取的 ${selectedOrderIds.size} 筆訂單嗎？\n取消後仍可在「取消訂單」狀態中查看。`))return;markSelectedOrdersCancelled()}
-async function markSelectedOrdersCancelled(){const ids=[...selectedOrderIds];try{await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled"});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單。`)}catch(error){cloudError('取消訂單失敗',error)}}
+async function markSelectedOrdersCancelled(){const ids=[...selectedOrderIds];const handler=currentUser?.name||"";try{await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單。`)}catch(error){cloudError('取消訂單失敗',error)}}
 function selectedOrdersForExport(){return orders.filter(o=>selectedOrderIds.has(o.id))}
 function getEditNote(o){if(!o.history?.length)return '';return o.history.map((h,i)=>{const b=h.before||{};return `第${i+1}次修改（${h.editedAt||''}）：姓名 ${b.name||''}；電話 ${b.phone||''}；地址 ${b.address||''}；配送 ${b.delivery||''}；商品 ${b.items||''}`}).join('｜')}
 function exportOrdersExcel(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const rows=list.map(o=>({訂單日期:orderDateValue(o),姓名:o.name,電話:o.phone,地址:o.address,配送:o.delivery,商品:o.items,狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':'待寄出',處理人:o.handler||'',寄出日期:o.shippedDate||'',備註:getEditNote(o)}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'訂單');XLSX.writeFile(wb,'訂單.xlsx');showOrderAction('Excel 匯出完成',`已匯出 ${list.length} 筆訂單。`)}
@@ -5128,7 +5151,9 @@ let orderEditSource="admin";
 let frontDeleteOrderId="";
 function openFrontDeleteReasonModal(){
  const id=$("editOrderId")?.value||"";
- if(!id)return;
+ const order=orders.find(x=>String(x.id)===String(id));
+ if(!id||!order)return;
+ if(orderEditSource!=="front"||!canCurrentLineUserEditOrder(order)){showOrderAction("沒有權限","只有原回傳人員可以刪除自己上傳且尚未寄出的訂單。");return;}
  frontDeleteOrderId=id;
  const reason=$("frontDeleteReason"),other=$("frontDeleteOtherReason");
  if(reason)reason.value="客人取消";if(other)other.value="";
@@ -5146,12 +5171,14 @@ async function confirmFrontDeleteOrder(){
  const other=$("frontDeleteOtherReason")?.value.trim()||"";
  if(reason==="其他"&&!other){showOrderAction("請填寫原因","選擇其他時，請輸入刪除原因。");return}
  const reasonText=reason==="其他"?other:reason;
+ const order=orders.find(x=>String(x.id)===String(orderId));
+ if(!order||!canCurrentLineUserEditOrder(order)){showOrderAction("沒有權限","只有原回傳人員可以刪除自己上傳且尚未寄出的訂單。");return}
  try{
-  await starredApi("delete_orders",{orderIds:[orderId],reason:reasonText});
+  await starredApi("bulk_order_status",{orderIds:[orderId],status:"cancelled",reason:reasonText,handler:order.returnPerson||""});
   closeFrontDeleteReasonModal();orderEditDirty=false;closeOrderEditModal(true);
   await loadStarredCloudData();
-  showOrderAction("訂單已刪除",`刪除原因：${reasonText}`);
- }catch(error){cloudError("刪除訂單失敗",error)}
+  showOrderAction("訂單已移至取消訂單",`取消原因：${reasonText}`);
+ }catch(error){cloudError("取消訂單失敗",error)}
 }
 
 
@@ -5216,7 +5243,7 @@ function closeOrderEditModal(force=false){
  if(!force&&orderEditDirty&&!window.confirm("尚有未儲存的修改，確定要離開嗎？"))return;
  $("orderEditModal").classList.remove("show");orderEditDirty=false;orderEditInitialSnapshot="";
 }
-async function saveOrderEdit(){const orderId=$("editOrderId").value;const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;const delivery=$("editOrderDelivery").value,pickup=delivery==='門市自取',pickupStore=$("editOrderPickupStore")?.value||'',county=$("editOrderCounty")?.value||'',district=$("editOrderDistrict")?.value||'',addressDetail=$("editOrderAddress")?.value.trim()||'';const pickupStoreData=pickup?stores.find(x=>x.name===pickupStore):null;const fullAddress=`${county}${district}${addressDetail}`;const next={customerName:$("editOrderName").value.trim(),customerPhone:$("editOrderPhone").value.trim(),customerAddress:pickup?`取件門市：${pickupStore}`:fullAddress,productContent:$("editOrderItems").value.trim(),deliveryMethod:pickup?'store_pickup':'company_shipping',pickupStoreId:pickup?(pickupStoreData?.id||''):null};if(!next.customerName||!next.customerPhone||!next.productContent||(!pickup&&(!county||!district||!addressDetail))){showOrderAction('資料未完成',pickup?'姓名、電話與商品都必須填寫。':'姓名、電話、縣市、行政區、詳細地址與商品都必須填寫。');return}if(pickup&&!pickupStoreData){showOrderAction('資料未完成','請選擇取件門市。');return}try{await starredApi("update_order",{orderId,order:next});orderEditDirty=false;closeOrderEditModal(true);await loadStarredCloudData();showOrderAction('訂單修改完成','目前資料已更新，原始資料與修改紀錄已同步保留。')}catch(error){cloudError('訂單修改失敗',error)}}
+async function saveOrderEdit(){const orderId=$("editOrderId").value;const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;if(orderEditSource==="front"&&!canCurrentLineUserEditOrder(o)){showOrderAction("沒有權限","只有原回傳人員可以修改自己上傳且尚未寄出的訂單。");return;}const delivery=$("editOrderDelivery").value,pickup=delivery==='門市自取',pickupStore=$("editOrderPickupStore")?.value||'',county=$("editOrderCounty")?.value||'',district=$("editOrderDistrict")?.value||'',addressDetail=$("editOrderAddress")?.value.trim()||'';const pickupStoreData=pickup?stores.find(x=>x.name===pickupStore):null;const fullAddress=`${county}${district}${addressDetail}`;const next={customerName:$("editOrderName").value.trim(),customerPhone:$("editOrderPhone").value.trim(),customerAddress:pickup?`取件門市：${pickupStore}`:fullAddress,productContent:$("editOrderItems").value.trim(),deliveryMethod:pickup?'store_pickup':'company_shipping',pickupStoreId:pickup?(pickupStoreData?.id||''):null};if(!next.customerName||!next.customerPhone||!next.productContent||(!pickup&&(!county||!district||!addressDetail))){showOrderAction('資料未完成',pickup?'姓名、電話與商品都必須填寫。':'姓名、電話、縣市、行政區、詳細地址與商品都必須填寫。');return}if(pickup&&!pickupStoreData){showOrderAction('資料未完成','請選擇取件門市。');return}try{await starredApi("update_order",{orderId,order:next});orderEditDirty=false;closeOrderEditModal(true);await loadStarredCloudData();showOrderAction('訂單修改完成','目前資料已更新，原始資料與修改紀錄已同步保留。')}catch(error){cloudError('訂單修改失敗',error)}}
 function setCloudBusy(isBusy, text="處理中…"){
   const btn=$("saveBtn");
   if(btn){
@@ -6011,6 +6038,17 @@ document.addEventListener("keydown",event=>{
   });
   window.addEventListener('pageshow',syncDeliveryFields);
 })();
+</script>
+
+<style id="requested-order-fixes">
+.front-delete-modal{z-index:600000!important;align-items:center!important;justify-content:center!important;padding:18px!important}
+.front-delete-dialog{position:relative;z-index:600001;width:min(460px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.front-order-edit-btn{background:#2563eb!important;color:#fff!important;border:1px solid #2563eb!important;font-weight:900!important;box-shadow:0 5px 14px rgba(37,99,235,.22)!important}
+.front-order-edit-btn:hover{background:#1d4ed8!important;border-color:#1d4ed8!important}
+@media(max-width:620px){.front-delete-modal{align-items:flex-end!important;padding:0!important}.front-delete-dialog{width:100%;max-height:90vh;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}}
+</style>
+<script>
+setTimeout(()=>{bindDailyOrderStoreMemory();if(isAdminLoginValid())checkLogin()},0);
 </script>
 </body>
 </html>
