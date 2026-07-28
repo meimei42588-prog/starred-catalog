@@ -5338,9 +5338,19 @@ async function saveOrderEdit(){
   // 正確順序：先以雲端真實狀態 pending 儲存正式修改，再切換為 change_request。
   const isFrontChangeSubmit=orderEditSource==="front"&&originalStatus==="processing";
   if(isFrontChangeSubmit){
-   await starredApi("update_order",{orderId,order:{...next,status:"pending"}});
+   // 先把訂單正式移入「更改申請」，再儲存編輯內容。
+   // 處理中訂單可能是資料庫 processing，或 pending + 處理中標記；
+   // 先切換狀態可解除處理中鎖定，避免 update_order 回傳「訂單狀態不正確」。
    await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:"",shippedDate:null});
    removeLocalProcessingOrderIds([orderId]);
+   try{
+    await starredApi("update_order",{orderId,order:{...next,status:"change_request"}});
+   }catch(updateError){
+    // 編輯資料若儲存失敗，恢復成原本的處理中，避免只改狀態卻沒有保存內容。
+    addLocalProcessingOrderIds([orderId]);
+    try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_PROCESSING_MARKER,shippedDate:null})}catch(_rollbackError){}
+    throw updateError;
+   }
   }else{
    const cloudStatus=originalStatus==="processing"?"pending":originalStatus;
    await starredApi("update_order",{orderId,order:{...next,status:cloudStatus}});
