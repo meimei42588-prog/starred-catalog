@@ -3119,6 +3119,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       <button id="activityTabBtn" class="active" onclick="showAdminTab('activity')">活動清單</button>
       <button id="storeTabBtn" onclick="showAdminTab('store')">百貨門市管理</button>
       <button id="orderAdminTabBtn" onclick="showAdminTab('orderAdmin')">訂單管理</button>
+      <button id="orderBackupTabBtn" onclick="showAdminTab('orderBackup')">訂單備份</button>
       <button id="accountTabBtn" onclick="showAdminTab('account')">管理員設定</button>
       <button id="lineUserTabBtn" onclick="showAdminTab('lineUser')">LINE 使用者</button>
     </div>
@@ -3174,7 +3175,32 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </div><input id="adminOrderStatus" type="hidden" value="">
 <div class="order-admin-filter compact-filter"><input id="adminOrderKeyword" placeholder="搜尋姓名、電話、地址、商品" oninput="renderOrderAdmin()"><select id="adminOrderStoreFilter" onchange="renderOrderAdmin()"><option value="">全部門市</option></select><select id="adminOrderDeliveryFilter" onchange="renderOrderAdmin()"><option value="">全部配送方式</option><option value="總公司寄出">公司寄出</option><option value="門市自取">門市自取</option></select><div class="compact-date-field"><label>訂單日起</label><input id="adminOrderDateFrom" type="date" onchange="renderOrderAdmin()"></div><div class="compact-date-field"><label>訂單日迄</label><input id="adminOrderDateTo" type="date" onchange="renderOrderAdmin()"></div><button type="button" class="secondary compact-btn" onclick="clearAdminOrderFilters()">清除</button></div>
 <div class="compact-batch-panel"><div class="compact-select-row"><label><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" onchange="toggleAllOrders(this.checked)"> 全選目前結果</label><b id="orderSelectedCount">已選 0 筆</b></div><div class="compact-process-row"><select id="orderHandler" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button id="markPendingBtn" class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="approveChangeRequestBtn" class="secondary compact-action" style="display:none;background:#f5e7f4;color:#8a3f84" onclick="approveSelectedChangeRequests()">確認申請</button><button id="returnOrderBtn" class="secondary compact-action" style="background:#fff0dc;color:#a85a00" onclick="markSelectedOrdersReturned()">退貨</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button type="button" class="secondary compact-action" onclick="exportOrdersExcel(event)">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
-<div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div><div id="accountTab" class="admin-tab-panel">
+<div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div>
+    <div id="orderBackupTab" class="admin-tab-panel">
+      <section class="panel order-backup-panel">
+        <div class="backup-heading">
+          <div>
+            <h2>訂單備份</h2>
+            <div class="note">訂單超過 60 天後會集中顯示於此頁，只保留訂單文字資料；照片欄不再顯示。</div>
+          </div>
+          <div class="backup-count-box"><span>備份筆數</span><b id="orderBackupCount">0</b></div>
+        </div>
+        <div class="backup-filter-bar">
+          <div class="field"><label>月份篩選</label><input id="orderBackupMonth" type="month" onchange="renderOrderBackup()"></div>
+          <div class="field backup-search-field"><label>關鍵字搜尋</label><input id="orderBackupKeyword" placeholder="搜尋姓名、電話、地址、商品、處理人" oninput="renderOrderBackup()"></div>
+          <div class="field"><label>訂單狀態</label><select id="orderBackupStatus" onchange="renderOrderBackup()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select></div>
+          <button type="button" class="secondary backup-clear-btn" onclick="clearOrderBackupFilters()">清除篩選</button>
+          <button type="button" class="primary backup-export-btn" onclick="exportOrderBackupExcel()">匯出 Excel</button>
+        </div>
+        <div class="backup-summary-line" id="orderBackupSummary">顯示全部月份</div>
+        <div class="backup-table-wrap">
+          <table class="backup-table">
+            <thead><tr><th>訂單日期</th><th>姓名</th><th>電話</th><th>地址</th><th>配送</th><th>商品</th><th>狀態</th><th>處理人</th><th>寄出日期</th><th>備註</th></tr></thead>
+            <tbody id="orderBackupTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div><div id="accountTab" class="admin-tab-panel">
       <section class="panel">
         <h2 id="accountFormTitle">新增管理帳號</h2>
         <div class="account-form">
@@ -4838,7 +4864,7 @@ function renderOrderPagination(totalPages,totalItems){
 }
 function renderOrderCards(){
  const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'';
- const list=orders.filter(o=>{const d=orderDateValue(o);return match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!from||d>=from)&&(!to||d<=to)});
+ const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!from||d>=from)&&(!to||d<=to)});
  const totalPages=Math.max(1,Math.ceil(list.length/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
  const pageList=list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
  $("orderCardList").innerHTML=pageList.length?pageList.map(o=>{
@@ -4862,7 +4888,7 @@ async function requestOrderChange(orderId){
 
 function setAdminOrderStatus(status){$("adminOrderStatus").value=status;document.querySelectorAll('.admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===status));selectedOrderIds.clear();updateCancelDeleteOrderButton();renderOrderAdmin()}
 function clearAdminOrderFilters(){$("adminOrderKeyword").value='';$("adminOrderStoreFilter").value='';$("adminOrderDateFrom").value='';$("adminOrderDateTo").value='';setAdminOrderStatus('')}
-function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("adminOrderDateTo")?.value||'',st=$("adminOrderStatus")?.value||'',store=$("adminOrderStoreFilter")?.value||'',delivery=$("adminOrderDeliveryFilter")?.value||'';const list=orders.filter(o=>{const d=orderDateValue(o);return match(o,$("adminOrderKeyword")?.value,st)&&(!store||o.store===store)&&(!delivery||o.delivery===delivery)&&(!f||d>=f)&&(!t||d<=t)});if(st==='returned')list.sort((a,b)=>Number(!!a.returnReceived)-Number(!!b.returnReceived)||String(orderDateValue(b)).localeCompare(String(orderDateValue(a))));return list}
+function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("adminOrderDateTo")?.value||'',st=$("adminOrderStatus")?.value||'',store=$("adminOrderStoreFilter")?.value||'',delivery=$("adminOrderDeliveryFilter")?.value||'';const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("adminOrderKeyword")?.value,st)&&(!store||o.store===store)&&(!delivery||o.delivery===delivery)&&(!f||d>=f)&&(!t||d<=t)});if(st==='returned')list.sort((a,b)=>Number(!!a.returnReceived)-Number(!!b.returnReceived)||String(orderDateValue(b)).localeCompare(String(orderDateValue(a))));return list}
 function updateAdminStatusCounts(){const status=o=>o.status||'pending';$("adminStatusAll").textContent=orders.length;$("adminStatusPending").textContent=orders.filter(o=>status(o)==='pending').length;$("adminStatusProcessing").textContent=orders.filter(o=>status(o)==='processing').length;const changeRequestCount=orders.filter(o=>status(o)==='change_request').length;$("adminStatusChangeRequest").textContent=changeRequestCount;document.querySelector('.admin-status-btn.change-request')?.classList.toggle('has-items',changeRequestCount>0);$("adminStatusShipped").textContent=orders.filter(o=>status(o)==='shipped').length;$("adminStatusCancelled").textContent=orders.filter(o=>status(o)==='cancelled').length;if($("adminStatusReturned"))$("adminStatusReturned").textContent=orders.filter(o=>status(o)==='returned'&&!o.returnReceived).length}
 function renderAdminOrderStoreOptions(){const e=$("adminOrderStoreFilter");if(!e)return;const old=e.value;const names=[...new Set([...stores.map(s=>s.name),...orders.map(o=>o.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));e.innerHTML='<option value="">全部門市</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))e.value=old}
 function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("orderHandler");if(!e)return;const old=e.value;e.innerHTML='<option value="">請選擇處理人</option>'+accounts.filter(a=>a.enabled!==false).map(a=>`<option value="${escapeHtml(a.name||a.username)}">${escapeHtml(a.name||a.username)}</option>`).join('');if([...e.options].some(x=>x.value===old))e.value=old;updateConfirmShipButton()}
@@ -5920,6 +5946,45 @@ persist=function(){};
 persistStores=function(){};
 window.addEventListener("load",async()=>{await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);},{once:true});
 
+
+
+/* ===== 訂單備份（超過 60 天，只顯示文字） ===== */
+const ORDER_BACKUP_DAYS=60;
+function orderAgeDays(order){
+ const d=orderDateValue(order);if(!d)return 0;
+ const base=new Date(d+'T00:00:00');const now=new Date();now.setHours(0,0,0,0);
+ return Math.floor((now-base)/86400000);
+}
+function isBackupOrder(order){return orderAgeDays(order)>ORDER_BACKUP_DAYS}
+function activeOrdersOnly(list){return (list||[]).filter(o=>!isBackupOrder(o))}
+function backupStatusLabel(o){const st=String(o?.status||'pending');return st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出'}
+function getBackupOrders(){
+ const month=$('orderBackupMonth')?.value||'',keyword=String($('orderBackupKeyword')?.value||'').trim().toLowerCase(),status=$('orderBackupStatus')?.value||'';
+ return orders.filter(o=>{
+  if(!isBackupOrder(o))return false;
+  const d=orderDateValue(o);if(month&&String(d).slice(0,7)!==month)return false;
+  if(status&&String(o.status||'pending')!==status)return false;
+  if(keyword&&!([o.name,o.phone,o.address,o.delivery,o.items,o.handler,o.returnPerson,o.shippedDate,getEditNote(o)].some(v=>String(v||'').toLowerCase().includes(keyword))))return false;
+  return true;
+ }).sort((a,b)=>String(orderDateValue(b)).localeCompare(String(orderDateValue(a))));
+}
+function renderOrderBackup(){
+ const list=getBackupOrders(),body=$('orderBackupTableBody'),count=$('orderBackupCount'),summary=$('orderBackupSummary');if(!body)return;
+ if(count)count.textContent=String(list.length);
+ const month=$('orderBackupMonth')?.value||'';if(summary)summary.textContent=`${month?month.replace('-',' 年 ')+' 月':'全部月份'}・共 ${list.length} 筆・照片已隱藏，只保留文字資料`;
+ body.innerHTML=list.length?list.map(o=>{const st=String(o.status||'pending'),note=getEditNote(o)||'';return `<tr><td>${escapeHtml(orderDateValue(o))}</td><td>${escapeHtml(o.name||'')}</td><td>${escapeHtml(o.phone||'')}</td><td>${escapeHtml(o.address||'')}</td><td>${escapeHtml(o.delivery||'')}</td><td>${escapeHtml(o.items||'')}</td><td><span class="backup-status ${st}">${escapeHtml(backupStatusLabel(o))}</span></td><td>${escapeHtml(o.handler||'—')}</td><td>${escapeHtml(o.shippedDate||'—')}</td><td>${escapeHtml(note||'—')}</td></tr>`}).join(''):'<tr><td colspan="10" class="backup-empty-cell">目前沒有符合條件的備份訂單</td></tr>';
+}
+function clearOrderBackupFilters(){if($('orderBackupMonth'))$('orderBackupMonth').value='';if($('orderBackupKeyword'))$('orderBackupKeyword').value='';if($('orderBackupStatus'))$('orderBackupStatus').value='';renderOrderBackup()}
+function exportOrderBackupExcel(){
+ const list=getBackupOrders();if(!list.length){showOrderAction('沒有資料','目前篩選條件沒有可匯出的備份訂單。');return}
+ const headers=['訂單日期','姓名','電話','地址','配送','商品','狀態','處理人','寄出日期','備註'];
+ const rows=list.map(o=>[orderDateValue(o),o.name||'',o.phone||'',o.address||'',o.delivery||'',o.items||'',backupStatusLabel(o),o.handler||'',o.shippedDate||'',getEditNote(o)||'']);
+ const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const csv='\ufeff'+[headers,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=`訂單備份_${$('orderBackupMonth')?.value||todayStr()}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
 document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();showPage("order");});
 </script>
 
@@ -6410,9 +6475,51 @@ document.addEventListener("keydown",event=>{
 .front-order-edit-btn{background:#2563eb!important;color:#fff!important;border:1px solid #2563eb!important;font-weight:900!important;box-shadow:0 5px 14px rgba(37,99,235,.22)!important}
 .front-order-edit-btn:hover{background:#1d4ed8!important;border-color:#1d4ed8!important}
 @media(max-width:620px){.front-delete-modal{align-items:flex-end!important;padding:0!important}.front-delete-dialog{width:100%;max-height:90vh;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}}
+
+
+/* ===== 訂單備份頁 ===== */
+.order-backup-panel{padding:18px!important}
+.backup-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.backup-heading h2{margin:0 0 5px}
+.backup-count-box{flex:0 0 auto;min-width:116px;padding:10px 14px;border:1px solid #d8e1e7;border-radius:13px;background:#f7fafb;text-align:center}
+.backup-count-box span{display:block;font-size:12px;color:#667b88}.backup-count-box b{display:block;margin-top:2px;font-size:24px;color:#274253}
+.backup-filter-bar{display:grid;grid-template-columns:160px minmax(240px,1fr) 160px auto auto;gap:9px;align-items:end;margin-bottom:10px;padding:12px;border:1px solid #dce5e9;border-radius:14px;background:#f8fafb}
+.backup-filter-bar .field label{font-size:12px;font-weight:800}.backup-clear-btn,.backup-export-btn{height:43px;white-space:nowrap}
+.backup-summary-line{margin:8px 0 10px;font-size:13px;font-weight:800;color:#617884}
+.backup-table-wrap{width:100%;overflow:auto;border:1px solid #cfdce3;border-radius:14px;background:#fff}
+.backup-table{width:100%;min-width:1420px;border-collapse:collapse;table-layout:fixed;font-size:13px;color:#355264}
+.backup-table th{position:sticky;top:0;z-index:2;padding:11px 9px;background:#294b5e;color:#fff;border-right:1px solid rgba(255,255,255,.45);font-weight:900;text-align:center;white-space:nowrap}
+.backup-table td{padding:10px 9px;border-right:1px solid #d5e0e6;border-bottom:1px solid #d5e0e6;vertical-align:top;line-height:1.55;word-break:break-word;background:#fff}
+.backup-table tr:nth-child(even) td{background:#fbfcfd}.backup-table tr:hover td{background:#f1f6f8}
+.backup-table th:nth-child(1){width:105px}.backup-table th:nth-child(2){width:92px}.backup-table th:nth-child(3){width:120px}.backup-table th:nth-child(4){width:240px}.backup-table th:nth-child(5){width:115px}.backup-table th:nth-child(6){width:335px}.backup-table th:nth-child(7){width:110px}.backup-table th:nth-child(8){width:105px}.backup-table th:nth-child(9){width:110px}.backup-table th:nth-child(10){width:290px}
+.backup-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:900;white-space:nowrap;background:#e7eef2;color:#274253}.backup-status.shipped{background:#e6f4eb;color:#26704f}.backup-status.cancelled{background:#f7e4e2;color:#9a352e}.backup-status.returned{background:#fff0dc;color:#a85a00}.backup-status.processing{background:#e7eef8;color:#315f79}.backup-status.change_request{background:#f5e7f4;color:#8a3f84}
+.backup-empty-cell{text-align:center!important;padding:34px!important;color:#788d99!important}
+@media(max-width:950px){.backup-filter-bar{grid-template-columns:1fr 1fr}.backup-search-field{grid-column:1/-1}.backup-clear-btn,.backup-export-btn{width:100%}}
+@media(max-width:620px){.backup-heading{flex-direction:column}.backup-count-box{width:100%}.backup-filter-bar{grid-template-columns:1fr}.backup-search-field{grid-column:auto}.order-backup-panel{padding:13px!important}.backup-table-wrap{border-radius:11px}}
 </style>
 <script>
 setTimeout(()=>{bindDailyOrderStoreMemory();if(isAdminLoginValid())checkLogin()},0);
+</script>
+
+<script>
+(function(){
+ const originalShowAdminTab=window.showAdminTab;
+ window.showAdminTab=function(name){
+  if(typeof originalShowAdminTab==='function')originalShowAdminTab(name);
+  const backupPanel=document.getElementById('orderBackupTab');
+  const backupBtn=document.getElementById('orderBackupTabBtn');
+  if(backupPanel)backupPanel.classList.toggle('active',name==='orderBackup');
+  if(backupBtn)backupBtn.classList.toggle('active',name==='orderBackup');
+  if(name==='orderBackup'){
+   ['activityTab','storeTab','accountTab','lineUserTab','orderAdminTab'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+   ['activityTabBtn','storeTabBtn','accountTabBtn','lineUserTabBtn','orderAdminTabBtn'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+   renderOrderBackup();
+  }
+ };
+ const originalLoad=window.loadStarredCloudData;
+ if(typeof originalLoad==='function')window.loadStarredCloudData=async function(){const result=await originalLoad.apply(this,arguments);renderOrderBackup();return result};
+ document.addEventListener('DOMContentLoaded',()=>renderOrderBackup());
+})();
 </script>
 </body>
 </html>
