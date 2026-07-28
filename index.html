@@ -4838,7 +4838,27 @@ function getEditNote(o){if(!o.history?.length)return '';return o.history.map((h,
 async function exportOrdersExcel(){
  const list=selectedOrdersForExport();
  if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}
+ const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
  const rows=list.map(o=>({訂單日期:orderDateValue(o),姓名:o.name,電話:o.phone,地址:o.address,配送:o.delivery,商品:o.items,狀態:o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出',處理人:o.handler||'',寄出日期:o.shippedDate||'',備註:getEditNote(o)}));
+
+ // 先將待寄出改為處理中，再執行下載，避免瀏覽器下載流程中斷後續狀態更新。
+ if(pendingIds.length){
+  addLocalProcessingOrderIds(pendingIds);
+  orders.forEach(o=>{if(pendingIds.includes(String(o.id))){o.status='processing';o.handler='';o.shippedDate=''}});
+  persistOrders();
+  selectedOrderIds.clear();
+  renderOrderCards();
+  renderOrderAdmin();
+  try{
+   // 雲端資料庫仍以 pending + 專用標記保存，讀取時會顯示為 processing。
+   await starredApi('bulk_order_status',{orderIds:pendingIds,status:'pending',handler:STARRED_PROCESSING_MARKER,shippedDate:null});
+   await loadStarredCloudData();
+  }catch(error){
+   // 雲端暫時失敗時保留本機處理中狀態，避免訂單回到待寄出造成重複出貨。
+   console.warn('匯出後同步處理中狀態失敗，已保留本機狀態：',error);
+  }
+ }
+
  try{
   const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'訂單');
@@ -4847,20 +4867,9 @@ async function exportOrdersExcel(){
   showOrderAction('Excel 匯出失敗',error?.message||String(error)||'請稍後再試');
   return;
  }
- const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>o.id);
- if(!pendingIds.length){
-  showOrderAction('Excel 匯出完成',`已匯出 ${list.length} 筆訂單。`);
-  return;
- }
- addLocalProcessingOrderIds(pendingIds);
- orders.forEach(o=>{if(pendingIds.includes(o.id)){o.status='processing';o.handler='';o.shippedDate=''}});
- persistOrders();
- selectedOrderIds.clear();
- renderOrderCards();
- renderOrderAdmin();
- showOrderAction('Excel 匯出完成',`已匯出 ${list.length} 筆訂單，其中 ${pendingIds.length} 筆待寄出訂單已自動改為處理中，避免重複出貨。`);
- // 雲端若支援處理中標記就同步；不支援時仍以本機標記維持正確狀態，不影響操作。
- starredApi('bulk_order_status',{orderIds:pendingIds,status:'pending',handler:STARRED_PROCESSING_MARKER,shippedDate:null}).catch(()=>{});
+ showOrderAction('Excel 匯出完成',pendingIds.length
+  ?`已匯出 ${list.length} 筆訂單，其中 ${pendingIds.length} 筆待寄出訂單已自動移到處理中，避免重複出貨。`
+  :`已匯出 ${list.length} 筆訂單。`);
 }
 async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const pages=[];for(let i=0;i<list.length;i++){const o=list[i],photo=await getPhoto(o.photoKey),note=getEditNote(o);pages.push(`<section class="pick-page"><h1>星紅織品｜揀貨單</h1><div class="pick-date">訂單日期：${escapeHtml(orderDateValue(o))}</div><div class="pick-photo">${photo?`<img src="${photo}">`:'無照片'}</div><div class="pick-grid"><div><span>收件人</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div><span>狀態</span><b>${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出'}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${note?`<div class="wide edit-note"><span>修改前資料備註</span><b>${escapeHtml(note)}</b></div>`:''}</div><footer>核對人：________________</footer></section>`)}const w=window.open('','_blank');if(!w){showOrderAction('無法開啟揀貨單','請允許彈出式視窗。');return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}body{font-family:"Microsoft JhengHei";margin:0}.pick-page{width:194mm;min-height:281mm;padding:5mm;page-break-after:always}.pick-page:last-child{page-break-after:auto}h1{text-align:center;margin:0}.pick-date{text-align:center;margin:2mm 0 4mm}.pick-photo{height:120mm;border:1px solid #000;display:flex;align-items:center;justify-content:center}.pick-photo img{max-width:100%;max-height:100%;object-fit:contain}.pick-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}.pick-grid>div{padding:3mm;border-right:1px solid #000;border-bottom:1px solid #000}.pick-grid>div:nth-child(even){border-right:0}.pick-grid .wide{grid-column:1/-1;border-right:0}.pick-grid span{display:block;font-size:10px}.pick-grid b{font-size:13px;line-height:1.45}.edit-note b{font-size:11px;font-weight:500}footer{text-align:right;margin-top:7mm;font-size:15px}
 /* 調整訂單清單摘要字重 */
