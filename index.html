@@ -2990,7 +2990,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
-  <div class="brand"><button type="button" class="brand-home-btn" onclick="goToActivityOverview()">星紅織品｜門市營用管理系統</button></div>
+  <div class="brand"><button type="button" class="brand-home-btn" onclick="goToOrderReturnPage()">星紅織品｜門市營用管理系統</button></div>
   <div class="topbar-right">
     <div class="nav">
       <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
@@ -3392,26 +3392,30 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
-function goToActivityOverview(){
+function goToOrderReturnPage(){
   try{
-    if(typeof showTab==="function"){
-      showTab("activity");
-    }else if(typeof switchTab==="function"){
-      switchTab("activity");
-    }
-    const candidates=Array.from(document.querySelectorAll("button,a"));
-    const tab=candidates.find(el=>{
-      if(el.classList.contains("brand-home-btn")) return false;
-      const text=(el.textContent||"").trim();
-      return text==="活動總攬" || text==="活動清單" || text==="活動管理";
-    });
-    if(tab) tab.click();
-    window.scrollTo({top:0,behavior:"smooth"});
+    showPage("order");
+    setTimeout(()=>{
+      applyDailyOrderStore();
+      window.scrollTo({top:0,behavior:"smooth"});
+    },0);
   }catch(err){
     console.error(err);
     window.scrollTo({top:0,behavior:"smooth"});
   }
 }
+
+// 若頁面內目前或日後動態產生 catalog.hshometw.com 連結，統一改為切換到訂單回傳頁。
+document.addEventListener("click",event=>{
+  const link=event.target.closest?.("a");
+  if(!link)return;
+  const href=String(link.getAttribute("href")||"");
+  const text=String(link.textContent||"");
+  if(/(?:https?:\/\/)?catalog\.hshometw\.com(?:\/|$)/i.test(href)||/catalog\.hshometw\.com/i.test(text)){
+    event.preventDefault();
+    goToOrderReturnPage();
+  }
+});
 
 const STORAGE_KEY="starred_events_v4";
 const LOGIN_KEY="starred_admin_logged_in";
@@ -3527,10 +3531,46 @@ function taipeiEndOfDayTimestamp(){
  return Date.UTC(get("year"),get("month")-1,get("day"),15,59,59,999);
 }
 function isAdminLoginValid(){return !!(currentUser&&Number(localStorage.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0)>Date.now())}
-function saveDailyOrderStore(area,storeId){if(!area||!storeId)return;localStorage.setItem(ORDER_DAILY_STORE_KEY,JSON.stringify({date:todayStr(),area:String(area),storeId:String(storeId)}))}
-function getDailyOrderStore(){try{const x=JSON.parse(localStorage.getItem(ORDER_DAILY_STORE_KEY)||"null");if(!x||x.date!==todayStr()){localStorage.removeItem(ORDER_DAILY_STORE_KEY);return null}return x}catch(e){return null}}
-function applyDailyOrderStore(){const x=getDailyOrderStore();if(!x||!$("orderArea")||!$("orderStore"))return;$("orderArea").value=x.area;rebuildOrderStoreOptions();if([...$("orderStore").options].some(o=>String(o.value)===String(x.storeId)))$("orderStore").value=x.storeId}
-function bindDailyOrderStoreMemory(){const area=$("orderArea"),store=$("orderStore");if(!area||!store||area.dataset.dailyBound)return;area.dataset.dailyBound="1";area.addEventListener("change",()=>{rebuildOrderStoreOptions();const remembered=getDailyOrderStore();if(remembered&&remembered.area===area.value&&[...store.options].some(o=>String(o.value)===String(remembered.storeId)))store.value=remembered.storeId});store.addEventListener("change",()=>saveDailyOrderStore(area.value,store.value));applyDailyOrderStore()}
+function clearDailyOrderStore(){localStorage.removeItem(ORDER_DAILY_STORE_KEY)}
+function saveDailyOrderStore(area,storeId){
+ if(!area||!storeId)return;
+ localStorage.setItem(ORDER_DAILY_STORE_KEY,JSON.stringify({date:todayStr(),area:String(area),storeId:String(storeId)}));
+}
+function getDailyOrderStore(){
+ try{
+  const x=JSON.parse(localStorage.getItem(ORDER_DAILY_STORE_KEY)||"null");
+  if(!x||x.date!==todayStr()){clearDailyOrderStore();return null}
+  return x;
+ }catch(e){clearDailyOrderStore();return null}
+}
+function resetOrderStoreSelection(){
+ if($("orderArea"))$("orderArea").value="";
+ if($("orderStore"))$("orderStore").innerHTML='<option value="">請先選擇區域</option>';
+}
+function applyDailyOrderStore(){
+ const area=$("orderArea"),store=$("orderStore");
+ if(!area||!store)return;
+ const x=getDailyOrderStore();
+ if(!x){resetOrderStoreSelection();return}
+ const areaExists=[...area.options].some(o=>String(o.value)===String(x.area));
+ const storeExists=stores.some(st=>String(st.id)===String(x.storeId)&&String(st.area)===String(x.area));
+ if(!areaExists||!storeExists){clearDailyOrderStore();resetOrderStoreSelection();return}
+ area.value=x.area;
+ rebuildOrderStoreOptions();
+ if([...store.options].some(o=>String(o.value)===String(x.storeId))){
+  store.value=x.storeId;
+ }else{
+  clearDailyOrderStore();
+  resetOrderStoreSelection();
+ }
+}
+function bindDailyOrderStoreMemory(){
+ const area=$("orderArea"),store=$("orderStore");
+ if(!area||!store||area.dataset.dailyBound)return;
+ area.dataset.dailyBound="1";
+ area.addEventListener("change",rebuildOrderStoreOptions);
+ applyDailyOrderStore();
+}
 function calcStatus(start,end){
  const t=todayStr();
  if(!start||!end)return "";
@@ -3538,7 +3578,7 @@ function calcStatus(start,end){
  if(t>end)return "ended";
  return "active";
 }
-function showPage(page){if(!enforceLineUserAccess())return;$("homePage").classList.toggle("active",page==="home");$("orderPage").classList.toggle("active",page==="order");$("adminPage").classList.toggle("active",page==="admin");$("homeNav").classList.toggle("active",page==="home");$("orderNav").classList.toggle("active",page==="order");$("adminNav").classList.toggle("active",page==="admin");if(page==="order"){rebuildOrderStoreOptions();renderOrderCards()}if(page==="admin")checkLogin();
+function showPage(page){if(!enforceLineUserAccess())return;$("homePage").classList.toggle("active",page==="home");$("orderPage").classList.toggle("active",page==="order");$("adminPage").classList.toggle("active",page==="admin");$("homeNav").classList.toggle("active",page==="home");$("orderNav").classList.toggle("active",page==="order");$("adminNav").classList.toggle("active",page==="admin");if(page==="order"){rebuildOrderStoreOptions();applyDailyOrderStore();renderOrderCards()}if(page==="admin")checkLogin();
 setTimeout(()=>{const x=$("accountEnabled");if(x){x.addEventListener("change",updateEnabledLabel);updateEnabledLabel()}},0);
 }
 function escapeLineHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]))}
@@ -4716,7 +4756,6 @@ async function submitOrder(event){
   if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 登入狀態已失效，請關閉頁面後由 LIFF 連結重新進入。");
 
   const st=stores.find(x=>String(x.id)===String($("orderStore").value));
-  saveDailyOrderStore($("orderArea").value,$("orderStore").value);
   if(!st){showOrderAction("門市資料錯誤","找不到選擇的門市，請重新選擇區域與門市。");return}
   const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
   if(pickup&&!pickupSt){showOrderAction("取件門市錯誤","找不到選擇的取件門市，請重新選擇。");return}
@@ -4739,6 +4778,8 @@ async function submitOrder(event){
   const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("傳送逾時，請確認網路後再試一次。")),45000));
   const result=await Promise.race([starredApi("create_order",payload),timeout]);
 
+  // 只有訂單成功送到雲端後，才記住當天使用的區域與門市。
+  saveDailyOrderStore($("orderArea").value,$("orderStore").value);
   try{await loadStarredCloudData()}catch(refreshError){console.warn("訂單已建立，但重新整理清單失敗：",refreshError)}
   resetOrderForm();
   const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
