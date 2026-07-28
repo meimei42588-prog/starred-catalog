@@ -5002,7 +5002,7 @@ async function exportOrdersExcel(event){
    狀態:'col-status',處理人:'col-handler',寄出日期:'col-ship-date',備註:'col-note'
   };
   // Excel HTML 匯出必須同時寫入 width 屬性，Excel 才會確實保留欄寬。
-  const excelColumnWidth={訂單日期:105,姓名:90,電話:125,地址:260,配送:105,商品:330,狀態:100,處理人:95,寄出日期:105,備註:290};
+  const excelColumnWidth={訂單日期:88,姓名:72,電話:98,地址:180,配送:82,商品:210,狀態:78,處理人:78,寄出日期:88,備註:175};
   const tableHtml=`<table class="report-table"><colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}">`).join('')}</colgroup><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((row,rowIndex)=>`<tr class="${rowIndex%2?'even-row':'odd-row'}">${headers.map(h=>`<td class="${columnClass[h]||''}">${h==='狀態'?`<span class="status-pill status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}">${esc(row[h])}</span>`:esc(row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const reportHeader=`<div class="report-header"><div><div class="brand-mark">STAR RED TEXTILE</div><h1>星紅織品｜訂單匯出報表</h1><p>匯出時間：${esc(exportDate)}</p></div><div class="report-summary"><b>${rows.length}</b><span>本次匯出筆數</span></div></div><div class="summary-strip"><span>報表狀態摘要</span><b>${summaryText||'無資料'}</b></div>`;
   const excelRows=rows.map((row,rowIndex)=>`<tr>${headers.map(h=>`<td class="${columnClass[h]||''}">${esc(row[h])}</td>`).join('')}</tr>`).join('');
@@ -5017,18 +5017,18 @@ async function exportOrdersExcel(event){
 </xml><![endif]-->
 <style>
 html,body{margin:0;padding:0;background:#fff}
-table{border-collapse:collapse;table-layout:fixed;width:1525px;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#000;mso-displayed-decimal-separator:"\.";mso-displayed-thousand-separator:","}
-td,th{border:1px solid #808080;padding:6px 7px;vertical-align:middle;white-space:normal;word-break:normal;line-height:1.35;mso-number-format:"\@";mso-wrap-style:wrap}
-.title{font-size:16pt;font-weight:700;text-align:center;border:0;height:34px}
-.subtitle{font-size:13pt;font-weight:700;text-align:center;border:0;height:28px}
-.info-label{font-weight:700;background:#f2f2f2;text-align:center;white-space:nowrap;height:34px}
-.info-value{text-align:left;white-space:nowrap;height:34px}
-.blank-row td{height:7px;border:0}
-.header{font-weight:700;text-align:center;background:#d9d9d9;border:1px solid #666;height:38px;white-space:nowrap;mso-wrap-style:none}
-.data-row td{background:#fff;vertical-align:top;height:42px;white-space:normal;mso-wrap-style:wrap}
-.total-label{font-weight:700;text-align:right;background:#f2f2f2}
-.total-value{font-weight:700;text-align:center;background:#f2f2f2}
-.col-date{width:105px;text-align:center;white-space:nowrap}.col-name{width:90px}.col-phone{width:125px;white-space:nowrap}.col-address{width:260px}.col-delivery{width:105px;text-align:center}.col-items{width:330px}.col-status{width:100px;text-align:center;white-space:nowrap}.col-handler{width:95px;text-align:center;white-space:nowrap}.col-ship-date{width:105px;text-align:center;white-space:nowrap}.col-note{width:290px}
+table{border-collapse:collapse;table-layout:fixed;width:1149px;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#000;border:2px solid #333;mso-displayed-decimal-separator:"\.";mso-displayed-thousand-separator:","}
+td,th{border:1px solid #555;padding:5px 6px;vertical-align:middle;white-space:normal;word-break:break-word;line-height:1.25;mso-number-format:"\@";mso-wrap-style:wrap}
+.title{font-size:16pt;font-weight:700;text-align:center;border:1px solid #555;height:32px}
+.subtitle{font-size:13pt;font-weight:700;text-align:center;border:1px solid #555;height:27px}
+.info-label{font-weight:700;background:#f2f2f2;text-align:center;white-space:nowrap;height:30px}
+.info-value{text-align:left;white-space:normal;height:30px}
+.blank-row td{height:5px;border-left:1px solid #555;border-right:1px solid #555}
+.header{font-weight:700;text-align:center;background:#d9d9d9;border:1px solid #333;height:34px;white-space:nowrap;mso-wrap-style:none}
+.data-row td{background:#fff;vertical-align:middle;min-height:34px;white-space:normal;mso-wrap-style:wrap}
+.total-label{font-weight:700;text-align:right;background:#f2f2f2;border:1px solid #333}
+.total-value{font-weight:700;text-align:center;background:#f2f2f2;border:1px solid #333}
+.col-date{width:88px;text-align:center;white-space:nowrap}.col-name{width:72px;text-align:center}.col-phone{width:98px;white-space:nowrap}.col-address{width:180px}.col-delivery{width:82px;text-align:center}.col-items{width:210px}.col-status{width:78px;text-align:center;white-space:nowrap}.col-handler{width:78px;text-align:center;white-space:nowrap}.col-ship-date{width:88px;text-align:center;white-space:nowrap}.col-note{width:175px}
 </style>
 </head>
 <body>
