@@ -4809,7 +4809,7 @@ async function requestOrderChange(orderId){
  const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;
  if(!canCurrentLineUserOwnOrder(o)||String(o.status||'')!=='processing'){showOrderAction('無法申請','只有原回傳人員可對處理中的訂單提出更改申請。');return}
  if(!window.confirm('確定要提出更改申請嗎？\n申請後此筆訂單會移到後台「更改申請」。'))return;
- try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:o.handler||"",shippedDate:o.shippedDate||null});await loadStarredCloudData();showOrderAction('更改申請已送出','此筆訂單目前可修改或刪除，後台確認後會回到處理中。')}catch(error){cloudError('更改申請失敗',error)}
+ try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_CHANGE_REQUEST_MARKER,shippedDate:null});await loadStarredCloudData();showOrderAction('更改申請已送出','此筆訂單目前可修改或刪除，後台確認後會回到處理中。')}catch(error){cloudError('更改申請失敗',error)}
 }
 
 function setAdminOrderStatus(status){$("adminOrderStatus").value=status;document.querySelectorAll('.admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===status));selectedOrderIds.clear();updateCancelDeleteOrderButton();renderOrderAdmin()}
@@ -5341,19 +5341,25 @@ async function saveOrderEdit(){
    // 先把訂單正式移入「更改申請」，再儲存編輯內容。
    // 處理中訂單可能是資料庫 processing，或 pending + 處理中標記；
    // 先切換狀態可解除處理中鎖定，避免 update_order 回傳「訂單狀態不正確」。
-   await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:"",shippedDate:null});
+   // 後端目前只接受 pending／shipped／cancelled 等既有狀態，直接送 change_request 會被判定「訂單狀態不正確」。
+   // 因此以 pending + 更改申請專用標記儲存，前後台讀取時再顯示為「更改申請」。
    removeLocalProcessingOrderIds([orderId]);
+   await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_CHANGE_REQUEST_MARKER,shippedDate:null});
    try{
-    await starredApi("update_order",{orderId,order:{...next,status:"change_request"}});
+    await starredApi("update_order",{orderId,order:{...next,status:"pending"}});
+    // update_order 若重設處理人，再補寫一次更改申請標記，確保跨裝置同步。
+    await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_CHANGE_REQUEST_MARKER,shippedDate:null});
    }catch(updateError){
-    // 編輯資料若儲存失敗，恢復成原本的處理中，避免只改狀態卻沒有保存內容。
     addLocalProcessingOrderIds([orderId]);
     try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_PROCESSING_MARKER,shippedDate:null})}catch(_rollbackError){}
     throw updateError;
    }
   }else{
-   const cloudStatus=originalStatus==="processing"?"pending":originalStatus;
+   const cloudStatus=(originalStatus==="processing"||originalStatus==="change_request")?"pending":originalStatus;
    await starredApi("update_order",{orderId,order:{...next,status:cloudStatus}});
+   if(orderEditSource==="front"&&originalStatus==="change_request"){
+    await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_CHANGE_REQUEST_MARKER,shippedDate:null});
+   }
   }
   orderEditDirty=false;closeOrderEditModal(true);
   await loadStarredCloudData();
@@ -5981,6 +5987,7 @@ async function starredApi(action,payload={}){
   return result;
 }
 const STARRED_PROCESSING_MARKER="__STARRED_PROCESSING__";
+const STARRED_CHANGE_REQUEST_MARKER="__STARRED_CHANGE_REQUEST__";
 const STARRED_LOCAL_PROCESSING_KEY="starred_processing_order_ids_v1";
 function getLocalProcessingOrderIds(){
  try{return new Set(JSON.parse(localStorage.getItem(STARRED_LOCAL_PROCESSING_KEY)||"[]").map(String))}catch(_){return new Set()}
@@ -6003,8 +6010,8 @@ function cloudOrderToLocal(o){
   pickupStore:String(o.pickup_store?.name||""),pickupStoreId:String(o.pickup_store_id||""),
   createdAt:o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",
   updatedAt:o.updated_at?new Date(o.updated_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):(o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):""),
-  createdDate:String(o.order_date||"").slice(0,10),status:(o.status==="processing"||((o.status||"pending")==="pending"&&(String(o.processor_name||"")===STARRED_PROCESSING_MARKER||getLocalProcessingOrderIds().has(String(o.id)))))?"processing":String(o.status||"pending"),
-  handler:String(o.processor_name||"")===STARRED_PROCESSING_MARKER?"":String(o.processor_name||""),shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
+  createdDate:String(o.order_date||"").slice(0,10),status:(o.status==="change_request"||((o.status||"pending")==="pending"&&String(o.processor_name||"")===STARRED_CHANGE_REQUEST_MARKER))?"change_request":((o.status==="processing"||((o.status||"pending")==="pending"&&(String(o.processor_name||"")===STARRED_PROCESSING_MARKER||getLocalProcessingOrderIds().has(String(o.id)))))?"processing":String(o.status||"pending")),
+  handler:[STARRED_PROCESSING_MARKER,STARRED_CHANGE_REQUEST_MARKER].includes(String(o.processor_name||""))?"":String(o.processor_name||""),shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
   original:createLog?.after_data?{name:createLog.after_data.customer_name,phone:createLog.after_data.customer_phone,address:createLog.after_data.customer_address,delivery:createLog.after_data.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:createLog.after_data.product_content,photoKey:String(o.photo_url||""),createdAt:o.created_at}:null,
   history:updateLogs.map(x=>({editedAt:x.created_at?new Date(x.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",editedBy:x.actor_name||"",before:{name:x.before_data?.customer_name,phone:x.before_data?.customer_phone,address:x.before_data?.customer_address,delivery:x.before_data?.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:x.before_data?.product_content}}))
  }
