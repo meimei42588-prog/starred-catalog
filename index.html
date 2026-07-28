@@ -5005,7 +5005,7 @@ async function exportOrdersExcel(event){
   const excelColumnWidth={訂單日期:88,姓名:72,電話:98,地址:180,配送:82,商品:210,狀態:78,處理人:78,寄出日期:88,備註:175};
   const tableHtml=`<table class="report-table"><colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}">`).join('')}</colgroup><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((row,rowIndex)=>`<tr class="${rowIndex%2?'even-row':'odd-row'}">${headers.map(h=>`<td class="${columnClass[h]||''}">${h==='狀態'?`<span class="status-pill status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}">${esc(row[h])}</span>`:esc(row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const reportHeader=`<div class="report-header"><div><div class="brand-mark">STAR RED TEXTILE</div><h1>星紅織品｜訂單匯出報表</h1><p>匯出時間：${esc(exportDate)}</p></div><div class="report-summary"><b>${rows.length}</b><span>本次匯出筆數</span></div></div><div class="summary-strip"><span>報表狀態摘要</span><b>${summaryText||'無資料'}</b></div>`;
-  const excelRows=rows.map((row,rowIndex)=>`<tr>${headers.map(h=>`<td class="${columnClass[h]||''}">${esc(row[h])}</td>`).join('')}</tr>`).join('');
+  const excelRows=rows.map((row,rowIndex)=>`<tr class="${rowIndex%2?'excel-even':'excel-odd'}">${headers.map(h=>`<td class="${columnClass[h]||''} ${h==='狀態'?`excel-status status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}`:''}">${esc(row[h])}</td>`).join('')}</tr>`).join('');
   const excelHtml=`<!doctype html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
@@ -5017,18 +5017,22 @@ async function exportOrdersExcel(event){
 </xml><![endif]-->
 <style>
 html,body{margin:0;padding:0;background:#fff}
-table{border-collapse:collapse;table-layout:fixed;width:1149px;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#000;border:2px solid #333;mso-displayed-decimal-separator:"\.";mso-displayed-thousand-separator:","}
-td,th{border:1px solid #555;padding:5px 6px;vertical-align:middle;white-space:normal;word-break:break-word;line-height:1.25;mso-number-format:"\@";mso-wrap-style:wrap}
-.title{font-size:16pt;font-weight:700;text-align:center;border:1px solid #555;height:32px}
-.subtitle{font-size:13pt;font-weight:700;text-align:center;border:1px solid #555;height:27px}
-.info-label{font-weight:700;background:#f2f2f2;text-align:center;white-space:nowrap;height:30px}
-.info-value{text-align:left;white-space:normal;height:30px}
-.blank-row td{height:5px;border-left:1px solid #555;border-right:1px solid #555}
-.header{font-weight:700;text-align:center;background:#d9d9d9;border:1px solid #333;height:34px;white-space:nowrap;mso-wrap-style:none}
-.data-row td{background:#fff;vertical-align:middle;min-height:34px;white-space:normal;mso-wrap-style:wrap}
-.total-label{font-weight:700;text-align:right;background:#f2f2f2;border:1px solid #333}
-.total-value{font-weight:700;text-align:center;background:#f2f2f2;border:1px solid #333}
-.col-date{width:88px;text-align:center;white-space:nowrap}.col-name{width:72px;text-align:center}.col-phone{width:98px;white-space:nowrap}.col-address{width:180px}.col-delivery{width:82px;text-align:center}.col-items{width:210px}.col-status{width:78px;text-align:center;white-space:nowrap}.col-handler{width:78px;text-align:center;white-space:nowrap}.col-ship-date{width:88px;text-align:center;white-space:nowrap}.col-note{width:175px}
+table{border-collapse:collapse;table-layout:fixed;width:1149px;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#243746;border:2px solid #274253;mso-displayed-decimal-separator:"\.";mso-displayed-thousand-separator:","}
+td,th{border:1px solid #9fb0ba;padding:6px 7px;vertical-align:middle;white-space:normal;word-break:break-word;line-height:1.3;mso-number-format:"\@";mso-wrap-style:wrap}
+.title{font-size:18pt;font-weight:700;text-align:center;color:#fff;background:#274253;border:1px solid #274253;height:38px;letter-spacing:1px}
+.subtitle{font-size:13pt;font-weight:700;text-align:center;color:#274253;background:#e9f0f4;border:1px solid #9fb0ba;height:30px}
+.info-label{font-weight:700;background:#dce8ee;color:#274253;text-align:center;white-space:nowrap;height:31px}
+.info-value{text-align:left;background:#f8fafb;color:#334e5d;white-space:normal;height:31px}
+.blank-row td{height:7px;background:#fff;border-left:1px solid #9fb0ba;border-right:1px solid #9fb0ba}
+.header{font-weight:700;text-align:center;color:#fff;background:#3f6174;border:1px solid #274253;height:36px;white-space:nowrap;mso-wrap-style:none}
+.data-row td{vertical-align:middle;min-height:36px;white-space:normal;mso-wrap-style:wrap}
+.data-row:nth-child(even) td{background:#f7fafb}
+.data-row:nth-child(odd) td{background:#ffffff}
+.total-label{font-weight:700;text-align:right;color:#fff;background:#3f6174;border:1px solid #274253;height:34px}
+.total-value{font-weight:700;text-align:center;color:#fff;background:#274253;border:1px solid #274253;height:34px}
+.excel-status{font-weight:700;text-align:center}
+.status-已寄出,.status-已收回退貨{background:#e3f2e8!important;color:#22633f}.status-退貨{background:#fff0dc!important;color:#9a5700}.status-取消訂單{background:#f8e4e1!important;color:#91372f}.status-處理中{background:#e6eef7!important;color:#315f79}.status-更改申請{background:#f3e5f2!important;color:#7e3f79}.status-待寄出{background:#fff4d6!important;color:#825700}
+.col-date{width:88px;text-align:center;white-space:nowrap}.col-name{width:72px;text-align:center}.col-phone{width:98px;white-space:nowrap;text-align:center}.col-address{width:180px}.col-delivery{width:82px;text-align:center}.col-items{width:210px}.col-status{width:78px;text-align:center;white-space:nowrap}.col-handler{width:78px;text-align:center;white-space:nowrap}.col-ship-date{width:88px;text-align:center;white-space:nowrap}.col-note{width:175px}
 </style>
 </head>
 <body>
@@ -5043,7 +5047,7 @@ td,th{border:1px solid #555;padding:5px 6px;vertical-align:middle;white-space:no
 </tr>
 <tr class="blank-row"><td colspan="${headers.length}"></td></tr>
 <tr>${headers.map(h=>`<th class="header ${columnClass[h]||''}" width="${excelColumnWidth[h]||120}" style="width:${excelColumnWidth[h]||120}px">${esc(h)}</th>`).join('')}</tr>
-${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass[h]||''}" width="${excelColumnWidth[h]||120}" style="width:${excelColumnWidth[h]||120}px">${esc(row[h])}</td>`).join('')}</tr>`).join('')}
+${rows.map((row,rowIndex)=>`<tr class="data-row ${rowIndex%2?'excel-even':'excel-odd'}">${headers.map(h=>`<td class="${columnClass[h]||''} ${h==='狀態'?`excel-status status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}`:''}" width="${excelColumnWidth[h]||120}" style="width:${excelColumnWidth[h]||120}px">${esc(row[h])}</td>`).join('')}</tr>`).join('')}
 <tr><td class="total-label" colspan="${headers.length-1}">合計</td><td class="total-value">共 ${rows.length} 筆</td></tr>
 </table>
 </body></html>`;
