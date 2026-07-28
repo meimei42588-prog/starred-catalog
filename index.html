@@ -4929,9 +4929,12 @@ async function exportOrdersExcel(event){
  if(event){event.preventDefault();event.stopPropagation()}
  const keepAdminPage=$("adminPage")?.classList.contains('active');
  const keepOrderAdminTab=$("orderAdminTab")?.classList.contains('active');
- const keepAdminStatus=$("adminOrderStatus")?.value||'';
+ const keepAdminStatus=$("adminOrderStatus")?.value||'all';
+ const keepScrollX=window.scrollX||0;
+ const keepScrollY=window.scrollY||0;
  const list=selectedOrdersForExport();
  if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}
+
  const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
  const rows=list.map(o=>({
   訂單日期:orderDateValue(o),姓名:o.name||'',電話:o.phone||'',地址:o.address||'',配送:o.delivery||'',商品:o.items||'',
@@ -4940,29 +4943,32 @@ async function exportOrdersExcel(event){
   寄出日期:o.shippedDate||'',備註:getEditNote(o)
  }));
 
- // 先完成檔案下載，再同步狀態，避免網路或畫面重繪阻擋下載。
+ // 不依賴 CDN 或 XLSX 套件，直接建立 Excel 可開啟的 .xls 檔案。
+ // 必須在使用者點擊事件內立即觸發下載，避免瀏覽器阻擋。
  try{
-  if(typeof XLSX!=="undefined"&&XLSX?.utils?.json_to_sheet&&XLSX?.writeFile){
-   const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();
-   XLSX.utils.book_append_sheet(wb,ws,'訂單');
-   XLSX.writeFile(wb,`訂單_${todayStr()}.xlsx`);
-  }else{
-   // CDN 載入失敗時自動改用 Excel 可直接開啟的 UTF-8 CSV，確保按鈕仍可使用。
-   const headers=Object.keys(rows[0]||{});
-   const csvEscape=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
-   const csv='\ufeff'+[headers.map(csvEscape).join(','),...rows.map(row=>headers.map(h=>csvEscape(row[h])).join(','))].join('\r\n');
-   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-   const url=URL.createObjectURL(blob),a=document.createElement('a');
-   a.href=url;a.download=`訂單_${todayStr()}.csv`;a.style.display='none';
-   document.body.appendChild(a);a.click();a.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),1500);
-  }
+  const escapeCell=value=>String(value??'')
+   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+   .replace(/"/g,'&quot;').replace(/\r?\n/g,'<br>');
+  const headers=Object.keys(rows[0]||{});
+  const table=`<table border="1"><thead><tr>${headers.map(h=>`<th>${escapeCell(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${headers.map(h=>`<td>${escapeCell(row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const workbook=`\ufeff<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>訂單</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>table{border-collapse:collapse;font-family:'Microsoft JhengHei',sans-serif}th,td{padding:6px;vertical-align:top;mso-number-format:'\\@'}th{font-weight:bold;background:#e7eef2}</style></head><body>${table}</body></html>`;
+  const blob=new Blob([workbook],{type:'application/vnd.ms-excel;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`訂單_${todayStr()}.xls`;
+  a.style.position='fixed';
+  a.style.left='-9999px';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},2000);
  }catch(error){
   console.error('訂單 Excel 匯出失敗：',error);
   showOrderAction('Excel 匯出失敗',error?.message||String(error)||'請稍後再試');
   return;
  }
 
+ // 待寄出訂單匯出後自動改成處理中，但不切換目前頁面或分頁。
  if(pendingIds.length){
   addLocalProcessingOrderIds(pendingIds);
   orders.forEach(o=>{if(pendingIds.includes(String(o.id))){o.status='processing';o.handler='';o.shippedDate=''}});
@@ -4978,14 +4984,22 @@ async function exportOrdersExcel(event){
   }
  }
 
+ // 強制恢復匯出前所在的後台訂單畫面、狀態分頁與捲動位置。
  if(keepAdminPage){
-  showPage('admin');
+  $("homePage")?.classList.remove('active');
+  $("orderPage")?.classList.remove('active');
+  $("adminPage")?.classList.add('active');
+  $("homeNav")?.classList.remove('active');
+  $("orderNav")?.classList.remove('active');
+  $("adminNav")?.classList.add('active');
   if(keepOrderAdminTab)showAdminTab('orderAdmin');
-  setAdminOrderStatus(keepAdminStatus||($('adminOrderStatus')?.value||''));
+  setAdminOrderStatus(keepAdminStatus);
  }
+ requestAnimationFrame(()=>window.scrollTo(keepScrollX,keepScrollY));
+
  showOrderAction('Excel 匯出完成',pendingIds.length
-  ?`已匯出 ${list.length} 筆訂單，其中 ${pendingIds.length} 筆待寄出訂單已自動移到處理中，避免重複出貨。`
-  :`已匯出 ${list.length} 筆訂單。`);
+  ?`已下載 ${list.length} 筆訂單的 Excel 檔，其中 ${pendingIds.length} 筆待寄出訂單已自動移到處理中。`
+  :`已下載 ${list.length} 筆訂單的 Excel 檔。`);
 }
 async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const pages=[];for(let i=0;i<list.length;i++){const o=list[i],photo=await getPhoto(o.photoKey),note=getEditNote(o);pages.push(`<section class="pick-page"><h1>星紅織品｜揀貨單</h1><div class="pick-date">訂單日期：${escapeHtml(orderDateValue(o))}</div><div class="pick-photo">${photo?`<img src="${photo}">`:'無照片'}</div><div class="pick-grid"><div><span>收件人</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div><span>狀態</span><b>${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?'退貨':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出'}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${note?`<div class="wide edit-note"><span>修改前資料備註</span><b>${escapeHtml(note)}</b></div>`:''}</div><footer>核對人：________________</footer></section>`)}const w=window.open('','_blank');if(!w){showOrderAction('無法開啟揀貨單','請允許彈出式視窗。');return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}body{font-family:"Microsoft JhengHei";margin:0}.pick-page{width:194mm;min-height:281mm;padding:5mm;page-break-after:always}.pick-page:last-child{page-break-after:auto}h1{text-align:center;margin:0}.pick-date{text-align:center;margin:2mm 0 4mm}.pick-photo{height:120mm;border:1px solid #000;display:flex;align-items:center;justify-content:center}.pick-photo img{max-width:100%;max-height:100%;object-fit:contain}.pick-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}.pick-grid>div{padding:3mm;border-right:1px solid #000;border-bottom:1px solid #000}.pick-grid>div:nth-child(even){border-right:0}.pick-grid .wide{grid-column:1/-1;border-right:0}.pick-grid span{display:block;font-size:10px}.pick-grid b{font-size:13px;line-height:1.45}.edit-note b{font-size:11px;font-weight:500}footer{text-align:right;margin-top:7mm;font-size:15px}
 /* 調整訂單清單摘要字重 */
