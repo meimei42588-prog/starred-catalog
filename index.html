@@ -5541,9 +5541,32 @@ function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.
 function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}const pendingBtn=$("markPendingBtn");if(pendingBtn&&$("adminOrderStatus")?.value==="returned"){const selected=orders.filter(o=>selectedOrderIds.has(o.id));pendingBtn.disabled=selected.length>0&&selected.every(o=>o.returnReceived);pendingBtn.title=pendingBtn.disabled?"選取的訂單皆已收回退貨":"將尚未收回的退貨標記為已收回退貨"}updateConfirmShipButton()}
 function updateConfirmShipButton(){const handlerSelected=!!$("orderHandler")?.value;const isChange=($("adminOrderStatus")?.value||'')==='change_request';const b=$("confirmShipBtn"),approve=$("approveChangeRequestBtn");if(b){b.disabled=false;b.classList.toggle("needs-handler",!isChange&&selectedOrderIds.size>0&&!handlerSelected)}if(approve){approve.classList.remove("needs-handler");approve.title="確認更改申請"}}
 function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
-async function markSelectedOrdersShipped(){if(!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
+// 訂單確認操作允許「主管 manager」與「系統管理員 admin／system_admin」執行。
+// 同時把目前後台登入者資訊帶給 API，避免只依 LINE 身分誤判而阻擋主管。
+function getOrderOperatorContext(){
+ const rawRole=String(currentUser?.role||window.starredVerifiedLineUser?.role||'').trim().toLowerCase();
+ const role=rawRole==='system_admin'?'admin':rawRole;
+ return {
+  operatorRole:role,
+  operatorAccount:String(currentUser?.username||''),
+  operatorName:getCurrentAdminDisplayName()
+ };
+}
+function canOperateOrderConfirmation(){
+ const role=getOrderOperatorContext().operatorRole;
+ return role==='manager'||role==='admin';
+}
+function ensureOrderConfirmationPermission(){
+ if(canOperateOrderConfirmation())return true;
+ showOrderAction('權限不足','只有主管或系統管理員可以進行確認申請與確認寄出。');
+ return false;
+}
+async function markSelectedOrdersShipped(){if(!ensureOrderConfirmationPermission()||!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date,...getOrderOperatorContext()});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
 async function markSelectedOrdersPending(){if(!ensureSelected())return;const ids=[...selectedOrderIds];const fromReturned=$("adminOrderStatus")?.value==="returned";if(fromReturned){const targets=orders.filter(o=>ids.includes(String(o.id))&&o.status==='returned'&&!o.returnReceived);if(!targets.length){showOrderAction('無法操作','選取的退貨訂單皆已標記為已收回退貨。');return}const targetIds=targets.map(o=>String(o.id));const handler=getCurrentAdminDisplayName();addLocalReturnReceivedOrderIds(targetIds);setLocalCancelHandlers(targetIds,handler);targets.forEach(o=>{o.returnReceived=true;o.returnReceivedAt=new Date().toISOString();o.returnReceivedBy=handler;o.handler=handler});persistOrders();renderOrderCards();renderOrderAdmin();try{await starredApi("bulk_order_status",{orderIds:targetIds,status:"cancelled",handler:STARRED_RETURN_RECEIVED_MARKER+handler,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();setAdminOrderStatus('returned');showOrderAction('已收回退貨',`已將 ${targetIds.length} 筆訂單標記為已收回退貨，訂單仍保留在退貨區。`)}catch(error){cloudError('已收回退貨失敗',error)}return}removeLocalProcessingOrderIds(ids);removeLocalCancelHandlers(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);orders.forEach(o=>{if(ids.includes(String(o.id))){o.status='pending';o.handler='';o.shippedDate=''}});persistOrders();try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:null,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出，處理人已恢復為待填寫。`)}catch(error){cloudError('狀態修改失敗',error)}}
-async function approveSelectedChangeRequests(){if(!ensureSelected())return;const handler=getCurrentAdminDisplayName();const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{await starredApi("approve_change_requests",{orderIds:ids,handler});await starredApi("bulk_order_status",{orderIds:ids,status:"processing",handler,shippedDate:null});addLocalProcessingOrderIds(ids);selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('成功',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){removeLocalProcessingOrderIds(ids);cloudError('確認申請失敗',error)}}
+async function approveSelectedChangeRequests(){if(!ensureOrderConfirmationPermission()||!ensureSelected())return;const handler=getCurrentAdminDisplayName();const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{
+ // 更改內容在送出申請時已寫入；確認時直接切回處理中，避免額外的管理員限定動作阻擋主管。
+ await starredApi("bulk_order_status",{orderIds:ids,status:"processing",handler,shippedDate:null,...getOrderOperatorContext()});
+ addLocalProcessingOrderIds(ids);selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('成功',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){removeLocalProcessingOrderIds(ids);cloudError('確認申請失敗',error)}}
 function updateCancelDeleteOrderButton(){
  const btn=$("cancelDeleteOrderBtn"),returnBtn=$("returnOrderBtn"),pendingBtn=$("markPendingBtn"),approve=$("approveChangeRequestBtn"),handler=$("orderHandler"),shipDate=$("orderShipDate"),confirmShip=$("confirmShipBtn"),row=document.querySelector('.compact-process-row');
  if(!btn)return;
