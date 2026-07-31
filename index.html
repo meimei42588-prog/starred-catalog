@@ -3191,7 +3191,9 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
           <div class="field"><label>訂單狀態</label><select id="orderBackupStatus" onchange="renderOrderBackup()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select></div>
           <button type="button" class="secondary backup-clear-btn" onclick="clearOrderBackupFilters()">清除篩選</button>
           <button type="button" class="primary backup-export-btn" onclick="exportOrderBackupExcel()">匯出 Excel</button>
+          <button type="button" id="backupOrdersEmailBtn" class="primary backup-email-btn" onclick="backupOrdersNow()">立即備份寄信</button>
         </div>
+        <div id="backupEmailStatus" class="backup-email-status" role="status" aria-live="polite"></div>
         <div class="backup-summary-line" id="orderBackupSummary">顯示全部月份</div>
         <div class="backup-table-wrap">
           <table class="backup-table">
@@ -6016,6 +6018,29 @@ function exportOrderBackupExcel(){
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=`訂單備份_${$('orderBackupMonth')?.value||todayStr()}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
+async function backupOrdersNow(){
+ const button=$('backupOrdersEmailBtn'),status=$('backupEmailStatus');
+ const currentUser=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;
+ if(!currentUser||String(currentUser.role||'')!=='system_admin'){
+  showOrderAction('權限不足','只有系統管理員可以執行立即備份寄信。');
+  return;
+ }
+ if(!confirm('確定要立即備份全部訂單文字資料並寄送 Email 嗎？'))return;
+ const originalText=button?.textContent||'立即備份寄信';
+ if(button){button.disabled=true;button.textContent='備份寄送中…'}
+ if(status){status.className='backup-email-status working';status.textContent='正在整理全部訂單並寄送 Excel，請稍候…'}
+ try{
+  const result=await starredApi('backup_orders');
+  if(status){status.className='backup-email-status success';status.textContent=`備份成功：共 ${Number(result.count||0)} 筆，已寄送到 ${result.email||'備份信箱'}。`}
+  showOrderAction('備份成功',`共備份 ${Number(result.count||0)} 筆訂單，Excel 已寄送到 ${result.email||'備份信箱'}。`);
+ }catch(error){
+  const message=String(error?.message||error||'未知錯誤');
+  if(status){status.className='backup-email-status error';status.textContent=`備份失敗：${message}`}
+  showOrderAction('備份失敗',message);
+ }finally{
+  if(button){button.disabled=false;button.textContent=originalText}
+ }
+}
 
 document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();showPage("order");});
 </script>
@@ -6515,8 +6540,13 @@ document.addEventListener("keydown",event=>{
 .backup-heading h2{margin:0 0 5px}
 .backup-count-box{flex:0 0 auto;min-width:116px;padding:10px 14px;border:1px solid #d8e1e7;border-radius:13px;background:#f7fafb;text-align:center}
 .backup-count-box span{display:block;font-size:12px;color:#667b88}.backup-count-box b{display:block;margin-top:2px;font-size:24px;color:#274253}
-.backup-filter-bar{display:grid;grid-template-columns:160px minmax(240px,1fr) 160px auto auto;gap:9px;align-items:end;margin-bottom:10px;padding:12px;border:1px solid #dce5e9;border-radius:14px;background:#f8fafb}
-.backup-filter-bar .field label{font-size:12px;font-weight:800}.backup-clear-btn,.backup-export-btn{height:43px;white-space:nowrap}
+.backup-filter-bar{display:grid;grid-template-columns:160px minmax(240px,1fr) 160px auto auto auto;gap:9px;align-items:end;margin-bottom:10px;padding:12px;border:1px solid #dce5e9;border-radius:14px;background:#f8fafb}
+.backup-filter-bar .field label{font-size:12px;font-weight:800}.backup-clear-btn,.backup-export-btn,.backup-email-btn{height:43px;white-space:nowrap}
+.backup-email-btn{background:#2f7658!important;box-shadow:0 5px 14px rgba(47,118,88,.18)!important}
+.backup-email-btn:disabled{cursor:wait;opacity:.72;transform:none!important}
+.backup-email-status{display:none;margin:0 0 10px;padding:9px 12px;border-radius:10px;font-size:13px;font-weight:800}
+.backup-email-status.working,.backup-email-status.success,.backup-email-status.error{display:block}
+.backup-email-status.working{background:#edf4f7;color:#315f79}.backup-email-status.success{background:#e8f5ed;color:#26704f}.backup-email-status.error{background:#fbe9e7;color:#9a352e}
 .backup-summary-line{margin:8px 0 10px;font-size:13px;font-weight:800;color:#617884}
 .backup-table-wrap{width:100%;overflow:auto;border:1px solid #cfdce3;border-radius:14px;background:#fff}
 .backup-table{width:100%;min-width:1420px;border-collapse:collapse;table-layout:fixed;font-size:13px;color:#355264}
@@ -6526,7 +6556,7 @@ document.addEventListener("keydown",event=>{
 .backup-table th:nth-child(1){width:105px}.backup-table th:nth-child(2){width:92px}.backup-table th:nth-child(3){width:120px}.backup-table th:nth-child(4){width:240px}.backup-table th:nth-child(5){width:115px}.backup-table th:nth-child(6){width:335px}.backup-table th:nth-child(7){width:110px}.backup-table th:nth-child(8){width:105px}.backup-table th:nth-child(9){width:110px}.backup-table th:nth-child(10){width:290px}
 .backup-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:900;white-space:nowrap;background:#e7eef2;color:#274253}.backup-status.shipped{background:#e6f4eb;color:#26704f}.backup-status.cancelled{background:#f7e4e2;color:#9a352e}.backup-status.returned{background:#fff0dc;color:#a85a00}.backup-status.processing{background:#e7eef8;color:#315f79}.backup-status.change_request{background:#f5e7f4;color:#8a3f84}
 .backup-empty-cell{text-align:center!important;padding:34px!important;color:#788d99!important}
-@media(max-width:950px){.backup-filter-bar{grid-template-columns:1fr 1fr}.backup-search-field{grid-column:1/-1}.backup-clear-btn,.backup-export-btn{width:100%}}
+@media(max-width:950px){.backup-filter-bar{grid-template-columns:1fr 1fr}.backup-search-field{grid-column:1/-1}.backup-clear-btn,.backup-export-btn,.backup-email-btn{width:100%}}
 @media(max-width:620px){.backup-heading{flex-direction:column}.backup-count-box{width:100%}.backup-filter-bar{grid-template-columns:1fr}.backup-search-field{grid-column:auto}.order-backup-panel{padding:13px!important}.backup-table-wrap{border-radius:11px}}
 </style>
 <script>
