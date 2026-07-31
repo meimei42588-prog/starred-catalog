@@ -5039,12 +5039,22 @@ function renderManage(){
  const storeId=$("manageStoreFilter")?.value||"";
  const status=$("manageStatusFilter")?.value||"";
  const month=$("manageMonthFilter")?.value||"";
+ const selectedStore=storeId
+  ?stores.find(s=>String(s.id)===String(storeId))
+  :null;
+ const normalizeStoreText=value=>String(value||"").trim().replace(/\s+/g," ");
 
  const filtered=events
   .filter(e=>{
    const eventStatus=calcStatus(e.start,e.end);
    const eventMonth=e.start?Number(String(e.start).slice(5,7)):null;
-   const matchesStore=!storeId||String(e.storeId||"")===String(storeId);
+   // 同一間門市在訂單與活動資料中可能使用不同 ID；ID 不同時改以區域、名稱、樓層比對。
+   const matchesStore=!storeId
+    ||String(e.storeId||"")===String(storeId)
+    ||Boolean(selectedStore
+      &&String(e.area||"")===String(selectedStore.area||"")
+      &&normalizeStoreText(e.mall)===normalizeStoreText(selectedStore.name)
+      &&normalizeStoreText(e.location)===normalizeStoreText(selectedStore.floor));
    return(!area||e.area===area)
     &&matchesStore
     &&(!status||eventStatus===status)
