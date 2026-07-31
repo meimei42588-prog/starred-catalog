@@ -5978,7 +5978,10 @@ window.deleteSelectedEvents=async function(){
 // 活動及門市改由 Supabase 管理；管理帳號暫時維持此瀏覽器，下一階段再改 Supabase Auth。
 persist=function(){};
 persistStores=function(){};
-window.addEventListener("load",async()=>{await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);},{once:true});
+window.addEventListener("load",async()=>{
+ if(window.STARRED_UI_PREVIEW_MODE)return;
+ await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);
+},{once:true});
 
 
 
@@ -6438,7 +6441,7 @@ async function initializeStarredLiff(){
 document.addEventListener("DOMContentLoaded",()=>{
   const cached=getCurrentLineUser();
   if(cached)setLineReturnPerson(cached);
-  initializeStarredLiff();
+  if(!window.STARRED_UI_PREVIEW_MODE)initializeStarredLiff();
 });
 </script>
 
@@ -6471,7 +6474,8 @@ function showSystemLoadingError(title="資料載入失敗",text="資料載入失
 function retrySystemLoading(){
  const overlay=document.getElementById("systemLoadingOverlay");
  if(overlay){overlay.classList.remove("error");}
- initializeStarredLiff();
+ if(window.STARRED_UI_PREVIEW_MODE)hideSystemLoading();
+ else initializeStarredLiff();
 }
 function cleanLoginCallbackUrl(){
  if(!/^https?:$/i.test(location.protocol))return;
@@ -7071,5 +7075,108 @@ button.danger{border-radius:8px!important}
   .admin-customer-block{grid-template-columns:1fr!important}
 }
 </style>
+<style id="starred-ui-preview-mode-style">
+  .ui-preview-ribbon{
+    position:fixed;right:12px;bottom:12px;z-index:10050;
+    padding:7px 11px;border:1px solid rgba(255,255,255,.28);border-radius:999px;
+    background:rgba(20,47,61,.92);box-shadow:0 8px 24px rgba(12,35,47,.2);
+    color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;
+    backdrop-filter:blur(10px)
+  }
+  @media(max-width:600px){
+    .ui-preview-ribbon{right:7px;bottom:7px;padding:6px 9px;font-size:9px}
+  }
+</style>
+<script id="starred-ui-preview-mode">
+window.STARRED_UI_PREVIEW_MODE=true;
+(function(){
+ const previewLineId="preview-line-user";
+ const previewStores=[
+  {id:"preview-store-1",area:"north",name:"台北新光站前",floor:"3F"},
+  {id:"preview-store-2",area:"central",name:"台中遠百",floor:"8F"},
+  {id:"preview-store-3",area:"south",name:"高雄夢時代",floor:"7F"},
+  {id:"preview-store-4",area:"south",name:"嘉義秀泰",floor:"2F"}
+ ];
+ const people=["林怡君","陳鈺婷","吳雅晴","張育甄","黃欣怡","李佳穎","王美玲","周佩珊","許庭瑜"];
+ const products=["兒童毛巾 粉1／藍1","純棉浴巾 灰2","花朵米飛毛巾 3入","飯店浴巾 白2","柔膚毛巾組 4入"];
+ const statuses=["pending","processing","shipped","change_request","cancelled","returned"];
+ function dateOffset(days){
+  const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-days);
+  return d.toISOString().slice(0,10);
+ }
+ function makePreviewOrders(){
+  return Array.from({length:20},(_,i)=>{
+   const old=i>=17,days=old?72+(i-17)*16:i*2;
+   const status=statuses[i%statuses.length],shipped=status==="shipped";
+   return {
+    id:"preview-order-"+(i+1),
+    createdDate:dateOffset(days),
+    createdAt:dateOffset(days)+"T10:30:00+08:00",
+    updatedAt:dateOffset(Math.max(0,days-1))+"T15:20:00+08:00",
+    name:people[i%people.length],
+    phone:"09"+String(81234000+i*137).padStart(8,"0"),
+    address:i%4===1?"取件門市："+previewStores[i%previewStores.length].name:"台中市西屯區臺灣大道三段 "+(100+i)+" 號",
+    delivery:i%4===1?"門市自取":"總公司寄出",
+    pickupStore:i%4===1?previewStores[i%previewStores.length].name:"",
+    store:previewStores[i%previewStores.length].name,
+    items:products[i%products.length],
+    status,
+    handler:status==="pending"?"":"UI 測試管理員",
+    shippedDate:shipped?dateOffset(Math.max(0,days-1)):"",
+    returnPerson:"UI 測試人員",
+    createdByLineId:previewLineId,
+    photoKey:"",
+    returnReceived:status==="returned"&&i%2===0
+   };
+  });
+ }
+ function showPreviewNotice(){
+  if(document.querySelector(".ui-preview-ribbon"))return;
+  const ribbon=document.createElement("div");
+  ribbon.className="ui-preview-ribbon";
+  ribbon.textContent="純 UI 測試模式・不連動正式資料";
+  document.body.appendChild(ribbon);
+ }
+ function setupPreview(){
+  currentUser={id:"preview-admin",name:"UI 測試管理員",username:"preview",role:"admin",enabled:true};
+  accounts=[
+   currentUser,
+   {id:"preview-manager",name:"UI 測試主管",username:"manager",role:"manager",enabled:true}
+  ];
+  window.starredVerifiedLineUser={
+   id:previewLineId,lineUserId:previewLineId,employeeName:"UI 測試人員",
+   lineDisplayName:"UI 測試人員",name:"UI 測試人員",role:"system_admin",isEnabled:true
+  };
+  const lineUser={id:previewLineId,lineUserId:previewLineId,name:"UI 測試人員",displayName:"UI 測試人員",role:"system_admin"};
+  localStorage.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(Date.now()+86400000));
+  localStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(lineUser));
+  sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(lineUser));
+  stores=previewStores.slice();
+  orders=makePreviewOrders();
+  selectedOrderIds.clear();
+  setLineReturnPerson(lineUser);
+  hideSystemLoading();
+  rebuildOrderStoreOptions();
+  renderOrderHandlerOptions();
+  renderOrderCards();
+  renderOrderAdmin();
+  renderOrderBackup();
+  checkLogin();
+  showPreviewNotice();
+ }
+ const blockedActions=/^(submitOrder|markSelected|approveSelected|handleCancelDelete|backupOrdersNow|saveStore|deleteStore|saveAccount|deleteAccount|toggleLineUser|saveEvent|deleteEvent|deleteSelectedEvents|saveOrderEdit)/;
+ document.addEventListener("click",event=>{
+  const target=event.target.closest("[onclick]");
+  if(!target)return;
+  const action=target.getAttribute("onclick")||"";
+  if(!blockedActions.test(action.trim()))return;
+  event.preventDefault();event.stopImmediatePropagation();
+  alert("這是純 UI 測試版，不會寫入或修改正式資料。");
+ },true);
+ document.addEventListener("DOMContentLoaded",setupPreview);
+})();
+</script>
 </body>
 </html>
