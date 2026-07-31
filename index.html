@@ -3555,8 +3555,8 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
   <div class="brand"><button type="button" class="brand-home-btn" onclick="showPage('home')">星紅織品｜門市營用管理系統</button></div>
   <div class="topbar-right">
     <div class="nav">
-      <button id="homeNav" class="active" onclick="showPage('home')">活動總覽</button>
-      <button id="orderNav" onclick="showPage('order')">訂單回傳</button>
+      <button id="homeNav" onclick="showPage('home')">活動總覽</button>
+      <button id="orderNav" class="active" onclick="showPage('order')">訂單回傳</button>
       <button id="adminNav" onclick="showPage('admin')">後台管理</button>
     </div>
     <div class="notification-wrap">
@@ -3581,7 +3581,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </div></div>
 
 <main class="container">
-<section id="homePage" class="page active">
+<section id="homePage" class="page">
   
 <div class="front-filter-panel">
   <div class="front-filter-heading">
@@ -6756,7 +6756,7 @@ async function backupOrdersNow(){
  }
 }
 
-document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderReturnPerson"))$("orderReturnPerson").textContent="（登入後自動帶入）";if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();showPage("dashboard");});
+document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderReturnPerson"))$("orderReturnPerson").textContent="（登入後自動帶入）";if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();showPage("order");});
 </script>
 
 <div id="globalDropOverlay" class="global-drop-overlay">
