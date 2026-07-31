@@ -4206,7 +4206,50 @@ function syncCurrentLineUser(profile){if(!profile||!profile.id)return null;const
 function isCurrentLineUserEnabled(){const profile=getCurrentLineUser();if(!profile||!profile.id)return true;const user=lineUsers.find(x=>String(x.id)===String(profile.id));return !user||user.enabled!==false}
 function enforceLineUserAccess(){const block=$("lineAccessBlock");if(!block)return true;const enabled=isCurrentLineUserEnabled();block.classList.toggle("show",!enabled);document.body.style.overflow=enabled?"":"hidden";return enabled}
 function renderLineUsers(){const list=$("lineUserList"),count=$("lineUserCount");if(!list)return;count.textContent=`${lineUsers.length} 位`;if(!lineUsers.length){list.innerHTML='<div class="line-user-empty">目前尚無 LINE 使用者。完成 LINE Login 串接後，首次登入的姓名會自動加入這裡。</div>';return}list.innerHTML=lineUsers.map(u=>`<div class="line-user-item"><div><div class="line-user-name">${escapeLineHtml(u.name||"未命名")}</div><div class="line-user-sub">LINE 使用者</div></div><div><div class="line-user-sub">LINE 識別碼</div><div>${escapeLineHtml(u.id||"—")}</div></div><div><span class="line-user-status ${u.enabled===false?'disabled':''}">${u.enabled===false?'已停用':'已啟用'}</span></div><div><div class="line-user-sub">最後登入</div><div>${u.lastLogin?new Date(u.lastLogin).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}):'尚無紀錄'}</div></div><div class="line-user-actions"><button class="${u.enabled===false?'primary':'secondary'}" onclick="toggleLineUser('${String(u.id).replace(/'/g,"\\'")}')">${u.enabled===false?'啟用':'停用'}</button></div></div>`).join('')}
-function toggleLineUser(id){if(!currentUser||currentUser.role!=="admin"){alert("只有系統管理員可以啟用或停用 LINE 使用者");return}const user=lineUsers.find(x=>String(x.id)===String(id));if(!user)return;const next=user.enabled===false;if(!next&&!confirm(`確定要停用「${user.name||'此使用者'}」嗎？\n停用後，這個 LINE 帳號將無法開啟系統。`))return;user.enabled=next;persistLineUsers();renderLineUsers();enforceLineUserAccess()}
+async function toggleLineUser(id){
+ if(!currentUser||currentUser.role!=="admin"){
+  alert("只有系統管理員可以啟用或停用 LINE 使用者");
+  return;
+ }
+ const user=lineUsers.find(x=>String(x.id)===String(id));
+ if(!user)return;
+ const previousEnabled=user.enabled!==false;
+ const nextEnabled=!previousEnabled;
+ const actionText=nextEnabled?"啟用":"停用";
+ if(!nextEnabled&&!confirm(`確定要停用「${user.name||'此使用者'}」嗎？\n停用後，這個 LINE 帳號重新整理或再次開啟時，都會被系統阻擋。`))return;
+
+ user.enabled=nextEnabled;
+ persistLineUsers();
+ renderLineUsers();
+
+ try{
+  await starredApi("toggle_line_user",{
+   lineUserId:String(user.id),
+   enabled:nextEnabled
+  });
+ }catch(error){
+  user.enabled=previousEnabled;
+  persistLineUsers();
+  renderLineUsers();
+  console.error("LINE 使用者狀態同步失敗",error);
+  alert(`LINE 使用者${actionText}失敗，雲端狀態沒有變更。\n\n錯誤：${error?.message||error}`);
+  return;
+ }
+
+ const currentLineId=String(getCurrentLineUser()?.id||window.starredVerifiedLineUser?.lineUserId||"");
+ if(!nextEnabled&&currentLineId===String(user.id)){
+  showLineAccessBlocked("此 LINE 帳號已被停用，重新整理或再次開啟系統仍會維持停用。請聯絡系統管理員協助啟用。");
+  return;
+ }
+
+ try{
+  await loadStarredCloudData();
+  alert(`LINE 使用者已${actionText}`);
+ }catch(error){
+  console.error("LINE 使用者已更新，但清單重新載入失敗",error);
+  alert(`LINE 使用者已${actionText}，但清單重新載入失敗；重新整理後會顯示最新狀態。`);
+ }
+}
 function showAdminTab(tab){
  if((tab==="account"||tab==="lineUser")&&(!currentUser||currentUser.role!=="admin")){alert("只有系統管理員可以管理帳號");return}
  $("dashboardPage")?.classList.toggle("active",tab==="dashboard");
