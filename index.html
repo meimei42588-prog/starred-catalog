@@ -6509,52 +6509,102 @@ window.saveStore=async function(){
   }
 };
 window.deleteStore=async function(id){
-  try{
-    id=String(id||"");
-    const s=stores.find(x=>String(x.id)===id);
-    if(!s){
-      alert("找不到這筆門市資料，請重新整理後再試。");
-      return;
-    }
-
-    const usedCount=events.filter(e=>
-      String(e.storeId||"")===id ||
-      (String(e.mall||"")===String(s.name||"") &&
-       String(e.location||"")===String(s.floor||""))
-    ).length;
-
-    const message=usedCount>0
-      ? `「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。停用門市不會刪除既有活動，確定繼續嗎？`
-      : `確定停用「${s.name} ${s.floor}」嗎？`;
-
-    if(!confirm(message))return;
-
-    const realStoreId=await resolveOrderStoreUuid(s);
-    if(!realStoreId){
-      alert("找不到對應的訂單門市資料，請重新整理後再試。");
-      return;
-    }
-    await starredApi("delete_store",{storeId:realStoreId});
-
-    await loadStarredCloudData();
-    await loadCloudData();
-
-    if(String(editingStoreId||"")===id)resetStoreForm();
+  id=String(id||"");
+  const s=stores.find(x=>String(x.id)===id);
+  if(!s){
+    alert("這筆門市已經刪除，清單已為您更新。");
     renderStores();
-    rebuildMallOptions();
-    rebuildOrderStoreOptions();
-    updateManageStoreFilter();
-    renderAll();
+    return;
+  }
+
+  const sameStore=x=>
+    String(x.area||"")===String(s.area||"")&&
+    String(x.name||"").trim()===String(s.name||"").trim()&&
+    String(x.floor||"").trim()===String(s.floor||"").trim();
+  const usedCount=events.filter(e=>
+    String(e.storeId||"")===id ||
+    (String(e.mall||"").trim()===String(s.name||"").trim()&&
+     String(e.location||"").trim()===String(s.floor||"").trim())
+  ).length;
+  const message=usedCount>0
+    ? `「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。刪除門市不會刪除既有活動，確定繼續嗎？`
+    : `確定刪除「${s.name} ${s.floor}」嗎？`;
+  if(!confirm(message))return;
+
+  const previousStores=stores.slice();
+  const previousSelectedStoreIds=new Set(selectedStoreIds);
+  const deleteButtons=[...document.querySelectorAll('.store-delete-btn')];
+  deleteButtons.forEach(button=>button.disabled=true);
+
+  // 先更新本機狀態與所有門市選單，手機版、電腦版都不必重新整理。
+  const removedIds=new Set(stores.filter(sameStore).map(x=>String(x.id)));
+  stores=stores.filter(x=>!sameStore(x));
+  removedIds.forEach(storeId=>selectedStoreIds.delete(storeId));
+  persistStores();
+  if(String(editingStoreId||"")===id)resetStoreForm();
+  renderStores();
+  rebuildMallOptions();
+  rebuildOrderStoreOptions();
+  rebuildOrderPickupStoreOptions();
+  renderAdminOrderStoreOptions();
+  updateManageStoreFilter();
+
+  try{
+    // 清單可能來自「訂單門市」、也可能只存在於「活動門市」；兩邊分別處理。
+    const orderStoreId=await resolveOrderStoreUuid(s);
+    const activityStoreId=/^\d+$/.test(id)?Number(id):null;
+    const deleteTasks=[];
+
+    if(orderStoreId){
+      deleteTasks.push(starredApi("delete_store",{storeId:orderStoreId}));
+    }
+    if(activityStoreId){
+      deleteTasks.push((async()=>{
+        // 既有活動保留百貨與樓層文字，只解除門市外鍵後刪除門市主檔。
+        const {error:eventUpdateError}=await cloudDb
+          .from("department_events")
+          .update({store_id:null})
+          .eq("store_id",activityStoreId);
+        if(eventUpdateError)throw eventUpdateError;
+        const {error:storeDeleteError}=await cloudDb
+          .from("department_stores")
+          .delete()
+          .eq("id",activityStoreId);
+        if(storeDeleteError)throw storeDeleteError;
+      })());
+    }
+
+    // 任一來源找得到即可刪除，不再因另一套資料沒有對應 ID 而誤判失敗。
+    if(!deleteTasks.length){
+      throw new Error("雲端找不到這筆門市，請重新整理後再試。");
+    }
+    await Promise.all(deleteTasks);
+
+    const key=storeKey(s);
+    deletedStoreKeys.add(key);
+    localStorage.setItem(DELETED_STORES_KEY,JSON.stringify([...deletedStoreKeys]));
 
     const status=document.getElementById("storeDeleteStatus");
     if(status){
-      status.textContent=`已停用：${s.name} ${s.floor}`;
+      status.textContent=`已刪除：${s.name} ${s.floor}`;
       status.style.display="block";
       setTimeout(()=>status.style.display="none",2500);
     }
   }catch(error){
+    // 雲端刪除失敗才還原，避免畫面與實際資料不同步。
+    stores=previousStores;
+    selectedStoreIds=previousSelectedStoreIds;
+    persistStores();
+    renderStores();
+    rebuildMallOptions();
+    rebuildOrderStoreOptions();
+    rebuildOrderPickupStoreOptions();
+    renderAdminOrderStoreOptions();
+    updateManageStoreFilter();
     console.error("deleteStore cloud error",error);
-    alert("門市停用失敗：\n"+(error?.message||error));
+    alert("門市刪除失敗：\n"+(error?.message||error));
+  }finally{
+    document.querySelectorAll('.store-delete-btn').forEach(button=>button.disabled=false);
   }
 };
 window.saveEventCloud=async function(){
