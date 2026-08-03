@@ -7355,6 +7355,14 @@ async function migrateLegacyLocalOrderState(){
  const legacyIds=new Set([...processingIds,...returnedIds,...receivedIds,...Object.keys(handlerMap)]);
  if(!legacyIds.size)return 0;
 
+ // 舊狀態只需由一台具有雲端訂單處理權限的電腦轉移一次。
+ // 一般門市帳號直接使用雲端資料，不應因本機殘留紀錄而卡住整個網站載入。
+ const verifiedLineRole=String(window.starredVerifiedLineUser?.role||"").trim().toLowerCase();
+ if(verifiedLineRole!=="manager"&&verifiedLineRole!=="system_admin"){
+  console.info("略過舊電腦訂單狀態轉移：目前 LINE 帳號不是主管或系統管理員");
+  return 0;
+ }
+
  const known=new Map(orders.map(order=>[String(order.id),order]));
  const receivedSet=new Set(receivedIds);
  const returnedSet=new Set(returnedIds.filter(id=>!receivedSet.has(id)));
