@@ -5728,7 +5728,7 @@ async function requestOrderChange(orderId){
  const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;
  if(!canCurrentLineUserOwnOrder(o)||String(o.status||'')!=='processing'){showOrderAction('無法申請','只有原回傳人員可對處理中的訂單提出更改申請。');return}
  if(!window.confirm('確定要提出更改申請嗎？\n申請後此筆訂單會移到後台「更改申請」。'))return;
- try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"pending",handler:STARRED_CHANGE_REQUEST_MARKER,shippedDate:null});await loadStarredCloudData();showOrderAction('更改申請已送出','此筆訂單目前可修改或刪除，後台確認後會回到處理中。')}catch(error){cloudError('更改申請失敗',error)}
+ try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:null,shippedDate:null});await loadStarredCloudData();showOrderAction('更改申請已送出','此筆訂單目前可修改或刪除，後台確認後會回到處理中。')}catch(error){cloudError('更改申請失敗',error)}
 }
 
 function setAdminOrderStatus(status){$("adminOrderStatus").value=status;document.querySelectorAll('.admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===status));selectedOrderIds.clear();updateCancelDeleteOrderButton();renderOrderAdmin()}
@@ -5737,7 +5737,7 @@ function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("a
 function updateAdminStatusCounts(){const status=o=>o.status||'pending';$("adminStatusAll").textContent=orders.length;$("adminStatusPending").textContent=orders.filter(o=>status(o)==='pending').length;$("adminStatusProcessing").textContent=orders.filter(o=>status(o)==='processing').length;const changeRequestCount=orders.filter(o=>status(o)==='change_request').length;$("adminStatusChangeRequest").textContent=changeRequestCount;document.querySelector('.admin-status-btn.change-request')?.classList.toggle('has-items',changeRequestCount>0);$("adminStatusShipped").textContent=orders.filter(o=>status(o)==='shipped').length;$("adminStatusCancelled").textContent=orders.filter(o=>status(o)==='cancelled').length;if($("adminStatusReturned"))$("adminStatusReturned").textContent=orders.filter(o=>status(o)==='returned'&&!o.returnReceived).length}
 function renderAdminOrderStoreOptions(){const e=$("adminOrderStoreFilter");if(!e)return;const old=e.value;const names=[...new Set([...stores.map(s=>s.name),...orders.map(o=>o.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));e.innerHTML='<option value="">全部門市</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))e.value=old}
 function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("orderHandler");if(!e)return;const old=e.value;e.innerHTML='<option value="">請選擇處理人</option>'+accounts.filter(a=>a.enabled!==false).map(a=>`<option value="${escapeHtml(a.name||a.username)}">${escapeHtml(a.name||a.username)}</option>`).join('');if([...e.options].some(x=>x.value===old))e.value=old;updateConfirmShipButton()}
-function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',displaySt=(st==='returned'&&o.returnReceived)?'return_received':st,label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${displaySt}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='pending'?'—':(o.handler||((o.status||'pending')==='cancelled'?getLocalCancelHandler(o.id):'—')))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
+function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',displaySt=(st==='returned'&&o.returnReceived)?'return_received':st,label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${displaySt}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='pending'?'—':(o.handler||'—'))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
 function toggleOrderSelection(id,c){c?selectedOrderIds.add(id):selectedOrderIds.delete(id);renderOrderAdmin()}
 function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.add(o.id):selectedOrderIds.delete(o.id));renderOrderAdmin()}
 function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}const pendingBtn=$("markPendingBtn");if(pendingBtn&&$("adminOrderStatus")?.value==="returned"){const selected=orders.filter(o=>selectedOrderIds.has(o.id));pendingBtn.disabled=selected.length>0&&selected.every(o=>o.returnReceived);pendingBtn.title=pendingBtn.disabled?"選取的訂單皆已收回退貨":"將尚未收回的退貨標記為已收回退貨"}updateConfirmShipButton()}
@@ -5764,11 +5764,32 @@ function ensureOrderConfirmationPermission(){
  return false;
 }
 async function markSelectedOrdersShipped(){if(!ensureOrderConfirmationPermission()||!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date,...getOrderOperatorContext()});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
-async function markSelectedOrdersPending(){if(!ensureSelected())return;const ids=[...selectedOrderIds];const fromReturned=$("adminOrderStatus")?.value==="returned";if(fromReturned){const targets=orders.filter(o=>ids.includes(String(o.id))&&o.status==='returned'&&!o.returnReceived);if(!targets.length){showOrderAction('無法操作','選取的退貨訂單皆已標記為已收回退貨。');return}const targetIds=targets.map(o=>String(o.id));const handler=getCurrentAdminDisplayName();addLocalReturnReceivedOrderIds(targetIds);setLocalCancelHandlers(targetIds,handler);targets.forEach(o=>{o.returnReceived=true;o.returnReceivedAt=new Date().toISOString();o.returnReceivedBy=handler;o.handler=handler});persistOrders();renderOrderCards();renderOrderAdmin();try{await starredApi("bulk_order_status",{orderIds:targetIds,status:"cancelled",handler:STARRED_RETURN_RECEIVED_MARKER+handler,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();setAdminOrderStatus('returned');showOrderAction('已收回退貨',`已將 ${targetIds.length} 筆訂單標記為已收回退貨，訂單仍保留在退貨區。`)}catch(error){cloudError('已收回退貨失敗',error)}return}removeLocalProcessingOrderIds(ids);removeLocalCancelHandlers(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);orders.forEach(o=>{if(ids.includes(String(o.id))){o.status='pending';o.handler='';o.shippedDate=''}});persistOrders();try{await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:null,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出，處理人已恢復為待填寫。`)}catch(error){cloudError('狀態修改失敗',error)}}
+async function markSelectedOrdersPending(){
+ if(!ensureSelected())return;
+ const ids=[...selectedOrderIds],fromReturned=$("adminOrderStatus")?.value==="returned";
+ if(fromReturned){
+  const targetIds=orders.filter(o=>ids.includes(String(o.id))&&o.status==='returned'&&!o.returnReceived).map(o=>String(o.id));
+  if(!targetIds.length){showOrderAction('無法操作','選取的退貨訂單皆已標記為已收回退貨。');return}
+  const handler=getCurrentAdminDisplayName();
+  try{
+   await starredApi("bulk_order_status",{orderIds:targetIds,status:"return_received",handler,shippedDate:null,...getOrderOperatorContext()});
+   removeLocalReturnReceivedOrderIds(targetIds);removeLocalReturnedOrderIds(targetIds);removeLocalCancelHandlers(targetIds);
+   selectedOrderIds.clear();await loadStarredCloudData();setAdminOrderStatus('returned');
+   showOrderAction('已收回退貨',`已將 ${targetIds.length} 筆訂單標記為已收回退貨，所有帳號已同步。`)
+  }catch(error){cloudError('已收回退貨失敗',error)}
+  return
+ }
+ try{
+  await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:null,shippedDate:null,...getOrderOperatorContext()});
+  removeLocalProcessingOrderIds(ids);removeLocalCancelHandlers(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);
+  selectedOrderIds.clear();await loadStarredCloudData();
+  showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出，所有帳號已同步。`)
+ }catch(error){cloudError('狀態修改失敗',error)}
+}
 async function approveSelectedChangeRequests(){if(!ensureOrderConfirmationPermission()||!ensureSelected())return;const handler=getCurrentAdminDisplayName();const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{
  // 更改內容在送出申請時已寫入；確認時直接切回處理中，避免額外的管理員限定動作阻擋主管。
  await starredApi("bulk_order_status",{orderIds:ids,status:"processing",handler,shippedDate:null,...getOrderOperatorContext()});
- addLocalProcessingOrderIds(ids);selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('成功',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中。`)}catch(error){removeLocalProcessingOrderIds(ids);cloudError('確認申請失敗',error)}}
+ removeLocalProcessingOrderIds(ids);selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('成功',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中並同步所有帳號。`)}catch(error){cloudError('確認申請失敗',error)}}
 function updateCancelDeleteOrderButton(){
  const btn=$("cancelDeleteOrderBtn"),returnBtn=$("returnOrderBtn"),pendingBtn=$("markPendingBtn"),approve=$("approveChangeRequestBtn"),handler=$("orderHandler"),shipDate=$("orderShipDate"),confirmShip=$("confirmShipBtn"),row=document.querySelector('.compact-process-row');
  if(!btn)return;
@@ -5815,42 +5836,29 @@ function getCurrentAdminDisplayName(){
  const visible=String($("currentUserName")?.textContent||"").replace(/^正在使用[：:]\s*/,"").trim();
  return String(currentUser?.name||visible||window.starredVerifiedLineUser?.employeeName||window.starredVerifiedLineUser?.lineDisplayName||currentUser?.username||"管理員").trim()||"管理員"
 }
-async function markSelectedOrdersCancelled(){const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);const handler=getCurrentAdminDisplayName();setLocalCancelHandlers(ids,handler);orders.forEach(o=>{if(ids.includes(String(o.id))){o.status='cancelled';o.handler=handler;o.shippedDate=''}});persistOrders();renderOrderAdmin();try{await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler,shippedDate:null});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單，處理人已固定為：${handler}。`)}catch(error){cloudError('取消訂單失敗',error)}}
+async function markSelectedOrdersCancelled(){
+ const ids=[...selectedOrderIds],handler=getCurrentAdminDisplayName();
+ try{
+  await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler,shippedDate:null,...getOrderOperatorContext()});
+  removeLocalProcessingOrderIds(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);removeLocalCancelHandlers(ids);
+  selectedOrderIds.clear();await loadStarredCloudData();
+  showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單，處理人為：${handler}，所有帳號已同步。`)
+ }catch(error){cloudError('取消訂單失敗',error)}
+}
 async function markSelectedOrdersReturned(){
  if(!ensureSelected())return;
  const ids=[...selectedOrderIds];
  const handler=getCurrentAdminDisplayName();
- const cloudHandler=STARRED_RETURNED_MARKER+handler;
- removeLocalProcessingOrderIds(ids);
- removeLocalCancelHandlers(ids);
- addLocalReturnedOrderIds(ids);
- removeLocalReturnReceivedOrderIds(ids);
- orders.forEach(o=>{
-  if(ids.includes(String(o.id))){
-   o.status='returned';
-   o.handler=handler;
-   o.shippedDate='';
-   o.returnReceived=false;
-   o.returnReceivedAt='';
-   o.returnReceivedBy='';
-  }
- });
- persistOrders();
- selectedOrderIds.clear();
- showPage('admin');
- showAdminTab('orderAdmin');
- setAdminOrderStatus('returned');
- renderOrderCards();
- renderOrderAdmin();
  try{
-  await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler:cloudHandler,shippedDate:null});
+  await starredApi("bulk_order_status",{orderIds:ids,status:"returned",handler,shippedDate:null,...getOrderOperatorContext()});
+  removeLocalProcessingOrderIds(ids);removeLocalCancelHandlers(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);
+  selectedOrderIds.clear();
   await loadStarredCloudData();
   showPage('admin');
   showAdminTab('orderAdmin');
   setAdminOrderStatus('returned');
-  showOrderAction('退貨完成',`已將 ${ids.length} 筆訂單移至退貨區。`)
+  showOrderAction('退貨完成',`已將 ${ids.length} 筆訂單移至退貨區，所有帳號已同步。`)
  }catch(error){
-  removeLocalReturnedOrderIds(ids);
   cloudError('退貨設定失敗',error)
  }
 }
@@ -5880,7 +5888,7 @@ async function exportOrdersExcel(event){
  const rows=list.map(o=>({
   訂單日期:orderDateValue(o),姓名:o.name||'',電話:o.phone||'',地址:o.address||'',配送:o.delivery||'',商品:o.items||'',
   狀態:statusText(o),
-  處理人:((o.status||'pending')==='pending'?'':(o.handler||((o.status||'pending')==='cancelled'?getLocalCancelHandler(o.id):''))),
+  處理人:((o.status||'pending')==='pending'?'':(o.handler||'')),
   寄出日期:o.shippedDate||'',備註:getEditNote(o)
  }));
 
@@ -5958,14 +5966,17 @@ ${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass
   return;
  }
 
+ let processingSyncError=null;
  if(pendingIds.length){
-  addLocalProcessingOrderIds(pendingIds);
-  orders.forEach(o=>{if(pendingIds.includes(String(o.id))){o.status='processing';o.handler='';o.shippedDate=''}});
-  persistOrders();selectedOrderIds.clear();renderOrderCards();renderOrderAdmin();
   try{
-   await starredApi('bulk_order_status',{orderIds:pendingIds,status:'pending',handler:STARRED_PROCESSING_MARKER,shippedDate:null});
+   await starredApi('bulk_order_status',{orderIds:pendingIds,status:'processing',handler:null,shippedDate:null,...getOrderOperatorContext()});
+   removeLocalProcessingOrderIds(pendingIds);
+   selectedOrderIds.clear();
    await loadStarredCloudData();
-  }catch(error){console.warn('匯出後同步處理中狀態失敗，已保留本機狀態：',error)}
+  }catch(error){
+   processingSyncError=error;
+   console.error('匯出後同步處理中狀態失敗：',error);
+  }
  }
 
  if(keepAdminPage){
@@ -5974,7 +5985,11 @@ ${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass
   if(keepOrderAdminTab)showAdminTab('orderAdmin');setAdminOrderStatus(keepAdminStatus);
  }
  requestAnimationFrame(()=>window.scrollTo(keepScrollX,keepScrollY));
- showOrderAction('Excel 報表已開啟',pendingIds.length?`已開啟 ${list.length} 筆訂單報表，其中 ${pendingIds.length} 筆待寄出訂單已移到處理中。若未自動下載，請在報表頁按「下載 Excel」。`:`已開啟 ${list.length} 筆訂單報表。若未自動下載，請在報表頁按「下載 Excel」。`);
+ if(processingSyncError){
+  showOrderAction('報表已開啟，但狀態同步失敗',`Excel 已產生，但 ${pendingIds.length} 筆訂單沒有改成處理中：${processingSyncError?.message||processingSyncError}。請確認網路後重新操作。`)
+ }else{
+  showOrderAction('Excel 報表已開啟',pendingIds.length?`已開啟 ${list.length} 筆訂單報表，其中 ${pendingIds.length} 筆待寄出訂單已移到處理中，所有帳號將自動同步。若未自動下載，請在報表頁按「下載 Excel」。`:`已開啟 ${list.length} 筆訂單報表。若未自動下載，請在報表頁按「下載 Excel」。`)
+ }
  // 保留網址一段時間，讓使用者可以手動下載。
  setTimeout(()=>{if(objectUrl)URL.revokeObjectURL(objectUrl)},10*60*1000);
 }
@@ -7112,7 +7127,12 @@ const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
 const STARRED_LINE_RELOGIN_KEY = "starred_line_relogin_running";
 const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
 const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
+const STARRED_ORDER_SYNC_INTERVAL_MS = 15000;
 let starredLiffInitialization=null;
+let starredOrderSyncTimer=0;
+let starredOrderSyncRunning=false;
+let starredOrderSyncEventsBound=false;
+let starredOrderSyncReady=false;
 
 /* 請把 Supabase「Publishable key」完整貼到下面引號內；不要放 Secret key。 */
 const STARRED_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_uxp_jErpZrRFYX4SXNmpkA_x9U86GSP";
@@ -7269,8 +7289,20 @@ function addLocalProcessingOrderIds(ids){const set=getLocalProcessingOrderIds();
 function removeLocalProcessingOrderIds(ids){const set=getLocalProcessingOrderIds();ids.forEach(id=>set.delete(String(id)));saveLocalProcessingOrderIds(set)}
 function cloudStoreToLocal(s){return{id:String(s.id),area:String(s.region||"central"),name:String(s.name||""),floor:String(s.floor||"")}}
 function cloudUserToLocal(u){return{id:String(u.line_user_id||u.id||""),dbId:String(u.id||""),name:String(u.employee_name||u.line_display_name||"LINE 使用者"),displayName:String(u.line_display_name||"LINE 使用者"),pictureUrl:String(u.picture_url||""),storeId:String(u.store_id||""),role:String(u.role||"staff"),enabled:u.is_enabled!==false,lastLogin:u.last_login_at||""}}
+function cloudOrderState(o){
+ const rawStatus=String(o?.status||"pending"),processor=String(o?.processor_name||"");
+ if(o?.effective_status){
+  return{status:String(o.effective_status),handler:String(o.effective_handler||""),returnReceived:o.return_received===true,returnReceivedBy:String(o.return_received_by||"")}
+ }
+ if(processor.startsWith(STARRED_RETURN_RECEIVED_MARKER)){const handler=processor.slice(STARRED_RETURN_RECEIVED_MARKER.length);return{status:"returned",handler,returnReceived:true,returnReceivedBy:handler}}
+ if(processor.startsWith(STARRED_RETURNED_MARKER)){return{status:"returned",handler:processor.slice(STARRED_RETURNED_MARKER.length),returnReceived:false,returnReceivedBy:""}}
+ if(rawStatus==="change_request"||processor===STARRED_CHANGE_REQUEST_MARKER)return{status:"change_request",handler:"",returnReceived:false,returnReceivedBy:""};
+ if(rawStatus==="processing"||processor===STARRED_PROCESSING_MARKER)return{status:"processing",handler:"",returnReceived:false,returnReceivedBy:""};
+ return{status:rawStatus,handler:rawStatus==="pending"?"":processor,returnReceived:false,returnReceivedBy:""}
+}
+function taipeiCloudDateTime(value){return value?new Date(value).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):""}
 function cloudOrderToLocal(o){
- const pickup=o.delivery_method==="store_pickup",logs=Array.isArray(o.audit_logs)?o.audit_logs:[],createLog=logs.find(x=>x.action==="create"),updateLogs=logs.filter(x=>x.action==="update"||x.action==="change_request_submit");
+ const pickup=o.delivery_method==="store_pickup",logs=Array.isArray(o.audit_logs)?o.audit_logs:[],createLog=logs.find(x=>x.action==="create"),updateLogs=logs.filter(x=>x.action==="update"||x.action==="change_request_submit"),state=cloudOrderState(o);
  return{
   id:String(o.id),orderNumber:String(o.order_number||""),photoKey:String(o.photo_url||""),photoUrl:String(o.photo_url||""),
   returnPerson:String(o.return_person||""),createdByLineId:String(o.creator_line_user_id||""),store:String(o.store?.name||""),
@@ -7278,28 +7310,148 @@ function cloudOrderToLocal(o){
   address:String(o.customer_address||""),delivery:pickup?"門市自取":"總公司寄出",
   items:String(o.product_content||o.note||""),pickupArea:String(o.pickup_store?.region||""),
   pickupStore:String(o.pickup_store?.name||""),pickupStoreId:String(o.pickup_store_id||""),
-  createdAt:o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",
-  updatedAt:o.updated_at?new Date(o.updated_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):(o.created_at?new Date(o.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):""),
-  createdDate:String(o.order_date||"").slice(0,10),status:(String(o.processor_name||"").startsWith(STARRED_RETURNED_MARKER)||String(o.processor_name||"").startsWith(STARRED_RETURN_RECEIVED_MARKER)||getLocalReturnedOrderIds().has(String(o.id)))?"returned":((o.status==="change_request"||((o.status||"pending")==="pending"&&String(o.processor_name||"")===STARRED_CHANGE_REQUEST_MARKER))?"change_request":((o.status==="processing"||((o.status||"pending")==="pending"&&(String(o.processor_name||"")===STARRED_PROCESSING_MARKER||getLocalProcessingOrderIds().has(String(o.id)))))?"processing":String(o.status||"pending"))),
-  handler:String(o.processor_name||"").startsWith(STARRED_RETURN_RECEIVED_MARKER)?String(o.processor_name||"").slice(STARRED_RETURN_RECEIVED_MARKER.length):(String(o.processor_name||"").startsWith(STARRED_RETURNED_MARKER)?String(o.processor_name||"").slice(STARRED_RETURNED_MARKER.length):(getLocalReturnedOrderIds().has(String(o.id))?(getLocalCancelHandler(o.id)||String(o.processor_name||"").replace(/^__STARRED_RETURNED__::/,"")||""):(String(o.status||"pending")==="pending"?"":([STARRED_PROCESSING_MARKER,STARRED_CHANGE_REQUEST_MARKER].includes(String(o.processor_name||""))?"":(String(o.processor_name||"")||(String(o.status||"")==="cancelled"?getLocalCancelHandler(o.id):"")))))),returnReceived:(String(o.processor_name||"").startsWith(STARRED_RETURN_RECEIVED_MARKER)||getLocalReturnReceivedOrderIds().has(String(o.id))),returnReceivedBy:String(o.processor_name||"").startsWith(STARRED_RETURN_RECEIVED_MARKER)?String(o.processor_name||"").slice(STARRED_RETURN_RECEIVED_MARKER.length):(getLocalReturnReceivedOrderIds().has(String(o.id))?(getLocalCancelHandler(o.id)||""):""),returnReceivedAt:(String(o.processor_name||"").startsWith(STARRED_RETURN_RECEIVED_MARKER)||getLocalReturnReceivedOrderIds().has(String(o.id)))?(o.updated_at||o.processed_at||""):"",shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
+  createdAt:taipeiCloudDateTime(o.created_at),
+  updatedAt:taipeiCloudDateTime(o.updated_at||o.created_at),
+  createdDate:String(o.order_date||"").slice(0,10),cloudStatus:String(o.status||"pending"),cloudProcessorName:String(o.processor_name||""),cloudUpdatedAtRaw:String(o.updated_at||o.created_at||""),status:state.status,
+  handler:state.handler,returnReceived:state.returnReceived,returnReceivedBy:state.returnReceivedBy,returnReceivedAt:state.returnReceived?(o.updated_at||o.processed_at||""):"",shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
   original:createLog?.after_data?{name:createLog.after_data.customer_name,phone:createLog.after_data.customer_phone,address:createLog.after_data.customer_address,delivery:createLog.after_data.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:createLog.after_data.product_content,photoKey:String(o.photo_url||""),createdAt:o.created_at}:null,
   history:updateLogs.map(x=>({editedAt:x.created_at?new Date(x.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",editedBy:x.actor_name||"",before:{name:x.before_data?.customer_name,phone:x.before_data?.customer_phone,address:x.before_data?.customer_address,delivery:x.before_data?.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:x.before_data?.product_content}}))
  }
 }
-async function loadStarredCloudData(){
- showSystemLoading("資料載入中…","正在同步最新的活動、門市與訂單資料。");
+function applyStarredCloudData(data){
+ stores=(data.stores||[]).map(cloudStoreToLocal);
+ lineUsers=(data.lineUsers||[]).map(cloudUserToLocal);
+ orders=(data.orders||[]).map(cloudOrderToLocal);
+ persistStores();persistLineUsers();persistOrders();
+ rebuildMallOptions();rebuildOrderStoreOptions();renderStores();renderLineUsers();renderOrderCards();renderOrderAdmin();
+}
+async function loadStarredCloudData(options={}){
+ const silent=options&&options.silent===true;
+ if(!silent)showSystemLoading("資料載入中…","正在同步最新的活動、門市與訂單資料。");
  try{
   const data=await starredApi("bootstrap");
-  stores=(data.stores||[]).map(cloudStoreToLocal);
-  lineUsers=(data.lineUsers||[]).map(cloudUserToLocal);
-  orders=(data.orders||[]).map(cloudOrderToLocal);
-  persistStores();persistLineUsers();persistOrders();
-  rebuildMallOptions();rebuildOrderStoreOptions();renderStores();renderLineUsers();renderOrderCards();renderOrderAdmin();
-  hideSystemLoading();
+  applyStarredCloudData(data);
+  if(!silent)hideSystemLoading();
   return data;
  }catch(error){
-  showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
+  if(!silent)showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
   throw error;
+ }
+}
+
+function clearLegacyLocalOrderState(){
+ try{
+  localStorage.removeItem(STARRED_LOCAL_PROCESSING_KEY);
+  localStorage.removeItem(STARRED_RETURNED_ORDER_IDS_KEY);
+  localStorage.removeItem(STARRED_RETURN_RECEIVED_IDS_KEY);
+  localStorage.removeItem(STARRED_CANCEL_HANDLER_KEY);
+ }catch(_){}
+}
+async function migrateLegacyLocalOrderState(){
+ const processingIds=[...getLocalProcessingOrderIds()].map(String);
+ const returnedIds=[...getLocalReturnedOrderIds()].map(String);
+ const receivedIds=[...getLocalReturnReceivedOrderIds()].map(String);
+ const handlerMap=getLocalCancelHandlerMap();
+ const legacyIds=new Set([...processingIds,...returnedIds,...receivedIds,...Object.keys(handlerMap)]);
+ if(!legacyIds.size)return 0;
+
+ const known=new Map(orders.map(order=>[String(order.id),order]));
+ const receivedSet=new Set(receivedIds);
+ const returnedSet=new Set(returnedIds.filter(id=>!receivedSet.has(id)));
+ const cancelledSet=new Set(Object.keys(handlerMap).filter(id=>!receivedSet.has(id)&&!returnedSet.has(id)));
+ const processingTargets=processingIds.filter(id=>{
+  const order=known.get(id);
+  return order&&order.status==="pending"&&!receivedSet.has(id)&&!returnedSet.has(id)&&!cancelledSet.has(id)
+ });
+
+ const groupedStatusSync=async(ids,status)=>{
+  const groups=new Map();
+  ids.filter(id=>known.has(id)).forEach(id=>{
+   const handler=String(handlerMap[id]||getCurrentAdminDisplayName()||"管理員");
+   if(!groups.has(handler))groups.set(handler,[]);
+   groups.get(handler).push(id);
+  });
+  let count=0;
+  for(const [handler,orderIds] of groups){
+   if(!orderIds.length)continue;
+   await starredApi("bulk_order_status",{orderIds,status,handler,shippedDate:null,...getOrderOperatorContext()});
+   count+=orderIds.length;
+  }
+  return count;
+ };
+
+ showSystemLoading("正在同步舊電腦資料…","正在把這台電腦原有的訂單狀態補寫到雲端，請勿關閉頁面。");
+ let migrated=0;
+ if(processingTargets.length){
+  await starredApi("bulk_order_status",{orderIds:processingTargets,status:"processing",handler:null,shippedDate:null,...getOrderOperatorContext()});
+  migrated+=processingTargets.length;
+ }
+ migrated+=await groupedStatusSync([...returnedSet].filter(id=>known.get(id)?.status!=="shipped"),"returned");
+ migrated+=await groupedStatusSync([...receivedSet].filter(id=>known.get(id)?.status!=="shipped"),"return_received");
+ migrated+=await groupedStatusSync([...cancelledSet].filter(id=>known.get(id)?.status==="cancelled"),"cancelled");
+
+ clearLegacyLocalOrderState();
+ if(migrated){
+  await loadStarredCloudData({silent:true});
+  hideSystemLoading();
+  showOrderAction("雲端同步完成",`已將這台電腦原有的 ${migrated} 筆訂單狀態同步給所有帳號。`);
+ }else{
+  hideSystemLoading();
+ }
+ return migrated;
+}
+
+function applyOrderStateSync(rows){
+ const localMap=new Map(orders.map(order=>[String(order.id),order]));
+ let needsFullReload=rows.length!==orders.length;
+ for(const row of rows){
+  const order=localMap.get(String(row.id));
+  if(!order){needsFullReload=true;continue}
+  if(row.updated_at&&String(order.cloudUpdatedAtRaw||"")!==String(row.updated_at))needsFullReload=true;
+  const state=cloudOrderState(row);
+  order.cloudStatus=String(row.status||"pending");
+  order.cloudProcessorName=String(row.processor_name||"");
+  order.status=state.status;
+  order.handler=state.handler;
+  order.returnReceived=state.returnReceived;
+  order.returnReceivedBy=state.returnReceivedBy;
+  order.returnReceivedAt=state.returnReceived?(row.updated_at||row.processed_at||""):"";
+  order.shippedDate=state.status==="shipped"&&row.processed_at?String(row.processed_at).slice(0,10):"";
+  if(row.updated_at){order.cloudUpdatedAtRaw=String(row.updated_at);order.updatedAt=taipeiCloudDateTime(row.updated_at)}
+ }
+ if(needsFullReload)return false;
+ persistOrders();
+ if(typeof orderSearchCache!=="undefined")orderSearchCache.clear();
+ renderOrderCards();renderOrderAdmin();
+ if(typeof renderOrderBackup==="function")renderOrderBackup();
+ if(typeof renderDashboard==="function")renderDashboard();
+ if(typeof renderNotifications==="function")renderNotifications();
+ return true;
+}
+async function syncStarredOrderStates(options={}){
+ const force=options&&options.force===true;
+ if(!starredOrderSyncReady||starredOrderSyncRunning||(!force&&document.hidden))return;
+ if(!window.liff||!liff.isLoggedIn())return;
+ starredOrderSyncRunning=true;
+ try{
+  const result=await starredApi("order_sync");
+  const rows=Array.isArray(result.orderStates)?result.orderStates:[];
+  if(!applyOrderStateSync(rows))await loadStarredCloudData({silent:true});
+ }catch(error){
+  console.warn("訂單背景同步失敗：",error);
+ }finally{
+  starredOrderSyncRunning=false;
+ }
+}
+function startStarredOrderAutoSync(){
+ starredOrderSyncReady=true;
+ if(starredOrderSyncTimer)clearInterval(starredOrderSyncTimer);
+ starredOrderSyncTimer=setInterval(()=>syncStarredOrderStates(),STARRED_ORDER_SYNC_INTERVAL_MS);
+ if(!starredOrderSyncEventsBound){
+  starredOrderSyncEventsBound=true;
+  window.addEventListener("focus",()=>syncStarredOrderStates({force:true}));
+  window.addEventListener("pageshow",()=>syncStarredOrderStates({force:true}));
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncStarredOrderStates({force:true})});
  }
 }
 
@@ -7359,6 +7511,9 @@ async function runStarredLiffInitialization(){
     setLineReturnPerson(normalized);
     currentStage="同步系統資料";
     await loadStarredCloudData();
+    currentStage="轉移舊電腦訂單狀態";
+    await migrateLegacyLocalOrderState();
+    startStarredOrderAutoSync();
   }catch(error){
     console.error("LIFF／line-api 初始化失敗：",error);
     if(error&&error.blocked){
