@@ -7109,8 +7109,12 @@ document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today
 <script>
 /* ===== LINE LIFF + Supabase line-api：僅處理登入資料，不修改任何版面 ===== */
 const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
+const STARRED_LIFF_URL = `https://liff.line.me/${STARRED_LIFF_ID}`;
+const STARRED_LINE_RELOGIN_KEY = "starred_line_relogin_running";
+const STARRED_LINE_LOGIN_ATTEMPT_KEY = "starred_line_login_attempt_at";
 const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
 const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
+let starredLiffInitialization=null;
 
 /* 請把 Supabase「Publishable key」完整貼到下面引號內；不要放 Secret key。 */
 const STARRED_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_uxp_jErpZrRFYX4SXNmpkA_x9U86GSP";
@@ -7173,27 +7177,54 @@ function isLineIdTokenExpired(token,bufferSeconds=60){
   if(!payload||!payload.exp)return false;
   return Number(payload.exp)*1000 <= Date.now()+bufferSeconds*1000;
 }
+function getStarredLineCleanUrl(){
+  return location.origin+location.pathname;
+}
+function startStarredLineLogin(){
+  if(!window.liff||!/^https?:$/i.test(location.protocol))return false;
+
+  /*
+    Safari 從 LINE 開到外部瀏覽器時，網址可能仍帶著上一輪 LIFF 的
+    code、state 或 liff.state。登入回傳網址固定使用乾淨網址，避免把
+    舊參數再次包進 LINE 授權網址而造成 access.line.me 400 或跳轉迴圈。
+  */
+  const now=Date.now();
+  const lastAttempt=Number(sessionStorage.getItem(STARRED_LINE_LOGIN_ATTEMPT_KEY)||0);
+  if(lastAttempt&&now-lastAttempt<15000){
+    showSystemLoadingError("LINE 登入未完成","請按「重新載入」重新開始登入；若仍無法登入，請關閉此頁後再由 LINE 連結進入。");
+    return false;
+  }
+
+  sessionStorage.setItem(STARRED_LINE_LOGIN_ATTEMPT_KEY,String(now));
+  showSystemLoading("LINE 登入中…","正在開啟 LINE 完成登入，請稍候。");
+  try{
+    liff.login({redirectUri:getStarredLineCleanUrl()});
+    return true;
+  }catch(error){
+    sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
+    console.error("LINE 登入啟動失敗",error);
+    showSystemLoadingError("LINE 登入失敗","請按「重新載入」再試一次，或關閉此頁後由 LINE 連結重新進入。");
+    return false;
+  }
+}
 function forceLineRelogin(){
   if(!window.liff)return false;
-  if(sessionStorage.getItem("starred_line_relogin_running")==="1")return true;
-  sessionStorage.setItem("starred_line_relogin_running","1");
+  if(sessionStorage.getItem(STARRED_LINE_RELOGIN_KEY)==="1")return true;
+  sessionStorage.setItem(STARRED_LINE_RELOGIN_KEY,"1");
+  sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
   try{if(liff.isLoggedIn())liff.logout()}catch(_){}
-  const redirectUri=location.origin+location.pathname+location.search;
-  setTimeout(()=>{
-    try{liff.login({redirectUri})}
-    catch(error){
-      sessionStorage.removeItem("starred_line_relogin_running");
-      console.error("LINE 重新登入失敗",error);
-      location.href=`https://liff.line.me/${STARRED_LIFF_ID}`;
-    }
-  },80);
+
+  /* 先回到乾淨頁面，再由初始化流程重新登入，避免 logout 與 login 互撞。 */
+  location.replace(getStarredLineCleanUrl());
   return true;
 }
 async function getFreshLineIdToken(){
   if(!window.liff)throw new Error("LINE 登入程式尚未載入");
   if(!liff.isLoggedIn()){
-    forceLineRelogin();
-    throw new Error("LINE 尚未登入，正在重新登入…");
+    startStarredLineLogin();
+    const loginError=new Error("LINE 尚未登入，正在重新登入…");
+    loginError.relogin=true;
+    throw loginError;
   }
   const idToken=liff.getIDToken();
   if(!idToken||isLineIdTokenExpired(idToken)){
@@ -7297,7 +7328,7 @@ async function loadStarredCloudData(){
  }
 }
 
-async function initializeStarredLiff(){
+async function runStarredLiffInitialization(){
   try{
     if(!window.liff){
       console.error("LIFF SDK 載入失敗");
@@ -7305,14 +7336,20 @@ async function initializeStarredLiff(){
       return;
     }
     await liff.init({liffId:STARRED_LIFF_ID});
+
+    /* LINE 官方要求等 liff.init 完成後才能改網址。 */
+    cleanLoginCallbackUrl();
+
     if(!liff.isLoggedIn()){
       if(/^https?:$/i.test(location.protocol)){
-        liff.login({redirectUri:location.href.split("#")[0]});
+        sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+        startStarredLineLogin();
       }
       return;
     }
 
-    sessionStorage.removeItem("starred_line_relogin_running");
+    sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+    sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
     const idToken=liff.getIDToken();
     if(!idToken||isLineIdTokenExpired(idToken)){
       forceLineRelogin();
@@ -7336,7 +7373,6 @@ async function initializeStarredLiff(){
     sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
     if(typeof window.registerLineLoginUser==="function")window.registerLineLoginUser(normalized);
     setLineReturnPerson(normalized);
-    cleanLoginCallbackUrl();
     await loadStarredCloudData();
   }catch(error){
     console.error("LIFF／line-api 初始化失敗：",error);
@@ -7344,6 +7380,7 @@ async function initializeStarredLiff(){
       showLineAccessBlocked(error.message);
       return;
     }
+    if(error&&error.relogin)return;
     const cached=getCurrentLineUser();
     if(cached)setLineReturnPerson(cached);
     showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
@@ -7351,6 +7388,14 @@ async function initializeStarredLiff(){
       console.warn("請先在 HTML 的 STARRED_SUPABASE_PUBLISHABLE_KEY 填入 Publishable key。");
     }
   }
+}
+
+function initializeStarredLiff(){
+  /* 防止錯誤按鈕連點時，在同一頁同時執行多次 liff.init。 */
+  if(starredLiffInitialization)return starredLiffInitialization;
+  starredLiffInitialization=runStarredLiffInitialization()
+    .finally(()=>{starredLiffInitialization=null});
+  return starredLiffInitialization;
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
@@ -7389,7 +7434,10 @@ function showSystemLoadingError(title="資料載入失敗",text="資料載入失
 function retrySystemLoading(){
  const overlay=document.getElementById("systemLoadingOverlay");
  if(overlay){overlay.classList.remove("error");}
- initializeStarredLiff();
+ sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+ sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
+ /* 重新載入乾淨網址，不沿用上一輪 LINE 登入留下的查詢參數。 */
+ location.replace(getStarredLineCleanUrl());
 }
 function cleanLoginCallbackUrl(){
  if(!/^https?:$/i.test(location.protocol))return;
