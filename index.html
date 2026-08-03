@@ -5441,20 +5441,27 @@ function splitTaiwanAddress(address=''){const text=String(address||'').trim();le
 function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.value==='門市自取',m=$("editOrderPickupStoreWrap"),addr=$("editOrderAddressFields");if(m)m.style.display=pickup?'flex':'none';if(addr)addr.style.display=pickup?'none':'grid';if(pickup)renderEditPickupStores($("editOrderPickupStore")?.value||'')}
 
 let orderCameraStream=null;
+const ORDER_CAMERA_PERMISSION_KEY='starred_camera_permission_granted_v1';
 function isAndroidOrderDevice(){return /Android/i.test(navigator.userAgent||'')}
+function hasLiveOrderCameraStream(){return !!orderCameraStream&&orderCameraStream.getVideoTracks().some(track=>track.readyState==='live')}
+function setOrderCameraTracksEnabled(enabled){if(orderCameraStream)orderCameraStream.getVideoTracks().forEach(track=>{track.enabled=enabled})}
 function stopOrderCameraStream(){
  if(orderCameraStream){orderCameraStream.getTracks().forEach(track=>track.stop());orderCameraStream=null}
  const video=$("orderCameraVideo");if(video)video.srcObject=null;
 }
 function closeOrderCamera(){
- stopOrderCameraStream();
+ // 保留本次頁面已取得的相機連線，避免 Android／LINE 每拍一張就重新詢問權限。
+ // track.enabled=false 會暫停鏡頭畫面；真正離開頁面時才完整釋放。
+ setOrderCameraTracksEnabled(false);
+ const video=$("orderCameraVideo");if(video)video.pause();
  $("orderCameraModal")?.classList.remove('show');
  const capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
  if(capture){capture.disabled=true;capture.textContent='允許使用相機';capture.dataset.mode='permission'}
  if(fallback){fallback.hidden=true;fallback.dataset.mode='cancel';fallback.textContent='取消'}
 }
 function openNativeOrderCamera(){
- closeOrderCamera();
+ stopOrderCameraStream();
+ $("orderCameraModal")?.classList.remove('show');
  const input=$("orderCameraPhoto");if(input){input.value='';input.click()}
 }
 function handleOrderCameraFallback(){
@@ -5481,10 +5488,23 @@ function openOrderCamera(){
  if(!modal||!video||!navigator.mediaDevices?.getUserMedia){
   showOrderAction('無法直接開啟相機','目前的瀏覽器不支援直接拍照，請改用 Chrome 開啟此頁面。');return;
  }
- stopOrderCameraStream();modal.classList.add('show');showOrderCameraPermissionIntro();
+ modal.classList.add('show');
+ if(hasLiveOrderCameraStream()){
+  setOrderCameraTracksEnabled(true);video.srcObject=orderCameraStream;
+  status.textContent='正在恢復後鏡頭…';capture.disabled=true;capture.textContent='正在開啟…';fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;
+  video.play().then(()=>{status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false}).catch(()=>requestOrderCameraAccess());
+  return;
+ }
+ // 第一次成功後會記住網站內的選擇；後續直接由這次點擊動作開啟鏡頭，不再多按一次網站按鈕。
+ if(localStorage.getItem(ORDER_CAMERA_PERMISSION_KEY)==='1')requestOrderCameraAccess();
+ else showOrderCameraPermissionIntro();
 }
 async function requestOrderCameraAccess(){
  const video=$("orderCameraVideo"),status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ if(hasLiveOrderCameraStream()){
+  setOrderCameraTracksEnabled(true);video.srcObject=orderCameraStream;await video.play();
+  status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;return;
+ }
  stopOrderCameraStream();status.textContent='正在等待相機權限…';capture.disabled=true;capture.textContent='正在開啟…';fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;
  try{
   try{orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}
@@ -5493,6 +5513,7 @@ async function requestOrderCameraAccess(){
    orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
   }
   video.srcObject=orderCameraStream;await video.play();
+  localStorage.setItem(ORDER_CAMERA_PERMISSION_KEY,'1');
   status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='取消';
  }catch(error){
   console.error('Android camera failed:',error);stopOrderCameraStream();
@@ -5507,6 +5528,10 @@ async function requestOrderCameraAccess(){
   fallback.hidden=false;
  }
 }
+
+// 離開或重新載入頁面時才真正釋放相機，避免背景持續占用鏡頭。
+window.addEventListener('pagehide',stopOrderCameraStream);
+window.addEventListener('beforeunload',stopOrderCameraStream);
 async function takeOrderCameraPhoto(){
  const video=$("orderCameraVideo"),capture=$("orderCameraCapture"),status=$("orderCameraStatus");
  if(!video?.videoWidth||!video?.videoHeight){status.textContent='相機尚未準備完成，請稍候再拍。';return}
