@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- STARRED BUILD: 20260803-cross-project-v4 | 正確版本共 8062 行 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4094,6 +4095,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260803-cross-project-v4";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -4335,16 +4337,28 @@ function checkLogin(){
   $("lineUserTabBtn")?.classList.remove("hidden-by-role");
  }
 }
+let cloudAdminAccountField="account";
+const CLOUD_ADMIN_ACCOUNT_FIELDS=["account","username","login_name","login_id","login","user_name","user","email","name"];
+function detectCloudAdminAccountField(row){
+ const field=CLOUD_ADMIN_ACCOUNT_FIELDS.find(key=>Object.prototype.hasOwnProperty.call(row||{},key));
+ if(field)cloudAdminAccountField=field;
+ return cloudAdminAccountField;
+}
+function cloudAdminAccountValue(row){
+ const field=detectCloudAdminAccountField(row);
+ return String(row?.[field]||"").trim();
+}
 async function loadCloudAccounts(){
  try{
   if(typeof cloudDb==="undefined")return false;
-  const {data,error}=await cloudDb.from("admins").select("id,account,password,name,role,email,enabled");
+  const {data,error}=await cloudDb.from("admins").select("*");
   if(error)throw error;
   if(Array.isArray(data)&&data.length){
+   detectCloudAdminAccountField(data[0]);
    accounts=data.map(row=>({
     id:String(row.id),
-    name:row.name||row.account||"管理員",
-    username:String(row.account||"").trim(),
+    name:row.name||cloudAdminAccountValue(row)||"管理員",
+    username:cloudAdminAccountValue(row),
     email:row.email||"",
     password:String(row.password||""),
     role:row.role||"manager",
@@ -4367,6 +4381,9 @@ async function login(){
  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent="登入中…"}
  try{
   const result=await starredApi("admin_login",{operatorAccount:username,operatorPassword:password});
+  if(result?.apiBuild!==STARRED_REQUIRED_ADMIN_API_BUILD){
+   throw new Error("Supabase line-api 仍不是最新版本，請確認已用本次提供的後端檔覆蓋 index.ts 並部署。");
+  }
   const admin=result?.admin||{};
   if(!result?.adminSessionToken||!admin?.username)throw new Error("後台登入驗證失敗，請重新登入");
   currentUser={
@@ -5334,19 +5351,20 @@ function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classLi
 function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
 function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
 async function syncAdminAccountToCloud(account){
- const payload={
+ const accountName=String(account.username||"").trim();
+ const sharedPayload={
   id:account.id,
-  account:String(account.username||"").trim(),
   password:String(account.password||""),
   name:account.name,
   role:account.role,
   email:account.email||null,
   enabled:account.enabled!==false
  };
+ const payload={...sharedPayload,[cloudAdminAccountField]:accountName};
  const {data,error}=await cloudDb
   .from("admins")
   .upsert(payload,{onConflict:"id"})
-  .select("id,account,password,name,role,email,enabled")
+  .select("*")
   .single();
  if(error)throw error;
  if(!data)throw new Error("Supabase 未回傳儲存結果");
@@ -7239,7 +7257,10 @@ async function starredApi(action,payload={}){
   const response=await fetch(STARRED_LINE_API_URL,{method:"POST",headers:{"Content-Type":"application/json","apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,"Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`},body:JSON.stringify({idToken,action,...operatorContext,...payload})});
   const result=await response.json().catch(()=>({success:false,error:"伺服器回傳格式錯誤"}));
   if(!response.ok||!result.success){
-    const message=String(result.error||`雲端操作失敗（${response.status}）`);
+    let message=String(result.error||`雲端操作失敗（${response.status}）`);
+    if(/column\s+admins\.account\s+does\s+not\s+exist/i.test(message)){
+      message="目前 Supabase line-api 仍在執行舊版；請用最新版後端完整覆蓋 index.ts 後重新部署。";
+    }
     if(/idtoken\s*expired|token\s*expired|expired\s*token/i.test(message)){
       forceLineRelogin();
       const expiredError=new Error("LINE 登入已過期，正在重新登入…");
