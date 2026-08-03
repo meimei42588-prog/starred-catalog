@@ -4335,16 +4335,24 @@ function checkLogin(){
   $("lineUserTabBtn")?.classList.remove("hidden-by-role");
  }
 }
+function isMissingAdminColumn(error,column){
+ const text=String(`${error?.code||''} ${error?.message||''} ${error?.details||''}`).toLowerCase();
+ const target=String(column||'').toLowerCase();
+ return (text.includes('42703')&&text.includes(target))||(text.includes('column')&&text.includes(target)&&text.includes('does not exist'));
+}
 async function loadCloudAccounts(){
  try{
   if(typeof cloudDb==="undefined")return false;
-  const {data,error}=await cloudDb.from("admins").select("id,account,password,name,role,email,enabled");
+  let {data,error}=await cloudDb.from("admins").select("id,username,password,name,role,email,enabled");
+  if(error&&isMissingAdminColumn(error,"username")){
+   ({data,error}=await cloudDb.from("admins").select("id,account,password,name,role,email,enabled"));
+  }
   if(error)throw error;
   if(Array.isArray(data)&&data.length){
    accounts=data.map(row=>({
     id:String(row.id),
-    name:row.name||row.account||"管理員",
-    username:String(row.account||"").trim(),
+    name:row.name||row.username||row.account||"管理員",
+    username:String(row.username||row.account||"").trim(),
     email:row.email||"",
     password:String(row.password||""),
     role:row.role||"manager",
@@ -5334,20 +5342,27 @@ function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classLi
 function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
 function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
 async function syncAdminAccountToCloud(account){
- const payload={
+ const accountName=String(account.username||"").trim();
+ const sharedPayload={
   id:account.id,
-  account:String(account.username||"").trim(),
   password:String(account.password||""),
   name:account.name,
   role:account.role,
   email:account.email||null,
   enabled:account.enabled!==false
  };
- const {data,error}=await cloudDb
+ let {data,error}=await cloudDb
   .from("admins")
-  .upsert(payload,{onConflict:"id"})
-  .select("id,account,password,name,role,email,enabled")
+  .upsert({...sharedPayload,username:accountName},{onConflict:"id"})
+  .select("id,username,password,name,role,email,enabled")
   .single();
+ if(error&&isMissingAdminColumn(error,"username")){
+  ({data,error}=await cloudDb
+   .from("admins")
+   .upsert({...sharedPayload,account:accountName},{onConflict:"id"})
+   .select("id,account,password,name,role,email,enabled")
+   .single());
+ }
  if(error)throw error;
  if(!data)throw new Error("Supabase 未回傳儲存結果");
  return data;
