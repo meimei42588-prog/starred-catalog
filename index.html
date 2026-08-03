@@ -84,6 +84,11 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 .lightbox.open{display:flex;opacity:1}
 .lightbox img{max-width:78vw;max-height:78vh;object-fit:contain;background:#fff;border-radius:18px;box-shadow:0 14px 32px rgba(39,66,83,.14);transform:scale(.985);animation:softZoom .45s cubic-bezier(.22,.61,.36,1) forwards}
 .lightbox-close{position:absolute;top:20px;right:24px;width:42px;height:42px;border:1px solid #d8e1e7;border-radius:50%;background:rgba(255,255,255,.9);color:#274253;font-size:24px;font-weight:900}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:58px;min-height:0;padding:0;border:1px solid #d8e1e7;border-radius:14px;background:rgba(255,255,255,.94);color:#274253;font-size:34px;font-weight:900;box-shadow:0 8px 24px rgba(39,66,83,.14)}
+.lightbox-prev{left:18px}.lightbox-next{right:18px}
+.lightbox-count{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);min-width:72px;padding:7px 13px;border-radius:999px;background:rgba(39,66,83,.9);color:#fff;text-align:center;font-size:13px;font-weight:900}
+.lightbox-nav[hidden],.lightbox-count[hidden]{display:none!important}
+@media(max-width:620px){.lightbox-nav{width:42px;height:52px;border-radius:12px;font-size:30px}.lightbox-prev{left:8px}.lightbox-next{right:8px}.lightbox-count{bottom:12px}}
 .account-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
 @keyframes softZoom{0%{transform:scale(.985);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
 .admin-tabs{display:flex;gap:8px;margin-bottom:16px}.admin-tabs button{border:0;border-radius:999px;padding:10px 16px;background:#e7eef2;color:#274253;font-weight:800}.admin-tabs button.active{background:#274253;color:#fff}.admin-tab-panel{display:none}.admin-tab-panel.active{display:block}
@@ -4053,7 +4058,10 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
   <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+  <button id="lightboxPrev" class="lightbox-nav lightbox-prev" onclick="stepLightbox(event,-1)" hidden aria-label="上一張照片">‹</button>
   <img id="lightboxImage" alt="活動照片放大">
+  <button id="lightboxNext" class="lightbox-nav lightbox-next" onclick="stepLightbox(event,1)" hidden aria-label="下一張照片">›</button>
+  <div id="lightboxCount" class="lightbox-count" hidden></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -5255,18 +5263,40 @@ function toggleEvent(button){
  const row=button.closest(".event-row");
  row.classList.toggle("open");
 }
-function openLightbox(src){
- $("lightboxImage").src=src;
+let lightboxItems=[];
+let lightboxIndex=0;
+function updateLightboxPhoto(){
+ const image=$("lightboxImage"),prev=$("lightboxPrev"),next=$("lightboxNext"),count=$("lightboxCount");
+ if(!image||!lightboxItems.length)return;
+ lightboxIndex=(lightboxIndex+lightboxItems.length)%lightboxItems.length;
+ image.src=lightboxItems[lightboxIndex];
+ const multiple=lightboxItems.length>1;
+ if(prev)prev.hidden=!multiple;if(next)next.hidden=!multiple;
+ if(count){count.hidden=!multiple;count.textContent=`${lightboxIndex+1} / ${lightboxItems.length}`}
+}
+function openLightboxGallery(items,startIndex=0){
+ lightboxItems=[...new Set((Array.isArray(items)?items:[items]).map(x=>String(x||'').trim()).filter(Boolean))];
+ if(!lightboxItems.length)return;
+ lightboxIndex=Math.min(Math.max(Number(startIndex)||0,0),lightboxItems.length-1);
+ updateLightboxPhoto();
  $("lightbox").classList.add("open");
  document.body.style.overflow="hidden";
+}
+function openLightbox(src){openLightboxGallery([src],0)}
+function stepLightbox(event,direction){
+ event?.preventDefault();event?.stopPropagation();
+ if(lightboxItems.length<2)return;
+ lightboxIndex+=Number(direction)||0;updateLightboxPhoto();
 }
 function closeLightbox(event){
  if(event && event.target && event.target.id==="lightboxImage")return;
  $("lightbox").classList.remove("open");
  $("lightboxImage").src="";
+ lightboxItems=[];lightboxIndex=0;
+ if($("lightboxPrev"))$("lightboxPrev").hidden=true;if($("lightboxNext"))$("lightboxNext").hidden=true;if($("lightboxCount"))$("lightboxCount").hidden=true;
  document.body.style.overflow="";
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeLightbox()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeLightbox();if($("lightbox")?.classList.contains("open")&&e.key==="ArrowLeft")stepLightbox(e,-1);if($("lightbox")?.classList.contains("open")&&e.key==="ArrowRight")stepLightbox(e,1)});
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 ["keyword","areaFilter","statusFilter"].forEach(id=>$(id).addEventListener("input",renderHome));
 renderAll();
@@ -5454,7 +5484,44 @@ async function getPhoto(key){
     r.onerror=()=>rej(r.error);
   });
 }
-async function viewOrderPhoto(key){try{const photo=await getPhoto(key);if(!photo){showOrderAction('找不到照片','此筆訂單的原始照片不存在或尚未成功儲存。');return}openLightbox(photo)}catch(err){console.error(err);showOrderAction('照片開啟失敗','無法讀取原始照片，請重新整理頁面後再試。')}}
+function normalizeOrderPhotoKeys(...sources){
+  const values=[];
+  const collect=value=>{
+    if(value==null||value==='')return;
+    if(Array.isArray(value)){value.forEach(collect);return}
+    if(typeof value==='object'){
+      const nested=value.urls||value.photo_urls||value.photoUrls||value.items||value.files;
+      if(nested)collect(nested);
+      collect(value.signed_url||value.signedUrl||value.photo_url||value.photoUrl||value.url||value.path||'');return;
+    }
+    const text=String(value).trim();if(!text)return;
+    if((text.startsWith('[')&&text.endsWith(']'))||(text.startsWith('{')&&text.endsWith('}'))){
+      try{collect(JSON.parse(text));return}catch(_){}
+    }
+    values.push(text);
+  };
+  sources.forEach(collect);
+  return [...new Set(values)].slice(0,5);
+}
+function getOrderPhotoKeys(orderOrKeys){
+  if(!orderOrKeys)return [];
+  if(typeof orderOrKeys!=='object'||Array.isArray(orderOrKeys))return normalizeOrderPhotoKeys(orderOrKeys);
+  return normalizeOrderPhotoKeys(orderOrKeys.photoKeys,orderOrKeys.photoUrls,orderOrKeys.photos,orderOrKeys.photoKey,orderOrKeys.photoUrl);
+}
+async function getOrderPhotos(orderOrKeys){
+  const keys=getOrderPhotoKeys(orderOrKeys);
+  const photos=await Promise.all(keys.map(key=>getPhoto(key).catch(()=>'')));
+  return [...new Set(photos.filter(Boolean))];
+}
+async function viewOrderPhotos(orderOrKeys,startIndex=0){
+  try{
+    const photos=await getOrderPhotos(orderOrKeys);
+    if(!photos.length){showOrderAction('找不到照片','此筆訂單的照片不存在或尚未成功儲存。');return}
+    openLightboxGallery(photos,startIndex);
+  }catch(err){console.error(err);showOrderAction('照片開啟失敗','無法讀取訂單照片，請重新整理頁面後再試。')}
+}
+async function viewOrderPhotosByOrderId(id){const order=orders.find(o=>String(o.id)===String(id));return viewOrderPhotos(order)}
+async function viewOrderPhoto(key){return viewOrderPhotos([key])}
 function editPickupAreaFromOrder(o){if(o&&o.pickupArea)return o.pickupArea;const name=(o&&o.pickupStore)||String((o&&o.address)||'').replace(/^取件門市：/,'');const st=stores.find(x=>x.name===name);return st?st.area:''}
 function renderEditPickupStores(selected=''){const sel=$("editOrderPickupStore");if(!sel)return;const list=stores.filter(x=>x.enabled!==false&&x.active!==false);sel.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');if(selected)sel.value=selected}
 function initEditOrderAddress(){const e=$("editOrderCounty");if(e)e.innerHTML='<option value="">請選擇縣市</option>'+Object.keys(taiwanAddressData).map(x=>`<option>${x}</option>`).join('')}
@@ -5806,9 +5873,10 @@ function renderOrderCards(options={}){
    const canEdit=isOwner&&(st==='pending'||st==='change_request');
    const canRequest=isOwner&&st==='processing';
    const updated=escapeHtml(orderLastUpdatedValue(o));
+   const photoCount=getOrderPhotoKeys(o).length;
    const statusClass=shipped?'shipped':(st==='returned'&&o.returnReceived?'return_received':st);
    const statusLabel=shipped?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';
-   return `<article class="order-card" data-order-id="${escapeHtml(String(o.id||''))}"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group"><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button>${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}</div></article>`;
+   return `<article class="order-card" data-order-id="${escapeHtml(String(o.id||''))}"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group"><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhotosByOrderId('${o.id}')">查看照片${photoCount>1?`（${photoCount} 張）`:''}</button>${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}</div></article>`;
  }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
  renderOrderPagination(totalPages,list.length);
  if(viewState)restoreOrderListViewState(viewState)
@@ -6083,7 +6151,7 @@ ${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass
  // 保留網址一段時間，讓使用者可以手動下載。
  setTimeout(()=>{if(objectUrl)URL.revokeObjectURL(objectUrl)},10*60*1000);
 }
-async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const pages=[];for(let i=0;i<list.length;i++){const o=list[i],photo=await getPhoto(o.photoKey),note=getEditNote(o);pages.push(`<section class="pick-page"><h1>星紅織品｜揀貨單</h1><div class="pick-date">訂單日期：${escapeHtml(orderDateValue(o))}</div><div class="pick-photo">${photo?`<img src="${photo}">`:'無照片'}</div><div class="pick-grid"><div><span>收件人</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div><span>狀態</span><b>${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?'退貨':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出'}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${note?`<div class="wide edit-note"><span>修改前資料備註</span><b>${escapeHtml(note)}</b></div>`:''}</div><footer>核對人：________________</footer></section>`)}const w=window.open('','_blank');if(!w){showOrderAction('無法開啟揀貨單','請允許彈出式視窗。');return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}body{font-family:"Microsoft JhengHei";margin:0}.pick-page{width:194mm;min-height:281mm;padding:5mm;page-break-after:always}.pick-page:last-child{page-break-after:auto}h1{text-align:center;margin:0}.pick-date{text-align:center;margin:2mm 0 4mm}.pick-photo{height:120mm;border:1px solid #000;display:flex;align-items:center;justify-content:center}.pick-photo img{max-width:100%;max-height:100%;object-fit:contain}.pick-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}.pick-grid>div{padding:3mm;border-right:1px solid #000;border-bottom:1px solid #000}.pick-grid>div:nth-child(even){border-right:0}.pick-grid .wide{grid-column:1/-1;border-right:0}.pick-grid span{display:block;font-size:10px}.pick-grid b{font-size:13px;line-height:1.45}.edit-note b{font-size:11px;font-weight:500}footer{text-align:right;margin-top:7mm;font-size:15px}
+async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const pages=[];for(let i=0;i<list.length;i++){const o=list[i],photos=await getOrderPhotos(o),note=getEditNote(o),photoClass=`photos-${Math.min(Math.max(photos.length,1),5)}`;pages.push(`<section class="pick-page"><h1>星紅織品｜揀貨單</h1><div class="pick-date">訂單日期：${escapeHtml(orderDateValue(o))}・照片 ${photos.length} 張</div><div class="pick-photos ${photoClass}">${photos.length?photos.map((photo,index)=>`<figure><img src="${photo}"><figcaption>${index+1}</figcaption></figure>`).join(''):'無照片'}</div><div class="pick-grid"><div><span>收件人</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div><span>狀態</span><b>${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?'退貨':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出'}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${note?`<div class="wide edit-note"><span>修改前資料備註</span><b>${escapeHtml(note)}</b></div>`:''}</div><footer>核對人：________________</footer></section>`)}const w=window.open('','_blank');if(!w){showOrderAction('無法開啟揀貨單','請允許彈出式視窗。');return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}body{font-family:"Microsoft JhengHei";margin:0}.pick-page{width:194mm;min-height:281mm;padding:5mm;page-break-after:always}.pick-page:last-child{page-break-after:auto}h1{text-align:center;margin:0}.pick-date{text-align:center;margin:2mm 0 4mm}.pick-photos{height:120mm;border:1px solid #000;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:2mm;padding:2mm;align-items:stretch;justify-items:stretch}.pick-photos.photos-1{grid-template-columns:1fr}.pick-photos.photos-5{grid-template-columns:repeat(3,minmax(0,1fr))}.pick-photos figure{position:relative;min-width:0;min-height:0;margin:0;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;overflow:hidden}.pick-photos img{width:100%;height:100%;object-fit:contain}.pick-photos figcaption{position:absolute;right:1.5mm;bottom:1.5mm;width:7mm;height:7mm;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;display:grid;place-items:center;font-size:9px;font-weight:700}.pick-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}.pick-grid>div{padding:3mm;border-right:1px solid #000;border-bottom:1px solid #000}.pick-grid>div:nth-child(even){border-right:0}.pick-grid .wide{grid-column:1/-1;border-right:0}.pick-grid span{display:block;font-size:10px}.pick-grid b{font-size:13px;line-height:1.45}.edit-note b{font-size:11px;font-weight:500}footer{text-align:right;margin-top:7mm;font-size:15px}
 /* 調整訂單清單摘要字重 */
 .sent-summary-main b{font-weight:700!important;}
 .sent-summary-main span,
@@ -6517,8 +6585,8 @@ async function openOrderEdit(id,source="admin"){
  $("editOrderCounty").value=parsed.county;rebuildEditOrderDistrictOptions(parsed.district);$("editOrderAddress").value=parsed.detail;
  const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');
  renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();
- const x=o.original||o,originalPhotoKey=x.photoKey||o.photoKey||'',historyHtml=buildCompactEditHistory(o);
- $("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>最後更新：</b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${historyHtml}<button type="button" class="photo-open-only" onclick="viewOrderPhoto('${originalPhotoKey}')">查看原始照片</button>`;
+ const x=o.original||o,originalPhotoCount=getOrderPhotoKeys(x).length||getOrderPhotoKeys(o).length,historyHtml=buildCompactEditHistory(o);
+ $("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>最後更新：</b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${historyHtml}<button type="button" class="photo-open-only" onclick="viewOrderPhotosByOrderId('${o.id}')">查看原始照片${originalPhotoCount>1?`（${originalPhotoCount} 張）`:''}</button>`;
  $("orderEditModal").classList.add('show');
  bindOrderEditDirtyTracking();
  orderEditInitialSnapshot=getOrderEditSnapshot();orderEditDirty=false;
@@ -7397,8 +7465,9 @@ function cloudOrderState(o){
 function taipeiCloudDateTime(value){return value?new Date(value).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):""}
 function cloudOrderToLocal(o){
  const pickup=o.delivery_method==="store_pickup",logs=Array.isArray(o.audit_logs)?o.audit_logs:[],createLog=logs.find(x=>x.action==="create"),updateLogs=logs.filter(x=>x.action==="update"||x.action==="change_request_submit"),state=cloudOrderState(o);
+ const photoKeys=normalizeOrderPhotoKeys(o.photo_urls,o.photoUrls,o.order_photos,o.photo_list,o.photos,o.photo_url);
  return{
-  id:String(o.id),orderNumber:String(o.order_number||""),photoKey:String(o.photo_url||""),photoUrl:String(o.photo_url||""),
+  id:String(o.id),orderNumber:String(o.order_number||""),photoKeys:[...photoKeys],photoUrls:[...photoKeys],photoKey:String(photoKeys[0]||""),photoUrl:String(photoKeys[0]||""),
   returnPerson:String(o.return_person||""),createdByLineId:String(o.creator_line_user_id||""),store:String(o.store?.name||""),
   storeId:String(o.store_id||""),name:String(o.customer_name||""),phone:String(o.customer_phone||""),
   address:String(o.customer_address||""),delivery:pickup?"門市自取":"總公司寄出",
@@ -7408,7 +7477,7 @@ function cloudOrderToLocal(o){
   updatedAt:taipeiCloudDateTime(o.updated_at||o.created_at),
   createdDate:String(o.order_date||"").slice(0,10),cloudStatus:String(o.status||"pending"),cloudProcessorName:String(o.processor_name||""),cloudUpdatedAtRaw:String(o.updated_at||o.created_at||""),status:state.status,
   handler:state.handler,returnReceived:state.returnReceived,returnReceivedBy:state.returnReceivedBy,returnReceivedAt:state.returnReceived?(o.updated_at||o.processed_at||""):"",shippedDate:o.processed_at?String(o.processed_at).slice(0,10):"",
-  original:createLog?.after_data?{name:createLog.after_data.customer_name,phone:createLog.after_data.customer_phone,address:createLog.after_data.customer_address,delivery:createLog.after_data.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:createLog.after_data.product_content,photoKey:String(o.photo_url||""),createdAt:o.created_at}:null,
+  original:createLog?.after_data?{name:createLog.after_data.customer_name,phone:createLog.after_data.customer_phone,address:createLog.after_data.customer_address,delivery:createLog.after_data.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:createLog.after_data.product_content,photoKeys:[...photoKeys],photoUrls:[...photoKeys],photoKey:String(photoKeys[0]||""),createdAt:o.created_at}:null,
   history:updateLogs.map(x=>({editedAt:x.created_at?new Date(x.created_at).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):"",editedBy:x.actor_name||"",before:{name:x.before_data?.customer_name,phone:x.before_data?.customer_phone,address:x.before_data?.customer_address,delivery:x.before_data?.delivery_method==="store_pickup"?"門市自取":"總公司寄出",items:x.before_data?.product_content}}))
  }
 }
