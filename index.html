@@ -2740,7 +2740,7 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
 }
 .system-loading-overlay.error .system-loading-spinner{display:none}
 .system-loading-title{font-size:20px;font-weight:900;color:#274253}
-.system-loading-text{margin-top:7px;color:#6b808c;font-size:14px;line-height:1.6}
+.system-loading-text{margin-top:7px;color:#6b808c;font-size:14px;line-height:1.6;white-space:pre-line}
 .system-loading-retry{
   display:none;width:100%;margin-top:17px;min-height:44px;border:0;border-radius:11px;
   background:#274253;color:#fff;font-weight:900
@@ -7109,9 +7109,7 @@ document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today
 <script>
 /* ===== LINE LIFF + Supabase line-api：僅處理登入資料，不修改任何版面 ===== */
 const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
-const STARRED_LIFF_URL = `https://liff.line.me/${STARRED_LIFF_ID}`;
 const STARRED_LINE_RELOGIN_KEY = "starred_line_relogin_running";
-const STARRED_LINE_LOGIN_ATTEMPT_KEY = "starred_line_login_attempt_at";
 const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
 const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
 let starredLiffInitialization=null;
@@ -7180,48 +7178,25 @@ function isLineIdTokenExpired(token,bufferSeconds=60){
 function getStarredLineCleanUrl(){
   return location.origin+location.pathname;
 }
-function startStarredLineLogin(){
-  if(!window.liff||!/^https?:$/i.test(location.protocol))return false;
-
-  /*
-    Safari 從 LINE 開到外部瀏覽器時，網址可能仍帶著上一輪 LIFF 的
-    code、state 或 liff.state。登入回傳網址固定使用乾淨網址，避免把
-    舊參數再次包進 LINE 授權網址而造成 access.line.me 400 或跳轉迴圈。
-  */
-  const now=Date.now();
-  const lastAttempt=Number(sessionStorage.getItem(STARRED_LINE_LOGIN_ATTEMPT_KEY)||0);
-  if(lastAttempt&&now-lastAttempt<15000){
-    showSystemLoadingError("LINE 登入未完成","請按「重新載入」重新開始登入；若仍無法登入，請關閉此頁後再由 LINE 連結進入。");
-    return false;
-  }
-
-  sessionStorage.setItem(STARRED_LINE_LOGIN_ATTEMPT_KEY,String(now));
-  showSystemLoading("LINE 登入中…","正在開啟 LINE 完成登入，請稍候。");
-  try{
-    liff.login({redirectUri:getStarredLineCleanUrl()});
-    return true;
-  }catch(error){
-    sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
-    console.error("LINE 登入啟動失敗",error);
-    showSystemLoadingError("LINE 登入失敗","請按「重新載入」再試一次，或關閉此頁後由 LINE 連結重新進入。");
-    return false;
-  }
+function getStarredLineErrorText(error){
+  const code=String(error&&error.code||"").trim();
+  const message=String(error&&error.message||error||"未知錯誤").trim();
+  return code?`${code}：${message}`:message;
 }
 function forceLineRelogin(){
   if(!window.liff)return false;
   if(sessionStorage.getItem(STARRED_LINE_RELOGIN_KEY)==="1")return true;
   sessionStorage.setItem(STARRED_LINE_RELOGIN_KEY,"1");
-  sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
   try{if(liff.isLoggedIn())liff.logout()}catch(_){}
 
-  /* 先回到乾淨頁面，再由初始化流程重新登入，避免 logout 與 login 互撞。 */
+  /* 先回到乾淨頁面，再交給 liff.init 的官方外部瀏覽器登入流程。 */
   location.replace(getStarredLineCleanUrl());
   return true;
 }
 async function getFreshLineIdToken(){
   if(!window.liff)throw new Error("LINE 登入程式尚未載入");
   if(!liff.isLoggedIn()){
-    startStarredLineLogin();
+    forceLineRelogin();
     const loginError=new Error("LINE 尚未登入，正在重新登入…");
     loginError.relogin=true;
     throw loginError;
@@ -7329,33 +7304,42 @@ async function loadStarredCloudData(){
 }
 
 async function runStarredLiffInitialization(){
+  let currentStage="載入 LINE 登入程式";
   try{
     if(!window.liff){
       console.error("LIFF SDK 載入失敗");
       showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
       return;
     }
-    await liff.init({liffId:STARRED_LIFF_ID});
+    showSystemLoading("LINE 登入確認中…","正在確認 LINE 登入狀態，請稍候。");
+
+    currentStage="LINE 外部瀏覽器登入";
+    await liff.init({
+      liffId:STARRED_LIFF_ID,
+      withLoginOnExternalBrowser:true
+    });
 
     /* LINE 官方要求等 liff.init 完成後才能改網址。 */
     cleanLoginCallbackUrl();
 
     if(!liff.isLoggedIn()){
-      if(/^https?:$/i.test(location.protocol)){
-        sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
-        startStarredLineLogin();
-      }
-      return;
+      throw new Error("LINE 登入尚未完成，請關閉此頁後再由 LINE 連結進入");
     }
 
     sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
-    sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
+    currentStage="取得 LINE 身分資料";
     const idToken=liff.getIDToken();
-    if(!idToken||isLineIdTokenExpired(idToken)){
+    if(!idToken){
+      const tokenError=new Error("已登入 LINE，但瀏覽器沒有取得身分憑證");
+      tokenError.code="LINE_ID_TOKEN_MISSING";
+      throw tokenError;
+    }
+    if(isLineIdTokenExpired(idToken)){
       forceLineRelogin();
       return;
     }
 
+    currentStage="驗證 LINE 使用者";
     const verified=await verifyLineLoginWithServer(idToken);
     const normalized={
       id:String(verified.lineUserId||""),
@@ -7373,6 +7357,7 @@ async function runStarredLiffInitialization(){
     sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
     if(typeof window.registerLineLoginUser==="function")window.registerLineLoginUser(normalized);
     setLineReturnPerson(normalized);
+    currentStage="同步系統資料";
     await loadStarredCloudData();
   }catch(error){
     console.error("LIFF／line-api 初始化失敗：",error);
@@ -7383,7 +7368,10 @@ async function runStarredLiffInitialization(){
     if(error&&error.relogin)return;
     const cached=getCurrentLineUser();
     if(cached)setLineReturnPerson(cached);
-    showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
+    showSystemLoadingError(
+      `${currentStage}失敗`,
+      `${getStarredLineErrorText(error)}\n請按「重新載入」再試一次；若仍失敗，請將這段錯誤文字截圖回傳。`
+    );
     if(String(error&&error.message||"").includes("Publishable key")){
       console.warn("請先在 HTML 的 STARRED_SUPABASE_PUBLISHABLE_KEY 填入 Publishable key。");
     }
@@ -7435,7 +7423,6 @@ function retrySystemLoading(){
  const overlay=document.getElementById("systemLoadingOverlay");
  if(overlay){overlay.classList.remove("error");}
  sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
- sessionStorage.removeItem(STARRED_LINE_LOGIN_ATTEMPT_KEY);
  /* 重新載入乾淨網址，不沿用上一輪 LINE 登入留下的查詢參數。 */
  location.replace(getStarredLineCleanUrl());
 }
