@@ -4107,7 +4107,10 @@ let accounts=JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||"[]");
 let lineUsers=JSON.parse(localStorage.getItem(LINE_USERS_KEY)||"[]");
 let currentUser=(()=>{try{
  const expiry=Number(localStorage.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0);
- if(expiry>Date.now())return JSON.parse(localStorage.getItem(CURRENT_USER_KEY)||sessionStorage.getItem(CURRENT_USER_KEY)||"null");
+ if(expiry>Date.now()){
+  const saved=JSON.parse(localStorage.getItem(CURRENT_USER_KEY)||sessionStorage.getItem(CURRENT_USER_KEY)||"null");
+  if(saved?.adminSessionToken)return saved;
+ }
  localStorage.removeItem(CURRENT_USER_KEY);localStorage.removeItem(ADMIN_LOGIN_EXPIRY_KEY);sessionStorage.removeItem(CURRENT_USER_KEY);sessionStorage.removeItem(LOGIN_KEY);
  return null;
 }catch(e){return null}})();
@@ -4363,23 +4366,24 @@ async function login(){
  const loginBtn=event?.currentTarget;
  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent="登入中…"}
  try{
-  window.__accountCloudLoadError=null;
-  await loadCloudAccounts();
-  if(window.__accountCloudLoadError){
-   alert("目前無法讀取雲端帳號資料。\n\n錯誤："+(window.__accountCloudLoadError.message||window.__accountCloudLoadError));
-   return;
-  }
-  const user=accounts.find(a=>String(a.username).trim()===username&&String(a.password)===password);
-  if(!user){alert("帳號或密碼錯誤");return}
-  if(!user.enabled){alert("此帳號已停用");return}
-  user.lastLogin=new Date().toISOString();
-  persistAccounts();
-  currentUser={id:user.id,name:user.name,username:user.username,role:user.role};
+  const result=await starredApi("admin_login",{operatorAccount:username,operatorPassword:password});
+  const admin=result?.admin||{};
+  if(!result?.adminSessionToken||!admin?.username)throw new Error("後台登入驗證失敗，請重新登入");
+  currentUser={
+   id:String(admin.id||""),
+   name:String(admin.name||admin.username||"管理員"),
+   username:String(admin.username||username),
+   role:String(admin.role||"manager"),
+   adminSessionToken:String(result.adminSessionToken)
+  };
   sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
   sessionStorage.setItem(LOGIN_KEY,"1");
   localStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
-  localStorage.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(taipeiEndOfDayTimestamp()));
+  localStorage.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(Number(result.expiresAt)||taipeiEndOfDayTimestamp()));
+  await loadCloudAccounts();
   checkLogin();
+ }catch(error){
+  alert(error?.message||"後台登入失敗，請確認帳號、密碼與網路連線。");
  }finally{
   if(loginBtn){loginBtn.disabled=false;loginBtn.textContent="登入"}
  }
@@ -5747,11 +5751,12 @@ function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾�
 // 同時把目前後台登入者資訊帶給 API，避免只依 LINE 身分誤判而阻擋主管。
 function getOrderOperatorContext(){
  const rawRole=String(currentUser?.role||window.starredVerifiedLineUser?.role||'').trim().toLowerCase();
- const role=rawRole==='system_admin'?'admin':rawRole;
+ const role=['admin','system_admin','administrator','管理員','系統管理員'].includes(rawRole)?'admin':(['manager','supervisor','主管'].includes(rawRole)?'manager':rawRole);
  return {
   operatorRole:role,
   operatorAccount:String(currentUser?.username||''),
-  operatorName:getCurrentAdminDisplayName()
+  operatorName:getCurrentAdminDisplayName(),
+  adminSessionToken:String(currentUser?.adminSessionToken||'')
  };
 }
 function canOperateOrderConfirmation(){
@@ -5801,7 +5806,7 @@ function updateCancelDeleteOrderButton(){
  const isShipped=current==='shipped';
  const isCancelled=current==='cancelled';
  const isReturned=current==='returned';
- const role=window.starredVerifiedLineUser?.role||currentUser?.role||'';
+ const role=currentUser?.role||window.starredVerifiedLineUser?.role||'';
 
  if(approve)approve.style.display=isChange?'':'none';
 
@@ -7230,7 +7235,8 @@ async function getFreshLineIdToken(){
 }
 async function starredApi(action,payload={}){
   const idToken=await getFreshLineIdToken();
-  const response=await fetch(STARRED_LINE_API_URL,{method:"POST",headers:{"Content-Type":"application/json","apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,"Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`},body:JSON.stringify({idToken,action,...payload})});
+  const operatorContext=typeof getOrderOperatorContext==="function"?getOrderOperatorContext():{};
+  const response=await fetch(STARRED_LINE_API_URL,{method:"POST",headers:{"Content-Type":"application/json","apikey":STARRED_SUPABASE_PUBLISHABLE_KEY,"Authorization":`Bearer ${STARRED_SUPABASE_PUBLISHABLE_KEY}`},body:JSON.stringify({idToken,action,...operatorContext,...payload})});
   const result=await response.json().catch(()=>({success:false,error:"伺服器回傳格式錯誤"}));
   if(!response.ok||!result.success){
     const message=String(result.error||`雲端操作失敗（${response.status}）`);
