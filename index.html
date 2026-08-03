@@ -6311,25 +6311,13 @@ async function confirmFrontDeleteOrder(){
  const order=orders.find(x=>String(x.id)===String(orderId));
  if(!order||!canCurrentLineUserEditOrder(order)){showOrderAction("沒有權限","只有原回傳人員可以刪除自己上傳且尚未寄出的訂單。");return}
  try{
-  const currentLineId=getCurrentVerifiedLineId();
-  // 前台刪除自己的訂單：將本人 LINE 身分與訂單建立者一併傳給後端，
-  // 避免被誤判成只有主管／系統管理員才能操作的後台批次處理。
-  await starredApi("bulk_order_status",{
-   orderIds:[orderId],
-   status:"cancelled",
-   reason:reasonText,
-   handler:order.returnPerson||"",
-   ownerAction:true,
-   actionSource:"front_order_owner",
-   lineUserId:currentLineId,
-   requesterLineUserId:currentLineId,
-   creatorLineUserId:String(order.createdByLineId||""),
-   returnPerson:String(order.returnPerson||"")
-  });
+  // 使用「本人刪除訂單」專用後端操作；伺服器會以 LINE Token
+  // 比對訂單建立者，不再呼叫只限主管的批次處理。
+  await starredApi("cancel_own_order",{orderId,reason:reasonText});
   closeFrontDeleteReasonModal();orderEditDirty=false;closeOrderEditModal(true);
   await loadStarredCloudData();
-  showOrderAction("訂單已刪除",`刪除原因：${reasonText}`);
- }catch(error){cloudError("取消訂單失敗",error)}
+  showOrderAction("訂單已刪除並移至取消訂單",`刪除原因：${reasonText}`);
+ }catch(error){cloudError("刪除訂單失敗",error)}
 }
 
 
