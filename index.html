@@ -1069,6 +1069,7 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 /* 訂購單照片：iOS / Android 分開提供相機與相簿，最多 5 張 */
 .order-photo-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
 .order-photo-source-btn{min-height:48px;border:1px solid #cbd8de;background:#fff!important}
+.order-photo-source-btn{display:flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:800;user-select:none;-webkit-tap-highlight-color:transparent}
 .order-photo-hidden-input{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
 .order-photo-note{margin:8px 0 0}
 .order-photo-preview-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}
@@ -3681,12 +3682,12 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <div class="field wide"><label>訂購商品／品項＋備註 *</label><textarea id="orderItems" rows="4" class="vertical-resize"></textarea></div>
 <div class="field wide order-photo-field"><label>訂購單照片 *（最多 5 張）</label>
 <div class="order-photo-picker">
-  <button type="button" class="secondary order-photo-source-btn" onclick="document.getElementById('orderCameraPhoto').click()">📷 現場拍照</button>
-  <button type="button" class="secondary order-photo-source-btn" onclick="document.getElementById('orderGalleryPhoto').click()">🖼️ 從手機相簿選擇</button>
   <input id="orderCameraPhoto" class="order-photo-hidden-input" type="file" accept="image/*" capture="environment" onchange="previewOrderPhoto(event)">
   <input id="orderGalleryPhoto" class="order-photo-hidden-input" type="file" accept="image/*" multiple onchange="previewOrderPhoto(event)">
+  <label for="orderCameraPhoto" class="secondary order-photo-source-btn" role="button" tabindex="0">📷 現場拍照</label>
+  <label for="orderGalleryPhoto" class="secondary order-photo-source-btn" role="button" tabindex="0">🖼️ 從手機相簿選擇</label>
 </div>
-<div class="note order-photo-note">iOS 與 Android 均可選擇現場拍照或手機內照片；可分次加入，合計最多 5 張。</div>
+<div class="note order-photo-note">iOS 與 Android 均可選擇現場拍照或手機內照片；可分次加入，合計最多 5 張。照片會自動縮小後再上傳。</div>
 <div id="orderPhotoPreview" class="order-photo-preview-grid"></div></div>
 </div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button id="orderSubmitButton" type="button" class="primary" onclick="submitOrder(event)">確認傳送</button></div></section>
 <section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期區間查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select><div class="sent-date-field"><label>開始日期</label><input id="orderDateFrom" type="date" onchange="resetOrderPageAndRender()"></div><div class="sent-date-field"><label>結束日期</label><input id="orderDateTo" type="date" onchange="resetOrderPageAndRender()"></div><button type="button" class="secondary sent-date-clear" onclick="clearSentOrderDate()">清除日期</button></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
@@ -5415,12 +5416,49 @@ function rebuildEditOrderDistrictOptions(selected=''){const c=$("editOrderCounty
 function splitTaiwanAddress(address=''){const text=String(address||'').trim();let county='',district='',detail=text;for(const c of Object.keys(taiwanAddressData)){if(text.startsWith(c)){county=c;detail=text.slice(c.length);break}}if(county){for(const d of taiwanAddressData[county]||[]){if(detail.startsWith(d)){district=d;detail=detail.slice(d.length);break}}}return{county,district,detail}}
 function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.value==='門市自取',m=$("editOrderPickupStoreWrap"),addr=$("editOrderAddressFields");if(m)m.style.display=pickup?'flex':'none';if(addr)addr.style.display=pickup?'none':'grid';if(pickup)renderEditPickupStores($("editOrderPickupStore")?.value||'')}
 
-function compressOrderPhoto(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error('照片讀取失敗'));r.onload=()=>{const i=new Image();i.onerror=()=>reject(new Error('照片格式無法讀取'));i.onload=()=>{const c=document.createElement('canvas'),sc=Math.min(1,1200/Math.max(i.width,i.height));c.width=Math.max(1,Math.round(i.width*sc));c.height=Math.max(1,Math.round(i.height*sc));c.getContext('2d').drawImage(i,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.72))};i.src=r.result};r.readAsDataURL(file)})}
+function loadOrderPhotoImage(file){
+ return new Promise((resolve,reject)=>{
+  if(!file||!file.size){reject(new Error('選取的照片是空白檔案'));return}
+  const objectUrl=URL.createObjectURL(file),image=new Image();
+  image.onload=()=>resolve({image,width:image.naturalWidth||image.width,height:image.naturalHeight||image.height,cleanup:()=>URL.revokeObjectURL(objectUrl)});
+  image.onerror=()=>{URL.revokeObjectURL(objectUrl);reject(new Error('此照片格式無法讀取，請改用 JPG、PNG 或重新拍照'))};
+  image.src=objectUrl;
+ });
+}
+async function compressOrderPhoto(file){
+ const loaded=await loadOrderPhotoImage(file);
+ try{
+  if(!loaded.width||!loaded.height)throw new Error('無法取得照片尺寸');
+  let maxSide=1000,quality=.7,dataUrl='';
+  for(let attempt=0;attempt<4;attempt++){
+   const scale=Math.min(1,maxSide/Math.max(loaded.width,loaded.height));
+   const canvas=document.createElement('canvas');
+   canvas.width=Math.max(1,Math.round(loaded.width*scale));
+   canvas.height=Math.max(1,Math.round(loaded.height*scale));
+   const ctx=canvas.getContext('2d',{alpha:false});
+   if(!ctx)throw new Error('手機無法建立照片預覽，請關閉其他 App 後再試');
+   ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+   ctx.drawImage(loaded.image,0,0,canvas.width,canvas.height);
+   dataUrl=canvas.toDataURL('image/jpeg',quality);
+   // Android 高畫素照片的內容較大；控制在約 330 KB 內，避免多張傳送逾時。
+   if(dataUrl.length<=450000)return dataUrl;
+   maxSide=Math.round(maxSide*.82);quality=Math.max(.5,quality-.08);
+  }
+  return dataUrl;
+ }finally{loaded.cleanup()}
+}
 async function previewOrderPhoto(e){
  const input=e.target,files=[...(input.files||[])];input.value='';if(!files.length)return;
  const remaining=5-orderPhotoData.length;if(remaining<=0){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
  const selected=files.slice(0,remaining);
- try{for(const file of selected){if(!String(file.type||'').startsWith('image/'))continue;orderPhotoData.push(await compressOrderPhoto(file))}renderOrderPhotoPreview();if(files.length>remaining)showOrderAction('部分照片未加入',`最多只能上傳 5 張，本次已加入 ${selected.length} 張。`)}catch(err){console.error(err);showOrderAction('照片處理失敗',err?.message||'請重新拍照或選擇照片。')}
+ let added=0,failed=0,lastError='';
+ for(const file of selected){
+  try{orderPhotoData.push(await compressOrderPhoto(file));added++}
+  catch(err){failed++;lastError=err?.message||'照片無法讀取';console.error('order photo failed:',err)}
+ }
+ renderOrderPhotoPreview();
+ if(!added)showOrderAction('照片處理失敗',lastError||'請重新拍照或選擇照片。');
+ else if(failed||files.length>remaining)showOrderAction('部分照片未加入',`本次已加入 ${added} 張；照片合計最多 5 張。${failed?' 有 '+failed+' 張格式無法讀取。':''}`);
 }
 function renderOrderPhotoPreview(){const preview=$("orderPhotoPreview");if(!preview)return;preview.innerHTML=orderPhotoData.length?orderPhotoData.map((src,index)=>`<div class="order-photo-preview-item"><button type="button" class="order-photo-thumb" onclick="openLightbox(orderPhotoData[${index}])"><img src="${src}" alt="訂購單照片 ${index+1}"></button><button type="button" class="order-photo-remove-one" onclick="removeOrderPhoto(${index})" aria-label="刪除第 ${index+1} 張照片">×</button><span>${index+1}</span></div>`).join(''):'<div class="photo-empty-hint">尚未加入照片</div>'}
 function removeOrderPhoto(index){if(Number.isInteger(index))orderPhotoData.splice(index,1);else orderPhotoData=[];['orderCameraPhoto','orderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});renderOrderPhotoPreview()}
@@ -5483,7 +5521,7 @@ async function submitOrder(event){
    photoDataList:orderPhotoData
   };
 
-  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("傳送逾時，請確認網路後再試一次。")),45000));
+  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("傳送逾時，請確認網路後再試一次。")),90000));
   const result=await Promise.race([starredApi("create_order",payload),timeout]);
 
   // 只有訂單成功送到雲端後，才記住當天使用的區域與門市。
