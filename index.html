@@ -4011,7 +4011,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
   <div class="order-camera-dialog">
     <div class="order-camera-head"><b>現場拍照</b><button type="button" class="order-camera-close" onclick="closeOrderCamera()" aria-label="關閉相機">×</button></div>
     <div class="order-camera-view"><video id="orderCameraVideo" autoplay muted playsinline></video><div id="orderCameraStatus" class="order-camera-status">正在開啟後鏡頭…</div></div>
-    <div class="order-camera-actions"><button id="orderCameraFallback" type="button" class="order-camera-fallback" onclick="handleOrderCameraFallback()" hidden>取消</button><button id="orderCameraCapture" type="button" class="primary" onclick="handleOrderCameraPrimary()" disabled>允許使用相機</button></div>
+    <div class="order-camera-actions"><button id="orderCameraFallback" type="button" class="order-camera-fallback" onclick="handleOrderCameraFallback()" hidden>取消</button><button id="orderCameraCapture" type="button" class="primary" onclick="handleOrderCameraPrimary()" disabled>正在開啟相機…</button></div>
   </div>
 </div>
 <div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2 id="orderEditTitle">修改訂單</h2><p id="orderEditSubtitle">調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button id="frontDeleteOrderBtn" type="button" class="danger order-edit-delete-btn" onclick="openFrontDeleteReasonModal()">刪除訂單</button><button class="secondary" onclick="closeOrderEditModal()">取消</button><button id="orderEditSubmitBtn" class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="frontDeleteReasonModal" class="order-edit-modal front-delete-modal" onclick="if(event.target===this)closeFrontDeleteReasonModal()"><div class="front-delete-dialog"><h2>刪除這筆訂單</h2><p>請先選擇刪除原因，確認後此筆訂單將被刪除。</p><label>刪除原因<select id="frontDeleteReason" onchange="toggleFrontDeleteOtherReason()"><option value="客人取消">客人取消</option><option value="其他">其他</option></select></label><label id="frontDeleteOtherWrap" style="display:none">其他原因<textarea id="frontDeleteOtherReason" rows="3" placeholder="請輸入刪除原因"></textarea></label><div class="front-delete-actions"><button type="button" class="secondary" onclick="closeFrontDeleteReasonModal()">返回</button><button type="button" class="danger" onclick="confirmFrontDeleteOrder()">確認刪除</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
@@ -5495,9 +5495,10 @@ function openOrderCamera(){
   video.play().then(()=>{status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false}).catch(()=>requestOrderCameraAccess());
   return;
  }
- // 第一次成功後會記住網站內的選擇；後續直接由這次點擊動作開啟鏡頭，不再多按一次網站按鈕。
- if(localStorage.getItem(ORDER_CAMERA_PERMISSION_KEY)==='1')requestOrderCameraAccess();
- else showOrderCameraPermissionIntro();
+ // 使用者按下「現場拍照」後，立即向 Android 系統要求相機權限。
+ // 第一次會直接出現系統的允許視窗；允許後立即開啟後鏡頭。
+ // 瀏覽器已記住允許時，後續會直接開啟，不再顯示網站內的第二層確認。
+ requestOrderCameraAccess();
 }
 async function requestOrderCameraAccess(){
  const video=$("orderCameraVideo"),status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
@@ -5519,8 +5520,8 @@ async function requestOrderCameraAccess(){
   console.error('Android camera failed:',error);stopOrderCameraStream();
   const denied=error?.name==='NotAllowedError'||error?.name==='PermissionDeniedError';
   if(denied){
-   status.innerHTML='<div class="order-camera-permission-help"><strong>相機權限尚未允許</strong><ol><li>若剛出現系統視窗，請選「使用應用程式時允許」</li><li>若沒有出現視窗：開啟 Android「設定」</li><li>選擇「應用程式」→「LINE」→「權限」</li><li>把「相機」設為「使用應用程式時允許」</li></ol><small>設定完成後回到此頁，再按「重新要求權限」</small></div>';
-   capture.dataset.mode='permission';capture.textContent='重新要求權限';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='關閉';
+   status.innerHTML='<div class="order-camera-permission-help"><span class="order-camera-permission-icon">📷</span><strong>請允許使用相機</strong><p>請在手機跳出的系統視窗按「允許」或「使用應用程式時允許」，系統就會立即開啟後鏡頭。</p><small>若這支手機以前曾按過「不允許」，Android 可能不會再次顯示詢問視窗，這種情況只能先恢復 LINE 的相機權限一次。</small></div>';
+   capture.dataset.mode='permission';capture.textContent='再次顯示允許視窗';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='關閉';
   }else{
    status.textContent='無法啟動相機，請確認沒有其他 App 正在使用鏡頭。';
    capture.dataset.mode='permission';capture.textContent='重新嘗試';capture.disabled=false;fallback.dataset.mode='native';fallback.textContent='改用系統拍照';
