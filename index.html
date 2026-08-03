@@ -1079,8 +1079,20 @@ button.danger{border:0;border-radius:10px;padding:8px 12px;background:#f7e2e0;co
 .order-photo-remove-one{position:absolute;top:6px;right:6px;width:28px;height:28px;min-height:0!important;padding:0;border:0;border-radius:50%;background:rgba(28,43,52,.82);color:#fff;font-size:20px;line-height:28px;font-weight:900}
 .order-photo-preview-item>span{position:absolute;left:6px;bottom:6px;display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:rgba(39,66,83,.86);color:#fff;font-size:12px;font-weight:900}
 .order-photo-preview-grid .photo-empty-hint{grid-column:1/-1}
+.order-camera-modal{position:fixed;inset:0;z-index:700000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(8,17,23,.92)}
+.order-camera-modal.show{display:flex}
+.order-camera-dialog{width:min(560px,100%);overflow:hidden;border-radius:18px;background:#101820;box-shadow:0 22px 70px rgba(0,0,0,.5)}
+.order-camera-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;color:#fff}
+.order-camera-head b{font-size:17px}.order-camera-close{width:40px;height:40px;min-height:0!important;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:26px}
+.order-camera-view{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:3/4;max-height:68vh;overflow:hidden;background:#05090c}
+.order-camera-view video{width:100%;height:100%;object-fit:cover}
+.order-camera-status{position:absolute;inset:0;display:grid;place-items:center;padding:24px;color:#fff;text-align:center;line-height:1.6;background:rgba(5,9,12,.68)}
+.order-camera-status:empty{display:none}
+.order-camera-actions{display:grid;grid-template-columns:1fr 1.45fr;gap:10px;padding:14px;background:#101820}
+.order-camera-actions button{min-height:50px}.order-camera-fallback{color:#253e4d!important;background:#fff!important}
+.order-camera-fallback[hidden]+#orderCameraCapture{grid-column:1/-1}
 @media(max-width:760px){.order-photo-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:430px){.order-photo-picker{grid-template-columns:1fr}.order-photo-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.order-photo-picker{grid-template-columns:1fr}.order-photo-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.order-camera-modal{padding:0}.order-camera-dialog{width:100%;height:100%;border-radius:0;display:flex;flex-direction:column}.order-camera-view{flex:1;max-height:none;aspect-ratio:auto}.order-camera-actions{padding:13px 13px calc(13px + env(safe-area-inset-bottom))}}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -3684,10 +3696,10 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <div class="order-photo-picker">
   <input id="orderCameraPhoto" class="order-photo-hidden-input" type="file" accept="image/*" capture="environment" onchange="previewOrderPhoto(event)">
   <input id="orderGalleryPhoto" class="order-photo-hidden-input" type="file" accept="image/*" multiple onchange="previewOrderPhoto(event)">
-  <label for="orderCameraPhoto" class="secondary order-photo-source-btn" role="button" tabindex="0">📷 現場拍照</label>
+  <button type="button" class="secondary order-photo-source-btn" onclick="openOrderCamera()">📷 現場拍照</button>
   <label for="orderGalleryPhoto" class="secondary order-photo-source-btn" role="button" tabindex="0">🖼️ 從手機相簿選擇</label>
 </div>
-<div class="note order-photo-note">iOS 與 Android 均可選擇現場拍照或手機內照片；可分次加入，合計最多 5 張。照片會自動縮小後再上傳。</div>
+<div class="note order-photo-note">Android 點「現場拍照」會直接開啟後鏡頭；iPhone 會使用系統相機。也可從相簿選擇，可分次加入，合計最多 5 張。</div>
 <div id="orderPhotoPreview" class="order-photo-preview-grid"></div></div>
 </div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button id="orderSubmitButton" type="button" class="primary" onclick="submitOrder(event)">確認傳送</button></div></section>
 <section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期區間查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select><div class="sent-date-field"><label>開始日期</label><input id="orderDateFrom" type="date" onchange="resetOrderPageAndRender()"></div><div class="sent-date-field"><label>結束日期</label><input id="orderDateTo" type="date" onchange="resetOrderPageAndRender()"></div><button type="button" class="secondary sent-date-clear" onclick="clearSentOrderDate()">清除日期</button></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
@@ -3990,7 +4002,15 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </main>
 
 
-<div id="orderActionModal" class="success-modal"><div class="success-dialog"><div class="success-icon">✓</div><div id="orderActionTitle" class="success-title"></div><div id="orderActionText" class="success-text"></div><button class="primary" onclick="closeOrderActionModal()">確認</button></div></div><div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2 id="orderEditTitle">修改訂單</h2><p id="orderEditSubtitle">調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button id="frontDeleteOrderBtn" type="button" class="danger order-edit-delete-btn" onclick="openFrontDeleteReasonModal()">刪除訂單</button><button class="secondary" onclick="closeOrderEditModal()">取消</button><button id="orderEditSubmitBtn" class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="frontDeleteReasonModal" class="order-edit-modal front-delete-modal" onclick="if(event.target===this)closeFrontDeleteReasonModal()"><div class="front-delete-dialog"><h2>刪除這筆訂單</h2><p>請先選擇刪除原因，確認後此筆訂單將被刪除。</p><label>刪除原因<select id="frontDeleteReason" onchange="toggleFrontDeleteOtherReason()"><option value="客人取消">客人取消</option><option value="其他">其他</option></select></label><label id="frontDeleteOtherWrap" style="display:none">其他原因<textarea id="frontDeleteOtherReason" rows="3" placeholder="請輸入刪除原因"></textarea></label><div class="front-delete-actions"><button type="button" class="secondary" onclick="closeFrontDeleteReasonModal()">返回</button><button type="button" class="danger" onclick="confirmFrontDeleteOrder()">確認刪除</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
+<div id="orderActionModal" class="success-modal"><div class="success-dialog"><div class="success-icon">✓</div><div id="orderActionTitle" class="success-title"></div><div id="orderActionText" class="success-text"></div><button class="primary" onclick="closeOrderActionModal()">確認</button></div></div>
+<div id="orderCameraModal" class="order-camera-modal" role="dialog" aria-modal="true" aria-label="現場拍照">
+  <div class="order-camera-dialog">
+    <div class="order-camera-head"><b>現場拍照</b><button type="button" class="order-camera-close" onclick="closeOrderCamera()" aria-label="關閉相機">×</button></div>
+    <div class="order-camera-view"><video id="orderCameraVideo" autoplay muted playsinline></video><div id="orderCameraStatus" class="order-camera-status">正在開啟後鏡頭…</div></div>
+    <div class="order-camera-actions"><button id="orderCameraFallback" type="button" class="order-camera-fallback" onclick="openNativeOrderCamera()" hidden>改用系統拍照</button><button id="orderCameraCapture" type="button" class="primary" onclick="takeOrderCameraPhoto()" disabled>拍下照片</button></div>
+  </div>
+</div>
+<div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2 id="orderEditTitle">修改訂單</h2><p id="orderEditSubtitle">調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button id="frontDeleteOrderBtn" type="button" class="danger order-edit-delete-btn" onclick="openFrontDeleteReasonModal()">刪除訂單</button><button class="secondary" onclick="closeOrderEditModal()">取消</button><button id="orderEditSubmitBtn" class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="frontDeleteReasonModal" class="order-edit-modal front-delete-modal" onclick="if(event.target===this)closeFrontDeleteReasonModal()"><div class="front-delete-dialog"><h2>刪除這筆訂單</h2><p>請先選擇刪除原因，確認後此筆訂單將被刪除。</p><label>刪除原因<select id="frontDeleteReason" onchange="toggleFrontDeleteOtherReason()"><option value="客人取消">客人取消</option><option value="其他">其他</option></select></label><label id="frontDeleteOtherWrap" style="display:none">其他原因<textarea id="frontDeleteOtherReason" rows="3" placeholder="請輸入刪除原因"></textarea></label><div class="front-delete-actions"><button type="button" class="secondary" onclick="closeFrontDeleteReasonModal()">返回</button><button type="button" class="danger" onclick="confirmFrontDeleteOrder()">確認刪除</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
   <div class="success-dialog">
     <div class="success-icon">✓</div>
     <div id="successTitle" class="success-title">活動建立成功</div>
@@ -5415,6 +5435,61 @@ function initEditOrderAddress(){const e=$("editOrderCounty");if(e)e.innerHTML='<
 function rebuildEditOrderDistrictOptions(selected=''){const c=$("editOrderCounty")?.value||'',d=$("editOrderDistrict");if(!d)return;d.innerHTML='<option value="">請選擇行政區</option>'+(taiwanAddressData[c]||[]).map(x=>`<option>${x}</option>`).join('');if(selected)d.value=selected}
 function splitTaiwanAddress(address=''){const text=String(address||'').trim();let county='',district='',detail=text;for(const c of Object.keys(taiwanAddressData)){if(text.startsWith(c)){county=c;detail=text.slice(c.length);break}}if(county){for(const d of taiwanAddressData[county]||[]){if(detail.startsWith(d)){district=d;detail=detail.slice(d.length);break}}}return{county,district,detail}}
 function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.value==='門市自取',m=$("editOrderPickupStoreWrap"),addr=$("editOrderAddressFields");if(m)m.style.display=pickup?'flex':'none';if(addr)addr.style.display=pickup?'none':'grid';if(pickup)renderEditPickupStores($("editOrderPickupStore")?.value||'')}
+
+let orderCameraStream=null;
+function isAndroidOrderDevice(){return /Android/i.test(navigator.userAgent||'')}
+function stopOrderCameraStream(){
+ if(orderCameraStream){orderCameraStream.getTracks().forEach(track=>track.stop());orderCameraStream=null}
+ const video=$("orderCameraVideo");if(video)video.srcObject=null;
+}
+function closeOrderCamera(){
+ stopOrderCameraStream();
+ $("orderCameraModal")?.classList.remove('show');
+ const capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ if(capture){capture.disabled=true;capture.textContent='拍下照片'}
+ if(fallback)fallback.hidden=true;
+}
+function openNativeOrderCamera(){
+ closeOrderCamera();
+ const input=$("orderCameraPhoto");if(input){input.value='';input.click()}
+}
+async function openOrderCamera(){
+ if(orderPhotoData.length>=5){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ // iOS 的 capture 行為正常，維持使用系統相機；Android 改用即時鏡頭，避開 LINE 將拍照導向相簿的問題。
+ if(!isAndroidOrderDevice()){
+  const input=$("orderCameraPhoto");if(input){input.value='';input.click()}return;
+ }
+ const modal=$("orderCameraModal"),video=$("orderCameraVideo"),status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ if(!modal||!video||!navigator.mediaDevices?.getUserMedia){
+  showOrderAction('無法直接開啟相機','目前的瀏覽器不支援直接拍照，請改用 Chrome 開啟此頁面。');return;
+ }
+ stopOrderCameraStream();modal.classList.add('show');status.textContent='正在開啟後鏡頭…';capture.disabled=true;fallback.hidden=true;
+ try{
+  try{orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+  catch(firstError){orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+  video.srcObject=orderCameraStream;await video.play();
+  status.textContent='';capture.disabled=false;
+ }catch(error){
+  console.error('Android camera failed:',error);stopOrderCameraStream();
+  const denied=error?.name==='NotAllowedError'||error?.name==='PermissionDeniedError';
+  status.textContent=denied?'相機權限未開啟。請允許此網站使用相機後再試。':'無法啟動相機，請確認沒有其他 App 正在使用鏡頭。';
+  fallback.hidden=false;
+ }
+}
+async function takeOrderCameraPhoto(){
+ const video=$("orderCameraVideo"),capture=$("orderCameraCapture"),status=$("orderCameraStatus");
+ if(!video?.videoWidth||!video?.videoHeight){status.textContent='相機尚未準備完成，請稍候再拍。';return}
+ if(orderPhotoData.length>=5){closeOrderCamera();showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ capture.disabled=true;capture.textContent='處理中…';
+ try{
+  const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  const ctx=canvas.getContext('2d',{alpha:false});ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('照片建立失敗')),'image/jpeg',.9));
+  orderPhotoData.push(await compressOrderPhoto(blob));renderOrderPhotoPreview();closeOrderCamera();
+ }catch(error){
+  console.error('camera capture failed:',error);capture.disabled=false;capture.textContent='拍下照片';status.textContent=error?.message||'拍照失敗，請再試一次。';
+ }
+}
 
 function loadOrderPhotoImage(file){
  return new Promise((resolve,reject)=>{
