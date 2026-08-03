@@ -5708,19 +5708,84 @@ function match(o,keyword,status){
  return orderSearchText(o).includes(q);
 }
 function clearSentOrderDate(){const f=$("orderDateFrom"),t=$("orderDateTo");if(f)f.value='';if(t)t.value='';resetOrderPageAndRender()}
-function resetOrderPageAndRender(){orderPageCurrent=1;renderOrderCards()}
-function changeOrderPage(page){orderPageCurrent=page;renderOrderCards();$("orderCardList")?.scrollTo({top:0,behavior:"smooth"})}
+function resetOrderPageAndRender(){orderPageCurrent=1;renderOrderCards({preserveView:false})}
+function changeOrderPage(page){orderPageCurrent=page;renderOrderCards({preserveView:false});$("orderCardList")?.scrollTo({top:0,behavior:"smooth"})}
+let orderViewRestoreToken=0;
+function findOrderCardById(id,list=$("orderCardList")){
+  const target=String(id||'');
+  if(!target||!list)return null;
+  return [...list.querySelectorAll('.order-card')].find(card=>String(card.dataset.orderId||'')===target)||null;
+}
+function captureOrderListViewState(){
+  const list=$("orderCardList");
+  if(!list)return null;
+  const pageActive=!!$("orderPage")?.classList.contains('active');
+  const cards=[...list.querySelectorAll('.order-card')];
+  const openCard=list.querySelector('.order-card.open');
+  const visibleCard=cards.find(card=>{const rect=card.getBoundingClientRect();return rect.bottom>0&&rect.top<window.innerHeight});
+  const anchorCard=(openCard&&openCard.getBoundingClientRect().bottom>0)?openCard:visibleCard;
+  const documentHeight=Math.max(document.documentElement.scrollHeight,document.body?.scrollHeight||0);
+  const maxWindowScroll=Math.max(0,documentHeight-window.innerHeight);
+  return {
+    pageActive,
+    openOrderId:String(openCard?.dataset.orderId||''),
+    anchorOrderId:String(anchorCard?.dataset.orderId||''),
+    anchorTop:anchorCard?anchorCard.getBoundingClientRect().top:null,
+    windowX:window.scrollX||0,
+    windowY:window.scrollY||0,
+    listScrollTop:list.scrollTop||0,
+    listScrollLeft:list.scrollLeft||0,
+    nearPageBottom:maxWindowScroll-(window.scrollY||0)<=56
+  };
+}
+function restoreOrderListViewState(state){
+  const list=$("orderCardList");
+  if(!state||!list)return;
+  const token=++orderViewRestoreToken;
+  const openCard=findOrderCardById(state.openOrderId,list);
+  if(openCard)openCard.classList.add('open');
+  const restorePosition=()=>{
+    if(token!==orderViewRestoreToken)return;
+    list.scrollTop=state.listScrollTop||0;
+    list.scrollLeft=state.listScrollLeft||0;
+    // 在後台頁面同步時只更新隱藏的訂單清單，不碰使用者目前的後台捲動位置。
+    if(!state.pageActive||!$("orderPage")?.classList.contains('active'))return;
+    const anchor=findOrderCardById(state.anchorOrderId,list);
+    if(anchor&&Number.isFinite(state.anchorTop)){
+      const delta=anchor.getBoundingClientRect().top-state.anchorTop;
+      if(Math.abs(delta)>.5)window.scrollBy(0,delta);
+    }else if(state.nearPageBottom){
+      const height=Math.max(document.documentElement.scrollHeight,document.body?.scrollHeight||0);
+      window.scrollTo(state.windowX||0,Math.max(0,height-window.innerHeight));
+    }else{
+      window.scrollTo(state.windowX||0,state.windowY||0);
+    }
+  };
+  restorePosition();
+  requestAnimationFrame(()=>{restorePosition();requestAnimationFrame(restorePosition)});
+}
 function toggleOrderCard(button){
   const card=button.closest('.order-card');
   const list=card.closest('.order-card-list');
   const savedScrollTop=list?list.scrollTop:0;
+  const savedScrollLeft=list?list.scrollLeft:0;
+  const savedWindowX=window.scrollX||0;
+  const savedWindowY=window.scrollY||0;
+  const cardTop=card.getBoundingClientRect().top;
   const willOpen=!card.classList.contains('open');
   document.querySelectorAll('.order-card.open').forEach(x=>x.classList.remove('open'));
   if(willOpen)card.classList.add('open');
-  // 固定傳送資料清單目前位置，避免展開下方訂單時上方客戶資料被自動捲走
+  // 同時固定內層清單與手機整頁位置，避免展開／收合時畫面跳走。
   if(list){
     list.scrollTop=savedScrollTop;
-    requestAnimationFrame(()=>{list.scrollTop=savedScrollTop;});
+    list.scrollLeft=savedScrollLeft;
+    requestAnimationFrame(()=>{
+      list.scrollTop=savedScrollTop;
+      list.scrollLeft=savedScrollLeft;
+      const delta=card.getBoundingClientRect().top-cardTop;
+      if(Math.abs(delta)>.5)window.scrollBy(0,delta);
+      else if(Math.abs((window.scrollY||0)-savedWindowY)>1)window.scrollTo(savedWindowX,savedWindowY);
+    });
   }
 }
 function renderOrderPagination(totalPages,totalItems){
@@ -5729,7 +5794,8 @@ function renderOrderPagination(totalPages,totalItems){
  const pages=[];for(let p=1;p<=totalPages;p++){if(p===1||p===totalPages||Math.abs(p-orderPageCurrent)<=1)pages.push(p);else if(pages[pages.length-1]!==0)pages.push(0)}
  box.innerHTML=`<button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent-1})" ${orderPageCurrent===1?'disabled':''}>‹ 上一頁</button><div class="order-page-numbers">${pages.map(p=>p===0?'<span class="order-page-dots">…</span>':`<button type="button" class="order-page-number ${p===orderPageCurrent?'active':''}" onclick="changeOrderPage(${p})">${p}</button>`).join('')}</div><button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent+1})" ${orderPageCurrent===totalPages?'disabled':''}>下一頁 ›</button><span class="order-page-info">第 ${orderPageCurrent} / ${totalPages} 頁・共 ${totalItems} 筆</span>`
 }
-function renderOrderCards(){
+function renderOrderCards(options={}){
+ const viewState=options&&options.preserveView===false?null:captureOrderListViewState();
  const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'';
  const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!from||d>=from)&&(!to||d<=to)});
  const totalPages=Math.max(1,Math.ceil(list.length/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
@@ -5742,9 +5808,10 @@ function renderOrderCards(){
    const updated=escapeHtml(orderLastUpdatedValue(o));
    const statusClass=shipped?'shipped':(st==='returned'&&o.returnReceived?'return_received':st);
    const statusLabel=shipped?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';
-   return `<article class="order-card"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group"><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button>${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}</div></article>`;
+   return `<article class="order-card" data-order-id="${escapeHtml(String(o.id||''))}"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group"><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhoto('${o.photoKey}')">查看照片</button>${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}</div></article>`;
  }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
- renderOrderPagination(totalPages,list.length)
+ renderOrderPagination(totalPages,list.length);
+ if(viewState)restoreOrderListViewState(viewState)
 }
 async function requestOrderChange(orderId){
  const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;
@@ -7439,22 +7506,35 @@ async function migrateLegacyLocalOrderState(){
 function applyOrderStateSync(rows){
  const localMap=new Map(orders.map(order=>[String(order.id),order]));
  let needsFullReload=rows.length!==orders.length;
+ let stateChanged=false;
  for(const row of rows){
   const order=localMap.get(String(row.id));
   if(!order){needsFullReload=true;continue}
   if(row.updated_at&&String(order.cloudUpdatedAtRaw||"")!==String(row.updated_at))needsFullReload=true;
   const state=cloudOrderState(row);
-  order.cloudStatus=String(row.status||"pending");
-  order.cloudProcessorName=String(row.processor_name||"");
-  order.status=state.status;
-  order.handler=state.handler;
-  order.returnReceived=state.returnReceived;
-  order.returnReceivedBy=state.returnReceivedBy;
-  order.returnReceivedAt=state.returnReceived?(row.updated_at||row.processed_at||""):"";
-  order.shippedDate=state.status==="shipped"&&row.processed_at?String(row.processed_at).slice(0,10):"";
+  const nextCloudStatus=String(row.status||"pending");
+  const nextProcessorName=String(row.processor_name||"");
+  const nextStatus=String(state.status||"pending");
+  const nextHandler=String(state.handler||"");
+  const nextReturnReceived=!!state.returnReceived;
+  const nextReturnReceivedBy=String(state.returnReceivedBy||"");
+  const nextReturnReceivedAt=nextReturnReceived?String(row.updated_at||row.processed_at||""):"";
+  const nextShippedDate=nextStatus==="shipped"&&row.processed_at?String(row.processed_at).slice(0,10):"";
+  const beforeState=[String(order.cloudStatus||""),String(order.cloudProcessorName||""),String(order.status||""),String(order.handler||""),String(!!order.returnReceived),String(order.returnReceivedBy||""),String(order.returnReceivedAt||""),String(order.shippedDate||"")].join("\u0001");
+  const afterState=[nextCloudStatus,nextProcessorName,nextStatus,nextHandler,String(nextReturnReceived),nextReturnReceivedBy,nextReturnReceivedAt,nextShippedDate].join("\u0001");
+  if(beforeState!==afterState)stateChanged=true;
+  order.cloudStatus=nextCloudStatus;
+  order.cloudProcessorName=nextProcessorName;
+  order.status=nextStatus;
+  order.handler=nextHandler;
+  order.returnReceived=nextReturnReceived;
+  order.returnReceivedBy=nextReturnReceivedBy;
+  order.returnReceivedAt=nextReturnReceivedAt;
+  order.shippedDate=nextShippedDate;
   if(row.updated_at){order.cloudUpdatedAtRaw=String(row.updated_at);order.updatedAt=taipeiCloudDateTime(row.updated_at)}
  }
  if(needsFullReload)return false;
+ if(!stateChanged)return true;
  persistOrders();
  if(typeof orderSearchCache!=="undefined")orderSearchCache.clear();
  renderOrderCards();renderOrderAdmin();
