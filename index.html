@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260804-mobile-date-range-compact-test-liff -->
+<!-- STARRED BUILD: 20260804-mobile-date-range-equal-box-test-liff -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -3721,7 +3721,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <div id="orderPhotoPreview" class="order-photo-preview-grid"></div></div>
 </div>
 </div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button id="orderSubmitButton" type="button" class="primary" onclick="submitOrder(event)">確認傳送</button></div></section>
-<section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期、門市與狀態查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select><select id="orderStoreFilter" onchange="resetOrderPageAndRender()"><option value="">全部門市</option></select><div class="sent-date-range"><div class="sent-date-range-head"><span>訂單日期區間</span><button type="button" onclick="clearSentOrderDate()">清除</button></div><div class="sent-date-range-inputs"><div class="sent-date-field"><label>開始</label><input id="orderDateFrom" type="date" onchange="syncSentOrderDateRange('from')"></div><div class="sent-date-field"><label>結束</label><input id="orderDateTo" type="date" onchange="syncSentOrderDateRange('to')"></div></div></div></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
+<section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期、門市與狀態查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select><select id="orderStoreFilter" onchange="resetOrderPageAndRender()"><option value="">全部門市</option></select><div class="sent-date-range"><div class="sent-date-range-head"><span>訂單日期區間</span><button type="button" onclick="clearSentOrderDate()">清除</button></div><div class="sent-date-range-inputs"><div class="sent-date-field"><label>開始</label><div class="sent-date-control"><input id="orderDateFrom" type="date" onchange="syncSentOrderDateRange('from')"></div></div><div class="sent-date-field"><label>結束</label><div class="sent-date-control"><input id="orderDateTo" type="date" onchange="syncSentOrderDateRange('to')"></div></div></div></div></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
 </div></section>
 <section id="adminPage" class="page">
   <div id="loginSection" class="login-wrap">
@@ -8494,6 +8494,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     display:block!important;
     width:100%!important;
     min-width:0!important;
+    overflow:hidden!important;
   }
   #orderPage .sent-date-field label{
     display:block!important;
@@ -8502,14 +8503,38 @@ document.addEventListener("DOMContentLoaded",()=>{
     font-size:12px!important;
     line-height:1.2!important;
   }
-  #orderPage .sent-date-field input{
+  #orderPage .sent-date-control{
     display:block!important;
     width:100%!important;
     min-width:0!important;
     max-width:100%!important;
     height:46px!important;
+    overflow:hidden!important;
+    border:1px solid #c9d8e8!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    box-sizing:border-box!important;
+  }
+  #orderPage .sent-date-control:focus-within{
+    border-color:#7daee2!important;
+    box-shadow:0 0 0 3px rgba(10,132,255,.10)!important;
+  }
+  #orderPage .sent-date-field input{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:44px!important;
+    min-height:44px!important;
     padding:8px 6px!important;
     overflow:hidden!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    -webkit-appearance:none!important;
+    appearance:none!important;
     text-align:center!important;
     font-size:14px!important;
   }
