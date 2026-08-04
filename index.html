@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260804-cross-project-v5-multi-photo-complete -->
+<!-- STARRED BUILD: 20260804-mobile-date-range-equal-box-production-liff -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -3690,9 +3690,17 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <div class="order-layout">
 <section class="panel order-entry-panel"><div class="order-title-row"><div><h2>新增客訂資料</h2><div class="order-red-note">只須填寫收件人資料，購買人無須填寫</div></div></div>
 <div class="order-fixed-date"><div class="order-fixed-meta"><span>訂單日期</span><b id="orderFixedDate"></b></div><div class="order-fixed-meta"><span>回傳人員</span><b id="orderReturnPerson">（登入後自動帶入）</b></div></div><div class="order-form-grid">
+<div class="order-form-section order-store-section">
+<div class="order-section-heading"><span>1</span><div><b>門市資訊</b><small>選擇回傳訂單的門市</small></div></div>
 <div class="field"><label>區域 *</label><select id="orderArea" onchange="rebuildOrderStoreOptions()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div>
 <div class="field"><label>門市 *</label><select id="orderStore"><option value="">請先選擇區域</option></select></div>
-<div class="field"><label>收件人姓名 *</label><input id="orderName"></div><div class="field"><label>電話 *</label><input id="orderPhone"></div>
+</div>
+<div class="order-form-section order-recipient-section">
+<div class="order-section-heading"><span>2</span><div><b>收件人資料</b><small>填寫姓名與聯絡電話</small></div></div>
+<div class="field"><label>收件人姓名 *</label><input id="orderName"></div><div class="field"><label>電話 *</label><input id="orderPhone" inputmode="tel"></div>
+</div>
+<div class="order-form-section order-detail-section">
+<div class="order-section-heading"><span>3</span><div><b>配送與訂購單</b><small>填寫配送、商品內容與照片</small></div></div>
 <div class="field wide"><label>配送方式 *</label><select id="orderDelivery" onchange="toggleOrderDeliveryFields()"><option selected>總公司寄出</option><option>門市自取</option></select></div>
 <div id="orderAddressFields" class="order-conditional-fields">
 <div class="field"><label>縣市 *</label><select id="orderCounty" onchange="rebuildOrderDistrictOptions()"><option value="">請選擇縣市</option></select></div><div class="field"><label>行政區 *</label><select id="orderDistrict"><option value="">請先選擇縣市</option></select></div>
@@ -3711,8 +3719,9 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 </div>
 <div class="note order-photo-note">Android 點「現場拍照」會直接開啟後鏡頭；iPhone 會使用系統相機。也可從相簿選擇，可分次加入，合計最多 5 張。</div>
 <div id="orderPhotoPreview" class="order-photo-preview-grid"></div></div>
+</div>
 </div><div class="order-submit-row"><button class="secondary" onclick="resetOrderForm()">清除資料</button><button id="orderSubmitButton" type="button" class="primary" onclick="submitOrder(event)">確認傳送</button></div></section>
-<section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期區間查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select><div class="sent-date-field"><label>開始日期</label><input id="orderDateFrom" type="date" onchange="resetOrderPageAndRender()"></div><div class="sent-date-field"><label>結束日期</label><input id="orderDateTo" type="date" onchange="resetOrderPageAndRender()"></div><button type="button" class="secondary sent-date-clear" onclick="clearSentOrderDate()">清除日期</button></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
+<section class="panel order-sent-panel"><div class="order-title-row"><div><h2>傳送資料</h2><div class="note">可依日期、門市與狀態查看訂單，點選每筆資料即可展開。</div></div></div><div class="order-filter-grid sent-order-filter"><input id="orderKeyword" placeholder="搜尋姓名、電話、門市、商品" oninput="resetOrderPageAndRender()"><select id="orderStatusFilter" onchange="resetOrderPageAndRender()"><option value="">全部狀態</option><option value="pending">待寄出</option><option value="processing">處理中</option><option value="change_request">更改申請</option><option value="shipped">已寄出</option><option value="cancelled">取消訂單</option><option value="returned">退貨</option></select><select id="orderStoreFilter" onchange="resetOrderPageAndRender()"><option value="">全部門市</option></select><div class="sent-date-range"><div class="sent-date-range-head"><span>訂單日期區間</span><button type="button" onclick="clearSentOrderDate()">清除</button></div><div class="sent-date-range-inputs"><div class="sent-date-field"><label>開始</label><div class="sent-date-control"><input id="orderDateFrom" type="date" onchange="syncSentOrderDateRange('from')"></div></div><div class="sent-date-field"><label>結束</label><div class="sent-date-control"><input id="orderDateTo" type="date" onchange="syncSentOrderDateRange('to')"></div></div></div></div></div><div id="orderCardList" class="order-card-list"></div><div id="orderPagination" class="order-pagination" aria-label="傳送資料分頁"></div></section>
 </div></section>
 <section id="adminPage" class="page">
   <div id="loginSection" class="login-wrap">
@@ -5775,6 +5784,21 @@ function match(o,keyword,status){
  return orderSearchText(o).includes(q);
 }
 function clearSentOrderDate(){const f=$("orderDateFrom"),t=$("orderDateTo");if(f)f.value='';if(t)t.value='';resetOrderPageAndRender()}
+function syncSentOrderDateRange(changed){
+ const from=$("orderDateFrom"),to=$("orderDateTo");
+ if(from&&to&&from.value&&to.value&&from.value>to.value){
+  if(changed==='from')to.value=from.value;
+  else from.value=to.value;
+ }
+ resetOrderPageAndRender();
+}
+function renderFrontOrderStoreFilterOptions(){
+ const select=$("orderStoreFilter");if(!select)return;
+ const old=select.value;
+ const names=[...new Set([...stores.map(store=>store.name),...orders.map(order=>order.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+ select.innerHTML='<option value="">全部門市</option>'+names.map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+ if(names.includes(old))select.value=old;
+}
 function resetOrderPageAndRender(){orderPageCurrent=1;renderOrderCards({preserveView:false})}
 function changeOrderPage(page){orderPageCurrent=page;renderOrderCards({preserveView:false});$("orderCardList")?.scrollTo({top:0,behavior:"smooth"})}
 let orderViewRestoreToken=0;
@@ -5863,8 +5887,9 @@ function renderOrderPagination(totalPages,totalItems){
 }
 function renderOrderCards(options={}){
  const viewState=options&&options.preserveView===false?null:captureOrderListViewState();
- const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'';
- const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!from||d>=from)&&(!to||d<=to)});
+ renderFrontOrderStoreFilterOptions();
+ const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'',store=$("orderStoreFilter")?.value||'';
+ const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!store||o.store===store)&&(!from||d>=from)&&(!to||d<=to)});
  const totalPages=Math.max(1,Math.ceil(list.length/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
  const pageList=list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
  $("orderCardList").innerHTML=pageList.length?pageList.map(o=>{
@@ -7952,11 +7977,11 @@ function renderDashboard(){
  renderNotifications();
 }
 function openDashboardOrders(status=""){
- showPage("order");if($("orderStatusFilter"))$("orderStatusFilter").value=status;if($("orderKeyword"))$("orderKeyword").value="";resetOrderPageAndRender();window.scrollTo({top:0,behavior:"smooth"});
+ showPage("order");if($("orderStatusFilter"))$("orderStatusFilter").value=status;if($("orderStoreFilter"))$("orderStoreFilter").value="";if($("orderKeyword"))$("orderKeyword").value="";resetOrderPageAndRender();window.scrollTo({top:0,behavior:"smooth"});
 }
 function openDashboardOrder(id){
  const decoded=decodeURIComponent(id),order=orders.find(o=>String(o.id||"")===decoded);showPage("order");
- if($("orderKeyword"))$("orderKeyword").value=order?.phone||order?.name||"";if($("orderStatusFilter"))$("orderStatusFilter").value="";resetOrderPageAndRender();
+ if($("orderKeyword"))$("orderKeyword").value=order?.phone||order?.name||"";if($("orderStatusFilter"))$("orderStatusFilter").value="";if($("orderStoreFilter"))$("orderStoreFilter").value="";resetOrderPageAndRender();
  setTimeout(()=>{const card=document.querySelector("#orderCardList .order-card");if(card){card.classList.add("open");card.scrollIntoView({behavior:"smooth",block:"center"})}},80);
 }
 function openDashboardActivity(id){
@@ -8205,6 +8230,328 @@ document.addEventListener("DOMContentLoaded",()=>{
   #orderBackupTab .backup-table td:nth-child(4),
   #orderBackupTab .backup-table td:nth-child(6),
   #orderBackupTab .backup-table td:nth-child(10){grid-column:auto!important}
+}
+</style>
+<style id="mobile-order-section-and-filter-refresh-20260804">
+/* 新增客訂：電腦版維持原本欄位排列，手機版才顯示三個分區卡片。 */
+#orderPage .order-form-section{display:contents}
+#orderPage .order-section-heading{display:none}
+
+/* 傳送資料：門市、狀態與同一張日期區間卡。 */
+#orderPage .sent-order-filter{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;
+  align-items:end!important;
+}
+#orderPage .sent-order-filter>#orderKeyword{
+  grid-column:1/-1!important;
+  grid-row:auto!important;
+}
+#orderPage .sent-order-filter>#orderStatusFilter,
+#orderPage .sent-order-filter>#orderStoreFilter{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  min-width:0!important;
+}
+#orderPage .sent-date-range{
+  grid-column:1/-1!important;
+  width:100%;
+  min-width:0;
+  padding:10px 11px 11px;
+  border:1px solid #d8e3ea;
+  border-radius:13px;
+  background:#f6f9fb;
+}
+#orderPage .sent-date-range-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:7px;
+  color:#5f7582;
+  font-size:12px;
+  font-weight:900;
+}
+#orderPage .sent-date-range-head button{
+  min-height:0!important;
+  padding:2px 4px;
+  border:0;
+  background:transparent;
+  color:#2878cc;
+  font-size:12px;
+  font-weight:900;
+}
+#orderPage .sent-date-range-inputs{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:end;
+  gap:7px;
+}
+#orderPage .sent-date-field{min-width:0}
+#orderPage .sent-date-field label{display:block;margin-bottom:4px}
+#orderPage .sent-date-separator{
+  align-self:center;
+  margin-top:18px;
+  color:#78909d;
+  font-size:12px;
+  font-weight:900;
+}
+
+@media(max-width:760px){
+  :root{
+    --mobile-ios-blue:#0a84ff;
+    --mobile-ios-bg:#f2f2f7;
+    --mobile-ios-line:rgba(60,60,67,.14);
+  }
+  body{background:var(--mobile-ios-bg)!important}
+  #orderPage .order-layout{gap:13px!important}
+  #orderPage .order-entry-panel,
+  #orderPage .order-sent-panel{
+    padding:13px!important;
+    border-color:var(--mobile-ios-line)!important;
+    background:#fff!important;
+    box-shadow:0 5px 20px rgba(32,53,66,.06)!important;
+  }
+  #orderPage .order-title-row h2{
+    color:#1c1c1e!important;
+    font-size:20px!important;
+    letter-spacing:-.01em;
+  }
+  #orderPage .order-red-note{color:#d44c42!important;font-size:12px!important}
+  #orderPage .order-fixed-date{
+    margin:10px 0 13px!important;
+    padding:11px 12px!important;
+    border:0!important;
+    border-radius:14px!important;
+    background:#edf4ff!important;
+  }
+  #orderPage .order-fixed-date span{color:#6d7f93!important}
+  #orderPage .order-fixed-date b{color:#1f4f84!important}
+
+  #orderPage .order-form-grid{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  #orderPage .order-form-section{
+    position:relative;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    min-width:0;
+    padding:13px 12px 14px;
+    border:1px solid var(--mobile-ios-line);
+    border-radius:16px;
+    overflow:hidden;
+  }
+  #orderPage .order-form-section:before{
+    content:"";
+    position:absolute;
+    top:0;left:0;bottom:0;
+    width:4px;
+    background:var(--section-accent);
+  }
+  #orderPage .order-store-section{
+    --section-accent:#0a84ff;
+    background:#f1f7ff;
+    border-color:#d6e7fb;
+  }
+  #orderPage .order-recipient-section{
+    --section-accent:#f29b38;
+    background:#fff8ef;
+    border-color:#f2e1ca;
+  }
+  #orderPage .order-detail-section{
+    --section-accent:#31a36b;
+    background:#f2faf6;
+    border-color:#d4eadc;
+  }
+  #orderPage .order-section-heading{
+    display:flex!important;
+    align-items:center;
+    gap:10px;
+    padding:0 1px 2px;
+  }
+  #orderPage .order-section-heading>span{
+    display:grid;
+    place-items:center;
+    flex:0 0 28px;
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:var(--section-accent);
+    color:#fff;
+    font-size:13px;
+    font-weight:900;
+    box-shadow:0 4px 10px color-mix(in srgb,var(--section-accent) 22%,transparent);
+  }
+  #orderPage .order-section-heading b{
+    display:block;
+    color:#263b48;
+    font-size:15px;
+    line-height:1.25;
+  }
+  #orderPage .order-section-heading small{
+    display:block;
+    margin-top:2px;
+    color:#758894;
+    font-size:11px;
+    line-height:1.25;
+  }
+  #orderPage .order-form-section .field,
+  #orderPage .order-form-section .field.wide{
+    grid-column:auto!important;
+    min-width:0;
+  }
+  #orderPage .order-form-section .field label{
+    color:#586e7b!important;
+    font-size:12px!important;
+  }
+  #orderPage .order-form-section input,
+  #orderPage .order-form-section select,
+  #orderPage .order-form-section textarea{
+    border-color:rgba(60,60,67,.16)!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.94)!important;
+  }
+  #orderPage .order-form-section input:focus,
+  #orderPage .order-form-section select:focus,
+  #orderPage .order-form-section textarea:focus{
+    border-color:var(--section-accent)!important;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--section-accent) 12%,transparent)!important;
+  }
+  #orderPage #orderAddressFields{
+    grid-column:1/-1!important;
+    width:100%!important;
+  }
+  #orderPage #orderPickupFields{
+    grid-column:1/-1!important;
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    width:100%!important;
+  }
+  #orderPage .order-photo-picker{gap:8px!important}
+  #orderPage .order-photo-source-btn{
+    min-height:46px!important;
+    border-color:#cddfea!important;
+    background:#fff!important;
+    color:#315d73!important;
+  }
+  #orderPage .order-submit-row{margin-top:12px!important}
+  #orderPage .order-submit-row #orderSubmitButton{
+    background:var(--mobile-ios-blue)!important;
+    box-shadow:0 6px 16px rgba(10,132,255,.22)!important;
+  }
+
+  #orderPage .order-sent-panel>.order-title-row .note{margin-top:4px!important}
+  #orderPage .sent-order-filter{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+    margin:12px 0!important;
+    padding:10px!important;
+    border:1px solid var(--mobile-ios-line);
+    border-radius:15px;
+    background:#f6f7fa;
+  }
+  #orderPage .sent-order-filter>#orderKeyword{grid-column:1/-1!important}
+  #orderPage .sent-order-filter>#orderStatusFilter{grid-column:1!important}
+  #orderPage .sent-order-filter>#orderStoreFilter{grid-column:2!important}
+  #orderPage .sent-order-filter>input,
+  #orderPage .sent-order-filter>select{
+    min-width:0!important;
+    border-color:var(--mobile-ios-line)!important;
+    background:#fff!important;
+    font-size:15px!important;
+  }
+  #orderPage .sent-date-range{
+    margin-top:1px;
+    padding:10px!important;
+    border-color:#cfe0f6!important;
+    background:#eef5ff!important;
+  }
+  #orderPage .sent-date-range-head{color:#55728f!important}
+  #orderPage .sent-date-range-head button{color:var(--mobile-ios-blue)!important}
+  #orderPage .sent-date-range-inputs{gap:6px!important}
+  #orderPage .sent-date-field input{
+    min-width:0!important;
+    padding:9px 7px!important;
+    border-color:#c9d8e8!important;
+    background:#fff!important;
+    font-size:14px!important;
+  }
+  #orderPage .sent-date-separator{color:#65809a!important}
+}
+
+/* 手機維持左右並排，拿掉「至」並壓縮日期欄，避免超出卡片。 */
+@media(max-width:560px){
+  #orderPage .sent-date-range-inputs{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  #orderPage .sent-date-separator{display:none!important}
+  #orderPage .sent-date-field{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  #orderPage .sent-date-field label{
+    display:block!important;
+    margin:0 0 4px!important;
+    color:#5f7891!important;
+    font-size:12px!important;
+    line-height:1.2!important;
+  }
+  #orderPage .sent-date-control{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:46px!important;
+    overflow:hidden!important;
+    border:1px solid #c9d8e8!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    box-sizing:border-box!important;
+  }
+  #orderPage .sent-date-control:focus-within{
+    border-color:#7daee2!important;
+    box-shadow:0 0 0 3px rgba(10,132,255,.10)!important;
+  }
+  #orderPage .sent-date-field input{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:44px!important;
+    min-height:44px!important;
+    padding:8px 6px!important;
+    overflow:hidden!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    -webkit-appearance:none!important;
+    appearance:none!important;
+    text-align:center!important;
+    font-size:14px!important;
+  }
+  #orderPage .sent-date-field input::-webkit-date-and-time-value{
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    text-align:center!important;
+  }
+}
+
+@media(max-width:370px){
+  #orderPage .order-entry-panel,
+  #orderPage .order-sent-panel{padding:10px!important}
+  #orderPage .order-form-section{padding:12px 10px 13px}
+  #orderPage .sent-order-filter{padding:8px!important}
+  #orderPage .sent-date-field input{font-size:13px!important;padding-left:4px!important;padding-right:4px!important}
 }
 </style>
 </body>
