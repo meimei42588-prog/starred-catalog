@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260804-mobile-date-range-equal-box-test-liff -->
+<!-- STARRED BUILD: 20260804-mobile-date-range-equal-box-production-liff -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -7306,7 +7306,7 @@ document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today
 
 <script>
 /* ===== LINE LIFF + Supabase line-api：僅處理登入資料，不修改任何版面 ===== */
-const STARRED_LIFF_ID = "2010833798-ivxAGeJ0";
+const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
 const STARRED_LINE_RELOGIN_KEY = "starred_line_relogin_running";
 const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
 const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
@@ -8552,6 +8552,216 @@ document.addEventListener("DOMContentLoaded",()=>{
   #orderPage .order-form-section{padding:12px 10px 13px}
   #orderPage .sent-order-filter{padding:8px!important}
   #orderPage .sent-date-field input{font-size:13px!important;padding-left:4px!important;padding-right:4px!important}
+}
+</style>
+<style id="order-admin-space-saving-test-v1">
+/* 訂單寄出管理 UI 精簡測試版：只調整顯示，不更動訂單功能與資料邏輯 */
+#adminPage .compact-order-admin{
+  padding:12px!important;
+}
+#adminPage .compact-batch-panel{
+  padding:8px 10px!important;
+  margin-bottom:8px!important;
+  border:1px solid #dce5e9!important;
+  border-radius:10px!important;
+  background:#f7f9fa!important;
+  box-shadow:none!important;
+}
+#adminPage .compact-select-row{
+  min-height:28px!important;
+  margin:0 0 7px!important;
+  padding:0 2px!important;
+}
+#adminPage .compact-select-row label{
+  gap:7px!important;
+  font-size:13px!important;
+  color:#294657!important;
+}
+#adminPage .compact-select-row>b{
+  padding:3px 8px!important;
+  border-radius:999px!important;
+  background:#e8eef2!important;
+  color:#355465!important;
+  font-size:12px!important;
+}
+#adminPage .compact-process-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex-wrap:wrap!important;
+}
+#adminPage .compact-process-row select,
+#adminPage .compact-process-row input{
+  width:auto!important;
+  min-width:135px!important;
+  height:34px!important;
+  min-height:34px!important;
+  padding:5px 8px!important;
+  border-radius:8px!important;
+  font-size:12px!important;
+}
+#adminPage .compact-process-row select{flex:1 1 150px!important}
+#adminPage .compact-process-row input{flex:0 1 142px!important}
+#adminPage .compact-action{
+  flex:1 1 104px!important;
+  width:auto!important;
+  min-width:92px!important;
+  min-height:34px!important;
+  padding:5px 9px!important;
+  border-radius:8px!important;
+  font-size:12px!important;
+  box-shadow:none!important;
+}
+#adminPage .clean-admin-list{gap:6px!important}
+#adminPage .clean-admin-card{
+  display:grid!important;
+  grid-template-columns:24px minmax(0,1fr)!important;
+  gap:8px!important;
+  align-items:start!important;
+  padding:9px 10px!important;
+  border:1px solid #dbe4e8!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+#adminPage .clean-admin-card:hover{
+  border-color:#b9cbd4!important;
+  background:#fcfdfd!important;
+}
+#adminPage .clean-admin-card.selected{
+  border-color:#5d7d8f!important;
+  background:#f1f6f8!important;
+  box-shadow:inset 3px 0 0 #365f75!important;
+}
+#adminPage .admin-check-wrap{
+  padding-top:3px!important;
+}
+#adminPage .order-big-checkbox{
+  width:22px!important;
+  height:22px!important;
+  margin:0!important;
+}
+#adminPage .admin-order-main{
+  gap:6px!important;
+}
+#adminPage .admin-order-top{
+  min-height:28px!important;
+  padding:0!important;
+  border:0!important;
+  gap:8px!important;
+}
+#adminPage .admin-customer-head{
+  gap:7px!important;
+  flex-wrap:wrap!important;
+}
+#adminPage .admin-customer-head>b{
+  font-size:15px!important;
+  line-height:1.25!important;
+}
+#adminPage .admin-customer-head time{
+  margin:0!important;
+  font-size:11px!important;
+  color:#81919a!important;
+}
+#adminPage .order-status{
+  padding:3px 7px!important;
+  font-size:10px!important;
+}
+#adminPage .admin-edit-compact{
+  min-width:auto!important;
+  min-height:30px!important;
+  padding:4px 9px!important;
+  border-color:#d3dfe4!important;
+  background:#f5f8f9!important;
+  color:#375667!important;
+  border-radius:7px!important;
+  font-size:12px!important;
+}
+#adminPage .admin-order-columns{
+  display:grid!important;
+  grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)!important;
+  gap:0!important;
+  overflow:hidden!important;
+  border:1px solid #e1e8eb!important;
+  border-radius:8px!important;
+  background:#fbfcfc!important;
+}
+#adminPage .admin-customer-block,
+#adminPage .admin-product-block{
+  min-height:0!important;
+  padding:7px 10px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+#adminPage .admin-customer-block{
+  gap:4px!important;
+  border-right:1px solid #e1e8eb!important;
+}
+#adminPage .admin-customer-block>div{
+  display:grid!important;
+  grid-template-columns:50px minmax(0,1fr)!important;
+  gap:7px!important;
+}
+#adminPage .admin-product-block{
+  gap:3px!important;
+}
+#adminPage .admin-customer-block span,
+#adminPage .admin-product-block>span{
+  font-size:10px!important;
+  line-height:1.45!important;
+  color:#7b8d97!important;
+}
+#adminPage .admin-customer-block b,
+#adminPage .admin-product-block>b{
+  font-size:13px!important;
+  line-height:1.42!important;
+  color:#294657!important;
+  font-weight:600!important;
+}
+#adminPage .admin-order-footer{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px 12px!important;
+  justify-content:stretch!important;
+  padding:5px 2px 0!important;
+  border:0!important;
+  font-size:10px!important;
+  color:#82939c!important;
+}
+#adminPage .admin-order-footer>span:last-child{text-align:right!important}
+#adminPage .admin-order-footer b{
+  font-size:11px!important;
+  color:#496473!important;
+  font-weight:600!important;
+}
+
+@media(max-width:900px){
+  #adminPage .compact-process-row select,
+  #adminPage .compact-process-row input,
+  #adminPage .compact-action{flex:1 1 calc(50% - 6px)!important}
+  #adminPage .admin-order-columns{grid-template-columns:1fr!important}
+  #adminPage .admin-customer-block{border-right:0!important;border-bottom:1px solid #e1e8eb!important}
+  #adminPage .admin-order-footer{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #adminPage .admin-order-footer>span:last-child{text-align:left!important}
+}
+@media(max-width:620px){
+  #adminPage .compact-order-admin{padding:9px!important}
+  #adminPage .compact-select-row{position:static!important}
+  #adminPage .compact-process-row select,
+  #adminPage .compact-process-row input,
+  #adminPage .compact-action{flex:1 1 calc(50% - 6px)!important;min-width:0!important}
+  #adminPage .clean-admin-card{grid-template-columns:22px minmax(0,1fr)!important;padding:8px!important}
+  #adminPage .admin-order-top{align-items:center!important}
+  #adminPage .admin-customer-head time{width:auto!important}
+  #adminPage .admin-edit-compact{width:auto!important;white-space:nowrap!important}
+  #adminPage .admin-order-footer{grid-template-columns:1fr 1fr!important;gap:4px 8px!important}
+}
+@media(max-width:390px){
+  #adminPage .compact-process-row select,
+  #adminPage .compact-process-row input{flex-basis:100%!important}
+  #adminPage .admin-customer-head{gap:5px!important}
+  #adminPage .admin-edit-compact{padding:4px 7px!important;font-size:11px!important}
 }
 </style>
 </body>
