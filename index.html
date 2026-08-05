@@ -3588,6 +3588,237 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
   #homePage .store-group-count{gap:3px!important}
 }
 </style>
+<style id="admin-order-list-clarity-test-20260805">
+/* 測試版：後台訂單清單簡潔辨識 UI（僅視覺，不改資料與操作邏輯） */
+#adminPage #orderAdminList.clean-admin-list{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  padding:0!important;
+}
+#adminPage #orderAdminList .clean-admin-card{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:36px minmax(0,1fr)!important;
+  gap:12px!important;
+  align-items:start!important;
+  overflow:hidden!important;
+  padding:14px 15px 13px 11px!important;
+  border:1px solid #dce5e9!important;
+  border-left:5px solid #d6e0e5!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:0 3px 12px rgba(39,66,83,.045)!important;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease!important;
+}
+#adminPage #orderAdminList .clean-admin-card:hover{
+  border-top-color:#c9d7de!important;
+  border-right-color:#c9d7de!important;
+  border-bottom-color:#c9d7de!important;
+  box-shadow:0 7px 20px rgba(39,66,83,.08)!important;
+  transform:translateY(-1px)!important;
+}
+#adminPage #orderAdminList .clean-admin-card.selected{
+  border-color:#274253!important;
+  border-left-color:#274253!important;
+  background:#f7fafb!important;
+  box-shadow:0 0 0 3px rgba(39,66,83,.09)!important;
+}
+#adminPage #orderAdminList .clean-admin-card.status-pending{border-left-color:#e2a62b!important}
+#adminPage #orderAdminList .clean-admin-card.status-processing{border-left-color:#4f86bd!important}
+#adminPage #orderAdminList .clean-admin-card.status-change_request{border-left-color:#a55ca0!important}
+#adminPage #orderAdminList .clean-admin-card.status-shipped{border-left-color:#43a06d!important}
+#adminPage #orderAdminList .clean-admin-card.status-cancelled{border-left-color:#c7655d!important}
+#adminPage #orderAdminList .clean-admin-card.status-returned{border-left-color:#d67b21!important}
+#adminPage #orderAdminList .clean-admin-card.status-return_received{border-left-color:#27a85d!important}
+
+#adminPage #orderAdminList .admin-check-wrap{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  padding-top:2px!important;
+}
+#adminPage #orderAdminList .order-big-checkbox{
+  width:24px!important;
+  height:24px!important;
+  margin:0!important;
+  accent-color:#274253!important;
+}
+#adminPage #orderAdminList .admin-order-main{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  min-width:0!important;
+}
+#adminPage #orderAdminList .admin-order-top{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:0 0 9px!important;
+  border-bottom:1px solid #edf1f3!important;
+}
+#adminPage #orderAdminList .admin-customer-head{
+  display:grid!important;
+  grid-template-columns:auto auto auto!important;
+  align-items:center!important;
+  justify-content:start!important;
+  gap:8px!important;
+  min-width:0!important;
+}
+#adminPage #orderAdminList .admin-customer-head>b{
+  color:#203b4b!important;
+  font-size:17px!important;
+  font-weight:800!important;
+  line-height:1.3!important;
+}
+#adminPage #orderAdminList .admin-customer-head time{
+  margin:0!important;
+  color:#82949e!important;
+  font-size:12px!important;
+  font-weight:600!important;
+}
+#adminPage #orderAdminList .order-status{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:62px!important;
+  padding:4px 9px!important;
+  border:1px solid transparent!important;
+  border-radius:999px!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+}
+#adminPage #orderAdminList .order-status.pending{color:#8a5c00!important;background:#fff5d9!important;border-color:#efd897!important}
+#adminPage #orderAdminList .order-status.processing{color:#285f8d!important;background:#eaf3fb!important;border-color:#bdd6eb!important}
+#adminPage #orderAdminList .order-status.change_request{color:#823b7d!important;background:#f7eaf6!important;border-color:#dfbfdd!important}
+#adminPage #orderAdminList .order-status.shipped{color:#247049!important;background:#e8f6ee!important;border-color:#b9dec8!important}
+#adminPage #orderAdminList .order-status.cancelled{color:#963c34!important;background:#faecea!important;border-color:#e6bdb8!important}
+#adminPage #orderAdminList .order-status.returned{color:#a85a00!important;background:#fff1df!important;border-color:#efcb9e!important}
+#adminPage #orderAdminList .order-status.return_received{color:#18753e!important;background:#e5f8ec!important;border-color:#a9dfbc!important}
+
+#adminPage #orderAdminList .admin-edit-compact{
+  min-height:34px!important;
+  padding:6px 10px!important;
+  border:1px solid #d5e0e5!important;
+  border-radius:9px!important;
+  background:#f3f7f9!important;
+  color:#355365!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  white-space:nowrap!important;
+  box-shadow:none!important;
+}
+#adminPage #orderAdminList .admin-edit-compact:hover{
+  border-color:#9fb3bd!important;
+  background:#eaf1f4!important;
+}
+#adminPage #orderAdminList .admin-order-columns{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr)!important;
+  gap:10px!important;
+}
+#adminPage #orderAdminList .admin-customer-block,
+#adminPage #orderAdminList .admin-product-block{
+  min-width:0!important;
+  padding:10px 12px!important;
+  border:0!important;
+  border-radius:10px!important;
+  background:#f7f9fa!important;
+  box-shadow:none!important;
+}
+#adminPage #orderAdminList .admin-customer-block{
+  display:grid!important;
+  grid-template-columns:minmax(150px,.38fr) minmax(0,1fr)!important;
+  gap:8px 16px!important;
+}
+#adminPage #orderAdminList .admin-customer-block>div{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  align-items:baseline!important;
+  gap:8px!important;
+  min-width:0!important;
+  padding:0!important;
+}
+#adminPage #orderAdminList .admin-customer-block span,
+#adminPage #orderAdminList .admin-product-block>span{
+  color:#82949e!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  white-space:nowrap!important;
+}
+#adminPage #orderAdminList .admin-customer-block b,
+#adminPage #orderAdminList .admin-product-block>b{
+  min-width:0!important;
+  color:#334e5d!important;
+  font-size:14px!important;
+  font-weight:600!important;
+  line-height:1.55!important;
+  overflow-wrap:anywhere!important;
+}
+#adminPage #orderAdminList .admin-product-block{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  align-content:start!important;
+  gap:8px!important;
+}
+#adminPage #orderAdminList .admin-order-footer{
+  display:flex!important;
+  justify-content:flex-start!important;
+  align-items:center!important;
+  gap:6px 18px!important;
+  flex-wrap:wrap!important;
+  padding:0!important;
+  border:0!important;
+  color:#8798a1!important;
+  font-size:11px!important;
+}
+#adminPage #orderAdminList .admin-order-footer>span{font-weight:500!important}
+#adminPage #orderAdminList .admin-order-footer b{
+  color:#506a78!important;
+  font-size:11px!important;
+  font-weight:700!important;
+}
+
+@media(max-width:900px){
+  #adminPage #orderAdminList .admin-order-columns{grid-template-columns:1fr!important}
+  #adminPage #orderAdminList .admin-customer-block{grid-template-columns:1fr!important}
+}
+@media(max-width:620px){
+  #adminPage #orderAdminList.clean-admin-list{gap:8px!important}
+  #adminPage #orderAdminList .clean-admin-card{
+    grid-template-columns:30px minmax(0,1fr)!important;
+    gap:8px!important;
+    padding:11px 10px 11px 7px!important;
+    border-radius:12px!important;
+  }
+  #adminPage #orderAdminList .order-big-checkbox{width:23px!important;height:23px!important}
+  #adminPage #orderAdminList .admin-order-top{align-items:flex-start!important;gap:8px!important}
+  #adminPage #orderAdminList .admin-customer-head{
+    grid-template-columns:auto auto!important;
+    gap:6px!important;
+  }
+  #adminPage #orderAdminList .admin-customer-head>b{font-size:16px!important}
+  #adminPage #orderAdminList .admin-customer-head time{
+    grid-column:1/-1!important;
+    width:auto!important;
+  }
+  #adminPage #orderAdminList .admin-edit-compact{
+    width:auto!important;
+    min-height:32px!important;
+    padding:5px 8px!important;
+    font-size:11px!important;
+  }
+  #adminPage #orderAdminList .admin-customer-block,
+  #adminPage #orderAdminList .admin-product-block{padding:9px 10px!important}
+  #adminPage #orderAdminList .admin-customer-block>div,
+  #adminPage #orderAdminList .admin-product-block{grid-template-columns:58px minmax(0,1fr)!important}
+  #adminPage #orderAdminList .admin-order-footer{gap:5px 12px!important}
+  #adminPage #orderAdminList .admin-order-footer>span:last-child{width:100%!important}
+}
+</style>
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
@@ -5919,7 +6150,7 @@ function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("a
 function updateAdminStatusCounts(){const status=o=>o.status||'pending';$("adminStatusAll").textContent=orders.length;$("adminStatusPending").textContent=orders.filter(o=>status(o)==='pending').length;$("adminStatusProcessing").textContent=orders.filter(o=>status(o)==='processing').length;const changeRequestCount=orders.filter(o=>status(o)==='change_request').length;$("adminStatusChangeRequest").textContent=changeRequestCount;document.querySelector('.admin-status-btn.change-request')?.classList.toggle('has-items',changeRequestCount>0);$("adminStatusShipped").textContent=orders.filter(o=>status(o)==='shipped').length;$("adminStatusCancelled").textContent=orders.filter(o=>status(o)==='cancelled').length;if($("adminStatusReturned"))$("adminStatusReturned").textContent=orders.filter(o=>status(o)==='returned'&&!o.returnReceived).length}
 function renderAdminOrderStoreOptions(){const e=$("adminOrderStoreFilter");if(!e)return;const old=e.value;const names=[...new Set([...stores.map(s=>s.name),...orders.map(o=>o.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));e.innerHTML='<option value="">全部門市</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))e.value=old}
 function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("orderHandler");if(!e)return;const old=e.value;e.innerHTML='<option value="">請選擇處理人</option>'+accounts.filter(a=>a.enabled!==false).map(a=>`<option value="${escapeHtml(a.name||a.username)}">${escapeHtml(a.name||a.username)}</option>`).join('');if([...e.options].some(x=>x.value===old))e.value=old;updateConfirmShipButton()}
-function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',displaySt=(st==='returned'&&o.returnReceived)?'return_received':st,label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${displaySt}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='pending'?'—':(o.handler||'—'))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
+function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',displaySt=(st==='returned'&&o.returnReceived)?'return_received':st,label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card status-${displaySt} ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${displaySt}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='pending'?'—':(o.handler||'—'))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
 function toggleOrderSelection(id,c){c?selectedOrderIds.add(id):selectedOrderIds.delete(id);renderOrderAdmin()}
 function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.add(o.id):selectedOrderIds.delete(o.id));renderOrderAdmin()}
 function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}const pendingBtn=$("markPendingBtn");if(pendingBtn&&$("adminOrderStatus")?.value==="returned"){const selected=orders.filter(o=>selectedOrderIds.has(o.id));pendingBtn.disabled=selected.length>0&&selected.every(o=>o.returnReceived);pendingBtn.title=pendingBtn.disabled?"選取的訂單皆已收回退貨":"將尚未收回的退貨標記為已收回退貨"}updateConfirmShipButton()}
@@ -8552,216 +8783,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   #orderPage .order-form-section{padding:12px 10px 13px}
   #orderPage .sent-order-filter{padding:8px!important}
   #orderPage .sent-date-field input{font-size:13px!important;padding-left:4px!important;padding-right:4px!important}
-}
-</style>
-<style id="order-admin-space-saving-test-v1">
-/* 訂單寄出管理 UI 精簡測試版：只調整顯示，不更動訂單功能與資料邏輯 */
-#adminPage .compact-order-admin{
-  padding:12px!important;
-}
-#adminPage .compact-batch-panel{
-  padding:8px 10px!important;
-  margin-bottom:8px!important;
-  border:1px solid #dce5e9!important;
-  border-radius:10px!important;
-  background:#f7f9fa!important;
-  box-shadow:none!important;
-}
-#adminPage .compact-select-row{
-  min-height:28px!important;
-  margin:0 0 7px!important;
-  padding:0 2px!important;
-}
-#adminPage .compact-select-row label{
-  gap:7px!important;
-  font-size:13px!important;
-  color:#294657!important;
-}
-#adminPage .compact-select-row>b{
-  padding:3px 8px!important;
-  border-radius:999px!important;
-  background:#e8eef2!important;
-  color:#355465!important;
-  font-size:12px!important;
-}
-#adminPage .compact-process-row{
-  display:flex!important;
-  align-items:center!important;
-  gap:6px!important;
-  flex-wrap:wrap!important;
-}
-#adminPage .compact-process-row select,
-#adminPage .compact-process-row input{
-  width:auto!important;
-  min-width:135px!important;
-  height:34px!important;
-  min-height:34px!important;
-  padding:5px 8px!important;
-  border-radius:8px!important;
-  font-size:12px!important;
-}
-#adminPage .compact-process-row select{flex:1 1 150px!important}
-#adminPage .compact-process-row input{flex:0 1 142px!important}
-#adminPage .compact-action{
-  flex:1 1 104px!important;
-  width:auto!important;
-  min-width:92px!important;
-  min-height:34px!important;
-  padding:5px 9px!important;
-  border-radius:8px!important;
-  font-size:12px!important;
-  box-shadow:none!important;
-}
-#adminPage .clean-admin-list{gap:6px!important}
-#adminPage .clean-admin-card{
-  display:grid!important;
-  grid-template-columns:24px minmax(0,1fr)!important;
-  gap:8px!important;
-  align-items:start!important;
-  padding:9px 10px!important;
-  border:1px solid #dbe4e8!important;
-  border-radius:10px!important;
-  background:#fff!important;
-  box-shadow:none!important;
-}
-#adminPage .clean-admin-card:hover{
-  border-color:#b9cbd4!important;
-  background:#fcfdfd!important;
-}
-#adminPage .clean-admin-card.selected{
-  border-color:#5d7d8f!important;
-  background:#f1f6f8!important;
-  box-shadow:inset 3px 0 0 #365f75!important;
-}
-#adminPage .admin-check-wrap{
-  padding-top:3px!important;
-}
-#adminPage .order-big-checkbox{
-  width:22px!important;
-  height:22px!important;
-  margin:0!important;
-}
-#adminPage .admin-order-main{
-  gap:6px!important;
-}
-#adminPage .admin-order-top{
-  min-height:28px!important;
-  padding:0!important;
-  border:0!important;
-  gap:8px!important;
-}
-#adminPage .admin-customer-head{
-  gap:7px!important;
-  flex-wrap:wrap!important;
-}
-#adminPage .admin-customer-head>b{
-  font-size:15px!important;
-  line-height:1.25!important;
-}
-#adminPage .admin-customer-head time{
-  margin:0!important;
-  font-size:11px!important;
-  color:#81919a!important;
-}
-#adminPage .order-status{
-  padding:3px 7px!important;
-  font-size:10px!important;
-}
-#adminPage .admin-edit-compact{
-  min-width:auto!important;
-  min-height:30px!important;
-  padding:4px 9px!important;
-  border-color:#d3dfe4!important;
-  background:#f5f8f9!important;
-  color:#375667!important;
-  border-radius:7px!important;
-  font-size:12px!important;
-}
-#adminPage .admin-order-columns{
-  display:grid!important;
-  grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)!important;
-  gap:0!important;
-  overflow:hidden!important;
-  border:1px solid #e1e8eb!important;
-  border-radius:8px!important;
-  background:#fbfcfc!important;
-}
-#adminPage .admin-customer-block,
-#adminPage .admin-product-block{
-  min-height:0!important;
-  padding:7px 10px!important;
-  border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-}
-#adminPage .admin-customer-block{
-  gap:4px!important;
-  border-right:1px solid #e1e8eb!important;
-}
-#adminPage .admin-customer-block>div{
-  display:grid!important;
-  grid-template-columns:50px minmax(0,1fr)!important;
-  gap:7px!important;
-}
-#adminPage .admin-product-block{
-  gap:3px!important;
-}
-#adminPage .admin-customer-block span,
-#adminPage .admin-product-block>span{
-  font-size:10px!important;
-  line-height:1.45!important;
-  color:#7b8d97!important;
-}
-#adminPage .admin-customer-block b,
-#adminPage .admin-product-block>b{
-  font-size:13px!important;
-  line-height:1.42!important;
-  color:#294657!important;
-  font-weight:600!important;
-}
-#adminPage .admin-order-footer{
-  display:grid!important;
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  gap:6px 12px!important;
-  justify-content:stretch!important;
-  padding:5px 2px 0!important;
-  border:0!important;
-  font-size:10px!important;
-  color:#82939c!important;
-}
-#adminPage .admin-order-footer>span:last-child{text-align:right!important}
-#adminPage .admin-order-footer b{
-  font-size:11px!important;
-  color:#496473!important;
-  font-weight:600!important;
-}
-
-@media(max-width:900px){
-  #adminPage .compact-process-row select,
-  #adminPage .compact-process-row input,
-  #adminPage .compact-action{flex:1 1 calc(50% - 6px)!important}
-  #adminPage .admin-order-columns{grid-template-columns:1fr!important}
-  #adminPage .admin-customer-block{border-right:0!important;border-bottom:1px solid #e1e8eb!important}
-  #adminPage .admin-order-footer{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  #adminPage .admin-order-footer>span:last-child{text-align:left!important}
-}
-@media(max-width:620px){
-  #adminPage .compact-order-admin{padding:9px!important}
-  #adminPage .compact-select-row{position:static!important}
-  #adminPage .compact-process-row select,
-  #adminPage .compact-process-row input,
-  #adminPage .compact-action{flex:1 1 calc(50% - 6px)!important;min-width:0!important}
-  #adminPage .clean-admin-card{grid-template-columns:22px minmax(0,1fr)!important;padding:8px!important}
-  #adminPage .admin-order-top{align-items:center!important}
-  #adminPage .admin-customer-head time{width:auto!important}
-  #adminPage .admin-edit-compact{width:auto!important;white-space:nowrap!important}
-  #adminPage .admin-order-footer{grid-template-columns:1fr 1fr!important;gap:4px 8px!important}
-}
-@media(max-width:390px){
-  #adminPage .compact-process-row select,
-  #adminPage .compact-process-row input{flex-basis:100%!important}
-  #adminPage .admin-customer-head{gap:5px!important}
-  #adminPage .admin-edit-compact{padding:4px 7px!important;font-size:11px!important}
 }
 </style>
 </body>
