@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260807-sales-direct-link-v18 -->
+<!-- STARRED BUILD: 20260807-admin-login-v15-compat-v19 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4276,7 +4276,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260803-cross-project-v5-multi-photo";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260807-sales-audit-backup-v15";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -4595,7 +4595,7 @@ async function login(){
  try{
   const result=await starredApi("admin_login",{operatorAccount:username,operatorPassword:password});
   if(result?.apiBuild!==STARRED_REQUIRED_ADMIN_API_BUILD){
-   throw new Error("Supabase line-api 仍不是最新版本，請確認已用本次提供的後端檔覆蓋 index.ts 並部署。");
+   throw new Error(`Supabase line-api 版本不相容（目前：${result?.apiBuild||"未回傳版本"}；需要：${STARRED_REQUIRED_ADMIN_API_BUILD}），請確認後端部署狀態。`);
   }
   const admin=result?.admin||{};
   if(!result?.adminSessionToken||!admin?.username)throw new Error("後台登入驗證失敗，請重新登入");
