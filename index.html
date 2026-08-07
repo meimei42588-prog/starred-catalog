@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260807-sales-excel-export-v20 -->
+<!-- STARRED BUILD: 20260807-sales-excel-navigation-v21 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4261,6 +4261,8 @@ document.addEventListener("click",event=>{
   if(!link)return;
   const href=String(link.getAttribute("href")||"");
   const text=String(link.textContent||"");
+  // blob 下載網址會包含本站網域；不可把 Excel／ZIP 等下載誤判為前往訂單回傳。
+  if(link.hasAttribute("download")||link.dataset.starredDownload==="true"||/^(?:blob:|data:)/i.test(href))return;
   if(/(?:https?:\/\/)?catalog\.hshometw\.com(?:\/|$)/i.test(href)||/catalog\.hshometw\.com/i.test(text)){
     event.preventDefault();
     goToOrderReturnPage();
@@ -10497,7 +10499,9 @@ function salesDownloadExcelBuffer(buffer,fileName){
   var link=document.createElement('a');
   link.href=url;
   link.download=fileName;
+  link.dataset.starredDownload='true';
   link.style.display='none';
+  link.addEventListener('click',function(event){event.stopPropagation()},{once:true});
   document.body.appendChild(link);
   link.click();
   link.remove();
