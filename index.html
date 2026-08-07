@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260807-sales-audit-backup-high-value-v16 -->
+<!-- STARRED BUILD: 20260807-sales-audit-backup-high-value-sync-hotfix-v17 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -5714,6 +5714,1798 @@ window.registerLineLoginUser=function(profile){const user=syncCurrentLineUser(pr
 }
 </style>
 
+
+<script>
+/* Supabase 雲端資料同步層：活動、門市、照片 */
+const SUPABASE_URL = "https://nsurxlmlurcfhkcguydk.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_1XStDPKImqiaYPIQcOC-CQ_rbl2dWnZ";
+const SUPABASE_BUCKET = "activity-images";
+const cloudDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let cloudReady = false;
+let resetVerifiedEmail="";
+let recoverySessionReady=false;
+function showForgotStep(step){[1,2,3].forEach(n=>$("forgotStep"+n).classList.toggle("active",n===step))}
+function setResetStatus(step,message,isError=false){const el=$("resetStatus"+step);el.textContent=message;el.style.display=message?"block":"none";el.classList.toggle("error",isError)}
+function openForgotPassword(){showForgotStep(1);$("forgotPasswordModal").classList.add("show");$("resetEmail").value="";$("resetNewPassword").value="";$("resetConfirmPassword").value="";[1,2,3].forEach(n=>setResetStatus(n,""))}
+function closeForgotPassword(){$("forgotPasswordModal").classList.remove("show");if(!recoverySessionReady)resetVerifiedEmail=""}
+function passwordResetRedirectUrl(){return window.location.origin&&window.location.origin!=="null"?window.location.origin+window.location.pathname:window.location.href.split(/[?#]/)[0]}
+async function syncAdminAccountToCloud(account){
+ const accountName=String(account.username||"").trim();
+ const sharedPayload={
+  id:account.id,
+  password:String(account.password||""),
+  name:account.name,
+  role:account.role,
+  email:account.email||null,
+  enabled:account.enabled!==false
+ };
+ const payload={...sharedPayload,[cloudAdminAccountField]:accountName};
+ const {data,error}=await cloudDb
+  .from("admins")
+  .upsert(payload,{onConflict:"id"})
+  .select("*")
+  .single();
+ if(error)throw error;
+ if(!data)throw new Error("Supabase 未回傳儲存結果");
+ return data;
+}
+async function sendPasswordOtp(){
+ const email=$("resetEmail").value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email)){setResetStatus(1,"請輸入正確的 Email",true);return}
+ const localAccount=accounts.find(a=>String(a.email||"").toLowerCase()===email);if(!localAccount){setResetStatus(1,"找不到綁定此 Email 的管理帳號，請聯絡系統管理員確認。",true);return}
+ const btn=$("sendOtpBtn");btn.disabled=true;btn.textContent="寄送中…";
+ try{
+  await syncAdminAccountToCloud(localAccount);
+  const {error}=await cloudDb.auth.resetPasswordForEmail(email,{redirectTo:passwordResetRedirectUrl()});
+  if(error)throw error;
+  resetVerifiedEmail=email;setResetStatus(1,"密碼重設信已寄出，請查看收件匣與垃圾郵件匣。");setTimeout(()=>showForgotStep(2),500)
+ }catch(error){setResetStatus(1,"重設信寄送失敗："+(error.message||error),true)}finally{btn.disabled=false;btn.textContent="寄送重設信"}
+}
+async function updateForgottenPassword(){
+ const password=$("resetNewPassword").value,confirmPassword=$("resetConfirmPassword").value;if(password.length<8){setResetStatus(3,"新密碼至少需要 8 碼",true);return}if(password!==confirmPassword){setResetStatus(3,"兩次輸入的密碼不一致",true);return}
+ if(!recoverySessionReady){setResetStatus(3,"Email 驗證尚未完成，請重新點擊最新的密碼重設信。",true);return}
+ const btn=$("updatePasswordBtn");btn.disabled=true;btn.textContent="更新中…";
+ try{
+  const {data,error}=await cloudDb.auth.updateUser({password});if(error)throw error;
+  const email=(data?.user?.email||resetVerifiedEmail||"").toLowerCase();
+  const {error:dbError}=await cloudDb.from("admins").update({password}).ilike("email",email);if(dbError)throw dbError;
+  accounts=accounts.map(a=>String(a.email||"").toLowerCase()===email?{...a,password}:a);persistAccounts();
+  setResetStatus(3,"密碼已更新，請使用新密碼登入。");recoverySessionReady=false;resetVerifiedEmail="";
+  await cloudDb.auth.signOut();
+  if(history.replaceState)history.replaceState({},document.title,passwordResetRedirectUrl());
+  setTimeout(()=>closeForgotPassword(),1200)
+ }catch(error){setResetStatus(3,"密碼更新失敗："+(error.message||error),true)}finally{btn.disabled=false;btn.textContent="更新密碼"}
+}
+cloudDb.auth.onAuthStateChange((event,session)=>{
+ if(event==="PASSWORD_RECOVERY"){
+  recoverySessionReady=true;resetVerifiedEmail=(session?.user?.email||"").toLowerCase();
+  setTimeout(()=>{$("forgotPasswordModal").classList.add("show");showForgotStep(3);setResetStatus(3,"Email 驗證成功，請設定新密碼。")},0);
+ }
+});
+
+
+const taiwanAddressData={
+"臺北市":["中正區","大同區","中山區","松山區","大安區","萬華區","信義區","士林區","北投區","內湖區","南港區","文山區"],
+"基隆市":["仁愛區","信義區","中正區","中山區","安樂區","暖暖區","七堵區"],
+"新北市":["萬里區","金山區","板橋區","汐止區","深坑區","石碇區","瑞芳區","平溪區","雙溪區","貢寮區","新店區","坪林區","烏來區","永和區","中和區","土城區","三峽區","樹林區","鶯歌區","三重區","新莊區","泰山區","林口區","蘆洲區","五股區","八里區","淡水區","三芝區","石門區"],
+"桃園市":["中壢區","平鎮區","龍潭區","楊梅區","新屋區","觀音區","桃園區","龜山區","八德區","大溪區","復興區","大園區","蘆竹區"],
+"新竹市":["東區","北區","香山區"],
+"新竹縣":["竹北市","湖口鄉","新豐鄉","新埔鎮","關西鎮","芎林鄉","寶山鄉","竹東鎮","五峰鄉","橫山鄉","尖石鄉","北埔鄉","峨眉鄉"],
+"苗栗縣":["竹南鎮","頭份市","三灣鄉","南庄鄉","獅潭鄉","後龍鎮","通霄鎮","苑裡鎮","苗栗市","造橋鄉","頭屋鄉","公館鄉","大湖鄉","泰安鄉","銅鑼鄉","三義鄉","西湖鄉","卓蘭鎮"],
+"臺中市":["中區","東區","南區","西區","北區","北屯區","西屯區","南屯區","太平區","大里區","霧峰區","烏日區","豐原區","后里區","石岡區","東勢區","和平區","新社區","潭子區","大雅區","神岡區","大肚區","沙鹿區","龍井區","梧棲區","清水區","大甲區","外埔區","大安區"],
+"彰化縣":["彰化市","芬園鄉","花壇鄉","秀水鄉","鹿港鎮","福興鄉","線西鄉","和美鎮","伸港鄉","員林市","社頭鄉","永靖鄉","埔心鄉","溪湖鎮","大村鄉","埔鹽鄉","田中鎮","北斗鎮","田尾鄉","埤頭鄉","溪州鄉","竹塘鄉","二林鎮","大城鄉","芳苑鄉","二水鄉"],
+"南投縣":["南投市","中寮鄉","草屯鎮","國姓鄉","埔里鎮","仁愛鄉","名間鄉","集集鎮","水里鄉","魚池鄉","信義鄉","竹山鎮","鹿谷鄉"],
+"雲林縣":["斗南鎮","大埤鄉","虎尾鎮","土庫鎮","褒忠鄉","東勢鄉","臺西鄉","崙背鄉","麥寮鄉","斗六市","林內鄉","古坑鄉","莿桐鄉","西螺鎮","二崙鄉","北港鎮","水林鄉","口湖鄉","四湖鄉","元長鄉"],
+"嘉義市":["東區","西區"],
+"嘉義縣":["番路鄉","梅山鄉","竹崎鄉","阿里山鄉","中埔鄉","大埔鄉","水上鄉","鹿草鄉","太保市","朴子市","東石鄉","六腳鄉","新港鄉","民雄鄉","大林鎮","溪口鄉","義竹鄉","布袋鎮"],
+"臺南市":["中西區","東區","南區","北區","安平區","安南區","永康區","歸仁區","新化區","左鎮區","玉井區","楠西區","南化區","仁德區","關廟區","龍崎區","官田區","麻豆區","佳里區","西港區","七股區","將軍區","學甲區","北門區","新營區","後壁區","白河區","東山區","六甲區","下營區","柳營區","鹽水區","善化區","大內區","山上區","新市區","安定區"],
+"高雄市":["新興區","前金區","苓雅區","鹽埕區","鼓山區","旗津區","前鎮區","三民區","楠梓區","小港區","左營區","仁武區","大社區","岡山區","路竹區","阿蓮區","田寮區","燕巢區","橋頭區","梓官區","彌陀區","永安區","湖內區","鳳山區","大寮區","林園區","鳥松區","大樹區","旗山區","美濃區","六龜區","內門區","杉林區","甲仙區","桃源區","那瑪夏區","茂林區","茄萣區"],
+"屏東縣":["屏東市","三地門鄉","霧臺鄉","瑪家鄉","九如鄉","里港鄉","高樹鄉","鹽埔鄉","長治鄉","麟洛鄉","竹田鄉","內埔鄉","萬丹鄉","潮州鎮","泰武鄉","來義鄉","萬巒鄉","崁頂鄉","新埤鄉","南州鄉","林邊鄉","東港鎮","琉球鄉","佳冬鄉","新園鄉","枋寮鄉","枋山鄉","春日鄉","獅子鄉","車城鄉","牡丹鄉","恆春鎮","滿州鄉"],
+"宜蘭縣":["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","三星鄉","大同鄉","五結鄉","冬山鄉","蘇澳鎮","南澳鄉","釣魚臺列嶼"],
+"花蓮縣":["花蓮市","新城鄉","秀林鄉","吉安鄉","壽豐鄉","鳳林鎮","光復鄉","豐濱鄉","瑞穗鄉","萬榮鄉","玉里鎮","卓溪鄉","富里鄉"],
+"臺東縣":["臺東市","綠島鄉","蘭嶼鄉","延平鄉","卑南鄉","鹿野鄉","關山鎮","海端鄉","池上鄉","東河鄉","成功鎮","長濱鄉","太麻里鄉","金峰鄉","大武鄉","達仁鄉"],
+"澎湖縣":["馬公市","西嶼鄉","望安鄉","七美鄉","白沙鄉","湖西鄉"],
+"金門縣":["金沙鎮","金湖鎮","金寧鄉","金城鎮","烈嶼鄉","烏坵鄉"],
+"連江縣":["南竿鄉","北竿鄉","莒光鄉","東引鄉"]
+};
+function initOrderAddress(){const e=$("orderCounty");if(e)e.innerHTML='<option value="">請選擇縣市</option>'+Object.keys(taiwanAddressData).map(x=>`<option>${x}</option>`).join('')}
+function rebuildOrderDistrictOptions(){const c=$("orderCounty").value;$("orderDistrict").innerHTML='<option value="">請選擇行政區</option>'+(taiwanAddressData[c]||[]).map(x=>`<option>${x}</option>`).join('')}
+function rebuildOrderStoreOptions(){
+ const a=$("orderArea")?.value||'',el=$("orderStore");if(!el)return;
+ const current=el.value,list=stores.filter(x=>!a||x.area===a);
+ el.innerHTML=`<option value="">${a?(list.length?'請選擇門市':'此區域尚未建立門市'):'請先選擇區域'}</option>`+list.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');
+ if(list.some(x=>String(x.id)===String(current)))el.value=current;
+ else{const remembered=getDailyOrderStore();if(remembered&&remembered.area===a&&list.some(x=>String(x.id)===String(remembered.storeId)))el.value=remembered.storeId}
+}
+function rebuildOrderPickupStoreOptions(){const area=$("orderPickupArea")?.value||'';const e=$("orderPickupStore");if(!e)return;const list=stores.filter(x=>x.area===area&&x.enabled!==false);e.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.name)}</option>`).join('')}
+function toggleOrderDeliveryFields(){const pickup=$("orderDelivery")?.value==='門市自取';const address=$("orderAddressFields"),pickupBox=$("orderPickupFields");if(address){address.hidden=pickup;address.style.display=pickup?'none':'contents'}if(pickupBox){pickupBox.hidden=!pickup;pickupBox.style.display=pickup?'grid':'none'}if(!pickup){if($("orderPickupArea"))$("orderPickupArea").value='';if($("orderPickupStore"))$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>'}}
+
+function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open('starred_order_photos',1);r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function savePhoto(key,data){const d=await db();return new Promise((res,rej)=>{const t=d.transaction('photos','readwrite');t.objectStore('photos').put(data,key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function getPhoto(key){
+  if(!key)return '';
+  const value=String(key).trim();
+  // 雲端照片會是 Supabase signed URL；舊版照片才存於 IndexedDB。
+  if(/^https?:\/\//i.test(value)||/^data:image\//i.test(value)||/^blob:/i.test(value)) return value;
+  const d=await db();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('photos').objectStore('photos').get(value);
+    r.onsuccess=()=>res(r.result||'');
+    r.onerror=()=>rej(r.error);
+  });
+}
+function normalizeOrderPhotoKeys(...sources){
+  const values=[];
+  const collect=value=>{
+    if(value==null||value==='')return;
+    if(Array.isArray(value)){value.forEach(collect);return}
+    if(typeof value==='object'){
+      const nested=value.urls||value.photo_urls||value.photoUrls||value.items||value.files;
+      if(nested)collect(nested);
+      collect(value.signed_url||value.signedUrl||value.photo_url||value.photoUrl||value.url||value.path||'');return;
+    }
+    const text=String(value).trim();if(!text)return;
+    if((text.startsWith('[')&&text.endsWith(']'))||(text.startsWith('{')&&text.endsWith('}'))){
+      try{collect(JSON.parse(text));return}catch(_){}
+    }
+    values.push(text);
+  };
+  sources.forEach(collect);
+  return [...new Set(values)].slice(0,5);
+}
+function getOrderPhotoKeys(orderOrKeys){
+  if(!orderOrKeys)return [];
+  if(typeof orderOrKeys!=='object'||Array.isArray(orderOrKeys))return normalizeOrderPhotoKeys(orderOrKeys);
+  return normalizeOrderPhotoKeys(orderOrKeys.photoKeys,orderOrKeys.photoUrls,orderOrKeys.photos,orderOrKeys.photoKey,orderOrKeys.photoUrl);
+}
+async function getOrderPhotos(orderOrKeys){
+  const keys=getOrderPhotoKeys(orderOrKeys);
+  const photos=await Promise.all(keys.map(key=>getPhoto(key).catch(()=>'')));
+  return [...new Set(photos.filter(Boolean))];
+}
+async function viewOrderPhotos(orderOrKeys,startIndex=0){
+  try{
+    const photos=await getOrderPhotos(orderOrKeys);
+    if(!photos.length){showOrderAction('找不到照片','此筆訂單的照片不存在或尚未成功儲存。');return}
+    openLightboxGallery(photos,startIndex);
+  }catch(err){console.error(err);showOrderAction('照片開啟失敗','無法讀取訂單照片，請重新整理頁面後再試。')}
+}
+async function viewOrderPhotosByOrderId(id){const order=orders.find(o=>String(o.id)===String(id));return viewOrderPhotos(order)}
+async function viewOrderPhoto(key){return viewOrderPhotos([key])}
+function editPickupAreaFromOrder(o){if(o&&o.pickupArea)return o.pickupArea;const name=(o&&o.pickupStore)||String((o&&o.address)||'').replace(/^取件門市：/,'');const st=stores.find(x=>x.name===name);return st?st.area:''}
+function renderEditPickupStores(selected=''){const sel=$("editOrderPickupStore");if(!sel)return;const list=stores.filter(x=>x.enabled!==false&&x.active!==false);sel.innerHTML='<option value="">請選擇取件門市</option>'+list.map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}${x.floor?'｜'+escapeHtml(x.floor):''}</option>`).join('');if(selected)sel.value=selected}
+function initEditOrderAddress(){const e=$("editOrderCounty");if(e)e.innerHTML='<option value="">請選擇縣市</option>'+Object.keys(taiwanAddressData).map(x=>`<option>${x}</option>`).join('')}
+function rebuildEditOrderDistrictOptions(selected=''){const c=$("editOrderCounty")?.value||'',d=$("editOrderDistrict");if(!d)return;d.innerHTML='<option value="">請選擇行政區</option>'+(taiwanAddressData[c]||[]).map(x=>`<option>${x}</option>`).join('');if(selected)d.value=selected}
+function splitTaiwanAddress(address=''){const text=String(address||'').trim();let county='',district='',detail=text;for(const c of Object.keys(taiwanAddressData)){if(text.startsWith(c)){county=c;detail=text.slice(c.length);break}}if(county){for(const d of taiwanAddressData[county]||[]){if(detail.startsWith(d)){district=d;detail=detail.slice(d.length);break}}}return{county,district,detail}}
+function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.value==='門市自取',m=$("editOrderPickupStoreWrap"),addr=$("editOrderAddressFields");if(m)m.style.display=pickup?'flex':'none';if(addr)addr.style.display=pickup?'none':'grid';if(pickup)renderEditPickupStores($("editOrderPickupStore")?.value||'')}
+
+let orderCameraStream=null;
+const ORDER_CAMERA_PERMISSION_KEY='starred_camera_permission_granted_v1';
+function isAndroidOrderDevice(){return /Android/i.test(navigator.userAgent||'')}
+function hasLiveOrderCameraStream(){return !!orderCameraStream&&orderCameraStream.getVideoTracks().some(track=>track.readyState==='live')}
+function setOrderCameraTracksEnabled(enabled){if(orderCameraStream)orderCameraStream.getVideoTracks().forEach(track=>{track.enabled=enabled})}
+function stopOrderCameraStream(){
+ if(orderCameraStream){orderCameraStream.getTracks().forEach(track=>track.stop());orderCameraStream=null}
+ const video=$("orderCameraVideo");if(video)video.srcObject=null;
+}
+function closeOrderCamera(){
+ // 保留本次頁面已取得的相機連線，避免 Android／LINE 每拍一張就重新詢問權限。
+ // track.enabled=false 會暫停鏡頭畫面；真正離開頁面時才完整釋放。
+ setOrderCameraTracksEnabled(false);
+ const video=$("orderCameraVideo");if(video)video.pause();
+ $("orderCameraModal")?.classList.remove('show');
+ const capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ if(capture){capture.disabled=true;capture.textContent='允許使用相機';capture.dataset.mode='permission'}
+ if(fallback){fallback.hidden=true;fallback.dataset.mode='cancel';fallback.textContent='取消'}
+}
+function openNativeOrderCamera(){
+ stopOrderCameraStream();
+ $("orderCameraModal")?.classList.remove('show');
+ const input=$("orderCameraPhoto");if(input){input.value='';input.click()}
+}
+function handleOrderCameraFallback(){
+ const button=$("orderCameraFallback");
+ if(button?.dataset.mode==='native')openNativeOrderCamera();else closeOrderCamera();
+}
+function handleOrderCameraPrimary(){
+ const button=$("orderCameraCapture");
+ if(button?.dataset.mode==='capture')takeOrderCameraPhoto();else requestOrderCameraAccess();
+}
+function showOrderCameraPermissionIntro(){
+ const status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ status.innerHTML='<div class="order-camera-permission-help"><span class="order-camera-permission-icon">📷</span><strong>需要使用相機權限</strong><p>現場拍照需要暫時使用手機後鏡頭。</p><p>只有按下「拍下照片」後，照片才會加入客訂資料。</p></div>';
+ capture.dataset.mode='permission';capture.textContent='允許使用相機';capture.disabled=false;
+ fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;
+}
+function openOrderCamera(){
+ if(orderPhotoData.length>=5){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ // iOS 的 capture 行為正常，維持使用系統相機；Android 改用即時鏡頭，避開 LINE 將拍照導向相簿的問題。
+ if(!isAndroidOrderDevice()){
+  const input=$("orderCameraPhoto");if(input){input.value='';input.click()}return;
+ }
+ const modal=$("orderCameraModal"),video=$("orderCameraVideo"),status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ if(!modal||!video||!navigator.mediaDevices?.getUserMedia){
+  showOrderAction('無法直接開啟相機','目前的瀏覽器不支援直接拍照，請改用 Chrome 開啟此頁面。');return;
+ }
+ modal.classList.add('show');
+ if(hasLiveOrderCameraStream()){
+  setOrderCameraTracksEnabled(true);video.srcObject=orderCameraStream;
+  status.textContent='正在恢復後鏡頭…';capture.disabled=true;capture.textContent='正在開啟…';fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;
+  video.play().then(()=>{status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false}).catch(()=>requestOrderCameraAccess());
+  return;
+ }
+ // 使用者按下「現場拍照」後，立即向 Android 系統要求相機權限。
+ // 第一次會直接出現系統的允許視窗；允許後立即開啟後鏡頭。
+ // 瀏覽器已記住允許時，後續會直接開啟，不再顯示網站內的第二層確認。
+ requestOrderCameraAccess();
+}
+async function requestOrderCameraAccess(){
+ const video=$("orderCameraVideo"),status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
+ if(hasLiveOrderCameraStream()){
+  setOrderCameraTracksEnabled(true);video.srcObject=orderCameraStream;await video.play();
+  status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;return;
+ }
+ stopOrderCameraStream();status.textContent='正在等待相機權限…';capture.disabled=true;capture.textContent='正在開啟…';fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;
+ try{
+  try{orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+  catch(firstError){
+   if(firstError?.name==='NotAllowedError'||firstError?.name==='PermissionDeniedError')throw firstError;
+   orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
+  }
+  video.srcObject=orderCameraStream;await video.play();
+  localStorage.setItem(ORDER_CAMERA_PERMISSION_KEY,'1');
+  status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='取消';
+ }catch(error){
+  console.error('Android camera failed:',error);stopOrderCameraStream();
+  const denied=error?.name==='NotAllowedError'||error?.name==='PermissionDeniedError';
+  if(denied){
+   status.innerHTML='<div class="order-camera-permission-help"><span class="order-camera-permission-icon">📷</span><strong>請允許使用相機</strong><p>請在手機跳出的系統視窗按「允許」或「使用應用程式時允許」，系統就會立即開啟後鏡頭。</p><small>若這支手機以前曾按過「不允許」，Android 可能不會再次顯示詢問視窗，這種情況只能先恢復 LINE 的相機權限一次。</small></div>';
+   capture.dataset.mode='permission';capture.textContent='再次顯示允許視窗';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='關閉';
+  }else{
+   status.textContent='無法啟動相機，請確認沒有其他 App 正在使用鏡頭。';
+   capture.dataset.mode='permission';capture.textContent='重新嘗試';capture.disabled=false;fallback.dataset.mode='native';fallback.textContent='改用系統拍照';
+  }
+  fallback.hidden=false;
+ }
+}
+
+// 離開或重新載入頁面時才真正釋放相機，避免背景持續占用鏡頭。
+window.addEventListener('pagehide',stopOrderCameraStream);
+window.addEventListener('beforeunload',stopOrderCameraStream);
+async function takeOrderCameraPhoto(){
+ const video=$("orderCameraVideo"),capture=$("orderCameraCapture"),status=$("orderCameraStatus");
+ if(!video?.videoWidth||!video?.videoHeight){status.textContent='相機尚未準備完成，請稍候再拍。';return}
+ if(orderPhotoData.length>=5){closeOrderCamera();showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ capture.disabled=true;capture.textContent='處理中…';
+ try{
+  const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  const ctx=canvas.getContext('2d',{alpha:false});ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('照片建立失敗')),'image/jpeg',.9));
+  orderPhotoData.push(await compressOrderPhoto(blob));renderOrderPhotoPreview();closeOrderCamera();
+ }catch(error){
+  console.error('camera capture failed:',error);capture.disabled=false;capture.textContent='拍下照片';status.textContent=error?.message||'拍照失敗，請再試一次。';
+ }
+}
+
+function loadOrderPhotoImage(file){
+ return new Promise((resolve,reject)=>{
+  if(!file||!file.size){reject(new Error('選取的照片是空白檔案'));return}
+  const objectUrl=URL.createObjectURL(file),image=new Image();
+  image.onload=()=>resolve({image,width:image.naturalWidth||image.width,height:image.naturalHeight||image.height,cleanup:()=>URL.revokeObjectURL(objectUrl)});
+  image.onerror=()=>{URL.revokeObjectURL(objectUrl);reject(new Error('此照片格式無法讀取，請改用 JPG、PNG 或重新拍照'))};
+  image.src=objectUrl;
+ });
+}
+async function compressOrderPhoto(file){
+ const loaded=await loadOrderPhotoImage(file);
+ try{
+  if(!loaded.width||!loaded.height)throw new Error('無法取得照片尺寸');
+  let maxSide=1000,quality=.7,dataUrl='';
+  for(let attempt=0;attempt<4;attempt++){
+   const scale=Math.min(1,maxSide/Math.max(loaded.width,loaded.height));
+   const canvas=document.createElement('canvas');
+   canvas.width=Math.max(1,Math.round(loaded.width*scale));
+   canvas.height=Math.max(1,Math.round(loaded.height*scale));
+   const ctx=canvas.getContext('2d',{alpha:false});
+   if(!ctx)throw new Error('手機無法建立照片預覽，請關閉其他 App 後再試');
+   ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+   ctx.drawImage(loaded.image,0,0,canvas.width,canvas.height);
+   dataUrl=canvas.toDataURL('image/jpeg',quality);
+   // Android 高畫素照片的內容較大；控制在約 330 KB 內，避免多張傳送逾時。
+   if(dataUrl.length<=450000)return dataUrl;
+   maxSide=Math.round(maxSide*.82);quality=Math.max(.5,quality-.08);
+  }
+  return dataUrl;
+ }finally{loaded.cleanup()}
+}
+async function previewOrderPhoto(e){
+ const input=e.target,files=[...(input.files||[])];input.value='';if(!files.length)return;
+ const remaining=5-orderPhotoData.length;if(remaining<=0){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ const selected=files.slice(0,remaining);
+ let added=0,failed=0,lastError='';
+ for(const file of selected){
+  try{orderPhotoData.push(await compressOrderPhoto(file));added++}
+  catch(err){failed++;lastError=err?.message||'照片無法讀取';console.error('order photo failed:',err)}
+ }
+ renderOrderPhotoPreview();
+ if(!added)showOrderAction('照片處理失敗',lastError||'請重新拍照或選擇照片。');
+ else if(failed||files.length>remaining)showOrderAction('部分照片未加入',`本次已加入 ${added} 張；照片合計最多 5 張。${failed?' 有 '+failed+' 張格式無法讀取。':''}`);
+}
+function renderOrderPhotoPreview(){const preview=$("orderPhotoPreview");if(!preview)return;preview.innerHTML=orderPhotoData.length?orderPhotoData.map((src,index)=>`<div class="order-photo-preview-item"><button type="button" class="order-photo-thumb" onclick="openLightbox(orderPhotoData[${index}])"><img src="${src}" alt="訂購單照片 ${index+1}"></button><button type="button" class="order-photo-remove-one" onclick="removeOrderPhoto(${index})" aria-label="刪除第 ${index+1} 張照片">×</button><span>${index+1}</span></div>`).join(''):'<div class="photo-empty-hint">尚未加入照片</div>'}
+function removeOrderPhoto(index){if(Number.isInteger(index))orderPhotoData.splice(index,1);else orderPhotoData=[];['orderCameraPhoto','orderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});renderOrderPhotoPreview()}
+function showOrderAction(t,x){
+ const title=$("orderActionTitle"),text=$("orderActionText"),modal=$("orderActionModal");
+ if(title&&text&&modal){title.textContent=t;text.textContent=x;modal.classList.add('show');return}
+ alert(`${t}\n\n${x}`);
+}
+function closeOrderActionModal(){const modal=$("orderActionModal");if(modal)modal.classList.remove('show')}
+function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function resetOrderForm(){['orderName','orderPhone','orderAddressDetail','orderItems'].forEach(id=>$(id).value='');$("orderCounty").value='';$("orderDistrict").innerHTML='<option value="">請先選縣市</option>';$("orderDelivery").value='總公司寄出';$("orderPickupArea").value='';$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>';toggleOrderDeliveryFields();['orderCameraPhoto','orderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});orderPhotoData=[];renderOrderPhotoPreview();applyDailyOrderStore()}
+async function submitOrder(event){
+ if(event?.preventDefault)event.preventDefault();
+ const submitButton=$("orderSubmitButton")||event?.currentTarget;
+ const originalText=submitButton?.textContent||"確認傳送";
+ try{
+  if(submitButton){submitButton.disabled=true;submitButton.textContent="傳送中…";submitButton.setAttribute("aria-busy","true")}
+
+  const requiredIds=["orderArea","orderStore","orderName","orderPhone","orderItems","orderDelivery"];
+  const missingElement=requiredIds.find(id=>!$(id));
+  if(missingElement)throw new Error(`頁面欄位載入不完整（${missingElement}），請按 Ctrl+F5 重新整理後再試。`);
+
+  const miss=[];
+  [["orderArea","區域"],["orderStore","門市"],["orderName","姓名"],["orderPhone","電話"],["orderItems","商品"]]
+    .forEach(([id,name])=>{if(!String($(id)?.value||"").trim())miss.push(name)});
+
+  const delivery=$("orderDelivery").value;
+  const pickup=delivery==="門市自取";
+  if(pickup){
+   if(!$("orderPickupArea")?.value)miss.push("取件區域");
+   if(!$("orderPickupStore")?.value)miss.push("取件門市");
+  }else{
+   [["orderCounty","縣市"],["orderDistrict","行政區"],["orderAddressDetail","詳細地址"]]
+    .forEach(([id,name])=>{if(!String($(id)?.value||"").trim())miss.push(name)});
+  }
+  if(!orderPhotoData.length)miss.push("照片");
+  if(miss.length){showOrderAction("資料未完成","請補寫："+miss.join("、"));return}
+
+  if(typeof starredApi!=="function")throw new Error("雲端連線程式尚未載入，請按 Ctrl+F5 強制重新整理。");
+  if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 登入狀態已失效，請關閉頁面後由 LIFF 連結重新進入。");
+
+  const st=stores.find(x=>String(x.id)===String($("orderStore").value));
+  if(!st){showOrderAction("門市資料錯誤","找不到選擇的門市，請重新選擇區域與門市。");return}
+  const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
+  if(pickup&&!pickupSt){showOrderAction("取件門市錯誤","找不到選擇的取件門市，請重新選擇。");return}
+
+  const address=pickup?`取件門市：${pickupSt.name}`:$("orderCounty").value+$("orderDistrict").value+$("orderAddressDetail").value.trim();
+  const lineProfile=getCurrentLineUser()||{};
+  const returnPerson=String(lineProfile.name||lineProfile.displayName||"（尚未取得 LINE 姓名）");
+  const payload={
+   order:{
+    storeId:String(st.id),storeName:String(st.name||""),returnPerson,orderDate:todayStr(),
+    customerName:$("orderName").value.trim(),customerPhone:$("orderPhone").value.trim(),
+    customerAddress:address,productContent:$("orderItems").value.trim(),
+    deliveryMethod:pickup?"store_pickup":"company_shipping",
+    pickupStoreId:pickup?String(pickupSt.id):null,
+    pickupStoreName:pickup?String(pickupSt.name||""):null
+   },
+   photoData:orderPhotoData[0],
+   photoDataList:orderPhotoData
+  };
+
+  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("傳送逾時，請確認網路後再試一次。")),90000));
+  const result=await Promise.race([starredApi("create_order",payload),timeout]);
+
+  // 只有訂單成功送到雲端後，才記住當天使用的區域與門市。
+  saveDailyOrderStore($("orderArea").value,$("orderStore").value);
+  try{await loadStarredCloudData()}catch(refreshError){console.warn("訂單已建立，但重新整理清單失敗：",refreshError)}
+  resetOrderForm();
+  const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
+  if(keyword)keyword.value="";if(status)status.value="";if(from)from.value="";if(to)to.value="";
+  renderOrderCards();renderOrderAdmin();
+  showOrderAction("完成","客訂資料已成功傳送到雲端。");
+ }catch(error){
+  console.error("submitOrder failed:",error);
+  showOrderAction("雲端傳送失敗",error?.message||String(error)||"請稍後再試");
+ }finally{
+  if(submitButton){submitButton.disabled=false;submitButton.textContent=originalText;submitButton.removeAttribute("aria-busy")}
+ }
+}
+function orderDateValue(o){
+ if(o?.createdDate)return String(o.createdDate).slice(0,10);
+ const raw=String(o?.createdAt||'').trim();
+ const m=raw.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+ if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+ return '';
+}
+function match(o,keyword,status){
+ const currentStatus=o?.status||'pending';
+ if(status&&currentStatus!==status)return false;
+ const q=String(keyword||'').trim().toLowerCase();
+ if(!q)return true;
+ return orderSearchText(o).includes(q);
+}
+function clearSentOrderDate(){const f=$("orderDateFrom"),t=$("orderDateTo");if(f)f.value='';if(t)t.value='';resetOrderPageAndRender()}
+function syncSentOrderDateRange(changed){
+ const from=$("orderDateFrom"),to=$("orderDateTo");
+ if(from&&to&&from.value&&to.value&&from.value>to.value){
+  if(changed==='from')to.value=from.value;
+  else from.value=to.value;
+ }
+ resetOrderPageAndRender();
+}
+function renderFrontOrderStoreFilterOptions(){
+ const select=$("orderStoreFilter");if(!select)return;
+ const old=select.value;
+ const names=[...new Set([...stores.map(store=>store.name),...orders.map(order=>order.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+ select.innerHTML='<option value="">全部門市</option>'+names.map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+ if(names.includes(old))select.value=old;
+}
+function resetOrderPageAndRender(){orderPageCurrent=1;renderOrderCards({preserveView:false})}
+function changeOrderPage(page){orderPageCurrent=page;renderOrderCards({preserveView:false});$("orderCardList")?.scrollTo({top:0,behavior:"smooth"})}
+let orderViewRestoreToken=0;
+function findOrderCardById(id,list=$("orderCardList")){
+  const target=String(id||'');
+  if(!target||!list)return null;
+  return [...list.querySelectorAll('.order-card')].find(card=>String(card.dataset.orderId||'')===target)||null;
+}
+function captureOrderListViewState(){
+  const list=$("orderCardList");
+  if(!list)return null;
+  const pageActive=!!$("orderPage")?.classList.contains('active');
+  const cards=[...list.querySelectorAll('.order-card')];
+  const openCard=list.querySelector('.order-card.open');
+  const visibleCard=cards.find(card=>{const rect=card.getBoundingClientRect();return rect.bottom>0&&rect.top<window.innerHeight});
+  const anchorCard=(openCard&&openCard.getBoundingClientRect().bottom>0)?openCard:visibleCard;
+  const documentHeight=Math.max(document.documentElement.scrollHeight,document.body?.scrollHeight||0);
+  const maxWindowScroll=Math.max(0,documentHeight-window.innerHeight);
+  return {
+    pageActive,
+    openOrderId:String(openCard?.dataset.orderId||''),
+    anchorOrderId:String(anchorCard?.dataset.orderId||''),
+    anchorTop:anchorCard?anchorCard.getBoundingClientRect().top:null,
+    windowX:window.scrollX||0,
+    windowY:window.scrollY||0,
+    listScrollTop:list.scrollTop||0,
+    listScrollLeft:list.scrollLeft||0,
+    nearPageBottom:maxWindowScroll-(window.scrollY||0)<=56
+  };
+}
+function restoreOrderListViewState(state){
+  const list=$("orderCardList");
+  if(!state||!list)return;
+  const token=++orderViewRestoreToken;
+  const openCard=findOrderCardById(state.openOrderId,list);
+  if(openCard)openCard.classList.add('open');
+  const restorePosition=()=>{
+    if(token!==orderViewRestoreToken)return;
+    list.scrollTop=state.listScrollTop||0;
+    list.scrollLeft=state.listScrollLeft||0;
+    // 在後台頁面同步時只更新隱藏的訂單清單，不碰使用者目前的後台捲動位置。
+    if(!state.pageActive||!$("orderPage")?.classList.contains('active'))return;
+    const anchor=findOrderCardById(state.anchorOrderId,list);
+    if(anchor&&Number.isFinite(state.anchorTop)){
+      const delta=anchor.getBoundingClientRect().top-state.anchorTop;
+      if(Math.abs(delta)>.5)window.scrollBy(0,delta);
+    }else if(state.nearPageBottom){
+      const height=Math.max(document.documentElement.scrollHeight,document.body?.scrollHeight||0);
+      window.scrollTo(state.windowX||0,Math.max(0,height-window.innerHeight));
+    }else{
+      window.scrollTo(state.windowX||0,state.windowY||0);
+    }
+  };
+  restorePosition();
+  requestAnimationFrame(()=>{restorePosition();requestAnimationFrame(restorePosition)});
+}
+function toggleOrderCard(button){
+  const card=button.closest('.order-card');
+  const list=card.closest('.order-card-list');
+  const savedScrollTop=list?list.scrollTop:0;
+  const savedScrollLeft=list?list.scrollLeft:0;
+  const savedWindowX=window.scrollX||0;
+  const savedWindowY=window.scrollY||0;
+  const cardTop=card.getBoundingClientRect().top;
+  const willOpen=!card.classList.contains('open');
+  document.querySelectorAll('.order-card.open').forEach(x=>x.classList.remove('open'));
+  if(willOpen)card.classList.add('open');
+  // 同時固定內層清單與手機整頁位置，避免展開／收合時畫面跳走。
+  if(list){
+    list.scrollTop=savedScrollTop;
+    list.scrollLeft=savedScrollLeft;
+    requestAnimationFrame(()=>{
+      list.scrollTop=savedScrollTop;
+      list.scrollLeft=savedScrollLeft;
+      const delta=card.getBoundingClientRect().top-cardTop;
+      if(Math.abs(delta)>.5)window.scrollBy(0,delta);
+      else if(Math.abs((window.scrollY||0)-savedWindowY)>1)window.scrollTo(savedWindowX,savedWindowY);
+    });
+  }
+}
+function renderOrderPagination(totalPages,totalItems){
+ const box=$("orderPagination");if(!box)return;
+ if(totalPages<=1){box.innerHTML=totalItems?`<span class="order-page-info">共 ${totalItems} 筆</span>`:'';return}
+ const pages=[];for(let p=1;p<=totalPages;p++){if(p===1||p===totalPages||Math.abs(p-orderPageCurrent)<=1)pages.push(p);else if(pages[pages.length-1]!==0)pages.push(0)}
+ box.innerHTML=`<button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent-1})" ${orderPageCurrent===1?'disabled':''}>‹ 上一頁</button><div class="order-page-numbers">${pages.map(p=>p===0?'<span class="order-page-dots">…</span>':`<button type="button" class="order-page-number ${p===orderPageCurrent?'active':''}" onclick="changeOrderPage(${p})">${p}</button>`).join('')}</div><button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent+1})" ${orderPageCurrent===totalPages?'disabled':''}>下一頁 ›</button><span class="order-page-info">第 ${orderPageCurrent} / ${totalPages} 頁・共 ${totalItems} 筆</span>`
+}
+function renderOrderCards(options={}){
+ const viewState=options&&options.preserveView===false?null:captureOrderListViewState();
+ renderFrontOrderStoreFilterOptions();
+ const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'',store=$("orderStoreFilter")?.value||'';
+ const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!store||o.store===store)&&(!from||d>=from)&&(!to||d<=to)});
+ const totalPages=Math.max(1,Math.ceil(list.length/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
+ const pageList=list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
+ $("orderCardList").innerHTML=pageList.length?pageList.map(o=>{
+   const shipped=isOrderShipped(o),st=String(o.status||'pending');
+   const isOwner=canCurrentLineUserOwnOrder(o);
+   const canEdit=isOwner&&(st==='pending'||st==='change_request');
+   const canRequest=isOwner&&st==='processing';
+   const updated=escapeHtml(orderLastUpdatedValue(o));
+   const photoCount=getOrderPhotoKeys(o).length;
+   const statusClass=shipped?'shipped':(st==='returned'&&o.returnReceived?'return_received':st);
+   const statusLabel=shipped?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';
+   return `<article class="order-card" data-order-id="${escapeHtml(String(o.id||''))}"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div></div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group"><button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhotosByOrderId('${o.id}')">查看照片${photoCount>1?`（${photoCount} 張）`:''}</button>${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}</div></article>`;
+ }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
+ renderOrderPagination(totalPages,list.length);
+ if(viewState)restoreOrderListViewState(viewState)
+}
+async function requestOrderChange(orderId){
+ const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;
+ if(!canCurrentLineUserOwnOrder(o)||String(o.status||'')!=='processing'){showOrderAction('無法申請','只有原回傳人員可對處理中的訂單提出更改申請。');return}
+ if(!window.confirm('確定要提出更改申請嗎？\n申請後此筆訂單會移到後台「更改申請」。'))return;
+ try{await starredApi("bulk_order_status",{orderIds:[orderId],status:"change_request",handler:null,shippedDate:null});await loadStarredCloudData();showOrderAction('更改申請已送出','此筆訂單目前可修改或刪除，後台確認後會回到處理中。')}catch(error){cloudError('更改申請失敗',error)}
+}
+
+function setAdminOrderStatus(status){$("adminOrderStatus").value=status;document.querySelectorAll('.admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===status));selectedOrderIds.clear();updateCancelDeleteOrderButton();renderOrderAdmin()}
+function clearAdminOrderFilters(){$("adminOrderKeyword").value='';$("adminOrderStoreFilter").value='';$("adminOrderDateFrom").value='';$("adminOrderDateTo").value='';setAdminOrderStatus('')}
+function filteredAdminOrders(){const f=$("adminOrderDateFrom")?.value||'',t=$("adminOrderDateTo")?.value||'',st=$("adminOrderStatus")?.value||'',store=$("adminOrderStoreFilter")?.value||'',delivery=$("adminOrderDeliveryFilter")?.value||'';const list=orders.filter(o=>{const d=orderDateValue(o);return !isBackupOrder(o)&&match(o,$("adminOrderKeyword")?.value,st)&&(!store||o.store===store)&&(!delivery||o.delivery===delivery)&&(!f||d>=f)&&(!t||d<=t)});if(st==='returned')list.sort((a,b)=>Number(!!a.returnReceived)-Number(!!b.returnReceived)||String(orderDateValue(b)).localeCompare(String(orderDateValue(a))));return list}
+function updateAdminStatusCounts(){const status=o=>o.status||'pending';$("adminStatusAll").textContent=orders.length;$("adminStatusPending").textContent=orders.filter(o=>status(o)==='pending').length;$("adminStatusProcessing").textContent=orders.filter(o=>status(o)==='processing').length;const changeRequestCount=orders.filter(o=>status(o)==='change_request').length;$("adminStatusChangeRequest").textContent=changeRequestCount;document.querySelector('.admin-status-btn.change-request')?.classList.toggle('has-items',changeRequestCount>0);$("adminStatusShipped").textContent=orders.filter(o=>status(o)==='shipped').length;$("adminStatusCancelled").textContent=orders.filter(o=>status(o)==='cancelled').length;if($("adminStatusReturned"))$("adminStatusReturned").textContent=orders.filter(o=>status(o)==='returned'&&!o.returnReceived).length}
+function renderAdminOrderStoreOptions(){const e=$("adminOrderStoreFilter");if(!e)return;const old=e.value;const names=[...new Set([...stores.map(s=>s.name),...orders.map(o=>o.store)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));e.innerHTML='<option value="">全部門市</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))e.value=old}
+function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("orderHandler");if(!e)return;const old=e.value;e.innerHTML='<option value="">請選擇處理人</option>'+accounts.filter(a=>a.enabled!==false).map(a=>`<option value="${escapeHtml(a.name||a.username)}">${escapeHtml(a.name||a.username)}</option>`).join('');if([...e.options].some(x=>x.value===old))e.value=old;updateConfirmShipButton()}
+function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',displaySt=(st==='returned'&&o.returnReceived)?'return_received':st,label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${displaySt}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='pending'?'—':(o.handler||'—'))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
+function toggleOrderSelection(id,c){c?selectedOrderIds.add(id):selectedOrderIds.delete(id);renderOrderAdmin()}
+function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.add(o.id):selectedOrderIds.delete(o.id));renderOrderAdmin()}
+function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}const pendingBtn=$("markPendingBtn");if(pendingBtn&&$("adminOrderStatus")?.value==="returned"){const selected=orders.filter(o=>selectedOrderIds.has(o.id));pendingBtn.disabled=selected.length>0&&selected.every(o=>o.returnReceived);pendingBtn.title=pendingBtn.disabled?"選取的訂單皆已收回退貨":"將尚未收回的退貨標記為已收回退貨"}updateConfirmShipButton()}
+function updateConfirmShipButton(){const handlerSelected=!!$("orderHandler")?.value;const isChange=($("adminOrderStatus")?.value||'')==='change_request';const b=$("confirmShipBtn"),approve=$("approveChangeRequestBtn");if(b){b.disabled=false;b.classList.toggle("needs-handler",!isChange&&selectedOrderIds.size>0&&!handlerSelected)}if(approve){approve.classList.remove("needs-handler");approve.title="確認更改申請"}}
+function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
+// 訂單確認操作允許主管、會計與系統管理員執行。
+// 同時把目前後台登入者資訊帶給 API，避免只依 LINE 身分誤判而阻擋主管。
+function getOrderOperatorContext(){
+ const rawRole=String(currentUser?.role||window.starredVerifiedLineUser?.role||'').trim().toLowerCase();
+ const role=['admin','system_admin','administrator','管理員','系統管理員'].includes(rawRole)?'admin':(['accounting','accountant','會計'].includes(rawRole)?'accounting':(['manager','supervisor','主管'].includes(rawRole)?'manager':rawRole));
+ return {
+  operatorRole:role,
+  operatorAccount:String(currentUser?.username||''),
+  operatorName:getCurrentAdminDisplayName(),
+  adminSessionToken:String(currentUser?.adminSessionToken||'')
+ };
+}
+function canOperateOrderConfirmation(){
+ const role=getOrderOperatorContext().operatorRole;
+ return role==='manager'||role==='accounting'||role==='admin';
+}
+function ensureOrderConfirmationPermission(){
+ if(canOperateOrderConfirmation())return true;
+ showOrderAction('權限不足','只有主管、會計或系統管理員可以進行確認申請與確認寄出。');
+ return false;
+}
+async function markSelectedOrdersShipped(){if(!ensureOrderConfirmationPermission()||!ensureSelected())return;const h=$("orderHandler").value;if(!h){showOrderAction('請選擇處理人','請選擇處理人，才能進行下一步。');return}const date=$("orderShipDate").value||todayStr();if(date>todayStr()){showOrderAction('寄出日期錯誤','寄出日期不能是未來日期。');return}const ids=[...selectedOrderIds];removeLocalProcessingOrderIds(ids);try{await starredApi("bulk_order_status",{orderIds:ids,status:"shipped",handler:h,shippedDate:date,...getOrderOperatorContext()});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('確認寄出完成',`已將 ${ids.length} 筆訂單標記為已寄出。`)}catch(error){cloudError('確認寄出失敗',error)}}
+async function markSelectedOrdersPending(){
+ if(!ensureSelected())return;
+ const ids=[...selectedOrderIds],fromReturned=$("adminOrderStatus")?.value==="returned";
+ if(fromReturned){
+  const targetIds=orders.filter(o=>ids.includes(String(o.id))&&o.status==='returned'&&!o.returnReceived).map(o=>String(o.id));
+  if(!targetIds.length){showOrderAction('無法操作','選取的退貨訂單皆已標記為已收回退貨。');return}
+  const handler=getCurrentAdminDisplayName();
+  try{
+   await starredApi("bulk_order_status",{orderIds:targetIds,status:"return_received",handler,shippedDate:null,...getOrderOperatorContext()});
+   removeLocalReturnReceivedOrderIds(targetIds);removeLocalReturnedOrderIds(targetIds);removeLocalCancelHandlers(targetIds);
+   selectedOrderIds.clear();await loadStarredCloudData();setAdminOrderStatus('returned');
+   showOrderAction('已收回退貨',`已將 ${targetIds.length} 筆訂單標記為已收回退貨，所有帳號已同步。`)
+  }catch(error){cloudError('已收回退貨失敗',error)}
+  return
+ }
+ try{
+  await starredApi("bulk_order_status",{orderIds:ids,status:"pending",handler:null,shippedDate:null,...getOrderOperatorContext()});
+  removeLocalProcessingOrderIds(ids);removeLocalCancelHandlers(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);
+  selectedOrderIds.clear();await loadStarredCloudData();
+  showOrderAction('狀態修改完成',`已將 ${ids.length} 筆訂單改回待寄出，所有帳號已同步。`)
+ }catch(error){cloudError('狀態修改失敗',error)}
+}
+async function approveSelectedChangeRequests(){if(!ensureOrderConfirmationPermission()||!ensureSelected())return;const handler=getCurrentAdminDisplayName();const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>String(o.status||'')!=='change_request')){showOrderAction('無法確認','請只勾選「更改申請」狀態內的訂單。');return}const ids=[...selectedOrderIds];try{
+ // 更改內容在送出申請時已寫入；確認時直接切回處理中，避免額外的管理員限定動作阻擋主管。
+ await starredApi("bulk_order_status",{orderIds:ids,status:"processing",handler,shippedDate:null,...getOrderOperatorContext()});
+ removeLocalProcessingOrderIds(ids);selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('成功',`已確認 ${ids.length} 筆更改申請，訂單已回到處理中並同步所有帳號。`)}catch(error){cloudError('確認申請失敗',error)}}
+function updateCancelDeleteOrderButton(){
+ const btn=$("cancelDeleteOrderBtn"),returnBtn=$("returnOrderBtn"),pendingBtn=$("markPendingBtn"),approve=$("approveChangeRequestBtn"),handler=$("orderHandler"),shipDate=$("orderShipDate"),confirmShip=$("confirmShipBtn"),row=document.querySelector('.compact-process-row');
+ if(!btn)return;
+ const current=$("adminOrderStatus")?.value||'';
+ const isAll=current==='';
+ const isPending=current==='pending';
+ const isProcessing=current==='processing';
+ const isChange=current==='change_request';
+ const isShipped=current==='shipped';
+ const isCancelled=current==='cancelled';
+ const isReturned=current==='returned';
+ const role=currentUser?.role||window.starredVerifiedLineUser?.role||'';
+
+ if(approve)approve.style.display=isChange?'':'none';
+
+ // 各狀態依需求顯示／隱藏操作欄位
+ const hideShipControls=isAll||isChange||isShipped||isCancelled||isReturned;
+ if(handler)handler.style.display=hideShipControls?'none':'';
+ if(shipDate)shipDate.style.display=hideShipControls?'none':'';
+ if(confirmShip)confirmShip.style.display=hideShipControls?'none':'';
+
+ const hidePendingButton=isAll||isPending||isProcessing||isChange||isCancelled;
+ if(pendingBtn){pendingBtn.style.display=hidePendingButton?'none':'';pendingBtn.textContent=isReturned?'已收回退貨':'改回待寄出';}
+
+ const hideReturnButton=isPending||isProcessing||isChange||isCancelled||isReturned;
+ if(returnBtn)returnBtn.style.display=hideReturnButton?'none':'';
+
+ if(isCancelled){
+  btn.textContent='刪除訂單';
+  btn.style.display=(role==='system_admin'||role==='admin')?'':'none';
+ }else{
+  btn.textContent='取消訂單';
+  btn.style.display=(isChange||isShipped||isReturned)?'none':'';
+ }
+
+ if(row)row.classList.toggle('change-request-mode',isChange||isReturned);
+ updateConfirmShipButton();
+}
+function handleCancelDeleteSelectedOrders(){if($("adminOrderStatus")?.value==='cancelled'){deleteSelectedCancelledOrders();return}requestCancelSelectedOrders()}
+async function deleteSelectedCancelledOrders(){if(!ensureSelected())return;const selected=orders.filter(o=>selectedOrderIds.has(o.id));if(selected.some(o=>(o.status||'pending')!=='cancelled')){showOrderAction('無法刪除','只能刪除「取消訂單」狀態內的訂單。');return}const ids=[...selectedOrderIds];if(!window.confirm(`確定要永久刪除選取的 ${ids.length} 筆訂單嗎？
+刪除後無法復原。`))return;try{await starredApi("delete_orders",{orderIds:ids});selectedOrderIds.clear();await loadStarredCloudData();showOrderAction('刪除訂單完成',`已刪除 ${ids.length} 筆訂單。`)}catch(error){cloudError('刪除訂單失敗',error)}}
+function requestCancelSelectedOrders(){if(!ensureSelected())return;if(!window.confirm(`確定要取消選取的 ${selectedOrderIds.size} 筆訂單嗎？\n取消後仍可在「取消訂單」狀態中查看。`))return;markSelectedOrdersCancelled()}
+function getCurrentAdminDisplayName(){
+ const visible=String($("currentUserName")?.textContent||"").replace(/^正在使用[：:]\s*/,"").trim();
+ return String(currentUser?.name||visible||window.starredVerifiedLineUser?.employeeName||window.starredVerifiedLineUser?.lineDisplayName||currentUser?.username||"管理員").trim()||"管理員"
+}
+async function markSelectedOrdersCancelled(){
+ const ids=[...selectedOrderIds],handler=getCurrentAdminDisplayName();
+ try{
+  await starredApi("bulk_order_status",{orderIds:ids,status:"cancelled",handler,shippedDate:null,...getOrderOperatorContext()});
+  removeLocalProcessingOrderIds(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);removeLocalCancelHandlers(ids);
+  selectedOrderIds.clear();await loadStarredCloudData();
+  showOrderAction('取消訂單完成',`已取消 ${ids.length} 筆訂單，處理人為：${handler}，所有帳號已同步。`)
+ }catch(error){cloudError('取消訂單失敗',error)}
+}
+async function markSelectedOrdersReturned(){
+ if(!ensureSelected())return;
+ const ids=[...selectedOrderIds];
+ const handler=getCurrentAdminDisplayName();
+ try{
+  await starredApi("bulk_order_status",{orderIds:ids,status:"returned",handler,shippedDate:null,...getOrderOperatorContext()});
+  removeLocalProcessingOrderIds(ids);removeLocalCancelHandlers(ids);removeLocalReturnedOrderIds(ids);removeLocalReturnReceivedOrderIds(ids);
+  selectedOrderIds.clear();
+  await loadStarredCloudData();
+  showPage('admin');
+  showAdminTab('orderAdmin');
+  setAdminOrderStatus('returned');
+  showOrderAction('退貨完成',`已將 ${ids.length} 筆訂單移至退貨區，所有帳號已同步。`)
+ }catch(error){
+  cloudError('退貨設定失敗',error)
+ }
+}
+function selectedOrdersForExport(){return orders.filter(o=>selectedOrderIds.has(o.id)||selectedOrderIds.has(String(o.id)))}
+function getEditNote(o){if(!o.history?.length)return '';return o.history.map((h,i)=>{const b=h.before||{};return `第${i+1}次修改（${h.editedAt||''}）：姓名 ${b.name||''}；電話 ${b.phone||''}；地址 ${b.address||''}；配送 ${b.delivery||''}；商品 ${b.items||''}`}).join('｜')}
+async function exportOrdersExcel(event){
+ if(event){event.preventDefault();event.stopPropagation()}
+ const keepAdminPage=$("adminPage")?.classList.contains('active');
+ const keepOrderAdminTab=$("orderAdminTab")?.classList.contains('active');
+ const keepAdminStatus=$("adminOrderStatus")?.value||'all';
+ const keepScrollX=window.scrollX||0;
+ const keepScrollY=window.scrollY||0;
+ const list=selectedOrdersForExport();
+ if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}
+
+ // 必須在使用者點擊當下先開啟，避免 Chrome 封鎖後續報表頁。
+ const reportWindow=window.open('about:blank','_blank');
+ if(!reportWindow){
+  showOrderAction('瀏覽器阻擋報表','請允許 catalog.hshometw.com 的彈出式視窗後，再按一次「匯出 Excel」。');
+  return;
+ }
+ reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p></body></html>');
+ reportWindow.document.close();
+
+ const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
+ const statusText=o=>o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?(o.returnReceived?'已收回退貨':'退貨'):o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出';
+ const rows=list.map(o=>({
+  訂單日期:orderDateValue(o),門市:o.store||'',回傳人員:o.returnPerson||'',姓名:o.name||'',電話:o.phone||'',地址:o.address||'',配送:o.delivery||'',商品:o.items||'',
+  狀態:statusText(o),
+  處理人:((o.status||'pending')==='pending'?'':(o.handler||'')),
+  寄出日期:o.shippedDate||'',備註:getEditNote(o)
+ }));
+
+ let objectUrl='';
+ try{
+  const headers=Object.keys(rows[0]||{});
+  const esc=v=>escapeHtml(String(v??''));
+  const exportDate=new Date().toLocaleString('zh-TW',{hour12:false});
+  const statusSummary=rows.reduce((acc,row)=>{const key=row.狀態||'未分類';acc[key]=(acc[key]||0)+1;return acc},{});
+  const summaryText=Object.entries(statusSummary).map(([key,value])=>`${esc(key)} ${value} 筆`).join('｜');
+  const columnClass={
+   訂單日期:'col-date',門市:'col-store',回傳人員:'col-return-person',姓名:'col-name',電話:'col-phone',地址:'col-address',配送:'col-delivery',商品:'col-items',
+   狀態:'col-status',處理人:'col-handler',寄出日期:'col-ship-date',備註:'col-note'
+  };
+  // Excel HTML 匯出必須同時寫入 width 屬性，Excel 才會確實保留欄寬。
+  const excelColumnWidth={訂單日期:88,門市:115,回傳人員:100,姓名:72,電話:98,地址:180,配送:82,商品:210,狀態:78,處理人:78,寄出日期:88,備註:175};
+  const tableHtml=`<table class="report-table"><colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}">`).join('')}</colgroup><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((row,rowIndex)=>`<tr class="${rowIndex%2?'even-row':'odd-row'}">${headers.map(h=>`<td class="${columnClass[h]||''}">${h==='狀態'?`<span class="status-pill status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}">${esc(row[h])}</span>`:esc(row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const reportHeader=`<div class="report-header"><div><div class="brand-mark">STAR RED TEXTILE</div><h1>星紅織品｜訂單匯出報表</h1><p>匯出時間：${esc(exportDate)}</p></div><div class="report-summary"><b>${rows.length}</b><span>本次匯出筆數</span></div></div><div class="summary-strip"><span>報表狀態摘要</span><b>${summaryText||'無資料'}</b></div>`;
+  const excelRows=rows.map((row,rowIndex)=>`<tr class="${rowIndex%2?'excel-even':'excel-odd'}">${headers.map(h=>`<td class="${columnClass[h]||''} ${h==='狀態'?`excel-status status-${String(row[h]||'').replace(/[^\w\u4e00-\u9fff-]/g,'')}`:''}">${esc(row[h])}</td>`).join('')}</tr>`).join('');
+  const excelHtml=`<!doctype html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta name="ProgId" content="Excel.Sheet">
+<meta name="Generator" content="Microsoft Excel 15">
+<!--[if gte mso 9]><xml>
+<x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>訂單匯出</x:Name><x:WorksheetOptions><x:Selected/><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>5</x:SplitHorizontal><x:TopRowBottomPane>5</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook>
+</xml><![endif]-->
+<style>
+html,body{margin:0;padding:0;background:#fff}
+table{border-collapse:collapse;table-layout:fixed;width:1310px;font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;font-size:12pt;color:#000;border:1px solid #000;mso-displayed-decimal-separator:"\.";mso-displayed-thousand-separator:","}
+td,th{border:1px solid #d5e0e6;padding:7px 8px;vertical-align:top;white-space:normal;word-break:break-word;line-height:1.4;mso-number-format:"\@";mso-wrap-style:wrap}
+.report-title{height:38px;background:#294b5e;color:#fff;font-size:18pt;font-weight:700;text-align:center;border:1px solid #294b5e;letter-spacing:2px}
+.report-subtitle{height:27px;background:#eef3f6;color:#294b5e;font-size:11pt;font-weight:700;text-align:center;border:1px solid #d5e0e6}
+.meta-label{height:28px;background:#eef3f6;color:#294b5e;font-weight:700;text-align:center;white-space:nowrap}
+.meta-value{height:28px;background:#fff;color:#355264;text-align:left}
+.column-header{height:34px;background:#294b5e;color:#fff;font-weight:700;text-align:center;white-space:nowrap;mso-wrap-style:none}
+.data-row td{height:32px;background:#fff;color:#355264}
+.data-row:nth-child(even) td{background:#fbfcfd}
+.total-label{height:32px;background:#eef3f6;color:#294b5e;font-weight:700;text-align:right}
+.total-value{height:32px;background:#eef3f6;color:#294b5e;font-weight:700;text-align:center}
+.col-date{width:86px;text-align:center;white-space:nowrap}.col-store{width:115px;text-align:center}.col-return-person{width:100px;text-align:center}.col-name{width:72px;text-align:center}.col-phone{width:100px;text-align:center;white-space:nowrap}.col-address{width:178px}.col-delivery{width:82px;text-align:center}.col-items{width:205px}.col-status{width:82px;text-align:center;white-space:nowrap}.col-handler{width:78px;text-align:center;white-space:nowrap}.col-ship-date{width:88px;text-align:center;white-space:nowrap}.col-note{width:124px}
+</style>
+</head>
+<body>
+<table>
+<colgroup>${headers.map(h=>`<col class="${columnClass[h]||''}" width="${excelColumnWidth[h]||120}">`).join('')}</colgroup>
+<tr><td class="report-title" colspan="${headers.length}">星紅織品訂單出貨明細表</td></tr>
+<tr><td class="report-subtitle" colspan="${headers.length}">STAR RED TEXTILE</td></tr>
+<tr>
+<td class="meta-label">匯出日期</td><td class="meta-value" colspan="3">${esc(exportDate)}</td>
+<td class="meta-label">匯出筆數</td><td class="meta-value">${rows.length} 筆</td>
+<td class="meta-label">狀態摘要</td><td class="meta-value" colspan="5">${summaryText||'無資料'}</td>
+</tr>
+<tr><td class="column-header col-date">訂單日期</td><td class="column-header col-store">門市</td><td class="column-header col-return-person">回傳人員</td><td class="column-header col-name">姓名</td><td class="column-header col-phone">電話</td><td class="column-header col-address">地址</td><td class="column-header col-delivery">配送</td><td class="column-header col-items">商品</td><td class="column-header col-status">狀態</td><td class="column-header col-handler">處理人</td><td class="column-header col-ship-date">寄出日期</td><td class="column-header col-note">備註</td></tr>
+${rows.map(row=>`<tr class="data-row">${headers.map(h=>`<td class="${columnClass[h]||''}">${esc(row[h])}</td>`).join('')}</tr>`).join('')}
+<tr><td class="total-label" colspan="${headers.length-1}">合計</td><td class="total-value">共 ${rows.length} 筆</td></tr>
+</table>
+</body></html>`;
+  const blob=new Blob(['\ufeff',excelHtml],{type:'application/vnd.ms-excel;charset=utf-8;'});
+  objectUrl=URL.createObjectURL(blob);
+  const fileName=`訂單_${todayStr()}_${String(Date.now()).slice(-6)}.xls`;
+
+  reportWindow.document.open();
+  reportWindow.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${fileName}</title><style>
+  *{box-sizing:border-box}body{font-family:Microsoft JhengHei,sans-serif;margin:0;background:linear-gradient(180deg,#edf3f6,#f8fafb);color:#274253}.page-shell{max-width:1800px;margin:auto;padding:24px}.bar{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border:1px solid #d8e1e7;border-radius:16px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:14px;box-shadow:0 10px 28px rgba(39,66,83,.12)}.bar-title{font-size:18px;font-weight:900}.download{display:inline-flex;align-items:center;justify-content:center;background:#274253;color:#fff;text-decoration:none;border-radius:11px;padding:12px 20px;font-weight:800;white-space:nowrap}.download:hover{background:#1d3542}.hint{font-size:13px;color:#667b88;margin-top:4px}.report-card{background:#fff;border:1px solid #d8e1e7;border-radius:18px;padding:20px;box-shadow:0 10px 30px rgba(39,66,83,.08)}.report-header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding-bottom:14px;border-bottom:3px solid #274253}.brand-mark{font-size:11px;letter-spacing:.18em;color:#738792;font-weight:800}.report-header h1{margin:5px 0 3px;font-size:28px}.report-header p{margin:0;color:#667b88}.report-summary{min-width:150px;text-align:center;background:#eef4f7;border:1px solid #cbd8de;border-radius:14px;padding:12px 18px}.report-summary b{display:block;font-size:30px}.report-summary span{font-size:12px;color:#667b88}.summary-strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0;padding:11px 13px;border:1px solid #dce5e9;border-radius:12px;background:#f7fafb}.summary-strip span{font-size:12px;color:#667b88;font-weight:700}.summary-strip b{font-size:13px}.table-wrap{overflow:auto;border:1px solid #d8e1e7;border-radius:14px}.report-table{border-collapse:separate;border-spacing:0;width:100%;min-width:1550px;table-layout:fixed;font-size:13px}.report-table th,.report-table td{border-right:1px solid #d6e0e5;border-bottom:1px solid #d6e0e5;padding:10px 11px;text-align:left;vertical-align:top;white-space:pre-wrap;word-break:break-word}.report-table th:last-child,.report-table td:last-child{border-right:0}.report-table tr:last-child td{border-bottom:0}.report-table th{position:sticky;top:0;background:#294b5e;color:#fff;text-align:center;font-weight:900;z-index:2}.report-table tr.even-row td{background:#fbfcfd}.report-table tr:hover td{background:#f1f6f8}.col-date{width:96px}.col-store{width:135px}.col-return-person{width:115px}.col-name{width:88px}.col-phone{width:110px}.col-address{width:230px}.col-delivery{width:110px}.col-items{width:320px}.col-status{width:105px;text-align:center}.col-handler{width:100px}.col-ship-date{width:100px}.col-note{width:280px}.status-pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef3f6;border:1px solid #ccd8de;font-size:12px;font-weight:800;white-space:nowrap}.status-已寄出,.status-已收回退貨{background:#e5f5ea;color:#2b7a49;border-color:#a9d4b7}.status-退貨{background:#fff0dc;color:#a85a00;border-color:#efc78f}.status-取消訂單{background:#fae8e5;color:#9a352e;border-color:#e5b6af}.status-處理中{background:#e7eef8;color:#315f79;border-color:#b9cbe1}.status-更改申請{background:#f5e7f4;color:#8a3f84;border-color:#d8b7d5}.status-待寄出{background:#fff4d6;color:#8b5c00;border-color:#ecd38d}@media(max-width:720px){.page-shell{padding:12px}.bar{align-items:stretch;flex-direction:column}.download{width:100%}.report-header{align-items:flex-start;flex-direction:column}.report-summary{width:100%}}@media print{body{background:#fff}.page-shell{max-width:none;padding:0}.bar{display:none}.report-card{border:0;box-shadow:none;padding:0}.table-wrap{overflow:visible}.report-table{min-width:0;font-size:10px}.report-table th{position:static}}
+  </style></head><body><div class="page-shell"><div class="bar"><div><div class="bar-title">訂單 Excel 報表預覽</div><div class="hint">可先檢查內容；若未自動下載，請按右側按鈕。</div></div><a id="manualDownload" class="download" href="${objectUrl}" download="${fileName}">下載 Excel</a></div><div class="report-card">${reportHeader}<div class="table-wrap">${tableHtml}</div></div></div><script>setTimeout(function(){document.getElementById('manualDownload').click()},250);<\/script></body></html>`);
+  reportWindow.document.close();
+  reportWindow.focus();
+ }catch(error){
+  if(reportWindow&&!reportWindow.closed)reportWindow.close();
+  if(objectUrl)URL.revokeObjectURL(objectUrl);
+  console.error('訂單 Excel 匯出失敗：',error);
+  showOrderAction('Excel 匯出失敗',error?.message||String(error)||'請稍後再試');
+  return;
+ }
+
+ let processingSyncError=null;
+ if(pendingIds.length){
+  try{
+   await starredApi('bulk_order_status',{orderIds:pendingIds,status:'processing',handler:null,shippedDate:null,...getOrderOperatorContext()});
+   removeLocalProcessingOrderIds(pendingIds);
+   selectedOrderIds.clear();
+   await loadStarredCloudData();
+  }catch(error){
+   processingSyncError=error;
+   console.error('匯出後同步處理中狀態失敗：',error);
+  }
+ }
+
+ if(keepAdminPage){
+  $("homePage")?.classList.remove('active');$("orderPage")?.classList.remove('active');$("adminPage")?.classList.add('active');
+  $("homeNav")?.classList.remove('active');$("orderNav")?.classList.remove('active');$("adminNav")?.classList.add('active');
+  if(keepOrderAdminTab)showAdminTab('orderAdmin');setAdminOrderStatus(keepAdminStatus);
+ }
+ requestAnimationFrame(()=>window.scrollTo(keepScrollX,keepScrollY));
+ if(processingSyncError){
+  showOrderAction('報表已開啟，但狀態同步失敗',`Excel 已產生，但 ${pendingIds.length} 筆訂單沒有改成處理中：${processingSyncError?.message||processingSyncError}。請確認網路後重新操作。`)
+ }else{
+  showOrderAction('Excel 報表已開啟',pendingIds.length?`已開啟 ${list.length} 筆訂單報表，其中 ${pendingIds.length} 筆待寄出訂單已移到處理中，所有帳號將自動同步。若未自動下載，請在報表頁按「下載 Excel」。`:`已開啟 ${list.length} 筆訂單報表。若未自動下載，請在報表頁按「下載 Excel」。`)
+ }
+ // 保留網址一段時間，讓使用者可以手動下載。
+ setTimeout(()=>{if(objectUrl)URL.revokeObjectURL(objectUrl)},10*60*1000);
+}
+async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.length){showOrderAction('尚未勾選訂單','請先勾選要匯出的訂單。');return}const pages=[];for(let i=0;i<list.length;i++){const o=list[i],photos=await getOrderPhotos(o),note=getEditNote(o),photoClass=`photos-${Math.min(Math.max(photos.length,1),5)}`;pages.push(`<section class="pick-page"><h1>星紅織品｜揀貨單</h1><div class="pick-date">訂單日期：${escapeHtml(orderDateValue(o))}・照片 ${photos.length} 張</div><div class="pick-photos ${photoClass}">${photos.length?photos.map((photo,index)=>`<figure><img src="${photo}"><figcaption>${index+1}</figcaption></figure>`).join(''):'無照片'}</div><div class="pick-grid"><div><span>門市</span><b>${escapeHtml(o.store||'')}</b></div><div><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'')}</b></div><div><span>收件人</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div><span>狀態</span><b>${o.status==='shipped'?'已寄出':o.status==='cancelled'?'取消訂單':o.status==='returned'?'退貨':o.status==='processing'?'處理中':o.status==='change_request'?'更改申請':'待寄出'}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${note?`<div class="wide edit-note"><span>修改前資料備註</span><b>${escapeHtml(note)}</b></div>`:''}</div><footer>核對人：________________</footer></section>`)}const w=window.open('','_blank');if(!w){showOrderAction('無法開啟揀貨單','請允許彈出式視窗。');return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}body{font-family:"Microsoft JhengHei";margin:0}.pick-page{width:194mm;min-height:281mm;padding:5mm;page-break-after:always}.pick-page:last-child{page-break-after:auto}h1{text-align:center;margin:0}.pick-date{text-align:center;margin:2mm 0 4mm}.pick-photos{height:120mm;border:1px solid #000;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:2mm;padding:2mm;align-items:stretch;justify-items:stretch}.pick-photos.photos-1{grid-template-columns:1fr}.pick-photos.photos-5{grid-template-columns:repeat(3,minmax(0,1fr))}.pick-photos figure{position:relative;min-width:0;min-height:0;margin:0;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;overflow:hidden}.pick-photos img{width:100%;height:100%;object-fit:contain}.pick-photos figcaption{position:absolute;right:1.5mm;bottom:1.5mm;width:7mm;height:7mm;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;display:grid;place-items:center;font-size:9px;font-weight:700}.pick-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}.pick-grid>div{padding:3mm;border-right:1px solid #000;border-bottom:1px solid #000}.pick-grid>div:nth-child(even){border-right:0}.pick-grid .wide{grid-column:1/-1;border-right:0}.pick-grid span{display:block;font-size:10px}.pick-grid b{font-size:13px;line-height:1.45}.edit-note b{font-size:11px;font-weight:500}footer{text-align:right;margin-top:7mm;font-size:15px}
+/* 調整訂單清單摘要字重 */
+.sent-summary-main b{font-weight:700!important;}
+.sent-summary-main span,
+.sent-summary-main small{
+  font-weight:500!important;
+  color:#6f8593!important;
+}
+
+</style>
+<style id="sent-order-expand-scroll-stability-fix">
+/* 展開下方客戶資料時，固定清單捲動位置，避免上方資料跳走 */
+#orderPage .order-sent-panel .order-card-list{
+  overflow-anchor:none!important;
+  scroll-behavior:auto!important;
+}
+#orderPage .order-sent-panel .order-card{overflow-anchor:none}
+</style>
+
+<style id="order-edit-fixed-footer-compact-original-v3">
+/* 修改訂單：原始資料緊湊、內容區可捲動、底部按鈕永遠可操作 */
+#orderEditModal .order-edit-dialog{
+  display:flex!important;
+  flex-direction:column!important;
+  height:min(900px,calc(100vh - 40px))!important;
+  max-height:calc(100vh - 40px)!important;
+  overflow:hidden!important;
+  padding:0!important;
+}
+#orderEditModal .order-edit-head{
+  flex:0 0 auto!important;
+}
+#orderEditModal .order-edit-columns{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  align-items:start!important;
+}
+#orderEditModal .current-order-box,
+#orderEditModal .original-box{
+  align-self:start!important;
+}
+#orderEditModal .original-box{
+  padding:14px!important;
+}
+#orderEditModal .original-box>h3{
+  margin-bottom:8px!important;
+}
+#orderEditModal #editOriginalData>p{
+  display:grid!important;
+  grid-template-columns:84px minmax(0,1fr)!important;
+  gap:8px!important;
+  margin:0!important;
+  padding:6px 0!important;
+  min-height:0!important;
+  border-bottom:1px dashed #e2e9ed!important;
+  line-height:1.35!important;
+  font-size:13px!important;
+}
+#orderEditModal #editOriginalData>p b{
+  min-width:0!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+  white-space:nowrap!important;
+}
+#orderEditModal .edit-history-box{
+  margin-top:9px!important;
+  padding:8px!important;
+}
+#orderEditModal .edit-history-box>b{
+  margin-bottom:6px!important;
+  font-size:14px!important;
+}
+#orderEditModal .edit-history-list{
+  max-height:132px!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#orderEditModal .edit-history-row{
+  grid-template-columns:112px minmax(0,1fr)!important;
+  padding:6px 8px!important;
+  gap:4px 8px!important;
+}
+#orderEditModal .edit-history-row time{
+  font-size:10px!important;
+}
+#orderEditModal .edit-history-row>div{
+  grid-template-columns:38px minmax(0,1fr)!important;
+  gap:4px!important;
+}
+#orderEditModal .edit-history-row span{font-size:10px!important}
+#orderEditModal .edit-history-row b{font-size:11px!important;line-height:1.35!important}
+#orderEditModal #editOriginalData>.photo-open-only{
+  min-height:40px!important;
+  margin-top:9px!important;
+}
+#orderEditModal .order-edit-actions{
+  position:relative!important;
+  bottom:auto!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:12px 26px 14px!important;
+  border-top:1px solid #dce5e9!important;
+  background:#fff!important;
+  box-shadow:0 -8px 20px rgba(39,66,83,.08)!important;
+  z-index:20!important;
+}
+@media(max-width:800px){
+  #orderEditModal .order-edit-dialog{
+    height:94vh!important;
+    max-height:94vh!important;
+  }
+  #orderEditModal .order-edit-columns{
+    padding:12px!important;
+  }
+  #orderEditModal .original-box{padding:12px!important}
+  #orderEditModal #editOriginalData>p{
+    grid-template-columns:76px minmax(0,1fr)!important;
+    padding:5px 0!important;
+    font-size:12px!important;
+  }
+  #orderEditModal #editOriginalData>p b{font-size:12px!important}
+  #orderEditModal .edit-history-list{max-height:118px!important}
+  #orderEditModal .edit-history-row{
+    grid-template-columns:1fr!important;
+    padding:6px!important;
+  }
+  #orderEditModal .edit-history-row time{
+    padding-bottom:3px!important;
+  }
+  #orderEditModal .order-edit-actions{
+    padding:10px 12px calc(12px + env(safe-area-inset-bottom))!important;
+  }
+}
+</style>
+
+<style id="mobile-editable-badge-fix-20260727">
+/* 修正手機版「可編輯」被舊版 span:last-child 規則隱藏 */
+@media (max-width:620px){
+  #orderPage .order-card-summary .order-summary-badges{
+    display:grid!important;
+    grid-template-columns:68px 72px!important;
+    flex:0 0 146px!important;
+    gap:4px!important;
+    align-items:center!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-status,
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-badge,
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-placeholder{
+    display:inline-flex!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-placeholder{
+    visibility:hidden!important;
+  }
+  #orderPage .order-card-summary .order-chevron{
+    display:inline-block!important;
+  }
+}
+@media (max-width:430px){
+  #orderPage .order-card-summary{
+    grid-template-columns:minmax(0,1fr) auto 18px!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges{
+    grid-template-columns:64px 68px!important;
+    flex-basis:136px!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-status{min-width:64px!important}
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-badge,
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-placeholder{
+    min-width:68px!important;width:68px!important;font-size:10px!important;padding:3px 4px!important;
+  }
+}
+</style>
+
+<style id="mobile-editable-badge-final-fix-20260727">
+/* 手機版最終修正：狀態與可編輯標示固定完整顯示，不再被舊規則裁切 */
+@media (max-width:900px){
+  #orderPage .order-card-summary{
+    grid-template-columns:minmax(0,1fr) 82px!important;
+    column-gap:10px!important;
+    overflow:visible!important;
+  }
+  #orderPage .order-card-summary > .sent-summary-main{grid-column:1!important;min-width:0!important}
+  #orderPage .order-card-summary > .order-summary-badges{
+    grid-column:2!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:center!important;
+    gap:5px!important;
+    width:82px!important;
+    min-width:82px!important;
+    max-width:82px!important;
+    overflow:visible!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-status,
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-badge{
+    display:flex!important;
+    width:82px!important;
+    min-width:82px!important;
+    max-width:82px!important;
+    height:28px!important;
+    margin:0!important;
+    visibility:visible!important;
+    opacity:1!important;
+    overflow:visible!important;
+    position:relative!important;
+  }
+  #orderPage .order-card-summary .order-summary-badges > .order-editable-placeholder{
+    display:none!important;
+  }
+  #orderPage .order-card-summary > .order-chevron{display:none!important}
+}
+</style>
+</head><body>${pages.join('')}<script>onload=()=>setTimeout(()=>print(),400)<\/script>
+<style>
+/* 展開後訂單卡片標題文字提高對比 */
+.order-card.open>.order-card-summary .sent-summary-main b{
+    color:#FFFFFF !important;
+}
+.order-card.open>.order-card-summary .sent-summary-main span,
+.order-card.open>.order-card-summary .sent-summary-main small{
+    color:#F2F8FC !important;
+    font-weight:600 !important;
+    text-shadow:0 1px 1px rgba(0,0,0,.15);
+}
+</style>
+
+<style>
+/* 傳送資料：展開標題全白字、左右欄同高與友善分頁 */
+@media(min-width:801px){
+  #orderPage .order-layout{align-items:stretch}
+  #orderPage .order-entry-panel,#orderPage .order-sent-panel{height:790px;display:flex;flex-direction:column}
+  #orderPage .order-sent-panel .order-card-list{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+}
+.order-card.open>.order-card-summary,.order-card.open>.order-card-summary *{color:#fff!important}
+.order-card.open>.order-card-summary .order-status.pending{color:#8b5c00!important}
+.order-card.open>.order-card-summary .order-status.shipped{color:#26704f!important}
+.order-card.open>.order-card-summary .order-status.cancelled{color:#9a352e!important}
+.order-pagination{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding:14px 0 0;border-top:1px solid #e1e8ec}
+.order-page-nav,.order-page-number{border:1.5px solid #bdcbd3;background:#fff;color:#274253;font-weight:900;min-height:44px;border-radius:11px;padding:9px 14px}
+.order-page-nav{min-width:112px}
+.order-page-number{min-width:44px;padding:9px}
+.order-page-number.active{background:#274253;color:#fff;border-color:#274253;box-shadow:0 5px 12px rgba(39,66,83,.18)}
+.order-page-nav:disabled{opacity:.38;cursor:not-allowed}
+.order-page-numbers{display:flex;align-items:center;gap:6px}
+.order-page-dots{padding:0 2px;color:#718693;font-weight:900}
+.order-page-info{width:100%;text-align:center;font-size:12px;color:#6d818d;font-weight:700}
+@media(max-width:800px){
+  #orderPage .order-entry-panel,#orderPage .order-sent-panel{height:auto}
+  .order-page-nav{flex:1;min-width:0}
+  .order-page-numbers{order:3;width:100%;justify-content:center}
+}
+</style>
+
+
+<style id="desktop-front-activity-ultra-compact-20260724">
+/* 前台活動總覽電腦版：進一步縮減空白，只改外觀與動畫，不更動資訊及展開邏輯 */
+@media (min-width:901px){
+  #homePage .summary{gap:7px!important;margin-bottom:9px!important}
+  #homePage .summary-box{padding:9px 11px!important;min-height:56px!important}
+  #homePage .summary-box b{font-size:20px!important;line-height:1.1!important}
+  #homePage .summary-box span{font-size:11px!important;line-height:1.2!important}
+
+  #homePage .front-filter-panel{margin:8px 0 10px!important;padding:9px 10px!important;border-radius:12px!important}
+  #homePage .front-filter-heading{margin-bottom:7px!important;align-items:center!important}
+  #homePage .front-filter-title{font-size:15px!important}
+  #homePage .front-filter-subtitle{font-size:11px!important;margin-top:1px!important}
+  #homePage .front-filter-grid{gap:6px!important}
+  #homePage .front-filter-field{gap:3px!important}
+  #homePage .front-filter-field>span{font-size:11px!important}
+  #homePage .front-filter-field select,
+  #homePage .front-filter-field input{height:34px!important;min-height:34px!important;border-radius:9px!important;padding-top:0!important;padding-bottom:0!important;font-size:13px!important}
+  #homePage .front-filter-clear{height:32px!important;min-height:32px!important;padding:0 10px!important;border-radius:9px!important;font-size:12px!important}
+
+  #homePage .events{gap:7px!important}
+  #homePage .store-activity-group{margin-bottom:7px!important;border-radius:11px!important;box-shadow:0 3px 10px rgba(39,66,83,.045)!important}
+  #homePage .store-activity-group>summary{min-height:52px!important;padding:8px 11px!important;gap:8px!important}
+  #homePage .store-group-title-row{gap:8px!important}
+  #homePage .activity-area-label{min-width:50px!important;padding:4px 7px!important;border-radius:8px!important;font-size:11px!important}
+  #homePage .store-group-name{font-size:15px!important;line-height:1.2!important}
+  #homePage .store-group-sub{font-size:11px!important;line-height:1.2!important;margin-top:2px!important}
+  #homePage .store-group-count{padding:5px 8px!important;font-size:11px!important;gap:4px!important}
+
+  #homePage .store-group-events{padding:2px 8px 8px!important}
+  #homePage .store-group-events .event-row{margin-top:5px!important}
+  #homePage .store-event-sequence{margin:6px 2px 3px!important;font-size:11px!important;line-height:1.2!important}
+  #homePage .store-event-sequence:before,
+  #homePage .store-event-sequence:after{opacity:.55!important}
+
+  #homePage .event-row{border-radius:9px!important;border-left-width:4px!important}
+  #homePage .event-summary{padding:8px 10px!important;gap:6px!important;min-height:48px!important}
+  #homePage .mall-name{font-size:14px!important;line-height:1.25!important}
+  #homePage .summary-region,
+  #homePage .summary-date{font-size:11px!important;line-height:1.2!important}
+  #homePage .summary-badges{gap:4px!important}
+  #homePage .summary-badges .badge{padding:3px 6px!important;font-size:10px!important;line-height:1.15!important}
+  #homePage .chevron{width:18px!important;font-size:14px!important}
+
+  #homePage .multi-activity-group[open]>summary{min-height:54px!important}
+  #homePage .multi-activity-group[open] .store-group-events{padding:5px 10px 10px!important}
+  #homePage .multi-activity-group[open] .store-event-sequence{margin:7px 0 4px!important}
+  #homePage .multi-activity-group[open] .store-event-sequence:before{height:14px!important;width:3px!important;flex-basis:3px!important;margin-right:6px!important}
+  #homePage .multi-activity-group[open] .event-summary{padding:9px 11px!important}
+
+  #homePage .event-row.open .event-detail{padding:4px 9px 9px!important}
+  #homePage .event-detail-inner{padding-top:7px!important}
+  #homePage .meta{gap:6px!important}
+  #homePage .row{grid-template-columns:68px minmax(0,1fr)!important;gap:6px!important;line-height:1.35!important}
+  #homePage .label{font-size:11px!important}
+  #homePage .front-activity-content{font-size:13px!important;line-height:1.42!important}
+  #homePage .front-activity-note{padding:6px 8px!important;font-size:12px!important;line-height:1.4!important;border-radius:8px!important}
+  #homePage .tags{gap:5px!important}
+  #homePage .tag{padding:4px 7px!important;font-size:11px!important}
+  #homePage .gallery{gap:6px!important;margin-top:7px!important}
+  #homePage .gallery img{width:112px!important;height:76px!important;border-radius:7px!important}
+  #homePage .multi-activity-group[open] .gallery{grid-template-columns:repeat(auto-fill,minmax(105px,120px))!important;gap:7px!important;margin-top:8px!important}
+  #homePage .multi-activity-group[open] .gallery img{width:120px!important;height:80px!important;border-radius:8px!important}
+
+  #homePage .store-activity-group:hover{box-shadow:0 5px 14px rgba(39,66,83,.08)!important}
+  #homePage .store-activity-group[open]{transform:none!important;box-shadow:0 7px 18px rgba(39,66,83,.13)!important}
+  #homePage .event-summary:hover{background:#f4f8fa!important}
+  #homePage .event-row.open>.event-summary:hover{background:linear-gradient(135deg,#274253,#365d72)!important}
+}
+</style>
+
+</body></html>`);w.document.close();showOrderAction('揀貨單已開啟',`已建立 ${list.length} 張揀貨單。`)}
+let orderEditDirty=false;
+let orderEditInitialSnapshot="";
+let orderEditSource="admin";
+let frontDeleteOrderId="";
+function openFrontDeleteReasonModal(){
+ const id=$("editOrderId")?.value||"";
+ const order=orders.find(x=>String(x.id)===String(id));
+ if(!id||!order)return;
+ if(orderEditSource!=="front"||!canCurrentLineUserEditOrder(order)){showOrderAction("沒有權限","只有原回傳人員可以刪除自己上傳且尚未寄出的訂單。");return;}
+ frontDeleteOrderId=id;
+ const reason=$("frontDeleteReason"),other=$("frontDeleteOtherReason");
+ if(reason)reason.value="客人取消";if(other)other.value="";
+ toggleFrontDeleteOtherReason();
+ $("frontDeleteReasonModal")?.classList.add("show");
+}
+function closeFrontDeleteReasonModal(){$("frontDeleteReasonModal")?.classList.remove("show")}
+function toggleFrontDeleteOtherReason(){
+ const other=$("frontDeleteReason")?.value==="其他";
+ const wrap=$("frontDeleteOtherWrap");if(wrap)wrap.style.display=other?"flex":"none";
+}
+async function confirmFrontDeleteOrder(){
+ const orderId=frontDeleteOrderId||$("editOrderId")?.value||"";
+ const reason=$("frontDeleteReason")?.value||"";
+ const other=$("frontDeleteOtherReason")?.value.trim()||"";
+ if(reason==="其他"&&!other){showOrderAction("請填寫原因","選擇其他時，請輸入刪除原因。");return}
+ const reasonText=reason==="其他"?other:reason;
+ const order=orders.find(x=>String(x.id)===String(orderId));
+ if(!order||!canCurrentLineUserEditOrder(order)){showOrderAction("沒有權限","只有原回傳人員可以刪除自己上傳且尚未寄出的訂單。");return}
+ try{
+  // 使用「本人刪除訂單」專用後端操作；伺服器會以 LINE Token
+  // 比對訂單建立者，不再呼叫只限主管的批次處理。
+  await starredApi("cancel_own_order",{orderId,reason:reasonText});
+  closeFrontDeleteReasonModal();orderEditDirty=false;closeOrderEditModal(true);
+  await loadStarredCloudData();
+  showOrderAction("訂單已刪除並移至取消訂單",`刪除原因：${reasonText}`);
+ }catch(error){cloudError("刪除訂單失敗",error)}
+}
+
+
+function getCurrentVerifiedLineId(){
+ const profile=getCurrentLineUser();
+ return String(window.starredVerifiedLineUser?.lineUserId||window.starredVerifiedLineUser?.id||profile?.id||"");
+}
+function isOrderShipped(o){
+ const status=String(o?.status||"").trim().toLowerCase();
+ return status==="shipped"||status==="已寄出";
+}
+function canCurrentLineUserOwnOrder(o){const currentId=getCurrentVerifiedLineId();return !!(o&&currentId&&String(o.createdByLineId||"")===currentId)}
+function canCurrentLineUserEditOrder(o){
+ const status=String(o?.status||"pending");
+ // 待寄出可直接修改；處理中需先申請，進入更改申請後才可修改或刪除
+ return !!(canCurrentLineUserOwnOrder(o)&&(status==="pending"||status==="change_request"));
+}
+function orderLastUpdatedValue(o){return String(o?.updatedAt||o?.createdAt||"")}
+function getOrderEditSnapshot(){
+ return JSON.stringify({
+  name:$("editOrderName")?.value||"",phone:$("editOrderPhone")?.value||"",
+  delivery:$("editOrderDelivery")?.value||"",pickupStore:$("editOrderPickupStore")?.value||"",
+  county:$("editOrderCounty")?.value||"",district:$("editOrderDistrict")?.value||"",
+  address:$("editOrderAddress")?.value||"",items:$("editOrderItems")?.value||""
+ });
+}
+function updateOrderEditDirtyState(){
+ if(!$("orderEditModal")?.classList.contains("show"))return;
+ orderEditDirty=getOrderEditSnapshot()!==orderEditInitialSnapshot;
+ $("orderEditUnsavedIndicator")?.classList.toggle("show",orderEditDirty);
+}
+function bindOrderEditDirtyTracking(){
+ ["editOrderName","editOrderPhone","editOrderDelivery","editOrderPickupStore","editOrderCounty","editOrderDistrict","editOrderAddress","editOrderItems"].forEach(id=>{
+  const el=$(id);if(!el||el.dataset.dirtyBound==="1")return;
+  el.addEventListener("input",updateOrderEditDirtyState);
+  el.addEventListener("change",()=>setTimeout(updateOrderEditDirtyState,0));
+  el.dataset.dirtyBound="1";
+ });
+}
+async function openOrderEdit(id,source="admin"){
+ const o=orders.find(x=>String(x.id)===String(id));if(!o)return;
+ const frontStatus=String(o.status||"pending");
+ if(source==="front"&&(!canCurrentLineUserOwnOrder(o)||!["pending","processing","change_request"].includes(frontStatus))){
+  showOrderAction("無法修改",isOrderShipped(o)?"此訂單已寄出，前台不可再修改。":"只有這筆訂單的原回傳人員可以修改。");
+  return;
+ }
+ orderEditSource=source;
+ const deleteBtn=$("frontDeleteOrderBtn");if(deleteBtn)deleteBtn.style.display=(source==="front"&&frontStatus!=="processing")?"inline-flex":"none";
+ const editTitle=$("orderEditTitle"),editSubtitle=$("orderEditSubtitle"),submitBtn=$("orderEditSubmitBtn");
+ if(source==="front"&&frontStatus==="processing"){
+  if(editTitle)editTitle.textContent="編輯／更改申請";
+  if(editSubtitle)editSubtitle.textContent="請先完成資料編輯，按下「送出更改申請」後，訂單才會移至後台更改申請。";
+  if(submitBtn)submitBtn.textContent="送出更改申請";
+ }else if(source==="front"&&frontStatus==="change_request"){
+  if(editTitle)editTitle.textContent="編輯申請內容";
+  if(editSubtitle)editSubtitle.textContent="此筆已在更改申請中，儲存後後台可查看編輯前與編輯後資料。";
+  if(submitBtn)submitBtn.textContent="更新更改申請";
+ }else{
+  if(editTitle)editTitle.textContent="修改訂單";
+  if(editSubtitle)editSubtitle.textContent="調整客戶資料後，原始內容與修改紀錄仍會保留。";
+  if(submitBtn)submitBtn.textContent="儲存修改";
+ }
+ $("editOrderId").value=id;$("editOrderName").value=o.name;$("editOrderPhone").value=o.phone;
+ $("editOrderDelivery").value=o.delivery;$("editOrderItems").value=o.items;initEditOrderAddress();
+ const parsed=splitTaiwanAddress(o.delivery==='門市自取'?'':o.address);
+ $("editOrderCounty").value=parsed.county;rebuildEditOrderDistrictOptions(parsed.district);$("editOrderAddress").value=parsed.detail;
+ const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');
+ renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();
+ const x=o.original||o,originalPhotoCount=getOrderPhotoKeys(x).length||getOrderPhotoKeys(o).length,historyHtml=buildCompactEditHistory(o);
+ $("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>最後更新：</b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${historyHtml}<button type="button" class="photo-open-only" onclick="viewOrderPhotosByOrderId('${o.id}')">查看原始照片${originalPhotoCount>1?`（${originalPhotoCount} 張）`:''}</button>`;
+ $("orderEditModal").classList.add('show');
+ bindOrderEditDirtyTracking();
+ orderEditInitialSnapshot=getOrderEditSnapshot();orderEditDirty=false;
+ $("orderEditUnsavedIndicator")?.classList.remove("show");
+}
+function buildCompactEditHistory(o){if(!o.history?.length)return '';const fields=[['name','姓名'],['phone','電話'],['address','地址'],['delivery','配送'],['items','商品']];const rows=o.history.map((h,i)=>{const before=h.before||{},after=i<o.history.length-1?(o.history[i+1].before||{}):{name:o.name,phone:o.phone,address:o.address,delivery:o.delivery,items:o.items};const changes=fields.filter(([k])=>String(before[k]||'')!==String(after[k]||'')).map(([k,label])=>`<div><span>${label}</span><b>${escapeHtml(before[k]||'—')} <em>→</em> ${escapeHtml(after[k]||'—')}</b></div>`).join('');return changes?`<section class="edit-history-row"><time>${escapeHtml(h.editedAt||`第 ${i+1} 次修改`)}</time>${changes}</section>`:''}).filter(Boolean).join('');return rows?`<div class="edit-history-box"><b>修改紀錄</b><div class="edit-history-list">${rows}</div></div>`:''}
+function closeOrderEditModal(force=false){
+ if(!force&&orderEditDirty&&!window.confirm("尚有未儲存的修改，確定要離開嗎？"))return;
+ $("orderEditModal").classList.remove("show");orderEditDirty=false;orderEditInitialSnapshot="";
+}
+async function saveOrderEdit(){
+ const orderId=$("editOrderId").value;
+ const o=orders.find(x=>String(x.id)===String(orderId));
+ if(!o)return;
+ const originalStatus=String(o.status||"pending");
+ if(orderEditSource==="front"){
+  const allowed=canCurrentLineUserOwnOrder(o)&&["pending","processing","change_request"].includes(originalStatus);
+  if(!allowed){showOrderAction("沒有權限","只有原回傳人員可以編輯自己上傳且尚未寄出的訂單。");return;}
+ }
+ const delivery=$("editOrderDelivery").value,pickup=delivery==='門市自取',pickupStore=$("editOrderPickupStore")?.value||'',county=$("editOrderCounty")?.value||'',district=$("editOrderDistrict")?.value||'',addressDetail=$("editOrderAddress")?.value.trim()||'';
+ const pickupStoreData=pickup?stores.find(x=>x.name===pickupStore):null;
+ const fullAddress=`${county}${district}${addressDetail}`;
+ const next={customerName:$("editOrderName").value.trim(),customerPhone:$("editOrderPhone").value.trim(),customerAddress:pickup?`取件門市：${pickupStore}`:fullAddress,productContent:$("editOrderItems").value.trim(),deliveryMethod:pickup?'store_pickup':'company_shipping',pickupStoreId:pickup?(pickupStoreData?.id||''):null};
+ if(!next.customerName||!next.customerPhone||!next.productContent||(!pickup&&(!county||!district||!addressDetail))){showOrderAction('資料未完成',pickup?'姓名、電話與商品都必須填寫。':'姓名、電話、縣市、行政區、詳細地址與商品都必須填寫。');return}
+ if(pickup&&!pickupStoreData){showOrderAction('資料未完成','請選擇取件門市。');return}
+ const submitBtn=$("orderEditSubmitBtn"),oldText=submitBtn?.textContent||"";
+ if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送出中…"}
+ try{
+  const isFrontChangeSubmit=orderEditSource==="front"&&(originalStatus==="processing"||originalStatus==="change_request");
+  if(isFrontChangeSubmit){
+   removeLocalProcessingOrderIds([orderId]);
+   await starredApi("submit_change_request",{orderId,order:next});
+  }else{
+   await starredApi("update_order",{orderId,order:next});
+  }
+  orderEditDirty=false;closeOrderEditModal(true);
+  await loadStarredCloudData();
+  if(isFrontChangeSubmit){
+   showOrderAction('更改申請已送出','前台狀態已改為「更改申請」，後台訂單也已移到「更改申請」分頁；後台確認後才會回到處理中。');
+  }else if(orderEditSource==="front"&&originalStatus==="change_request"){
+   showOrderAction('更改申請已更新','最新編輯內容已同步至後台，等待後台確認申請。');
+  }else{
+   showOrderAction('訂單修改完成','目前資料已更新，原始資料與修改紀錄已同步保留。');
+  }
+ }catch(error){cloudError(orderEditSource==="front"&&originalStatus==="processing"?'更改申請送出失敗':'訂單修改失敗',error)}
+ finally{if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=oldText}}
+}
+function setCloudBusy(isBusy, text="處理中…"){
+  const btn=$("saveBtn");
+  if(btn){
+    btn.disabled=isBusy;
+    if(isBusy){ btn.dataset.oldText=btn.textContent; btn.textContent=text; }
+    else if(btn.dataset.oldText){ btn.textContent=btn.dataset.oldText; delete btn.dataset.oldText; }
+  }
+}
+function cloudError(prefix,error){
+  console.error(prefix,error);
+  alert(`${prefix}：${error?.message||error||"未知錯誤"}`);
+}
+function eventRowToLocal(row, imageMap){
+  let products=[];
+  try{
+    const parsed=JSON.parse(row.event_content||"[]");
+    products=Array.isArray(parsed)?parsed:[];
+  }catch{
+    products=String(row.event_content||"").split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+  }
+  return {
+    id:String(row.id), area:row.region, mall:row.department, location:row.floor||"",
+    start:row.start_date, end:row.end_date, campaign:row.event_name,
+    products, note:row.remark||"", status:row.status||calcStatus(row.start_date,row.end_date),
+    storeId:row.store_id?String(row.store_id):"",
+    photos:(imageMap.get(String(row.id))||[]).map(x=>x.image_url),
+    createdAt:row.created_at, updatedAt:row.updated_at
+  };
+}
+
+async function getOrderCloudStores(){
+  try{
+    const result=await starredApi("bootstrap");
+    return (Array.isArray(result.stores)?result.stores:[])
+      .filter(store=>store&&store.is_enabled!==false)
+      .map(store=>({
+        sourceId:String(store.id||""),
+        area:String(store.region||""),
+        name:String(store.name||"").trim(),
+        floor:String(store.floor||"").trim(),
+        sortOrder:Number(store.sort_order||9999)
+      }))
+      .filter(store=>store.area&&store.name&&store.floor);
+  }catch(error){
+    console.warn("讀取訂單門市失敗",error);
+    return [];
+  }
+}
+
+async function ensureActivityStore(store){
+  const numericId=Number(store?.id);
+  if(Number.isFinite(numericId)&&numericId>0)return {...store,id:String(numericId)};
+
+  const {data:existingRows,error:findError}=await cloudDb
+    .from("department_stores")
+    .select("id,region,department_name,floor")
+    .eq("region",String(store.area||""))
+    .eq("department_name",String(store.name||""))
+    .eq("floor",String(store.floor||""))
+    .limit(1);
+  if(findError)throw findError;
+
+  if(existingRows&&existingRows[0]){
+    return {
+      id:String(existingRows[0].id),
+      area:existingRows[0].region,
+      name:existingRows[0].department_name,
+      floor:existingRows[0].floor||""
+    };
+  }
+
+  const {data,error}=await cloudDb
+    .from("department_stores")
+    .insert({
+      region:String(store.area||""),
+      department_name:String(store.name||""),
+      floor:String(store.floor||""),
+      sort_order:stores.length
+    })
+    .select("id,region,department_name,floor")
+    .single();
+  if(error)throw error;
+
+  return {
+    id:String(data.id),
+    area:data.region,
+    name:data.department_name,
+    floor:data.floor||""
+  };
+}
+
+async function loadCloudData(){
+  try{
+    const [orderCloudStores,cloudResults]=await Promise.all([
+      getOrderCloudStores(),
+      Promise.all([
+
+      cloudDb.from("department_stores").select("*").order("sort_order",{ascending:true}).order("id",{ascending:true}),
+      cloudDb.from("department_events").select("*").order("start_date",{ascending:false}).order("id",{ascending:false}),
+      cloudDb.from("event_images").select("*").order("sort_order",{ascending:true})
+      ])
+    ]);
+    const [{data:storeRows,error:storeError},{data:eventRows,error:eventError},{data:imageRows,error:imageError}]=cloudResults;
+    if(storeError)throw storeError;if(eventError)throw eventError;if(imageError)throw imageError;
+
+    const activityStores=(storeRows||[]).map(r=>({
+      id:String(r.id),area:r.region,name:r.department_name,floor:r.floor||"",builtin:false
+    }));
+    const existingKeys=new Set(activityStores.map(s=>[s.area,s.name,s.floor].join("|")));
+    const virtualStores=orderCloudStores
+      .filter(s=>!existingKeys.has([s.area,s.name,s.floor].join("|")))
+      .map(s=>({
+        id:"order:"+s.sourceId,
+        area:s.area,
+        name:s.name,
+        floor:s.floor,
+        builtin:false,
+        virtual:true,
+        sortOrder:s.sortOrder
+      }));
+    const mergedStoreMap=new Map();
+    [...activityStores,...virtualStores].forEach(store=>{
+      const key=[String(store.area||""),String(store.name||"").trim(),String(store.floor||"").trim()].join("|");
+      if(!mergedStoreMap.has(key)||mergedStoreMap.get(key).virtual){
+        mergedStoreMap.set(key,store);
+      }
+    });
+    stores=[...mergedStoreMap.values()];
+    if(!stores.length){
+      const seed=BUILTIN_STORES.map((s,i)=>({region:s.area,department_name:s.name,floor:s.floor,sort_order:i}));
+      const {error}=await cloudDb.from("department_stores").insert(seed);
+      if(error)throw error;
+      return loadCloudData();
+    }
+    const imageMap=new Map();
+    (imageRows||[]).forEach(img=>{
+      const key=String(img.event_id);if(!imageMap.has(key))imageMap.set(key,[]);imageMap.get(key).push(img);
+    });
+    events=(eventRows||[]).map(row=>eventRowToLocal(row,imageMap));
+    cloudReady=true;
+    selectedManageEventIds.clear();
+    rebuildMallOptions();rebuildOrderStoreOptions();renderStores();updateManageStoreFilter();renderAll();
+  }catch(error){
+    cloudReady=false;
+    cloudError("Supabase 資料載入失敗",error);
+  }
+}
+async function dataUrlToBlob(dataUrl){
+  const response=await fetch(dataUrl);return response.blob();
+}
+async function uploadEventPhotos(eventId, photoSources){
+  const imageRows=[];
+  for(let index=0;index<photoSources.length;index++){
+    const source=photoSources[index];
+    if(/^https?:\/\//i.test(source)){
+      imageRows.push({event_id:Number(eventId),image_url:source,sort_order:index});
+      continue;
+    }
+    const blob=await dataUrlToBlob(source);
+    const path=`events/${eventId}/${Date.now()}-${index}-${crypto.randomUUID()}.jpg`;
+    const {error:uploadError}=await cloudDb.storage.from(SUPABASE_BUCKET).upload(path,blob,{contentType:"image/jpeg",upsert:false});
+    if(uploadError)throw uploadError;
+    const {data}=cloudDb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+    imageRows.push({event_id:Number(eventId),image_url:data.publicUrl,sort_order:index});
+  }
+  if(imageRows.length){
+    const {error}=await cloudDb.from("event_images").insert(imageRows);if(error)throw error;
+  }
+}
+function storagePathFromPublicUrl(url){
+  const marker=`/storage/v1/object/public/${SUPABASE_BUCKET}/`;
+  const pos=String(url||"").indexOf(marker);
+  return pos<0?null:decodeURIComponent(String(url).slice(pos+marker.length));
+}
+async function removeEventPhotos(eventIds){
+  if(!eventIds.length)return;
+  const {data,error}=await cloudDb.from("event_images").select("image_url").in("event_id",eventIds.map(Number));
+  if(error)throw error;
+  const paths=(data||[]).map(x=>storagePathFromPublicUrl(x.image_url)).filter(Boolean);
+  if(paths.length){const {error:storageError}=await cloudDb.storage.from(SUPABASE_BUCKET).remove(paths);if(storageError)console.warn(storageError)}
+  const {error:deleteError}=await cloudDb.from("event_images").delete().in("event_id",eventIds.map(Number));
+  if(deleteError)throw deleteError;
+}
+
+async function resolveOrderStoreUuid(localStoreOrId){
+  const localId=String(typeof localStoreOrId==="object"&&localStoreOrId?localStoreOrId.id:localStoreOrId||"").trim();
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(localId))return localId;
+  if(localId.startsWith("order:")){
+    const raw=localId.slice(6);
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)?raw:"";
+  }
+  const localStore=typeof localStoreOrId==="object"&&localStoreOrId
+    ? localStoreOrId
+    : stores.find(x=>String(x.id)===localId);
+  if(!localStore)return "";
+  const orderStores=await getOrderCloudStores();
+  const matched=orderStores.find(x=>
+    String(x.area||"")===String(localStore.area||"")&&
+    String(x.name||"").trim()===String(localStore.name||"").trim()&&
+    String(x.floor||"").trim()===String(localStore.floor||"").trim()
+  );
+  return matched?String(matched.sourceId||matched.id||""):"";
+}
+
+window.saveStore=async function(){
+  const area=$("storeArea").value;
+  const name=$("storeName").value.trim();
+  const floor=$("storeFloor").value.trim();
+
+  if(!name||!floor){
+    alert("請填寫百貨名稱與樓層／櫃位");
+    return;
+  }
+
+  const currentEditingLocalId=String(editingStoreId||"");
+  const editingLocalStore=stores.find(s=>String(s.id)===currentEditingLocalId);
+  const currentEditingId=currentEditingLocalId
+    ? await resolveOrderStoreUuid(editingLocalStore||currentEditingLocalId)
+    : "";
+  if(currentEditingLocalId&&!currentEditingId){
+    alert("找不到對應的訂單門市資料，請重新整理後再試。");
+    return;
+  }
+  const duplicate=stores.find(s=>
+    String(s.id)!==currentEditingLocalId &&
+    s.area===area &&
+    String(s.name||"").trim()===name &&
+    String(s.floor||"").trim()===floor
+  );
+  if(duplicate){
+    alert("這間百貨門市已經存在");
+    return;
+  }
+
+  const btn=$("storeSaveBtn");
+  const oldText=btn?.textContent||"新增門市";
+  if(btn){
+    btn.disabled=true;
+    btn.textContent="儲存中…";
+  }
+
+  try{
+    await starredApi("upsert_store",{
+      store:{
+        id:currentEditingId||null,
+        region:area,
+        name,
+        floor
+      }
+    });
+
+    /*
+      重新載入訂單系統的 stores，確保：
+      1. 百貨門市管理清單立即顯示
+      2. 重新整理後仍保留
+      3. 新增客訂資料門市選單立即同步
+    */
+    await loadStarredCloudData();
+
+    /*
+      再重新載入活動系統資料。
+      loadCloudData() 會把訂單系統 stores 合併進活動門市，
+      因此新增活動的門市選單也會立即顯示。
+    */
+    await loadCloudData();
+
+    resetStoreForm();
+    renderStores();
+    rebuildMallOptions();
+    rebuildOrderStoreOptions();
+    updateManageStoreFilter();
+    renderAll();
+
+    alert(currentEditingId?"門市修改完成":"門市新增完成");
+  }catch(error){
+    console.error("saveStore cloud error",error);
+    alert("門市儲存失敗：\n"+(error?.message||error));
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
+  }
+};
+window.deleteStore=async function(id){
+  id=String(id||"");
+  const s=stores.find(x=>String(x.id)===id);
+  if(!s){
+    alert("這筆門市已經刪除，清單已為您更新。");
+    renderStores();
+    return;
+  }
+
+  const sameStore=x=>
+    String(x.area||"")===String(s.area||"")&&
+    String(x.name||"").trim()===String(s.name||"").trim()&&
+    String(x.floor||"").trim()===String(s.floor||"").trim();
+  const usedCount=events.filter(e=>
+    String(e.storeId||"")===id ||
+    (String(e.mall||"").trim()===String(s.name||"").trim()&&
+     String(e.location||"").trim()===String(s.floor||"").trim())
+  ).length;
+  const message=usedCount>0
+    ? `「${s.name} ${s.floor}」目前有 ${usedCount} 筆活動。刪除門市不會刪除既有活動，確定繼續嗎？`
+    : `確定刪除「${s.name} ${s.floor}」嗎？`;
+  if(!confirm(message))return;
+
+  const previousStores=stores.slice();
+  const previousSelectedStoreIds=new Set(selectedStoreIds);
+  const deleteButtons=[...document.querySelectorAll('.store-delete-btn')];
+  deleteButtons.forEach(button=>button.disabled=true);
+
+  // 先更新本機狀態與所有門市選單，手機版、電腦版都不必重新整理。
+  const removedIds=new Set(stores.filter(sameStore).map(x=>String(x.id)));
+  stores=stores.filter(x=>!sameStore(x));
+  removedIds.forEach(storeId=>selectedStoreIds.delete(storeId));
+  persistStores();
+  if(String(editingStoreId||"")===id)resetStoreForm();
+  renderStores();
+  rebuildMallOptions();
+  rebuildOrderStoreOptions();
+  rebuildOrderPickupStoreOptions();
+  renderAdminOrderStoreOptions();
+  updateManageStoreFilter();
+
+  try{
+    // 清單可能來自「訂單門市」、也可能只存在於「活動門市」；兩邊分別處理。
+    const orderStoreId=await resolveOrderStoreUuid(s);
+    const activityStoreId=/^\d+$/.test(id)?Number(id):null;
+    const deleteTasks=[];
+
+    if(orderStoreId){
+      deleteTasks.push(starredApi("delete_store",{storeId:orderStoreId}));
+    }
+    if(activityStoreId){
+      deleteTasks.push((async()=>{
+        // 既有活動保留百貨與樓層文字，只解除門市外鍵後刪除門市主檔。
+        const {error:eventUpdateError}=await cloudDb
+          .from("department_events")
+          .update({store_id:null})
+          .eq("store_id",activityStoreId);
+        if(eventUpdateError)throw eventUpdateError;
+        const {error:storeDeleteError}=await cloudDb
+          .from("department_stores")
+          .delete()
+          .eq("id",activityStoreId);
+        if(storeDeleteError)throw storeDeleteError;
+      })());
+    }
+
+    // 任一來源找得到即可刪除，不再因另一套資料沒有對應 ID 而誤判失敗。
+    if(!deleteTasks.length){
+      throw new Error("雲端找不到這筆門市，請重新整理後再試。");
+    }
+    await Promise.all(deleteTasks);
+
+    const key=storeKey(s);
+    deletedStoreKeys.add(key);
+    localStorage.setItem(DELETED_STORES_KEY,JSON.stringify([...deletedStoreKeys]));
+
+    const status=document.getElementById("storeDeleteStatus");
+    if(status){
+      status.textContent=`已刪除：${s.name} ${s.floor}`;
+      status.style.display="block";
+      setTimeout(()=>status.style.display="none",2500);
+    }
+  }catch(error){
+    // 雲端刪除失敗才還原，避免畫面與實際資料不同步。
+    stores=previousStores;
+    selectedStoreIds=previousSelectedStoreIds;
+    persistStores();
+    renderStores();
+    rebuildMallOptions();
+    rebuildOrderStoreOptions();
+    rebuildOrderPickupStoreOptions();
+    renderAdminOrderStoreOptions();
+    updateManageStoreFilter();
+    console.error("deleteStore cloud error",error);
+    alert("門市刪除失敗：\n"+(error?.message||error));
+  }finally{
+    document.querySelectorAll('.store-delete-btn').forEach(button=>button.disabled=false);
+  }
+};
+window.saveEventCloud=async function(){
+  if(!validate())return;
+  const selectedStores=getSelectedStores();
+  const common={start_date:$("start").value,end_date:$("end").value,event_name:$("campaign").value.trim(),event_content:JSON.stringify($("products").value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)),remark:$("note").value.trim(),status:calcStatus($("start").value,$("end").value)};
+  const wasEditing=Boolean(editingId);
+  setCloudBusy(true,wasEditing?"儲存中…":"新增中…");
+  try{
+    const resolvedStores=[];
+    for(const selectedStore of selectedStores){
+      resolvedStores.push(await ensureActivityStore(selectedStore));
+    }
+
+    if(wasEditing){
+      const store=resolvedStores[0];
+      const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id),updated_at:new Date().toISOString()};
+      const {error}=await cloudDb.from("department_events").update(payload).eq("id",Number(editingId));if(error)throw error;
+      await removeEventPhotos([editingId]);
+      await uploadEventPhotos(editingId,currentPhotos);
+    }else{
+      for(const store of resolvedStores){
+        const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id)};
+        const {data,error}=await cloudDb.from("department_events").insert(payload).select("id").single();if(error)throw error;
+        await uploadEventPhotos(data.id,currentPhotos);
+      }
+    }
+    const count=resolvedStores.length;
+    resetForm();
+    await loadCloudData();
+    renderHome();
+    updateManageStoreFilter();
+    renderManage();
+    if(!wasEditing)showSuccessModal(count);
+  }catch(error){
+    console.error("活動儲存失敗",error);
+    cloudError("活動儲存失敗",error);
+  }finally{
+    setCloudBusy(false);
+  }
+};
+window.deleteEvent=async function(id){
+  if(!confirm("確定刪除這筆活動？"))return;
+  try{await removeEventPhotos([id]);const {error}=await cloudDb.from("department_events").delete().eq("id",Number(id));if(error)throw error;selectedManageEventIds.delete(String(id));await loadCloudData()}catch(error){cloudError("活動刪除失敗",error)}
+};
+window.deleteSelectedEvents=async function(){
+  const ids=[...selectedManageEventIds];if(!ids.length)return;
+  if(!confirm(`確定刪除已選取的 ${ids.length} 筆活動？刪除後無法復原。`))return;
+  try{await removeEventPhotos(ids);const {error}=await cloudDb.from("department_events").delete().in("id",ids.map(Number));if(error)throw error;selectedManageEventIds.clear();await loadCloudData()}catch(error){cloudError("批次刪除失敗",error)}
+};
+
+// 活動及門市改由 Supabase 管理；管理帳號暫時維持此瀏覽器，下一階段再改 Supabase Auth。
+persist=function(){};
+persistStores=function(){};
+window.addEventListener("load",async()=>{
+ if(window.STARRED_SALES_TEST_MODE){
+  rebuildMallOptions();rebuildOrderStoreOptions();renderStores();updateManageStoreFilter();renderAll();
+  return;
+ }
+ await Promise.allSettled([loadCloudData(),loadCloudAccounts()]);
+},{once:true});
+
+
+
+/* ===== 訂單備份（超過 60 天，只顯示文字） ===== */
+const ORDER_BACKUP_DAYS=60;
+function orderAgeDays(order){
+ const d=orderDateValue(order);if(!d)return 0;
+ const base=new Date(d+'T00:00:00');const now=new Date();now.setHours(0,0,0,0);
+ return Math.floor((now-base)/86400000);
+}
+function isBackupOrder(order){return orderAgeDays(order)>ORDER_BACKUP_DAYS}
+function activeOrdersOnly(list){return (list||[]).filter(o=>!isBackupOrder(o))}
+function backupStatusLabel(o){const st=String(o?.status||'pending');return st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出'}
+function getBackupOrders(){
+ const month=$('orderBackupMonth')?.value||'',keyword=String($('orderBackupKeyword')?.value||'').trim().toLowerCase(),status=$('orderBackupStatus')?.value||'';
+ return orders.filter(o=>{
+  if(!isBackupOrder(o))return false;
+  const d=orderDateValue(o);if(month&&String(d).slice(0,7)!==month)return false;
+  if(status&&String(o.status||'pending')!==status)return false;
+  if(keyword&&!([o.name,o.phone,o.address,o.delivery,o.items,o.handler,o.returnPerson,o.shippedDate,getEditNote(o)].some(v=>String(v||'').toLowerCase().includes(keyword))))return false;
+  return true;
+ }).sort((a,b)=>String(orderDateValue(b)).localeCompare(String(orderDateValue(a))));
+}
+function renderOrderBackup(){
+ const list=getBackupOrders(),body=$('orderBackupTableBody'),count=$('orderBackupCount'),summary=$('orderBackupSummary');if(!body)return;
+ if(count)count.textContent=String(list.length);
+ const month=$('orderBackupMonth')?.value||'';if(summary)summary.textContent=`${month?month.replace('-',' 年 ')+' 月':'全部月份'}・共 ${list.length} 筆・照片已隱藏，只保留文字資料`;
+ body.innerHTML=list.length?list.map(o=>{const st=String(o.status||'pending'),note=getEditNote(o)||'';return `<tr><td>${escapeHtml(orderDateValue(o))}</td><td>${escapeHtml(o.name||'')}</td><td>${escapeHtml(o.phone||'')}</td><td>${escapeHtml(o.address||'')}</td><td>${escapeHtml(o.delivery||'')}</td><td>${escapeHtml(o.items||'')}</td><td><span class="backup-status ${st}">${escapeHtml(backupStatusLabel(o))}</span></td><td>${escapeHtml(o.handler||'—')}</td><td>${escapeHtml(o.shippedDate||'—')}</td><td>${escapeHtml(note||'—')}</td></tr>`}).join(''):'<tr><td colspan="10" class="backup-empty-cell">目前沒有符合條件的備份訂單</td></tr>';
+}
+function clearOrderBackupFilters(){if($('orderBackupMonth'))$('orderBackupMonth').value='';if($('orderBackupKeyword'))$('orderBackupKeyword').value='';if($('orderBackupStatus'))$('orderBackupStatus').value='';renderOrderBackup()}
+function exportOrderBackupExcel(){
+ const list=getBackupOrders();if(!list.length){showOrderAction('沒有資料','目前篩選條件沒有可匯出的備份訂單。');return}
+ const headers=['訂單日期','姓名','電話','地址','配送','商品','狀態','處理人','寄出日期','備註'];
+ const rows=list.map(o=>[orderDateValue(o),o.name||'',o.phone||'',o.address||'',o.delivery||'',o.items||'',backupStatusLabel(o),o.handler||'',o.shippedDate||'',getEditNote(o)||'']);
+ const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const csv='\ufeff'+[headers,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=`訂單備份_${$('orderBackupMonth')?.value||todayStr()}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+async function backupOrdersNow(){
+ const button=$('backupOrdersEmailBtn'),status=$('backupEmailStatus');
+ const currentUser=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;
+ if(!currentUser||normalizeCurrentAdminRole(currentUser.role)!=='admin'){
+  showOrderAction('權限不足','只有系統管理員可以執行立即備份寄信。');
+  return;
+ }
+ if(!confirm('確定要立即備份全部訂單文字資料並寄送 Email 嗎？'))return;
+ const originalText=button?.textContent||'立即備份寄信';
+ if(button){button.disabled=true;button.textContent='備份寄送中…'}
+ if(status){status.className='backup-email-status working';status.textContent='正在整理全部訂單並寄送 Excel，請稍候…'}
+ try{
+  const result=await starredApi('backup_orders');
+  if(status){status.className='backup-email-status success';status.textContent=`備份成功：共 ${Number(result.count||0)} 筆，已寄送到 ${result.email||'備份信箱'}。`}
+  showOrderAction('備份成功',`共備份 ${Number(result.count||0)} 筆訂單，Excel 已寄送到 ${result.email||'備份信箱'}。`);
+ }catch(error){
+  const message=String(error?.message||error||'未知錯誤');
+  if(status){status.className='backup-email-status error';status.textContent=`備份失敗：${message}`}
+  showOrderAction('備份失敗',message);
+ }finally{
+  if(button){button.disabled=false;button.textContent=originalText}
+ }
+}
+
+document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today=todayStr();if($("orderFixedDate"))$("orderFixedDate").textContent=today;if($("orderReturnPerson"))$("orderReturnPerson").textContent="（登入後自動帶入）";if($("orderShipDate")){$("orderShipDate").value=today;$("orderShipDate").max=today}["orderDateFrom","orderDateTo","adminOrderDateFrom","adminOrderDateTo"].forEach(id=>{const e=$(id);if(e)e.max=today});renderOrderHandlerOptions();toggleOrderDeliveryFields();showPage("order");});
+</script>
 
 <script>
 /* ===== LINE LIFF + Supabase line-api：僅處理登入資料，不修改任何版面 ===== */
