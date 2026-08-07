@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260807-admin-login-v15-compat-v19 -->
+<!-- STARRED BUILD: 20260807-sales-excel-export-v20 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -3974,7 +3974,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       <section class="panel sales-admin-panel">
         <div class="sales-admin-heading">
           <div><span class="sales-eyebrow">SALES REPORT</span><h2>業績報表</h2><p>依日期、區域、門市或銷售人員查看每日明細與統計。</p></div>
-          <button type="button" class="primary sales-export-btn" onclick="exportSalesReportExcel()">匯出 Excel</button>
+          <button type="button" id="salesExportBtn" class="primary sales-export-btn" onclick="exportSalesReportExcel()">匯出 Excel</button>
         </div>
         <div class="sales-admin-filter">
           <div class="field sales-admin-date-field"><label>開始日期</label><div class="sales-admin-date-control"><input id="salesAdminDateFrom" type="date" onchange="loadSalesAdminReport()"></div></div>
@@ -10503,9 +10503,56 @@ function salesDownloadExcelBuffer(buffer,fileName){
   link.remove();
   setTimeout(function(){URL.revokeObjectURL(url)},1000);
 }
-async function exportSalesReportExcel(){
-  if(!window.ExcelJS){salesSetAdminStatus('Excel 樣式元件尚未載入，請重新整理後再試。','error');return}
-  if(!salesAdminData.records.length){salesSetAdminStatus('目前沒有可匯出的業績資料。','error');return}
+var salesExcelExportBusy=false;
+var salesExcelJsLoadPromise=null;
+function salesExcelJsReady(){
+  return Boolean(window.ExcelJS&&typeof window.ExcelJS.Workbook==='function');
+}
+function salesLoadExcelJsFromBackupSources(){
+  var sources=[
+    'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',
+    'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
+  ];
+  return new Promise(function(resolve){
+    var finished=false;
+    var pending=sources.length;
+    var timer=setTimeout(function(){finish(salesExcelJsReady())},8000);
+    function finish(ready){
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      resolve(Boolean(ready));
+    }
+    function complete(script){
+      if(salesExcelJsReady()){finish(true);return}
+      pending-=1;
+      if(script&&script.parentNode)script.parentNode.removeChild(script);
+      if(pending<=0)finish(false);
+    }
+    sources.forEach(function(source){
+      var script=document.createElement('script');
+      script.async=true;
+      script.src=source;
+      script.setAttribute('data-sales-excel-backup','true');
+      script.onload=function(){complete(script)};
+      script.onerror=function(){complete(script)};
+      document.head.appendChild(script);
+    });
+  });
+}
+function salesEnsureExcelJs(){
+  if(salesExcelJsReady())return Promise.resolve(true);
+  if(!salesExcelJsLoadPromise){
+    salesExcelJsLoadPromise=salesLoadExcelJsFromBackupSources().then(function(ready){
+      if(!ready)salesExcelJsLoadPromise=null;
+      return ready;
+    });
+  }
+  return salesExcelJsLoadPromise;
+}
+async function salesExportReportExcelWithExcelJs(){
+  if(!salesExcelJsReady())throw new Error('Excel 元件載入失敗，請檢查網路後再試');
   salesSetAdminStatus('正在建立 Excel 報表…','working');
   var summary=[{
     '篩選開始日期':(salesEl('salesAdminDateFrom')||{}).value||'全部',
@@ -10532,7 +10579,7 @@ async function exportSalesReportExcel(){
     '排名':index+1,'區域':(typeof areaText!=='undefined'&&areaText[row.area])||row.area||'','門市':row.storeName,'樓層／櫃位':row.storeFloor,'營業總額':row.grossAmount,'退貨總額（另計）':row.returnAmount,'回傳筆數':row.recordCount
   }});
   var peopleSheet=salesAdminData.byPerson.map(function(row,index){return {
-    '排名':index+1,'銷售人員':row.name,'店點':(row.locations||[]).map(salesStoreText).join('、'),'個人營業總額':row.grossAmount,'退貨':row.returnAmount,'當月業績':Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)),'明細筆數':row.recordCount
+    '排名':index+1,'銷售人員':row.name,'店點':(Array.isArray(row.locations)?row.locations:[]).map(salesStoreText).join('、'),'個人營業總額':row.grossAmount,'退貨':row.returnAmount,'當月業績':Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)),'明細筆數':row.recordCount
   }});
   var returnsSheet=salesAdminData.records.filter(function(record){return salesRecordType(record)==='return'}).map(function(record){return {
     '退貨日期':record.businessDate,'原發票日期':record.originalInvoiceDate||'','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':record.storeName,'樓層／櫃位':record.storeFloor,'退貨處理人':record.submitterName,'退貨金額':Number(record.returnAmount||0),'歸屬銷售人員':record.assignedSalespersonName||'待指定','歸列業績月份':String(record.returnPerformanceMonth||'').slice(0,7),'歸列操作人':record.returnAssignedByName||'','歸列時間':salesDateTime(record.returnAssignedAt)
@@ -10553,13 +10600,86 @@ async function exportSalesReportExcel(){
   salesMarkHighValueExcelCells(personSheet,['個人營業總額','當月業績']);
   var from=(salesEl('salesAdminDateFrom')||{}).value||'全部';
   var to=(salesEl('salesAdminDateTo')||{}).value||'全部';
+  var buffer=await workbook.xlsx.writeBuffer();
+  salesDownloadExcelBuffer(buffer,'星紅織品_業績報表_'+from+'_至_'+to+'.xlsx');
+  salesSetAdminStatus('Excel 已匯出；單筆營業額達 10,000 元，以及人員統計達 10,000 元的金額皆為紅字。','success');
+}
+function salesCreateSheetJsReportSheet(rows,widths,highValueHeaders){
+  var worksheet=window.XLSX.utils.json_to_sheet(Array.isArray(rows)?rows:[]);
+  worksheet['!cols']=(widths||[]).map(function(width){return {wch:Number(width||14)}});
+  if(worksheet['!ref'])worksheet['!autofilter']={ref:worksheet['!ref']};
+  if(worksheet['!ref']&&Array.isArray(highValueHeaders)&&highValueHeaders.length){
+    var range=window.XLSX.utils.decode_range(worksheet['!ref']);
+    var highColumns=[];
+    for(var column=range.s.c;column<=range.e.c;column+=1){
+      var headerCell=worksheet[window.XLSX.utils.encode_cell({r:range.s.r,c:column})];
+      if(headerCell&&highValueHeaders.includes(String(headerCell.v||'')))highColumns.push(column);
+    }
+    highColumns.forEach(function(column){
+      for(var row=range.s.r+1;row<=range.e.r;row+=1){
+        var address=window.XLSX.utils.encode_cell({r:row,c:column});
+        var cell=worksheet[address];
+        var amount=cell&&typeof cell.v==='number'?cell.v:Number(String(cell&&cell.v||'').replace(/,/g,''));
+        if(cell&&Number.isFinite(amount)&&amount>=SALES_HIGH_VALUE_THRESHOLD){
+          cell.s={font:{name:'Microsoft JhengHei',sz:10,bold:true,color:{rgb:'C62828'}}};
+        }
+      }
+    });
+  }
+  return worksheet;
+}
+function salesExportReportExcelWithSheetJs(){
+  if(!window.XLSX||!window.XLSX.utils||typeof window.XLSX.write!=='function')throw new Error('Excel 相容元件也未載入');
+  var records=Array.isArray(salesAdminData.records)?salesAdminData.records:[];
+  var byStore=Array.isArray(salesAdminData.byStore)?salesAdminData.byStore:[];
+  var byPerson=Array.isArray(salesAdminData.byPerson)?salesAdminData.byPerson:[];
+  var editRequests=Array.isArray(salesAdminData.editRequests)?salesAdminData.editRequests:[];
+  var totals=salesAdminData.totals||{grossAmount:0,returnAmount:0,recordCount:records.length};
+  var summary=[{'篩選開始日期':(salesEl('salesAdminDateFrom')||{}).value||'全部','篩選結束日期':(salesEl('salesAdminDateTo')||{}).value||'全部','營業總額':Number(totals.grossAmount||0),'退貨總額':Number(totals.returnAmount||0),'待審核修改申請':editRequests.filter(function(request){return request&&request.status==='pending'}).length,'回傳筆數':Number(totals.recordCount||records.length)}];
+  var daily=records.map(function(record){record=record||{};return {'業績日期':record.businessDate||'','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':record.storeName||'','樓層／櫃位':record.storeFloor||'','銷售人員':record.submitterName||'','營業總額':Number(record.grossAmount||0),'退貨金額':Number(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'建立時間':salesDateTime(record.createdAt),'最後更新':salesDateTime(record.updatedAt)}});
+  var storesSheet=byStore.map(function(row,index){row=row||{};return {'排名':index+1,'區域':(typeof areaText!=='undefined'&&areaText[row.area])||row.area||'','門市':row.storeName||'','樓層／櫃位':row.storeFloor||'','營業總額':Number(row.grossAmount||0),'退貨總額（另計）':Number(row.returnAmount||0),'回傳筆數':Number(row.recordCount||0)}});
+  var peopleSheet=byPerson.map(function(row,index){row=row||{};return {'排名':index+1,'銷售人員':row.name||'','店點':(Array.isArray(row.locations)?row.locations:[]).map(salesStoreText).join('、'),'個人營業總額':Number(row.grossAmount||0),'退貨':Number(row.returnAmount||0),'當月業績':Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)),'明細筆數':Number(row.recordCount||0)}});
+  var returnsSheet=records.filter(function(record){return salesRecordType(record)==='return'}).map(function(record){record=record||{};return {'退貨日期':record.businessDate||'','原發票日期':record.originalInvoiceDate||'','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':record.storeName||'','樓層／櫃位':record.storeFloor||'','退貨處理人':record.submitterName||'','退貨金額':Number(record.returnAmount||0),'歸屬銷售人員':record.assignedSalespersonName||'待指定','歸列業績月份':String(record.returnPerformanceMonth||'').slice(0,7),'歸列操作人':record.returnAssignedByName||'','歸列時間':salesDateTime(record.returnAssignedAt)}});
+  var requestsSheet=editRequests.map(function(request){request=request||{};var before=request.requestedSnapshot&&typeof request.requestedSnapshot==='object'?request.requestedSnapshot:{},after=request.completedSnapshot&&typeof request.completedSnapshot==='object'?request.completedSnapshot:{},proposed=request.proposedSnapshot&&typeof request.proposedSnapshot==='object'?request.proposedSnapshot:(Object.keys(after).length?after:before);return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','原業績日期':before.businessDate||'','原門市':salesStoreText(before),'原營業額':Number(before.grossAmount||0),'原退貨金額':Number(before.returnAmount||0),'原發票日期':before.originalInvoiceDate||'','申請修改後營業額':Number(proposed.grossAmount||0),'申請修改後退貨金額':Number(proposed.returnAmount||0),'申請修改後原發票日期':proposed.originalInvoiceDate||'','修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'','審核時間':salesDateTime(request.reviewedAt),'完成時間':salesDateTime(request.completedAt),'實際修改後營業額':request.status==='completed'?Number(after.grossAmount||0):'','實際修改後退貨金額':request.status==='completed'?Number(after.returnAmount||0):'','實際修改後原發票日期':request.status==='completed'?(after.originalInvoiceDate||''):''}});
+  var workbook=window.XLSX.utils.book_new();
+  function append(name,rows,widths,highHeaders){window.XLSX.utils.book_append_sheet(workbook,salesCreateSheetJsReportSheet(rows,widths,highHeaders),name)}
+  append('統計摘要',summary,[16,16,16,16,18,12],[]);
+  append('每日業績明細',daily,[13,10,20,14,14,14,14,14,21,21,21],['營業總額']);
+  append('門市統計',storesSheet,[8,10,20,14,14,20,12],[]);
+  append('人員業績統計',peopleSheet,[8,14,36,16,14,16,12],['個人營業總額','當月業績']);
+  append('退貨明細',returnsSheet,[13,13,10,20,14,14,14,16,16,14,21],[]);
+  append('修改申請紀錄',requestsSheet,[21,14,13,24,14,14,14,18,18,20,28,12,14,21,21,18,18,20],[]);
+  var from=(salesEl('salesAdminDateFrom')||{}).value||'全部';
+  var to=(salesEl('salesAdminDateTo')||{}).value||'全部';
+  var buffer=window.XLSX.write(workbook,{bookType:'xlsx',type:'array',compression:true,cellStyles:true});
+  salesDownloadExcelBuffer(buffer,'星紅織品_業績報表_'+from+'_至_'+to+'.xlsx');
+  salesSetAdminStatus('Excel 已使用相容模式匯出；重新整理後可再使用完整紅字樣式匯出。','success');
+}
+async function exportSalesReportExcel(){
+  if(salesExcelExportBusy)return;
+  if(!Array.isArray(salesAdminData.records)||!salesAdminData.records.length){salesSetAdminStatus('目前沒有可匯出的業績資料。','error');return}
+  var button=salesEl('salesExportBtn')||document.querySelector('.sales-export-btn');
+  var originalLabel=button?button.textContent:'匯出 Excel';
+  salesExcelExportBusy=true;
+  if(button){button.disabled=true;button.textContent='準備匯出…'}
+  salesSetAdminStatus(salesExcelJsReady()?'正在建立 Excel 報表…':'正在載入 Excel 元件…','working');
   try{
-    var buffer=await workbook.xlsx.writeBuffer();
-    salesDownloadExcelBuffer(buffer,'星紅織品_業績報表_'+from+'_至_'+to+'.xlsx');
-    salesSetAdminStatus('Excel 已匯出；單筆營業額達 10,000 元，以及人員統計達 10,000 元的金額皆為紅字。','success');
+    var ready=await salesEnsureExcelJs();
+    if(!ready){
+      if(button)button.textContent='相容模式匯出…';
+      salesExportReportExcelWithSheetJs();
+      return;
+    }
+    if(button)button.textContent='正在建立…';
+    await salesExportReportExcelWithExcelJs();
   }catch(error){
     console.error('匯出業績 Excel 失敗',error);
-    salesSetAdminStatus('Excel 匯出失敗：'+String(error&&error.message||error),'error');
+    var message='Excel 匯出失敗：'+String(error&&error.message||error);
+    salesSetAdminStatus(message,'error');
+    if(typeof alert==='function')alert(message);
+  }finally{
+    salesExcelExportBusy=false;
+    if(button){button.disabled=false;button.textContent=originalLabel}
   }
 }
 function salesBackupRoleAllowed(){
