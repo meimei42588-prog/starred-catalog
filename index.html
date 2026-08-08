@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260808-sales-report-store-matrix-compact-picker-v23 -->
+<!-- STARRED BUILD: 20260808-sales-person-flat-stroke-picker-v24 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -10299,7 +10299,7 @@ function salesPersonDetailFilteredPeople(){
 function ensureSalesPersonPicker(){
   var modal=salesEl('salesPersonPickerModal');if(modal)return modal;
   modal=document.createElement('div');modal.id='salesPersonPickerModal';modal.className='sales-person-picker-modal';modal.hidden=true;
-  modal.innerHTML='<div class="sales-person-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="salesPersonPickerTitle"><header><div><span>STAFF FILTER</span><h3 id="salesPersonPickerTitle">人員篩選</h3><p>勾選要顯示在下方業績明細表的人員。</p></div><button type="button" class="sales-person-picker-close" onclick="closeSalesPersonPicker()" aria-label="關閉">×</button></header><div class="sales-person-picker-tools"><label class="sales-person-picker-search"><span>搜尋姓名</span><input id="salesPersonPickerSearch" type="search" placeholder="輸入姓名" oninput="filterSalesPersonPicker(this.value)" autocomplete="off"></label><div class="sales-person-picker-actions"><b id="salesPersonPickerCount">已選 0 人</b><button type="button" class="secondary" onclick="selectFilteredSalesPersonDetail()">全部選取</button><button type="button" class="secondary" onclick="selectAllSalesPersonDetail(false)">清除</button></div></div><div id="salesPersonPickerGroups" class="sales-person-picker-groups"></div><footer><small>勾選後會立即更新表格</small><button type="button" class="primary" onclick="closeSalesPersonPicker()">套用並關閉</button></footer></div>';
+  modal.innerHTML='<div class="sales-person-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="salesPersonPickerTitle"><header><div><span>STAFF FILTER</span><h3 id="salesPersonPickerTitle">選擇人員</h3><p>點選姓名可複選，順序依姓氏筆畫排列。</p></div><button type="button" class="sales-person-picker-close" onclick="closeSalesPersonPicker()" aria-label="關閉">×</button></header><div class="sales-person-picker-tools"><label class="sales-person-picker-search"><span>搜尋姓名</span><input id="salesPersonPickerSearch" type="search" placeholder="輸入姓名" oninput="filterSalesPersonPicker(this.value)" autocomplete="off"></label><div class="sales-person-picker-actions"><b id="salesPersonPickerCount">已選 0 人</b><button type="button" class="secondary" onclick="selectFilteredSalesPersonDetail()">全部選取</button><button type="button" class="secondary" onclick="selectAllSalesPersonDetail(false)">清除</button></div></div><div id="salesPersonPickerGroups" class="sales-person-picker-groups sales-person-flat-grid"></div><footer><small>綠色代表已選取，點一下即可切換</small><button type="button" class="primary" onclick="closeSalesPersonPicker()">套用並關閉</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesPersonPicker()});
   document.addEventListener('keydown',function(event){if(event.key==='Escape'&&!modal.hidden)closeSalesPersonPicker()});
   document.body.appendChild(modal);return modal;
@@ -10311,11 +10311,9 @@ function renderSalesPersonPickerChoices(){
   var box=salesEl('salesPersonPickerGroups');if(!box)return;
   var people=salesPersonDetailFilteredPeople();renderSalesPersonPickerCount();
   if(!people.length){box.innerHTML='<div class="sales-empty">找不到符合搜尋條件的人員。</div>';return}
-  var grouped=new Map();
-  people.forEach(function(person){var surname=salesPersonSurname(person.name);if(!grouped.has(surname))grouped.set(surname,[]);grouped.get(surname).push(person)});
-  box.innerHTML=Array.from(grouped.entries()).map(function(entry){
-    var surname=entry[0],members=entry[1];
-    return '<section class="sales-person-filter-group"><h4><span>'+salesEsc(surname)+'</span><small>'+String(members.length)+' 人</small></h4><div>'+members.map(function(person){return '<label><input type="checkbox" value="'+salesEsc(person.lineUserId)+'" '+(salesPersonDetailSelection.has(person.lineUserId)?'checked':'')+' onchange="toggleSalesPersonDetail(this)"><span>'+salesEsc(person.name)+'</span></label>'}).join('')+'</div></section>';
+  box.innerHTML=people.map(function(person){
+    var selected=salesPersonDetailSelection.has(person.lineUserId);
+    return '<button type="button" class="sales-person-choice-button'+(selected?' selected':'')+'" data-line-user-id="'+salesEsc(person.lineUserId)+'" aria-pressed="'+(selected?'true':'false')+'" onclick="toggleSalesPersonDetailButton(this)">'+salesEsc(person.name)+'</button>';
   }).join('');
 }
 function openSalesPersonPicker(){
@@ -10336,6 +10334,12 @@ function toggleSalesPersonDetail(input){
   var id=String(input&&input.value||'');if(!id)return;
   if(input.checked)salesPersonDetailSelection.add(id);else salesPersonDetailSelection.delete(id);
   renderSalesPersonDetailChoices();renderSalesPersonPickerCount();renderSalesPersonDetailTable();
+}
+function toggleSalesPersonDetailButton(button){
+  var id=String(button&&button.getAttribute('data-line-user-id')||'');if(!id)return;
+  if(salesPersonDetailSelection.has(id))salesPersonDetailSelection.delete(id);else salesPersonDetailSelection.add(id);
+  salesPersonDetailSelectionInitialized=true;
+  renderSalesPersonPickerChoices();renderSalesPersonDetailChoices();renderSalesPersonDetailTable();
 }
 function selectFilteredSalesPersonDetail(){
   salesPersonDetailFilteredPeople().forEach(function(person){salesPersonDetailSelection.add(person.lineUserId)});
@@ -11391,6 +11395,7 @@ window.closeSalesPersonPicker=closeSalesPersonPicker;
 window.filterSalesPersonPicker=filterSalesPersonPicker;
 window.selectFilteredSalesPersonDetail=selectFilteredSalesPersonDetail;
 window.toggleSalesPersonDetail=toggleSalesPersonDetail;
+window.toggleSalesPersonDetailButton=toggleSalesPersonDetailButton;
 window.selectAllSalesPersonDetail=selectAllSalesPersonDetail;
 window.printSalesPersonDetail=printSalesPersonDetail;
 window.exportSalesPersonDetailExcel=exportSalesPersonDetailExcel;
@@ -11779,6 +11784,21 @@ body.sales-stat-modal-open{overflow:hidden}
 .sales-stat-detail-switcher[hidden],.sales-stat-detail-view[hidden]{display:none!important}.sales-stat-detail-switcher{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 20px 10px;padding:5px 5px 5px 10px;border-radius:10px;background:#edf2f5}.sales-stat-detail-switcher>span{color:#6f8490;font-size:9px;font-weight:600}.sales-stat-detail-switcher>div{display:flex;gap:3px}.sales-stat-detail-switcher button{min-width:86px;padding:7px 10px;border:0;border-radius:7px;background:transparent;color:#607985;font-size:10px;font-weight:500;cursor:pointer}.sales-stat-detail-switcher button.active{background:#fff;color:#294858;box-shadow:0 2px 8px rgba(39,66,83,.12)}.sales-stat-detail-view{display:flex;flex:1 1 auto;min-height:0;overflow:hidden;flex-direction:column}.sales-stat-detail-view .sales-stat-detail-table-wrap{flex:1 1 auto;min-height:0}.sales-store-matrix-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 20px 7px;color:#748994;font-size:9px}.sales-store-matrix-note span{font-weight:600}.sales-store-matrix-note b{font-weight:500}.sales-store-matrix-scroll{flex:1 1 auto;min-height:0;overflow:auto;margin:0 20px;border:1px solid #cfdadf;border-radius:11px;background:#fff}.sales-store-matrix-scroll table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;color:#405d6c;font-size:11px}.sales-store-matrix-scroll th,.sales-store-matrix-scroll td{height:35px;padding:7px 8px;border-right:1px solid #d8e0e4;border-bottom:1px solid #d8e0e4;background:#fff}.sales-store-matrix-scroll thead th{position:sticky;z-index:4;top:0;background:#2d4b5b;color:#fff;font-size:10px;font-weight:600;text-align:center}.sales-store-matrix-scroll thead th:first-child{left:0;z-index:6;width:105px}.sales-store-matrix-scroll thead th:last-child{width:125px}.sales-store-matrix-scroll tbody th.date{position:sticky;z-index:2;left:0;background:#f4f8fa;color:#425e6c;font-weight:500;text-align:center;white-space:nowrap}.sales-store-matrix-scroll tbody th.date.weekend{color:#d04444}.sales-store-matrix-scroll tbody tr:nth-child(even) td{background:#fbfcfd}.sales-store-matrix-scroll td.amount{font-variant-numeric:tabular-nums;text-align:right}.sales-store-matrix-scroll td.total{background:#f2f6f8!important;font-weight:600}.sales-store-matrix-scroll tfoot th,.sales-store-matrix-scroll tfoot td{position:sticky;z-index:3;bottom:0;background:#e9f0f3;font-weight:600}.sales-store-matrix-scroll tfoot th{left:0;z-index:5;text-align:center}.sales-store-matrix-scroll tfoot td.grand{color:#c62828;font-size:12px}.sales-store-matrix-scroll tr>*:last-child{border-right:0}.sales-store-matrix-scroll tfoot tr>*{border-bottom:0}.sales-store-matrix-scroll .sales-high-value{color:#c62828!important;font-weight:600}
 @media(max-width:620px){.sales-table .sales-person-cell b,.sales-admin-daily-person .sales-person-cell b{font-size:13px!important}.sales-person-filter-summary{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:9px 10px}.sales-person-filter-status{min-width:0}.sales-person-filter-preview{grid-column:1/-1;grid-row:2}.sales-person-picker-open-btn{grid-column:2;grid-row:1;width:auto!important}.sales-person-picker-modal{place-items:end center!important;padding:8px!important}.sales-person-picker-dialog{width:100%!important;max-height:80vh!important;border-radius:16px!important}.sales-person-filter-group{grid-template-columns:37px minmax(0,1fr);gap:6px}.sales-person-filter-group>div{grid-template-columns:1fr}.sales-person-picker-actions{flex-wrap:wrap!important}.sales-person-picker-actions>b{width:100%;margin-right:0!important}.sales-person-picker-dialog>footer small{display:none}.sales-stat-detail-switcher{margin:0 14px 9px}.sales-stat-detail-switcher>span{display:none}.sales-stat-detail-switcher>div{display:grid;width:100%;grid-template-columns:1fr 1fr}.sales-stat-detail-switcher button{width:100%;min-width:0}.sales-store-matrix-note{margin:0 14px 6px}.sales-store-matrix-scroll{margin:0 14px}.sales-store-matrix-scroll table{font-size:10px}.sales-store-matrix-scroll th,.sales-store-matrix-scroll td{height:33px;padding:6px}.sales-store-matrix-scroll thead th:first-child{width:82px}.sales-store-matrix-scroll thead th:last-child{width:105px}}
 @media print{body.sales-stat-printing .sales-stat-detail-switcher{display:none!important}body.sales-stat-printing .sales-stat-detail-view{display:block!important;overflow:visible!important}body.sales-stat-printing .sales-stat-detail-view[hidden]{display:none!important}body.sales-stat-printing .sales-store-matrix-note{margin:0 0 6px!important}body.sales-stat-printing .sales-store-matrix-scroll{overflow:visible!important;margin:0!important;border-color:#777!important}body.sales-stat-printing .sales-store-matrix-scroll table{min-width:0!important;font-size:8px!important}body.sales-stat-printing .sales-store-matrix-scroll th,body.sales-stat-printing .sales-store-matrix-scroll td{position:static!important;height:auto!important;padding:4px!important;border:1px solid #777!important}}
+</style>
+
+<style id="sales-performance-v24-flat-person-picker-style">
+/* v24：姓名改為平面方塊多選，依繁體中文姓氏筆畫排序。 */
+.sales-person-picker-dialog{width:min(690px,100%)!important;max-height:min(700px,88vh)!important}
+.sales-person-picker-groups.sales-person-flat-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));align-content:start;gap:8px!important;min-height:0!important;padding:14px!important;background:#f8fafb}
+.sales-person-flat-grid .sales-empty{grid-column:1/-1}
+.sales-person-choice-button{appearance:none!important;display:flex!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:44px!important;margin:0!important;padding:8px 10px!important;overflow:hidden;border:1px solid #d3dee3!important;border-radius:9px!important;background:#fff!important;box-shadow:0 1px 2px rgba(34,62,77,.04)!important;color:#405e6c!important;font-family:inherit!important;font-size:13px!important;font-weight:600!important;line-height:1.2!important;text-align:center!important;text-overflow:ellipsis!important;white-space:nowrap!important;cursor:pointer!important;transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease,transform .16s ease}
+.sales-person-choice-button:hover{border-color:#9db3bd!important;background:#f2f6f7!important;color:#294b5c!important}
+.sales-person-choice-button.selected,.sales-person-choice-button[aria-pressed="true"]{border-color:#3c8a5d!important;background:#3c8a5d!important;box-shadow:0 4px 11px rgba(60,138,93,.2)!important;color:#fff!important}
+.sales-person-choice-button.selected:hover,.sales-person-choice-button[aria-pressed="true"]:hover{border-color:#347b52!important;background:#347b52!important;color:#fff!important}
+.sales-person-choice-button:active{transform:translateY(1px)}
+.sales-person-choice-button:focus-visible{outline:3px solid rgba(49,95,121,.2)!important;outline-offset:2px}
+@media(max-width:760px) and (min-width:621px){.sales-person-picker-groups.sales-person-flat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.sales-person-picker-dialog{width:100%!important;max-height:84vh!important}.sales-person-picker-groups.sales-person-flat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px!important;padding:10px!important}.sales-person-choice-button{min-height:42px!important;padding:7px 8px!important;font-size:12px!important}}
 </style>
 
 </body>
