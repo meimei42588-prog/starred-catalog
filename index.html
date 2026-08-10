@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260808-sales-person-flat-stroke-picker-v24 -->
+<!-- STARRED BUILD: 20260810-line-mobile-login-fix-v25 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -7555,6 +7555,9 @@ document.addEventListener("DOMContentLoaded",()=>{initOrderAddress();const today
 /* ===== LINE LIFF + Supabase line-api：僅處理登入資料，不修改任何版面 ===== */
 const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
 const STARRED_LINE_RELOGIN_KEY = "starred_line_relogin_running";
+const STARRED_LIFF_ENTRY_SESSION_KEY = "starred_liff_entry_session_v1";
+const STARRED_LINE_INIT_TIMEOUT_MS = 20000;
+const STARRED_LIFF_BASE_URL = `https://liff.line.me/${STARRED_LIFF_ID}`;
 const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
 const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
 const STARRED_ORDER_SYNC_INTERVAL_MS = 15000;
@@ -7624,6 +7627,50 @@ function isLineIdTokenExpired(token,bufferSeconds=60){
   const payload=parseJwtPayload(token);
   if(!payload||!payload.exp)return false;
   return Number(payload.exp)*1000 <= Date.now()+bufferSeconds*1000;
+}
+function getStarredSearchParams(){
+  try{return new URLSearchParams(location.search)}catch(_){return new URLSearchParams()}
+}
+function isStarredLineInAppBrowser(){
+  return /\bLine\/[\d.]+/i.test(String(navigator.userAgent||""));
+}
+function getStarredLiffSalesUrl(){
+  return `${STARRED_LIFF_BASE_URL}/?page=sales`;
+}
+function hasStarredLiffEntrySession(){
+  try{return sessionStorage.getItem(STARRED_LIFF_ENTRY_SESSION_KEY)==="1"}catch(_){return false}
+}
+function markStarredLiffEntrySession(){
+  try{sessionStorage.setItem(STARRED_LIFF_ENTRY_SESSION_KEY,"1")}catch(_){}
+}
+function redirectDirectLineSalesToLiff(){
+  const params=getStarredSearchParams();
+
+  /* 由 LIFF 專用網址進站時會帶 liff.state；記住本分頁已進入正確流程，避免二次轉址。 */
+  if(params.has("liff.state")){
+    markStarredLiffEntrySession();
+    return false;
+  }
+
+  const isDirectSales=String(params.get("page")||"").trim().toLowerCase()==="sales";
+  if(!isDirectSales||!isStarredLineInAppBrowser()||hasStarredLiffEntrySession())return false;
+
+  /* LINE 手機內直接點一般網址時，先改走 LIFF 入口，避免外部登入流程卡住。 */
+  markStarredLiffEntrySession();
+  location.replace(getStarredLiffSalesUrl());
+  return true;
+}
+function waitForStarredLineInitialization(promise){
+  let timeoutId=0;
+  const timeoutPromise=new Promise((_,reject)=>{
+    timeoutId=setTimeout(()=>{
+      const error=new Error("LINE 登入等候時間過久，請按下方按鈕重新登入");
+      error.code="LINE_INIT_TIMEOUT";
+      reject(error);
+    },STARRED_LINE_INIT_TIMEOUT_MS);
+  });
+  return Promise.race([Promise.resolve(promise),timeoutPromise])
+    .finally(()=>{if(timeoutId)clearTimeout(timeoutId)});
 }
 function getStarredLineCleanUrl(){
   const requestedPage=typeof window.getStarredRequestedPage==="function"
@@ -7927,6 +7974,7 @@ async function runStarredLiffInitialization(){
       hideSystemLoading();
       return;
     }
+    if(redirectDirectLineSalesToLiff())return;
     if(!window.liff){
       console.error("LIFF SDK 載入失敗");
       showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
@@ -7935,10 +7983,10 @@ async function runStarredLiffInitialization(){
     showSystemLoading("LINE 登入確認中…","正在確認 LINE 登入狀態，請稍候。");
 
     currentStage="LINE 外部瀏覽器登入";
-    await liff.init({
+    await waitForStarredLineInitialization(liff.init({
       liffId:STARRED_LIFF_ID,
       withLoginOnExternalBrowser:true
-    });
+    }));
 
     /* LINE 官方要求等 liff.init 完成後才能改網址。 */
     cleanLoginCallbackUrl();
@@ -7992,9 +8040,13 @@ async function runStarredLiffInitialization(){
     if(error&&error.relogin)return;
     const cached=getCurrentLineUser();
     if(cached)setLineReturnPerson(cached);
+    const retryLabel=String(error&&error.code||"")==="LINE_INIT_TIMEOUT"
+      ?"用 LINE 重新登入"
+      :"重新載入";
     showSystemLoadingError(
       `${currentStage}失敗`,
-      `${getStarredLineErrorText(error)}\n請按「重新載入」再試一次；若仍失敗，請將這段錯誤文字截圖回傳。`
+      `${getStarredLineErrorText(error)}\n請按「${retryLabel}」再試一次；若仍失敗，請將這段錯誤文字截圖回傳。`,
+      retryLabel
     );
     if(String(error&&error.message||"").includes("Publishable key")){
       console.warn("請先在 HTML 的 STARRED_SUPABASE_PUBLISHABLE_KEY 填入 Publishable key。");
@@ -8035,18 +8087,28 @@ function showSystemLoading(title="資料載入中…",text="正在同步最新�
  overlay.classList.remove("error");overlay.classList.add("show");
  document.getElementById("systemLoadingTitle").textContent=title;
  document.getElementById("systemLoadingText").textContent=text;
+ const retry=document.getElementById("systemLoadingRetry");if(retry)retry.textContent="重新載入";
 }
 function hideSystemLoading(){document.getElementById("systemLoadingOverlay")?.classList.remove("show","error")}
-function showSystemLoadingError(title="資料載入失敗",text="資料載入失敗，請重新整理或重新登入"){
+function showSystemLoadingError(title="資料載入失敗",text="資料載入失敗，請重新整理或重新登入",retryLabel="重新載入"){
  const overlay=document.getElementById("systemLoadingOverlay");if(!overlay)return;
  overlay.classList.add("show","error");
  document.getElementById("systemLoadingTitle").textContent=title;
  document.getElementById("systemLoadingText").textContent=text;
+ const retry=document.getElementById("systemLoadingRetry");if(retry)retry.textContent=retryLabel;
 }
 function retrySystemLoading(){
  const overlay=document.getElementById("systemLoadingOverlay");
  if(overlay){overlay.classList.remove("error");}
  sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+ const requestedPage=typeof window.getStarredRequestedPage==="function"
+  ?window.getStarredRequestedPage()
+  :String(getStarredSearchParams().get("page")||"").trim().toLowerCase();
+ if(requestedPage==="sales"&&isStarredLineInAppBrowser()){
+  markStarredLiffEntrySession();
+  location.replace(getStarredLiffSalesUrl());
+  return;
+ }
  /* 重新載入乾淨網址，不沿用上一輪 LINE 登入留下的查詢參數。 */
  location.replace(getStarredLineCleanUrl());
 }
