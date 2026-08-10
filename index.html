@@ -3776,7 +3776,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
           <div class="field sales-entry-area"><label>區域 *</label><select id="salesArea" onchange="rebuildSalesStoreOptions()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div>
           <div class="field sales-wide sales-entry-store"><label>門市 *</label><select id="salesStore"><option value="">請先選擇區域</option></select></div>
           <div class="field sales-wide sales-entry-proxy-only" hidden><label>業績歸屬人員（本名） *</label><select id="salesProxyPerson"><option value="">請選擇實際計算業績的人員</option></select><small class="sales-field-note">由目前登入人員代為回傳，但排行榜與報表會算在這位人員名下。</small></div>
-          <div class="field sales-wide sales-entry-proxy-only" hidden><label>該人員當天是否上班 *</label><select id="salesProxyWorked"><option value="yes">有上班（計入上班天數）</option><option value="no">未上班（不計入上班天數）</option></select></div>
+          <div class="field sales-wide sales-entry-proxy-only" hidden><label>該人員當天是否上班 *</label><select id="salesProxyWorked"><option value="no">未上班（不計入上班天數）</option></select></div>
           <div class="field sales-wide sales-amount-field sales-entry-sales-only"><label>當日營業總金額 *</label><div class="sales-money-input"><span>$</span><input id="salesGrossAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="0" oninput="updateSalesAmountPreview()"></div></div>
           <div id="salesInvoiceDateField" class="field sales-invoice-field sales-entry-return-only" hidden><label class="sales-date-limit-label">原發票日期 * <small>未來日期已停用</small></label><div class="sales-invoice-date-control"><input id="salesOriginalInvoiceDate" type="date" onfocus="enforceSalesInvoiceDateMax(this)" onchange="enforceSalesInvoiceDateMax(this)"></div></div>
           <div class="field sales-wide sales-amount-field sales-entry-return-only" hidden><label>退貨金額 *</label><div class="sales-money-input return"><span>$</span><input id="salesReturnAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="0" oninput="updateSalesAmountPreview()"></div></div>
@@ -9569,7 +9569,7 @@ function toggleSalesInvoiceDate(){
 function resetSalesForm(){
   var ids=['salesEditingId','salesGrossAmount','salesReturnAmount','salesOriginalInvoiceDate','salesProxyPerson'];
   ids.forEach(function(id){var el=salesEl(id);if(el)el.value=''});
-  if(salesEl('salesProxyWorked'))salesEl('salesProxyWorked').value='yes';
+  if(salesEl('salesProxyWorked'))salesEl('salesProxyWorked').value='no';
   if(salesEl('salesBusinessDate'))salesEl('salesBusinessDate').value=salesToday();
   if(salesEl('salesArea'))salesEl('salesArea').value='';
   rebuildSalesStoreOptions();
@@ -10097,7 +10097,7 @@ function editSalesRecord(id){
   if(mode==='proxy'){
     rebuildSalesProxyPersonOptions(record.salespersonLineUserId||record.submitterLineUserId);
     if(salesEl('salesProxyPerson'))salesEl('salesProxyPerson').value=String(record.salespersonLineUserId||record.submitterLineUserId||'');
-    if(salesEl('salesProxyWorked'))salesEl('salesProxyWorked').value=record.salespersonWasWorking===false?'no':'yes';
+    if(salesEl('salesProxyWorked'))salesEl('salesProxyWorked').value='no';
   }
   toggleSalesInvoiceDate();
   updateSalesAmountPreview();
@@ -10125,7 +10125,7 @@ async function submitSalesRecord(){
   if(recordType==='return'&&!enforceSalesInvoiceDateMax(originalInvoiceInput,businessDate||salesToday()))return;
   var originalInvoiceDate=(originalInvoiceInput||{}).value||'';
   var salespersonLineUserId=isProxySale?String((salesEl('salesProxyPerson')||{}).value||''):salesIdentity().id;
-  var salespersonWasWorking=isProxySale?String((salesEl('salesProxyWorked')||{}).value||'yes')!=='no':true;
+  var salespersonWasWorking=isProxySale?String((salesEl('salesProxyWorked')||{}).value||'no')!=='no':true;
   if(!businessDate||businessDate>salesToday()){salesSetStatus('請選擇今天或過去的業績日期。','error');return}
   if(!area||!storeId){salesSetStatus('請選擇區域與門市。','error');return}
   if(recordType==='sales'&&(String(grossRaw||'').trim()===''||!Number.isFinite(grossAmount)||grossAmount<0)){salesSetStatus('請填寫正確的當日營業總金額。','error');return}
