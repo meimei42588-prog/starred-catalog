@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260810-line-mobile-login-fix-v25 -->
+<!-- STARRED BUILD: 20260810-sales-proxy-order-photo-edit-v26 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -3803,12 +3803,12 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div><span class="sales-step">03</span><h2>銷售排行榜</h2></div>
         <div class="sales-ranking-controls">
           <select id="salesRankingType" aria-label="排行項目" onchange="changeSalesRankingType()">
-            <option value="today">本日銷售前 5 名</option>
-            <option value="month">本月銷售前 10 名</option>
-            <option value="monthStoresTop10">本月店點前 10 名</option>
-            <option value="monthStoresAll">店點本月營業總額</option>
-            <option value="storeDaily">店點每日銷售額明細</option>
-            <option value="all">所有銷售人員排名</option>
+            <option value="today">今日TOP5</option>
+            <option value="month">本月TOP10</option>
+            <option value="monthStoresTop10">店點TOP10</option>
+            <option value="monthStoresAll">店點營業額</option>
+            <option value="storeDaily">店點銷售明細</option>
+            <option value="all">人員排行榜</option>
           </select>
           <label class="sales-ranking-month"><span>月份</span><input id="salesRankingMonth" type="month" aria-label="排行月份" onchange="changeSalesRankingMonth()"></label>
           <div id="salesRankingLocation" class="sales-ranking-location" hidden><select id="salesRankingArea" aria-label="區域查詢" onchange="changeSalesRankingArea()"><option value="">區域</option></select><select id="salesRankingStore" class="sales-ranking-store-filter" aria-label="門市查詢" onchange="changeSalesRankingStore()"><option value="">請先選擇區域</option></select></div>
@@ -3995,17 +3995,19 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         </div>
         <div class="sales-report-switcher" role="tablist" aria-label="業績報表檢視">
           <button type="button" class="active" data-sales-view="daily" onclick="showSalesReportView('daily',this)">每日明細</button>
-          <button type="button" data-sales-view="store" onclick="showSalesReportView('store',this)">門市統計</button>
-          <button type="button" data-sales-view="person" onclick="showSalesReportView('person',this)">人員業績統計</button>
-          <button type="button" data-sales-view="personDetail" onclick="showSalesReportView('personDetail',this)">人員業績明細</button>
+          <button type="button" data-sales-view="proxy" onclick="showSalesReportView('proxy',this)">代銷售 <b id="salesProxyTabCount" class="sales-tab-count"></b></button>
+          <button type="button" data-sales-view="store" onclick="showSalesReportView('store',this)">門市業績</button>
+          <button type="button" data-sales-view="person" onclick="showSalesReportView('person',this)">業績總覽</button>
+          <button type="button" data-sales-view="personDetail" onclick="showSalesReportView('personDetail',this)">業績明細</button>
           <button type="button" data-sales-view="workdays" onclick="showSalesReportView('workdays',this)">上班天數</button>
           <button type="button" data-sales-view="returns" onclick="showSalesReportView('returns',this)">退貨明細 <b id="salesReturnTabCount" class="sales-tab-count"></b></button>
           <button type="button" data-sales-view="requests" onclick="showSalesReportView('requests',this)">修改審核 <b id="salesRequestTabCount" class="sales-tab-count"></b></button>
         </div>
         <div id="salesReportDailyView" class="sales-report-view active"><div class="sales-table-wrap"><table class="sales-table"><thead><tr><th>業績日期</th><th>區域</th><th>門市／樓層</th><th>銷售人員</th><th>營業總額</th><th>退貨金額</th><th>原發票日期</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminDailyBody"></tbody></table></div><div id="salesAdminDailyMobile" class="sales-admin-daily-mobile"></div></div>
+        <div id="salesReportProxyView" class="sales-report-view"><div class="sales-proxy-toolbar"><div><b>代銷售明細</b><span>查看誰代為回傳、業績歸屬人員，以及該人員當天是否上班。</span></div><strong id="salesProxySummary">共 0 筆</strong></div><div class="sales-table-wrap sales-proxy-table-wrap"><table class="sales-table sales-proxy-table"><thead><tr><th>業績日期</th><th>區域／門市</th><th>回傳人員</th><th>業績歸屬</th><th>是否上班</th><th>營業總額</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminProxyBody"></tbody></table></div><div id="salesAdminProxyMobile" class="sales-admin-proxy-mobile"></div></div>
         <div id="salesReportStoreView" class="sales-report-view"><div id="salesAdminStoreStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonView" class="sales-report-view"><div id="salesAdminPersonStats" class="sales-stat-list"></div></div>
-        <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b>人員業績明細</b><span>可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesPersonDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesPersonDetailExcel()">匯出 Excel</button></div></div><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div>
+        <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b>業績明細</b><span>可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesPersonDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesPersonDetailExcel()">匯出 Excel</button></div></div><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div>
         <div id="salesReportWorkdaysView" class="sales-report-view"><div class="sales-workday-note">上班天數以「業績歸屬人員」的日期去除重複後計算；一般回傳視為有上班，代銷售則依回傳時選擇的「是否上班」計算。</div><div id="salesAdminWorkdayStats" class="sales-stat-list"></div></div>
         <div id="salesReportReturnsView" class="sales-report-view"><div class="sales-return-toolbar"><div><span>退貨銷售歸屬</span><p>依班表選擇原銷售人員後按「確認歸列」；金額會扣在確認當月的個人業績，不受原發票月份影響。</p></div><b id="salesReturnListSummary">共 0 筆退貨</b></div><div id="salesAdminReturnList" class="sales-return-admin-list"></div></div>
         <div id="salesReportRequestsView" class="sales-report-view"><div class="sales-request-toolbar"><div><b>修改申請與歷程</b><span>會計或系統管理員可比較原值與申請值；同意時才套用新金額並標示「修改完成」。</span></div><select id="salesAdminRequestFilter" onchange="renderSalesAdminRequests()"><option value="">全部狀態</option><option value="pending">申請中</option><option value="approved">已核准（舊版）</option><option value="completed">修改完成</option><option value="rejected">未通過</option></select></div><div id="salesAdminRequestList" class="sales-review-list"></div></div>
@@ -4199,7 +4201,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <div class="order-camera-actions"><button id="orderCameraFallback" type="button" class="order-camera-fallback" onclick="handleOrderCameraFallback()" hidden>取消</button><button id="orderCameraCapture" type="button" class="primary" onclick="handleOrderCameraPrimary()" disabled>正在開啟相機…</button></div>
   </div>
 </div>
-<div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2 id="orderEditTitle">修改訂單</h2><p id="orderEditSubtitle">調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button id="frontDeleteOrderBtn" type="button" class="danger order-edit-delete-btn" onclick="openFrontDeleteReasonModal()">刪除訂單</button><button class="secondary" onclick="closeOrderEditModal()">取消</button><button id="orderEditSubmitBtn" class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="frontDeleteReasonModal" class="order-edit-modal front-delete-modal" onclick="if(event.target===this)closeFrontDeleteReasonModal()"><div class="front-delete-dialog"><h2>刪除這筆訂單</h2><p>請先選擇刪除原因，確認後此筆訂單將被刪除。</p><label>刪除原因<select id="frontDeleteReason" onchange="toggleFrontDeleteOtherReason()"><option value="客人取消">客人取消</option><option value="其他">其他</option></select></label><label id="frontDeleteOtherWrap" style="display:none">其他原因<textarea id="frontDeleteOtherReason" rows="3" placeholder="請輸入刪除原因"></textarea></label><div class="front-delete-actions"><button type="button" class="secondary" onclick="closeFrontDeleteReasonModal()">返回</button><button type="button" class="danger" onclick="confirmFrontDeleteOrder()">確認刪除</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
+<div id="orderEditModal" class="order-edit-modal"><div class="order-edit-dialog"><div class="order-edit-head"><div><h2 id="orderEditTitle">修改訂單</h2><p id="orderEditSubtitle">調整客戶資料後，原始內容與修改紀錄仍會保留。</p><div id="orderEditUnsavedIndicator" class="unsaved-indicator">尚有未儲存的修改</div></div><button type="button" aria-label="關閉修改訂單" onclick="closeOrderEditModal()">×</button></div><input id="editOrderId" type="hidden"><div class="order-edit-columns"><section class="current-order-box"><h3>目前資料</h3><div class="order-edit-grid"><label>姓名<input id="editOrderName"></label><label>電話<input id="editOrderPhone"></label><label>配送<select id="editOrderDelivery" onchange="toggleEditOrderDeliveryFields()"><option>總公司寄出</option><option>門市自取</option></select></label><label id="editOrderPickupStoreWrap" style="display:none">取件門市<select id="editOrderPickupStore"><option value="">請選擇取件門市</option></select></label><div id="editOrderAddressFields" class="wide edit-address-fields"><label>縣市<select id="editOrderCounty" onchange="rebuildEditOrderDistrictOptions()"><option value="">請選擇縣市</option></select></label><label>行政區<select id="editOrderDistrict"><option value="">請先選擇縣市</option></select></label><label class="wide">詳細地址<input id="editOrderAddress"></label></div><label class="wide">商品<textarea id="editOrderItems" rows="5" class="vertical-resize"></textarea></label><div class="wide order-edit-photo-field"><div class="order-edit-photo-heading"><b>訂購單照片</b><span>可保留、刪除或新增，合計 1～5 張</span></div><div class="order-photo-picker"><input id="editOrderCameraPhoto" class="order-photo-hidden-input" type="file" accept="image/*" capture="environment" onchange="previewOrderEditPhoto(event)"><input id="editOrderGalleryPhoto" class="order-photo-hidden-input" type="file" accept="image/*" multiple onchange="previewOrderEditPhoto(event)"><button type="button" class="primary order-photo-source-btn" onclick="openOrderCamera('edit')">📷 現場拍照</button><label for="editOrderGalleryPhoto" class="secondary order-photo-source-btn" role="button" tabindex="0">🖼️ 從手機相簿選擇</label></div><div id="editOrderPhotoPreview" class="order-photo-preview-grid"></div></div></div></section><section class="original-box"><h3>原始資料</h3><div id="editOriginalData"></div></section></div><div class="order-edit-actions"><button id="frontDeleteOrderBtn" type="button" class="danger order-edit-delete-btn" onclick="openFrontDeleteReasonModal()">刪除訂單</button><button class="secondary" onclick="closeOrderEditModal()">取消</button><button id="orderEditSubmitBtn" class="primary" onclick="saveOrderEdit()">儲存修改</button></div></div></div><div id="frontDeleteReasonModal" class="order-edit-modal front-delete-modal" onclick="if(event.target===this)closeFrontDeleteReasonModal()"><div class="front-delete-dialog"><h2>刪除這筆訂單</h2><p>請先選擇刪除原因，確認後此筆訂單將被刪除。</p><label>刪除原因<select id="frontDeleteReason" onchange="toggleFrontDeleteOtherReason()"><option value="客人取消">客人取消</option><option value="其他">其他</option></select></label><label id="frontDeleteOtherWrap" style="display:none">其他原因<textarea id="frontDeleteOtherReason" rows="3" placeholder="請輸入刪除原因"></textarea></label><div class="front-delete-actions"><button type="button" class="secondary" onclick="closeFrontDeleteReasonModal()">返回</button><button type="button" class="danger" onclick="confirmFrontDeleteOrder()">確認刪除</button></div></div></div><div id="successModal" class="success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle" onclick="if(event.target===this)closeSuccessModal()">
   <div class="success-dialog">
     <div class="success-icon">✓</div>
     <div id="successTitle" class="success-title">活動建立成功</div>
@@ -4284,7 +4286,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260807-sales-proxy-realname-v16";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260810-order-photo-edit-v17";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -5885,7 +5887,7 @@ function normalizeOrderPhotoKeys(...sources){
     if(typeof value==='object'){
       const nested=value.urls||value.photo_urls||value.photoUrls||value.items||value.files;
       if(nested)collect(nested);
-      collect(value.signed_url||value.signedUrl||value.photo_url||value.photoUrl||value.url||value.path||'');return;
+      collect(value.src||value.signed_url||value.signedUrl||value.photo_url||value.photoUrl||value.url||value.path||'');return;
     }
     const text=String(value).trim();if(!text)return;
     if((text.startsWith('[')&&text.endsWith(']'))||(text.startsWith('{')&&text.endsWith('}'))){
@@ -5899,7 +5901,7 @@ function normalizeOrderPhotoKeys(...sources){
 function getOrderPhotoKeys(orderOrKeys){
   if(!orderOrKeys)return [];
   if(typeof orderOrKeys!=='object'||Array.isArray(orderOrKeys))return normalizeOrderPhotoKeys(orderOrKeys);
-  return normalizeOrderPhotoKeys(orderOrKeys.photoKeys,orderOrKeys.photoUrls,orderOrKeys.photos,orderOrKeys.photoKey,orderOrKeys.photoUrl);
+  return normalizeOrderPhotoKeys(orderOrKeys.photoItems,orderOrKeys.photoKeys,orderOrKeys.photoUrls,orderOrKeys.photos,orderOrKeys.photoKey,orderOrKeys.photoUrl);
 }
 async function getOrderPhotos(orderOrKeys){
   const keys=getOrderPhotoKeys(orderOrKeys);
@@ -5923,9 +5925,20 @@ function splitTaiwanAddress(address=''){const text=String(address||'').trim();le
 function toggleEditOrderDeliveryFields(){const pickup=$("editOrderDelivery")?.value==='門市自取',m=$("editOrderPickupStoreWrap"),addr=$("editOrderAddressFields");if(m)m.style.display=pickup?'flex':'none';if(addr)addr.style.display=pickup?'none':'grid';if(pickup)renderEditPickupStores($("editOrderPickupStore")?.value||'')}
 
 let orderCameraStream=null;
+let orderCameraTarget="create";
 const ORDER_CAMERA_PERMISSION_KEY='starred_camera_permission_granted_v1';
 function isAndroidOrderDevice(){return /Android/i.test(navigator.userAgent||'')}
 function hasLiveOrderCameraStream(){return !!orderCameraStream&&orderCameraStream.getVideoTracks().some(track=>track.readyState==='live')}
+function orderCameraPhotoCount(){return orderCameraTarget==='edit'?orderEditPhotoItems.length:orderPhotoData.length}
+function orderCameraInput(){return $(orderCameraTarget==='edit'?'editOrderCameraPhoto':'orderCameraPhoto')}
+function appendOrderCameraPhoto(src){
+ if(orderCameraTarget==='edit'){
+  orderEditPhotoItems.push({src:String(src||''),storagePath:'',isNew:true});
+  renderOrderEditPhotoPreview();updateOrderEditDirtyState();
+ }else{
+  orderPhotoData.push(src);renderOrderPhotoPreview();
+ }
+}
 function setOrderCameraTracksEnabled(enabled){if(orderCameraStream)orderCameraStream.getVideoTracks().forEach(track=>{track.enabled=enabled})}
 function stopOrderCameraStream(){
  if(orderCameraStream){orderCameraStream.getTracks().forEach(track=>track.stop());orderCameraStream=null}
@@ -5944,7 +5957,7 @@ function closeOrderCamera(){
 function openNativeOrderCamera(){
  stopOrderCameraStream();
  $("orderCameraModal")?.classList.remove('show');
- const input=$("orderCameraPhoto");if(input){input.value='';input.click()}
+ const input=orderCameraInput();if(input){input.value='';input.click()}
 }
 function handleOrderCameraFallback(){
  const button=$("orderCameraFallback");
@@ -5960,11 +5973,12 @@ function showOrderCameraPermissionIntro(){
  capture.dataset.mode='permission';capture.textContent='允許使用相機';capture.disabled=false;
  fallback.dataset.mode='cancel';fallback.textContent='取消';fallback.hidden=false;
 }
-function openOrderCamera(){
- if(orderPhotoData.length>=5){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+function openOrderCamera(target='create'){
+ orderCameraTarget=target==='edit'?'edit':'create';
+ if(orderCameraPhotoCount()>=5){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
  // iOS 的 capture 行為正常，維持使用系統相機；Android 改用即時鏡頭，避開 LINE 將拍照導向相簿的問題。
  if(!isAndroidOrderDevice()){
-  const input=$("orderCameraPhoto");if(input){input.value='';input.click()}return;
+  const input=orderCameraInput();if(input){input.value='';input.click()}return;
  }
  const modal=$("orderCameraModal"),video=$("orderCameraVideo"),status=$("orderCameraStatus"),capture=$("orderCameraCapture"),fallback=$("orderCameraFallback");
  if(!modal||!video||!navigator.mediaDevices?.getUserMedia){
@@ -6018,13 +6032,13 @@ window.addEventListener('beforeunload',stopOrderCameraStream);
 async function takeOrderCameraPhoto(){
  const video=$("orderCameraVideo"),capture=$("orderCameraCapture"),status=$("orderCameraStatus");
  if(!video?.videoWidth||!video?.videoHeight){status.textContent='相機尚未準備完成，請稍候再拍。';return}
- if(orderPhotoData.length>=5){closeOrderCamera();showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ if(orderCameraPhotoCount()>=5){closeOrderCamera();showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
  capture.disabled=true;capture.textContent='處理中…';
  try{
   const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;
   const ctx=canvas.getContext('2d',{alpha:false});ctx.drawImage(video,0,0,canvas.width,canvas.height);
   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('照片建立失敗')),'image/jpeg',.9));
-  orderPhotoData.push(await compressOrderPhoto(blob));renderOrderPhotoPreview();closeOrderCamera();
+  appendOrderCameraPhoto(await compressOrderPhoto(blob));closeOrderCamera();
  }catch(error){
   console.error('camera capture failed:',error);capture.disabled=false;capture.textContent='拍下照片';status.textContent=error?.message||'拍照失敗，請再試一次。';
  }
@@ -6076,6 +6090,28 @@ async function previewOrderPhoto(e){
 }
 function renderOrderPhotoPreview(){const preview=$("orderPhotoPreview");if(!preview)return;preview.innerHTML=orderPhotoData.length?orderPhotoData.map((src,index)=>`<div class="order-photo-preview-item"><button type="button" class="order-photo-thumb" onclick="openLightbox(orderPhotoData[${index}])"><img src="${src}" alt="訂購單照片 ${index+1}"></button><button type="button" class="order-photo-remove-one" onclick="removeOrderPhoto(${index})" aria-label="刪除第 ${index+1} 張照片">×</button><span>${index+1}</span></div>`).join(''):'<div class="photo-empty-hint">尚未加入照片</div>'}
 function removeOrderPhoto(index){if(Number.isInteger(index))orderPhotoData.splice(index,1);else orderPhotoData=[];['orderCameraPhoto','orderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});renderOrderPhotoPreview()}
+async function previewOrderEditPhoto(e){
+ const input=e.target,files=[...(input.files||[])];input.value='';if(!files.length)return;
+ const remaining=5-orderEditPhotoItems.length;if(remaining<=0){showOrderAction('照片已達上限','訂購單照片最多只能上傳 5 張。');return}
+ const selected=files.slice(0,remaining);
+ let added=0,failed=0,lastError='';
+ for(const file of selected){
+  try{orderEditPhotoItems.push({src:await compressOrderPhoto(file),storagePath:'',isNew:true});added++}
+  catch(err){failed++;lastError=err?.message||'照片無法讀取';console.error('edited order photo failed:',err)}
+ }
+ renderOrderEditPhotoPreview();updateOrderEditDirtyState();
+ if(!added)showOrderAction('照片處理失敗',lastError||'請重新拍照或選擇照片。');
+ else if(failed||files.length>remaining)showOrderAction('部分照片未加入',`本次已加入 ${added} 張；照片合計最多 5 張。${failed?' 有 '+failed+' 張格式無法讀取。':''}`);
+}
+function renderOrderEditPhotoPreview(){
+ const preview=$("editOrderPhotoPreview");if(!preview)return;
+ preview.innerHTML=orderEditPhotoItems.length?orderEditPhotoItems.map((item,index)=>`<div class="order-photo-preview-item"><button type="button" class="order-photo-thumb" onclick="openLightbox(orderEditPhotoItems[${index}].src)"><img src="${escapeHtml(item.src)}" alt="訂購單照片 ${index+1}"></button><button type="button" class="order-photo-remove-one" onclick="removeOrderEditPhoto(${index})" aria-label="刪除第 ${index+1} 張照片">×</button><span>${index+1}</span></div>`).join(''):'<div class="photo-empty-hint edit-photo-empty">至少需保留或新增 1 張照片</div>';
+}
+function removeOrderEditPhoto(index){
+ if(Number.isInteger(index))orderEditPhotoItems.splice(index,1);
+ ['editOrderCameraPhoto','editOrderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});
+ renderOrderEditPhotoPreview();updateOrderEditDirtyState();
+}
 function showOrderAction(t,x){
  const title=$("orderActionTitle"),text=$("orderActionText"),modal=$("orderActionModal");
  if(title&&text&&modal){title.textContent=t;text.textContent=x;modal.classList.add('show');return}
@@ -6892,6 +6928,8 @@ async function exportPickingPdf(){const list=selectedOrdersForExport();if(!list.
 </body></html>`);w.document.close();showOrderAction('揀貨單已開啟',`已建立 ${list.length} 張揀貨單。`)}
 let orderEditDirty=false;
 let orderEditInitialSnapshot="";
+let orderEditInitialPhotoSnapshot="";
+let orderEditPhotoItems=[];
 let orderEditSource="admin";
 let frontDeleteOrderId="";
 function openFrontDeleteReasonModal(){
@@ -6944,12 +6982,16 @@ function canCurrentLineUserEditOrder(o){
  return !!(canCurrentLineUserOwnOrder(o)&&(status==="pending"||status==="change_request"));
 }
 function orderLastUpdatedValue(o){return String(o?.updatedAt||o?.createdAt||"")}
+function getOrderEditPhotoSnapshot(){
+ return JSON.stringify(orderEditPhotoItems.map(item=>item.storagePath?{storagePath:item.storagePath}:{newPhoto:item.src}));
+}
 function getOrderEditSnapshot(){
  return JSON.stringify({
   name:$("editOrderName")?.value||"",phone:$("editOrderPhone")?.value||"",
   delivery:$("editOrderDelivery")?.value||"",pickupStore:$("editOrderPickupStore")?.value||"",
   county:$("editOrderCounty")?.value||"",district:$("editOrderDistrict")?.value||"",
-  address:$("editOrderAddress")?.value||"",items:$("editOrderItems")?.value||""
+  address:$("editOrderAddress")?.value||"",items:$("editOrderItems")?.value||"",
+  photos:getOrderEditPhotoSnapshot()
  });
 }
 function updateOrderEditDirtyState(){
@@ -6994,17 +7036,19 @@ async function openOrderEdit(id,source="admin"){
  $("editOrderCounty").value=parsed.county;rebuildEditOrderDistrictOptions(parsed.district);$("editOrderAddress").value=parsed.detail;
  const pickupStore=o.pickupStore||String(o.address||'').replace(/^取件門市：/,'');
  renderEditPickupStores(pickupStore);toggleEditOrderDeliveryFields();
+ orderEditPhotoItems=(Array.isArray(o.photoItems)&&o.photoItems.length?o.photoItems:getOrderPhotoKeys(o).map(src=>({src,storagePath:'',isNew:false}))).map(item=>({src:String(item?.src||item?.signedUrl||item?.signed_url||item?.url||''),storagePath:String(item?.storagePath||item?.storage_path||''),isNew:item?.isNew===true})).filter(item=>item.src).slice(0,5);
+ renderOrderEditPhotoPreview();
  const x=o.original||o,originalPhotoCount=getOrderPhotoKeys(x).length||getOrderPhotoKeys(o).length,historyHtml=buildCompactEditHistory(o);
  $("editOriginalData").innerHTML=`<p><b>訂單日期：</b>${escapeHtml(orderDateValue(o))}</p><p><b>最後更新：</b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</p><p><b>回傳人員：</b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</p><p><b>門市：</b>${escapeHtml(o.store||'')}</p><p><b>姓名：</b>${escapeHtml(x.name||'')}</p><p><b>電話：</b>${escapeHtml(x.phone||'')}</p><p><b>地址：</b>${escapeHtml(x.address||'')}</p><p><b>配送：</b>${escapeHtml(x.delivery||'')}</p><p><b>商品：</b>${escapeHtml(x.items||'')}</p>${historyHtml}<button type="button" class="photo-open-only" onclick="viewOrderPhotosByOrderId('${o.id}')">查看原始照片${originalPhotoCount>1?`（${originalPhotoCount} 張）`:''}</button>`;
  $("orderEditModal").classList.add('show');
  bindOrderEditDirtyTracking();
- orderEditInitialSnapshot=getOrderEditSnapshot();orderEditDirty=false;
+ orderEditInitialPhotoSnapshot=getOrderEditPhotoSnapshot();orderEditInitialSnapshot=getOrderEditSnapshot();orderEditDirty=false;
  $("orderEditUnsavedIndicator")?.classList.remove("show");
 }
 function buildCompactEditHistory(o){if(!o.history?.length)return '';const fields=[['name','姓名'],['phone','電話'],['address','地址'],['delivery','配送'],['items','商品']];const rows=o.history.map((h,i)=>{const before=h.before||{},after=i<o.history.length-1?(o.history[i+1].before||{}):{name:o.name,phone:o.phone,address:o.address,delivery:o.delivery,items:o.items};const changes=fields.filter(([k])=>String(before[k]||'')!==String(after[k]||'')).map(([k,label])=>`<div><span>${label}</span><b>${escapeHtml(before[k]||'—')} <em>→</em> ${escapeHtml(after[k]||'—')}</b></div>`).join('');return changes?`<section class="edit-history-row"><time>${escapeHtml(h.editedAt||`第 ${i+1} 次修改`)}</time>${changes}</section>`:''}).filter(Boolean).join('');return rows?`<div class="edit-history-box"><b>修改紀錄</b><div class="edit-history-list">${rows}</div></div>`:''}
 function closeOrderEditModal(force=false){
  if(!force&&orderEditDirty&&!window.confirm("尚有未儲存的修改，確定要離開嗎？"))return;
- $("orderEditModal").classList.remove("show");orderEditDirty=false;orderEditInitialSnapshot="";
+ $("orderEditModal").classList.remove("show");orderEditDirty=false;orderEditInitialSnapshot="";orderEditInitialPhotoSnapshot="";orderEditPhotoItems=[];
 }
 async function saveOrderEdit(){
  const orderId=$("editOrderId").value;
@@ -7021,15 +7065,22 @@ async function saveOrderEdit(){
  const next={customerName:$("editOrderName").value.trim(),customerPhone:$("editOrderPhone").value.trim(),customerAddress:pickup?`取件門市：${pickupStore}`:fullAddress,productContent:$("editOrderItems").value.trim(),deliveryMethod:pickup?'store_pickup':'company_shipping',pickupStoreId:pickup?(pickupStoreData?.id||''):null};
  if(!next.customerName||!next.customerPhone||!next.productContent||(!pickup&&(!county||!district||!addressDetail))){showOrderAction('資料未完成',pickup?'姓名、電話與商品都必須填寫。':'姓名、電話、縣市、行政區、詳細地址與商品都必須填寫。');return}
  if(pickup&&!pickupStoreData){showOrderAction('資料未完成','請選擇取件門市。');return}
+ if(!orderEditPhotoItems.length){showOrderAction('資料未完成','訂購單至少需要保留或新增 1 張照片。');return}
+ const photoUpdate=getOrderEditPhotoSnapshot()!==orderEditInitialPhotoSnapshot;
+ const keptPhotoItems=orderEditPhotoItems.filter(item=>!item.isNew);
+ if(photoUpdate&&keptPhotoItems.some(item=>!item.storagePath)){
+  showOrderAction('照片資料需要重新載入','目前頁面是舊版照片資料，請重新整理後再進入修改，才能安全保留原有照片。');return;
+ }
+ const editPayload={orderId,order:next,photoUpdate,keepPhotoPaths:keptPhotoItems.map(item=>item.storagePath),photoDataList:orderEditPhotoItems.filter(item=>item.isNew).map(item=>item.src)};
  const submitBtn=$("orderEditSubmitBtn"),oldText=submitBtn?.textContent||"";
  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送出中…"}
  try{
   const isFrontChangeSubmit=orderEditSource==="front"&&(originalStatus==="processing"||originalStatus==="change_request");
   if(isFrontChangeSubmit){
    removeLocalProcessingOrderIds([orderId]);
-   await starredApi("submit_change_request",{orderId,order:next});
+   await starredApi("submit_change_request",editPayload);
   }else{
-   await starredApi("update_order",{orderId,order:next});
+   await starredApi("update_order",editPayload);
   }
   orderEditDirty=false;closeOrderEditModal(true);
   await loadStarredCloudData();
@@ -7631,6 +7682,10 @@ function isLineIdTokenExpired(token,bufferSeconds=60){
 function getStarredSearchParams(){
   try{return new URLSearchParams(location.search)}catch(_){return new URLSearchParams()}
 }
+function isStarredTransientLineTransition(){
+  const params=getStarredSearchParams();
+  return params.has('liff.state')||(params.has('code')&&params.has('state'))||params.has('liffClientId')||params.has('liffRedirectUri');
+}
 function isStarredLineInAppBrowser(){
   return /\bLine\/[\d.]+/i.test(String(navigator.userAgent||""));
 }
@@ -7787,9 +7842,11 @@ function cloudOrderState(o){
 function taipeiCloudDateTime(value){return value?new Date(value).toLocaleString("zh-TW",{hour12:false,timeZone:"Asia/Taipei"}):""}
 function cloudOrderToLocal(o){
  const pickup=o.delivery_method==="store_pickup",logs=Array.isArray(o.audit_logs)?o.audit_logs:[],createLog=logs.find(x=>x.action==="create"),updateLogs=logs.filter(x=>x.action==="update"||x.action==="change_request_submit"),state=cloudOrderState(o);
- const photoKeys=normalizeOrderPhotoKeys(o.photo_urls,o.photoUrls,o.order_photos,o.photo_list,o.photos,o.photo_url);
+ const cloudPhotoItems=(Array.isArray(o.photo_items)?o.photo_items:[]).map(item=>({src:String(item?.signed_url||item?.signedUrl||item?.url||''),storagePath:String(item?.storage_path||item?.storagePath||''),isNew:false})).filter(item=>item.src);
+ const photoKeys=normalizeOrderPhotoKeys(cloudPhotoItems,o.photo_urls,o.photoUrls,o.order_photos,o.photo_list,o.photos,o.photo_url);
+ const photoItems=cloudPhotoItems.length?cloudPhotoItems:photoKeys.map(src=>({src,storagePath:'',isNew:false}));
  return{
-  id:String(o.id),orderNumber:String(o.order_number||""),photoKeys:[...photoKeys],photoUrls:[...photoKeys],photoKey:String(photoKeys[0]||""),photoUrl:String(photoKeys[0]||""),
+  id:String(o.id),orderNumber:String(o.order_number||""),photoItems,photoKeys:[...photoKeys],photoUrls:[...photoKeys],photoKey:String(photoKeys[0]||""),photoUrl:String(photoKeys[0]||""),
   returnPerson:String(o.return_person||""),createdByLineId:String(o.creator_line_user_id||""),store:String(o.store?.name||""),
   storeId:String(o.store_id||""),name:String(o.customer_name||""),phone:String(o.customer_phone||""),
   address:String(o.customer_address||""),delivery:pickup?"門市自取":"總公司寄出",
@@ -7980,7 +8037,8 @@ async function runStarredLiffInitialization(){
       showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
       return;
     }
-    showSystemLoading("LINE 登入確認中…","正在確認 LINE 登入狀態，請稍候。");
+    const isLineTransition=isStarredTransientLineTransition();
+    showSystemLoading(isLineTransition?"正在開啟系統…":"LINE 登入確認中…",isLineTransition?"正在安全連接 LINE，請稍候。":"正在確認 LINE 登入狀態，請稍候。");
 
     currentStage="LINE 外部瀏覽器登入";
     await waitForStarredLineInitialization(liff.init({
@@ -7994,6 +8052,8 @@ async function runStarredLiffInitialization(){
     if(!liff.isLoggedIn()){
       throw new Error("LINE 登入尚未完成，請關閉此頁後再由 LINE 連結進入");
     }
+
+    if(isLineTransition)showSystemLoading("LINE 登入確認中…","正在確認 LINE 登入狀態，請稍候。");
 
     sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
     currentStage="取得 LINE 身分資料";
@@ -10441,7 +10501,7 @@ function renderSalesPersonDetailTable(){
 }
 function renderSalesPersonDetail(){renderSalesPersonDetailChoices();renderSalesPersonDetailTable()}
 function printSalesPersonDetail(){
-  var view=salesEl('salesReportPersonDetailView');if(!view||!view.classList.contains('active')){salesSetAdminStatus('請先開啟「人員業績明細」再列印。','error');return}
+  var view=salesEl('salesReportPersonDetailView');if(!view||!view.classList.contains('active')){salesSetAdminStatus('請先開啟「業績明細」再列印。','error');return}
   if(!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}
   document.body.classList.add('sales-person-detail-printing');var clear=function(){document.body.classList.remove('sales-person-detail-printing')};window.addEventListener('afterprint',clear,{once:true});window.print();setTimeout(clear,30000);
 }
@@ -10777,6 +10837,7 @@ function renderSalesAdminReport(){
   }
   var mobileDaily=salesEl('salesAdminDailyMobile');
   if(mobileDaily)mobileDaily.innerHTML=salesAdminDailyMobileHtml(salesAdminData.records);
+  renderSalesAdminProxy();
   var storeList=salesEl('salesAdminStoreStats');
   if(storeList){
     storeList.innerHTML=salesAdminStatListHtml('store',salesAdminData.byStore);
@@ -10790,6 +10851,28 @@ function renderSalesAdminReport(){
   renderSalesPersonDetail();
   renderSalesAdminReturns();
   renderSalesAdminRequests();
+}
+function renderSalesAdminProxy(){
+  var rows=(salesAdminData.records||[]).filter(function(record){return salesRecordType(record)==='sales'&&record.isProxySale===true}).slice().sort(function(a,b){return String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
+  var total=rows.reduce(function(sum,record){return sum+Number(record.grossAmount||0)},0);
+  if(salesEl('salesProxyTabCount'))salesEl('salesProxyTabCount').textContent=rows.length?String(rows.length):'';
+  if(salesEl('salesProxySummary'))salesEl('salesProxySummary').textContent='共 '+String(rows.length)+' 筆・'+salesMoney(total);
+  var body=salesEl('salesAdminProxyBody');
+  if(body){
+    body.innerHTML=rows.length?rows.map(function(record){
+      var meta=salesStatusMeta(salesRecordStatus(record));
+      var working=record.salespersonWasWorking===false?'<span class="sales-proxy-work no">未上班</span>':'<span class="sales-proxy-work yes">有上班</span>';
+      return '<tr><td>'+salesEsc(record.businessDate||'—')+'</td><td><b>'+salesEsc((typeof areaText!=='undefined'&&areaText[record.area])||record.area||'—')+'</b><small>'+salesEsc(salesStoreText(record))+'</small></td><td>'+salesEsc(salesSubmitterName(record))+'</td><td>'+salesEsc(salesCreditedName(record))+'</td><td>'+working+'</td><td class="amount">'+salesAdminAmountHtml(record,'gross')+'</td><td><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span></td><td>'+salesEsc(salesDateTime(record.updatedAt))+'</td><td>'+salesAdminActionsHtml(record)+'</td></tr>';
+    }).join(''):'<tr><td colspan="9" class="sales-table-empty">目前篩選區間內沒有代銷售資料。</td></tr>';
+  }
+  var mobile=salesEl('salesAdminProxyMobile');
+  if(mobile){
+    mobile.innerHTML=rows.length?rows.map(function(record){
+      var meta=salesStatusMeta(salesRecordStatus(record));
+      var working=record.salespersonWasWorking===false?'未上班':'有上班';
+      return '<article class="sales-proxy-card"><header><div><time>'+salesEsc(record.businessDate||'—')+'</time><b>'+salesEsc(salesStoreText(record))+'</b></div><strong>'+salesAdminAmountHtml(record,'gross')+'</strong></header><div class="sales-proxy-people"><span><small>回傳人員</small><b>'+salesEsc(salesSubmitterName(record))+'</b></span><i>→</i><span><small>業績歸屬</small><b>'+salesEsc(salesCreditedName(record))+'</b></span></div><footer><span class="sales-proxy-work '+(record.salespersonWasWorking===false?'no':'yes')+'">'+working+'</span><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span><div>'+salesAdminActionsHtml(record)+'</div></footer></article>';
+    }).join(''):'<div class="sales-empty">目前篩選區間內沒有代銷售資料。</div>';
+  }
 }
 function renderSalesAdminReturns(){
   var list=salesEl('salesAdminReturnList');
@@ -10932,7 +11015,7 @@ function resetSalesAdminFilters(){
   loadSalesAdminReport();
 }
 function showSalesReportView(name,button){
-  ['daily','store','person','personDetail','workdays','returns','requests'].forEach(function(view){
+  ['daily','proxy','store','person','personDetail','workdays','returns','requests'].forEach(function(view){
     var panel=salesEl('salesReport'+view.charAt(0).toUpperCase()+view.slice(1)+'View');
     if(panel)panel.classList.toggle('active',view===name);
   });
@@ -10973,7 +11056,7 @@ async function exportSalesStatDetailExcel(){
 async function exportSalesPersonDetailExcel(){
   var model=salesPersonDetailModel();if(!model.people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}
   var rows=salesPersonDetailExportRows();var highHeaders=model.people.map(function(person){return person.name}).concat(['銷售總額']);var widths=[13].concat(model.people.map(function(){return 14})).concat([16]);
-  try{salesSetAdminStatus('正在匯出人員業績明細…','working');await salesExportSingleSheetExcel('人員業績明細',rows,widths,'星紅織品_人員業績明細_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',highHeaders);salesSetAdminStatus('人員業績明細已匯出。','success')}catch(error){salesSetAdminStatus('人員業績明細匯出失敗：'+String(error&&error.message||error),'error')}
+  try{salesSetAdminStatus('正在匯出業績明細…','working');await salesExportSingleSheetExcel('業績明細',rows,widths,'星紅織品_業績明細_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',highHeaders);salesSetAdminStatus('業績明細已匯出。','success')}catch(error){salesSetAdminStatus('業績明細匯出失敗：'+String(error&&error.message||error),'error')}
 }
 function salesSetWorksheetWidths(sheet,widths){
   sheet['!cols']=widths.map(function(width){return {wch:width}});
@@ -11127,12 +11210,12 @@ async function salesExportReportExcelWithExcelJs(){
   workbook.created=new Date();
   var summarySheet=salesCreateStyledExcelSheet(workbook,'統計摘要',summary,[16,16,16,16,16,16,18,12]);
   var dailySheet=salesCreateStyledExcelSheet(workbook,'每日業績明細',daily,[16,16,13,10,20,14,16,16,12,18,14,14,14,14,21,21]);
-  var storeSheet=salesCreateStyledExcelSheet(workbook,'門市統計',storesSheet,[16,16,8,10,20,14,14,20,12]);
-  var personSheet=salesCreateStyledExcelSheet(workbook,'人員業績統計',peopleSheet,[16,16,8,14,36,16,14,16,12]);
+  var storeSheet=salesCreateStyledExcelSheet(workbook,'門市業績',storesSheet,[16,16,8,10,20,14,14,20,12]);
+  var personSheet=salesCreateStyledExcelSheet(workbook,'業績總覽',peopleSheet,[16,16,8,14,36,16,14,16,12]);
   var returnSheet=salesCreateStyledExcelSheet(workbook,'退貨明細',returnsSheet,[16,16,13,13,10,20,14,14,14,16,16,14,21]);
   var requestSheet=salesCreateStyledExcelSheet(workbook,'修改申請紀錄',requestsSheet,[16,16,21,14,13,24,14,14,14,18,18,20,28,12,14,21,21,18,18,20]);
   var workdaySheet=salesCreateStyledExcelSheet(workbook,'上班天數',workdaysRows,[16,16,16,12,14,18,18,14,12]);
-  var personDetailSheet=salesCreateStyledExcelSheet(workbook,'人員業績明細',personDetailRows,[16,16,13].concat(personDetailModel.people.map(function(){return 14})).concat([16]));
+  var personDetailSheet=salesCreateStyledExcelSheet(workbook,'業績明細',personDetailRows,[16,16,13].concat(personDetailModel.people.map(function(){return 14})).concat([16]));
   salesMarkHighValueExcelCells(dailySheet,['營業總額']);
   salesMarkHighValueExcelCells(personSheet,['個人營業總額','當月業績']);
   salesMarkHighValueExcelCells(workdaySheet,['營業總額']);
@@ -11187,12 +11270,12 @@ function salesExportReportExcelWithSheetJs(){
   function append(name,rows,widths,highHeaders){window.XLSX.utils.book_append_sheet(workbook,salesCreateSheetJsReportSheet(rows,widths,highHeaders),name)}
   append('統計摘要',summary,[16,16,16,16,16,16,18,12],[]);
   append('每日業績明細',daily,[16,16,13,10,20,14,16,16,12,18,14,14,14,14,21,21],['營業總額']);
-  append('門市統計',storesSheet,[16,16,8,10,20,14,14,20,12],[]);
-  append('人員業績統計',peopleSheet,[16,16,8,14,36,16,14,16,12],['個人營業總額','當月業績']);
+  append('門市業績',storesSheet,[16,16,8,10,20,14,14,20,12],[]);
+  append('業績總覽',peopleSheet,[16,16,8,14,36,16,14,16,12],['個人營業總額','當月業績']);
   append('退貨明細',returnsSheet,[16,16,13,13,10,20,14,14,14,16,16,14,21],[]);
   append('修改申請紀錄',requestsSheet,[16,16,21,14,13,24,14,14,14,18,18,20,28,12,14,21,21,18,18,20],[]);
   append('上班天數',workdaysRows,[16,16,16,12,14,18,18,14,12],['營業總額']);
-  append('人員業績明細',personDetailRows,[16,16,13].concat(personDetailModel.people.map(function(){return 14})).concat([16]),personDetailModel.people.map(function(person){return person.name}).concat(['銷售總額']));
+  append('業績明細',personDetailRows,[16,16,13].concat(personDetailModel.people.map(function(){return 14})).concat([16]),personDetailModel.people.map(function(person){return person.name}).concat(['銷售總額']));
   var from=(salesEl('salesAdminDateFrom')||{}).value||'全部';
   var to=(salesEl('salesAdminDateTo')||{}).value||'全部';
   var buffer=window.XLSX.write(workbook,{bookType:'xlsx',type:'array',compression:true,cellStyles:true});
@@ -11794,10 +11877,10 @@ body.sales-stat-modal-open{overflow:hidden}
 </script>
 
 <style id="sales-report-tabs-single-row-style">
-/* 桌機版七個業績分頁固定同一行；窄螢幕改為單行左右滑動。 */
+/* 桌機版八個業績分頁固定同一行；窄螢幕改為單行左右滑動。 */
 .sales-report-switcher{
   display:grid!important;
-  grid-template-columns:repeat(7,minmax(0,1fr))!important;
+  grid-template-columns:repeat(8,minmax(0,1fr))!important;
   gap:6px!important;
   align-items:stretch;
 }
@@ -11822,6 +11905,13 @@ body.sales-stat-modal-open{overflow:hidden}
     font-size:12px!important;
   }
 }
+</style>
+
+<style id="sales-proxy-order-photo-edit-v26-style">
+.order-edit-photo-field{display:grid;gap:9px;padding:12px;border:1px solid #d9e4e8;border-radius:12px;background:#f8fbfc}.order-edit-photo-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.order-edit-photo-heading b{color:#385361;font-size:13px}.order-edit-photo-heading span{color:#7b909a;font-size:10px}.order-edit-photo-field .order-photo-picker{margin:0}.order-edit-photo-field .order-photo-preview-grid{margin-top:0}.order-edit-photo-field .edit-photo-empty{color:#b04444;background:#fff7f7}
+.sales-proxy-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px;padding:12px 14px;border:1px solid #d9e5df;border-radius:12px;background:#f4f9f6}.sales-proxy-toolbar>div b,.sales-proxy-toolbar>div span{display:block}.sales-proxy-toolbar>div b{color:#315f49;font-size:15px}.sales-proxy-toolbar>div span{margin-top:3px;color:#738a7c;font-size:10px}.sales-proxy-toolbar>strong{flex:0 0 auto;color:#315f49;font-size:12px}.sales-proxy-table td:nth-child(2) b,.sales-proxy-table td:nth-child(2) small{display:block}.sales-proxy-table td:nth-child(2) b{font-size:11px}.sales-proxy-table td:nth-child(2) small{margin-top:2px;color:#7b909a;font-size:9px}.sales-proxy-work{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.sales-proxy-work.yes{background:#e8f5ec;color:#2f714b}.sales-proxy-work.no{background:#fff0e5;color:#a85a00}.sales-admin-proxy-mobile{display:none}
+.sales-proxy-card{overflow:hidden;border:1px solid #d9e3e7;border-radius:13px;background:#fff;box-shadow:0 3px 10px rgba(39,66,83,.06)}.sales-proxy-card header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;background:#f6f9fa}.sales-proxy-card header div time,.sales-proxy-card header div b{display:block}.sales-proxy-card header time{color:#718894;font-size:10px}.sales-proxy-card header b{margin-top:2px;color:#294858;font-size:13px}.sales-proxy-card header>strong{color:#315f49;font-size:14px}.sales-proxy-people{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:12px}.sales-proxy-people span small,.sales-proxy-people span b{display:block}.sales-proxy-people span small{color:#83959e;font-size:9px}.sales-proxy-people span b{margin-top:3px;color:#405d6c;font-size:12px}.sales-proxy-people i{color:#94a5ad;font-style:normal}.sales-proxy-card footer{display:flex;align-items:center;gap:7px;padding:9px 12px;border-top:1px solid #e6ecef}.sales-proxy-card footer>div{margin-left:auto}
+@media(max-width:760px){.order-edit-photo-heading{align-items:flex-start;flex-direction:column;gap:3px}.sales-proxy-toolbar{align-items:flex-start}.sales-proxy-toolbar>div span{max-width:240px}.sales-proxy-table-wrap{display:none!important}.sales-admin-proxy-mobile{display:grid;gap:9px}}
 </style>
 
 <style id="sales-performance-v18-selection-style">
