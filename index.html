@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260810-sales-proxy-order-photo-edit-v26 -->
+<!-- STARRED BUILD: 20260810-workday-confirm-v18-own-record-count-fix-v1 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -3759,7 +3759,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <div class="sales-summary-card"><span>我的本日營業額</span><b id="salesMyToday">$0</b><small>不扣除退貨</small></div>
     <div class="sales-summary-card"><span>我的本月營業額</span><b id="salesMyMonth">$0</b><small id="salesCurrentMonthLabel">本月累計</small></div>
     <div class="sales-summary-card return-card"><span>本月處理退貨</span><b id="salesMyReturns">$0</b><small>獨立統計，不影響業績</small></div>
-    <div class="sales-summary-card"><span>我的回傳紀錄</span><b id="salesMyRecordCount">0 筆</b><small>業績每日一筆；退貨可多筆</small></div>
+    <div class="sales-summary-card"><span>我的本月回傳紀錄</span><b id="salesMyRecordCount">0 筆</b><small>與下方本月清單一致</small></div>
   </div>
 
   <div class="sales-layout">
@@ -9668,13 +9668,14 @@ function renderSalesSummary(){
   var creditedRows=salesOwnRecords.filter(function(record){return salesRecordType(record)!=='return'&&salesCreditedLineUserId(record)===identity.id});
   var todayGross=creditedRows.filter(function(record){return record.businessDate===today}).reduce(function(sum,record){return sum+Number(record.grossAmount||0)},0);
   var monthRows=salesOwnRecords.filter(function(record){return String(record.businessDate).slice(0,7)===month});
+  var monthRecordGroups=salesGroupOwnRecords(monthRows);
   var monthGross=creditedRows.filter(function(record){return String(record.businessDate).slice(0,7)===month}).reduce(function(sum,record){return sum+Number(record.grossAmount||0)},0);
   var monthReturns=monthRows.reduce(function(sum,record){return sum+Number(record.returnAmount||0)},0);
   if(salesEl('salesCurrentUser'))salesEl('salesCurrentUser').textContent=identity.name||'LINE 使用者';
   if(salesEl('salesMyToday'))salesEl('salesMyToday').textContent=salesMoney(todayGross);
   if(salesEl('salesMyMonth'))salesEl('salesMyMonth').textContent=salesMoney(monthGross);
   if(salesEl('salesMyReturns'))salesEl('salesMyReturns').textContent=salesMoney(monthReturns);
-  if(salesEl('salesMyRecordCount'))salesEl('salesMyRecordCount').textContent=String(salesOwnRecords.length)+' 筆';
+  if(salesEl('salesMyRecordCount'))salesEl('salesMyRecordCount').textContent=String(monthRecordGroups.length)+' 筆';
   if(salesEl('salesCurrentMonthLabel'))salesEl('salesCurrentMonthLabel').textContent=month.replace('-',' 年 ')+' 月累計';
 }
 function salesRequestsForRecord(record){
@@ -10135,7 +10136,10 @@ async function loadSalesData(){
     }else{
       result=await starredApi('sales_bootstrap',{rankingMonth:rankingMonth});
     }
-    salesOwnRecords=(Array.isArray(result.ownRecords)?result.ownRecords:[]).map(function(record){
+    salesOwnRecords=(Array.isArray(result.ownRecords)?result.ownRecords:[]).filter(function(record){
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(record&&record.businessDate||'').slice(0,10));
+    }).map(function(record){
+      record=Object.assign({},record,{businessDate:String(record.businessDate||'').slice(0,10)});
       record=Object.assign({},record,{submitterName:salesSubmitterName(record)});
       if(salesRecordType(record)!=='return')record=Object.assign(record,{salespersonLineUserId:salesCreditedLineUserId(record),salespersonName:salesCreditedName(record)});
       return record;
