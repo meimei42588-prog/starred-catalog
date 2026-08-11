@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260811-hourly-wage-v20 -->
+<!-- STARRED BUILD: 20260811-report-ui-liff-v21 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -2762,6 +2762,12 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
   border-top-color:#274253;border-radius:50%;animation:systemSpin .75s linear infinite
 }
 .system-loading-overlay.error .system-loading-spinner{display:none}
+.system-loading-error-icon{
+  display:none;place-items:center;width:52px;height:52px;margin:0 auto 14px;border-radius:50%;
+  background:#eef3f5;color:#526f7e;font-size:28px;font-weight:500;line-height:1
+}
+.system-loading-overlay.error .system-loading-error-icon{display:grid}
+.system-loading-overlay.connection-error .system-loading-error-icon{background:#e8f6ed;color:#328457}
 .system-loading-title{font-size:20px;font-weight:900;color:#274253}
 .system-loading-text{margin-top:7px;color:#6b808c;font-size:14px;line-height:1.6;white-space:pre-line}
 .system-loading-retry{
@@ -2769,6 +2775,8 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
   background:#274253;color:#fff;font-weight:900
 }
 .system-loading-overlay.error .system-loading-retry{display:block}
+.system-loading-overlay.connection-error .system-loading-retry{background:#328457}
+.system-loading-overlay.connection-error .system-loading-title{font-weight:700}
 @keyframes systemSpin{to{transform:rotate(360deg)}}
 
 .order-updated-time{
@@ -7616,6 +7624,7 @@ const STARRED_LIFF_ID = "2010833798-6JCJUkwU";
 const STARRED_LINE_RELOGIN_KEY = "starred_line_relogin_running";
 const STARRED_LIFF_ENTRY_SESSION_KEY = "starred_liff_entry_session_v1";
 const STARRED_LINE_INIT_TIMEOUT_MS = 20000;
+const STARRED_LINE_AUTO_RETRY_DELAY_MS = 900;
 const STARRED_LIFF_BASE_URL = `https://liff.line.me/${STARRED_LIFF_ID}`;
 const STARRED_SUPABASE_URL = "https://onpbvydhjeqaaarmuxsq.supabase.co";
 const STARRED_LINE_API_URL = `${STARRED_SUPABASE_URL}/functions/v1/line-api`;
@@ -7734,6 +7743,26 @@ function waitForStarredLineInitialization(promise){
   });
   return Promise.race([Promise.resolve(promise),timeoutPromise])
     .finally(()=>{if(timeoutId)clearTimeout(timeoutId)});
+}
+function isStarredLineConnectionError(error){
+  const message=String(error&&error.message||error||"").trim();
+  return /load failed|failed to fetch|network\s*error|networkerror|connection failed|internet disconnected/i.test(message);
+}
+async function initializeStarredLineWithRetry(){
+  try{
+    return await waitForStarredLineInitialization(liff.init({
+      liffId:STARRED_LIFF_ID,
+      withLoginOnExternalBrowser:true
+    }));
+  }catch(error){
+    if(!isStarredLineConnectionError(error))throw error;
+    showSystemLoading("LINE 連線中…","網路連線稍慢，系統正在自動重試，請稍候。");
+    await new Promise(resolve=>setTimeout(resolve,STARRED_LINE_AUTO_RETRY_DELAY_MS));
+    return await waitForStarredLineInitialization(liff.init({
+      liffId:STARRED_LIFF_ID,
+      withLoginOnExternalBrowser:true
+    }));
+  }
 }
 function getStarredLineCleanUrl(){
   const requestedPage=typeof window.getStarredRequestedPage==="function"
@@ -8047,17 +8076,14 @@ async function runStarredLiffInitialization(){
     if(redirectDirectLineSalesToLiff())return;
     if(!window.liff){
       console.error("LIFF SDK 載入失敗");
-      showSystemLoadingError("資料載入失敗","資料載入失敗，請重新整理或重新登入");
+      showSystemLoadingError("LINE 連線尚未完成","LINE 登入元件沒有載入完成，請確認網路後重新載入。","重新載入","reload");
       return;
     }
     const isLineTransition=isStarredTransientLineTransition();
     showSystemLoading(isLineTransition?"正在開啟系統…":"LINE 登入確認中…",isLineTransition?"正在安全連接 LINE，請稍候。":"正在確認 LINE 登入狀態，請稍候。");
 
     currentStage="LINE 外部瀏覽器登入";
-    await waitForStarredLineInitialization(liff.init({
-      liffId:STARRED_LIFF_ID,
-      withLoginOnExternalBrowser:true
-    }));
+    await initializeStarredLineWithRetry();
 
     /* LINE 官方要求等 liff.init 完成後才能改網址。 */
     cleanLoginCallbackUrl();
@@ -8113,14 +8139,27 @@ async function runStarredLiffInitialization(){
     if(error&&error.relogin)return;
     const cached=getCurrentLineUser();
     if(cached)setLineReturnPerson(cached);
-    const retryLabel=String(error&&error.code||"")==="LINE_INIT_TIMEOUT"
+    const connectionIssue=currentStage==="LINE 外部瀏覽器登入"&&isStarredLineConnectionError(error);
+    const retryLabel=connectionIssue
+      ?"重新連線"
+      :String(error&&error.code||"")==="LINE_INIT_TIMEOUT"
       ?"用 LINE 重新登入"
       :"重新載入";
-    showSystemLoadingError(
-      `${currentStage}失敗`,
-      `${getStarredLineErrorText(error)}\n請按「${retryLabel}」再試一次；若仍失敗，請將這段錯誤文字截圖回傳。`,
-      retryLabel
-    );
+    if(connectionIssue){
+      showSystemLoadingError(
+        "LINE 連線暫時中斷",
+        "目前網路可能不穩定，系統尚未完成 LINE 登入。\n請確認網路後按下方按鈕；已回傳的資料不會受影響。",
+        retryLabel,
+        "reconnect"
+      );
+    }else{
+      showSystemLoadingError(
+        `${currentStage}失敗`,
+        `${getStarredLineErrorText(error)}\n請按「${retryLabel}」再試一次；若仍失敗，請將這段錯誤文字截圖回傳。`,
+        retryLabel,
+        "reload"
+      );
+    }
     if(String(error&&error.message||"").includes("Publishable key")){
       console.warn("請先在 HTML 的 STARRED_SUPABASE_PUBLISHABLE_KEY 填入 Publishable key。");
     }
@@ -8147,6 +8186,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 <div id="systemLoadingOverlay" class="system-loading-overlay" role="status" aria-live="polite">
   <div class="system-loading-card">
     <div class="system-loading-spinner"></div>
+    <div id="systemLoadingErrorIcon" class="system-loading-error-icon" aria-hidden="true">↻</div>
     <div id="systemLoadingTitle" class="system-loading-title">資料載入中…</div>
     <div id="systemLoadingText" class="system-loading-text">正在同步最新的活動、門市與訂單資料。</div>
     <button id="systemLoadingRetry" type="button" class="system-loading-retry" onclick="retrySystemLoading()">重新載入</button>
@@ -8157,23 +8197,31 @@ document.addEventListener("DOMContentLoaded",()=>{
 <script id="starred-system-enhancement-js">
 function showSystemLoading(title="資料載入中…",text="正在同步最新資料。"){
  const overlay=document.getElementById("systemLoadingOverlay");if(!overlay)return;
- overlay.classList.remove("error");overlay.classList.add("show");
+ overlay.classList.remove("error","connection-error");overlay.classList.add("show");
  document.getElementById("systemLoadingTitle").textContent=title;
  document.getElementById("systemLoadingText").textContent=text;
- const retry=document.getElementById("systemLoadingRetry");if(retry)retry.textContent="重新載入";
+ const retry=document.getElementById("systemLoadingRetry");if(retry){retry.textContent="重新載入";retry.dataset.retryMode="reload"}
 }
-function hideSystemLoading(){document.getElementById("systemLoadingOverlay")?.classList.remove("show","error")}
-function showSystemLoadingError(title="資料載入失敗",text="資料載入失敗，請重新整理或重新登入",retryLabel="重新載入"){
+function hideSystemLoading(){document.getElementById("systemLoadingOverlay")?.classList.remove("show","error","connection-error")}
+function showSystemLoadingError(title="資料載入失敗",text="資料載入失敗，請重新整理或重新登入",retryLabel="重新載入",retryMode="reload"){
  const overlay=document.getElementById("systemLoadingOverlay");if(!overlay)return;
  overlay.classList.add("show","error");
+ overlay.classList.toggle("connection-error",retryMode==="reconnect");
  document.getElementById("systemLoadingTitle").textContent=title;
  document.getElementById("systemLoadingText").textContent=text;
- const retry=document.getElementById("systemLoadingRetry");if(retry)retry.textContent=retryLabel;
+ const icon=document.getElementById("systemLoadingErrorIcon");if(icon)icon.textContent=retryMode==="reconnect"?"↻":"!";
+ const retry=document.getElementById("systemLoadingRetry");if(retry){retry.textContent=retryLabel;retry.dataset.retryMode=retryMode}
 }
 function retrySystemLoading(){
  const overlay=document.getElementById("systemLoadingOverlay");
  if(overlay){overlay.classList.remove("error");}
  sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+ const retry=document.getElementById("systemLoadingRetry");
+ if(retry&&retry.dataset.retryMode==="reconnect"&&window.liff&&typeof initializeStarredLiff==="function"){
+  showSystemLoading("LINE 重新連線中…","正在重新連接 LINE，請稍候。");
+  setTimeout(()=>initializeStarredLiff(),0);
+  return;
+ }
  const requestedPage=typeof window.getStarredRequestedPage==="function"
   ?window.getStarredRequestedPage()
   :String(getStarredSearchParams().get("page")||"").trim().toLowerCase();
@@ -10468,14 +10516,18 @@ function salesAdminStatListHtml(kind,rows){
   }).join('');
   return '<div class="sales-admin-compact-list '+kind+'">'+header+body+'</div>';
 }
+function salesWorkdayPaidSummary(row){
+  var days=Number(row&&row.workDays||0);var hourly=Number(row&&row.hourlyHours||0);
+  return String(days)+' 天'+(hourly>0?'＋'+salesWorkHoursNumberText(hourly)+' 小時薪':'');
+}
 function salesWorkdayListHtml(rows){
   rows=Array.isArray(rows)?rows:[];
   if(!rows.length)return '<div class="sales-empty">目前篩選區間內沒有可統計的上班天數。</div>';
-  return '<div class="sales-workday-list"><div class="sales-workday-head"><span>人員</span><span>已計日薪</span><span>自動計入</span><span>主管確認</span><span>時薪工時</span><span>待確認</span><span>已填工時</span><span>營業總額</span></div>'+rows.map(function(row){
+  return '<div class="sales-workday-list"><div class="sales-workday-head"><span>人員</span><span>已計薪資</span><span>自動計入</span><span>主管確認</span><span>時薪工時</span><span>待確認</span><span>已填工時</span><span>營業總額</span></div>'+rows.map(function(row){
     var personName=salesPersonName(row.lineUserId,row.name);
     var recordedHours=Number(row.recordedHours||0);var recordedLabel=Number(row.recordedHourDays||0)?salesWorkHoursText(recordedHours):'—';
     var hourlyLabel=Number(row.hourlyDays||0)?salesWorkHoursText(row.hourlyHours):'—';
-    return '<div class="sales-workday-row"><span class="name"><span class="title">'+salesEsc(personName)+'</span><small>'+String(row.recordCount||0)+' 筆業績</small></span><button type="button" class="sales-workday-days" data-line-user-id="'+salesEsc(row.lineUserId)+'" onclick="openSalesWorkdayDetail(this.dataset.lineUserId)" aria-label="查看 '+salesEsc(personName)+' 的上班天數明細"><b>'+String(row.workDays||0)+' 天</b><small>查看明細</small></button><span class="auto-days">'+String(row.autoDays||0)+' 天</span><span class="confirmed-days">'+String(row.confirmedDays||0)+' 天</span><span class="hourly-hours">'+salesEsc(hourlyLabel)+'</span><span class="pending-days">'+String(row.pendingDays||0)+' 天</span><span class="recorded-hours">'+salesEsc(recordedLabel)+'</span><span class="amount '+(Number(row.grossAmount||0)>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+salesMoney(row.grossAmount)+'</span></div>';
+    return '<div class="sales-workday-row"><span class="name"><span class="title">'+salesEsc(personName)+'</span><small>'+String(row.recordCount||0)+' 筆業績</small></span><button type="button" class="sales-workday-days" data-line-user-id="'+salesEsc(row.lineUserId)+'" onclick="openSalesWorkdayDetail(this.dataset.lineUserId)" aria-label="查看 '+salesEsc(personName)+' 的薪資與工時明細"><b class="sales-workday-pay-total">'+salesEsc(salesWorkdayPaidSummary(row))+'</b><small>查看明細</small></button><span class="auto-days">'+String(row.autoDays||0)+' 天</span><span class="confirmed-days">'+String(row.confirmedDays||0)+' 天</span><span class="hourly-hours">'+salesEsc(hourlyLabel)+'</span><span class="pending-days">'+String(row.pendingDays||0)+' 天</span><span class="recorded-hours">'+salesEsc(recordedLabel)+'</span><span class="amount '+(Number(row.grossAmount||0)>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+salesMoney(row.grossAmount)+'</span></div>';
   }).join('')+'</div>';
 }
 function salesWorkdayReviewCardHtml(group,confirmed){
@@ -10579,7 +10631,7 @@ function salesWorkdayDetailRows(lineUserId){
 function ensureSalesWorkdayDetailModal(){
   var modal=salesEl('salesWorkdayDetailModal');if(modal)return modal;
   modal=document.createElement('div');modal.id='salesWorkdayDetailModal';modal.className='sales-workday-detail-modal';modal.hidden=true;
-  modal.innerHTML='<div class="sales-workday-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="salesWorkdayDetailTitle"><header><div><span>WORKDAY DETAIL</span><h3 id="salesWorkdayDetailTitle">上班天數明細</h3><p id="salesWorkdayDetailPeriod"></p></div><button type="button" class="sales-workday-detail-close" onclick="closeSalesWorkdayDetail()" aria-label="關閉">×</button></header><div class="sales-workday-detail-summary"><div><span>已計日薪</span><b id="salesWorkdayDetailDays">0 天</b></div><div><span>已填工時</span><b id="salesWorkdayDetailHours">—</b></div><div><span>業績合計</span><b id="salesWorkdayDetailGross">$0</b></div></div><div class="sales-workday-detail-table-wrap"><table class="sales-workday-detail-table"><thead><tr><th>日期</th><th>店點</th><th>上班時數</th><th>薪資狀態</th><th>業績</th></tr></thead><tbody id="salesWorkdayDetailBody"></tbody></table></div><footer><button type="button" class="primary" onclick="closeSalesWorkdayDetail()">關閉</button></footer></div>';
+  modal.innerHTML='<div class="sales-workday-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="salesWorkdayDetailTitle"><header><div><span>WORKDAY DETAIL</span><h3 id="salesWorkdayDetailTitle">上班天數明細</h3><p id="salesWorkdayDetailPeriod"></p></div><button type="button" class="sales-workday-detail-close" onclick="closeSalesWorkdayDetail()" aria-label="關閉">×</button></header><div class="sales-workday-detail-summary"><div><span>已計薪資</span><b id="salesWorkdayDetailDays">0 天</b></div><div><span>已填工時</span><b id="salesWorkdayDetailHours">—</b></div><div><span>業績合計</span><b id="salesWorkdayDetailGross">$0</b></div></div><div class="sales-workday-detail-table-wrap"><table class="sales-workday-detail-table"><thead><tr><th>日期</th><th>店點</th><th>上班時數</th><th>薪資狀態</th><th>業績</th></tr></thead><tbody id="salesWorkdayDetailBody"></tbody></table></div><footer><button type="button" class="primary" onclick="closeSalesWorkdayDetail()">關閉</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesWorkdayDetail()});
   document.addEventListener('keydown',function(event){if(event.key==='Escape'&&!modal.hidden)closeSalesWorkdayDetail()});
   document.body.appendChild(modal);return modal;
@@ -10595,7 +10647,7 @@ function openSalesWorkdayDetail(lineUserId){
   var hourRows=rows.filter(function(row){return row.hours!==null&&row.hours!==undefined});var hours=hourRows.reduce(function(total,row){return total+Number(row.hours||0)},0);
   if(salesEl('salesWorkdayDetailTitle'))salesEl('salesWorkdayDetailTitle').textContent=personName+'｜上班天數明細';
   if(salesEl('salesWorkdayDetailPeriod'))salesEl('salesWorkdayDetailPeriod').textContent='查詢區間：'+salesAdminPeriodLabel();
-  if(salesEl('salesWorkdayDetailDays'))salesEl('salesWorkdayDetailDays').textContent=String(summary.workDays||0)+' 天';
+  if(salesEl('salesWorkdayDetailDays'))salesEl('salesWorkdayDetailDays').textContent=salesWorkdayPaidSummary(summary);
   if(salesEl('salesWorkdayDetailHours'))salesEl('salesWorkdayDetailHours').textContent=hourRows.length?salesWorkHoursText(hours):'—';
   if(salesEl('salesWorkdayDetailGross'))salesEl('salesWorkdayDetailGross').textContent=salesMoney(gross);
   var body=salesEl('salesWorkdayDetailBody');
@@ -12213,6 +12265,32 @@ body.sales-stat-modal-open{overflow:hidden}
 .sales-person-choice-button{font-size:15px!important;font-weight:400!important}.sales-person-filter-chip,.sales-person-filter-more{font-size:12px!important;font-weight:400!important}.sales-person-detail-scroll thead th:not(:first-child){font-size:14px!important;font-weight:400!important}
 @media(max-width:900px){.sales-workday-row .hourly-hours,.sales-workday-row .recorded-hours{display:flex;justify-content:space-between;gap:10px;grid-column:1/-1;text-align:right!important}.sales-workday-row .hourly-hours:before{content:'時薪工時';color:#7b8f99}.sales-workday-row .recorded-hours:before{content:'已填工時';color:#7b8f99}}
 @media(max-width:620px){.sales-workday-review-person{grid-template-columns:minmax(0,1fr) 118px!important;gap:8px!important}.sales-workday-wage-choice{grid-column:1}.sales-workday-hours-field{grid-column:2}.sales-workday-wage-result{grid-column:1/-1;justify-self:start;margin-left:26px}.sales-workday-detail-summary{grid-template-columns:1fr!important}.sales-person-choice-button{font-size:14px!important}.sales-person-filter-chip,.sales-person-filter-more{font-size:11px!important}.sales-person-detail-scroll thead th:not(:first-child){font-size:13px!important}}
+</style>
+
+<style id="sales-report-v21-style">
+/* v21：業績報表深色表頭白字統一放大、取消粗體；薪資欄合併顯示日薪與時薪。 */
+#salesReportTab .sales-table thead th,
+#salesReportTab .sales-admin-list-head>span,
+#salesReportTab .sales-review-list-head>span,
+#salesReportTab .sales-return-admin-head>span,
+#salesReportTab .sales-workday-head>span,
+.sales-stat-dialog .sales-stat-detail-table thead th,
+.sales-stat-dialog .sales-store-matrix-scroll thead th,
+.sales-workday-detail-dialog .sales-workday-detail-table thead th{
+  font-size:13px!important;
+  font-weight:400!important;
+  letter-spacing:.01em!important
+}
+.sales-workday-days{min-width:112px!important}
+.sales-workday-days .sales-workday-pay-total{
+  color:#2f714b!important;font-size:14px!important;font-weight:500!important;
+  line-height:1.35;white-space:nowrap
+}
+@media(max-width:900px){
+  .sales-workday-row{grid-template-columns:minmax(0,1fr) auto!important}
+  .sales-workday-days{min-width:118px!important;max-width:145px!important}
+  .sales-workday-days .sales-workday-pay-total{font-size:13px!important;white-space:normal;text-align:right}
+}
 </style>
 
 </body>
