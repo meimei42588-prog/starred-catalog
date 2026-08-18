@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260818-sales-active-period-v24 -->
+<!-- STARRED BUILD: 20260818-print-a4-v25 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -9063,7 +9063,7 @@ var salesOwnPage = 1;
 var salesRankingPage = 1;
 var salesRequestModalRecordId = '';
 var salesAdminEditRecordId = '';
-var salesStatDetailState = {kind:'',key:'',rows:[],view:'list'};
+var salesStatDetailState = {kind:'',key:'',rows:[],view:'list',summary:null};
 var salesPersonDetailSelection = new Set();
 var salesPersonDetailSelectionInitialized = false;
 var salesPersonDetailSearchText = '';
@@ -10618,6 +10618,25 @@ function salesStoreMissingModel(row){
   }
   return {enabled:true,missingDates:missingDates,periods:periods,endCandidates:endCandidates};
 }
+function salesStoreReportingEndSettings(row){
+  var storeId=String(row&&row.storeId||'');
+  if(!storeId)return [];
+  var from=String((salesEl('salesAdminDateFrom')||{}).value||'');
+  var to=String((salesEl('salesAdminDateTo')||{}).value||'');
+  var fromMonth=from.slice(0,7);var toMonth=to.slice(0,7);
+  return (salesAdminData.reportingPeriods||[]).filter(function(setting){
+    var monthKey=String(setting&&setting.monthKey||String(setting&&setting.endedFrom||'').slice(0,7));
+    return String(setting&&setting.storeId||'')===storeId&&(!fromMonth||monthKey>=fromMonth)&&(!toMonth||monthKey<=toMonth)&&setting.endedFrom;
+  }).slice().sort(function(a,b){return String(a.endedFrom||'').localeCompare(String(b.endedFrom||''))});
+}
+function renderSalesStorePrintEnding(summary){
+  var box=salesEl('salesStorePrintEnding');if(!box)return;
+  var settings=salesStoreReportingEndSettings(summary);
+  box.innerHTML=settings.map(function(setting){
+    return '<span><b>'+salesEsc(salesShortDate(setting.endedFrom))+' 起</b>｜後續日期：特賣結束</span>';
+  }).join('');
+  box.hidden=!settings.length;
+}
 async function markSalesStoreEnded(storeId,endedFrom){
   storeId=String(storeId||'');endedFrom=String(endedFrom||'');
   var summary=(salesAdminData.byStore||[]).find(function(row){return String(row.storeId||'')===storeId});
@@ -10958,7 +10977,8 @@ function salesStoreMatrixModel(rows){
     var valueKey=String(record.businessDate||'')+'\u0001'+key;values.set(valueKey,Number(values.get(valueKey)||0)+Number(record.grossAmount||0));
   });
   var collator=salesPersonSortCollator();var people=Array.from(peopleMap.values()).sort(function(a,b){return collator.compare(salesPersonSurname(a.name),salesPersonSurname(b.name))||collator.compare(a.name,b.name)});var totals=new Map();people.forEach(function(person){totals.set(person.key,0)});
-  var matrixRows=salesStoreMatrixDates(rows).map(function(date){var cells={};var total=0;people.forEach(function(person){var amount=Number(values.get(date+'\u0001'+person.key)||0);cells[person.key]=amount;totals.set(person.key,Number(totals.get(person.key)||0)+amount);total+=amount});return {date:date,cells:cells,total:total}});
+  var endedByMonth=new Map(salesStoreReportingEndSettings((salesStatDetailState||{}).summary).map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),String(setting.endedFrom||'')]}));
+  var matrixRows=salesStoreMatrixDates(rows).map(function(date){var cells={};var total=0;people.forEach(function(person){var amount=Number(values.get(date+'\u0001'+person.key)||0);cells[person.key]=amount;totals.set(person.key,Number(totals.get(person.key)||0)+amount);total+=amount});var endedFrom=endedByMonth.get(String(date).slice(0,7));return {date:date,cells:cells,total:total,specialSaleEnded:Boolean(!total&&endedFrom&&date>=endedFrom)}});
   return {people:people,rows:matrixRows,totals:totals,grandTotal:matrixRows.reduce(function(sum,row){return sum+Number(row.total||0)},0)};
 }
 function salesStoreMatrixExportRows(rows){
@@ -10970,7 +10990,7 @@ function renderSalesStoreMatrix(){
   if(state.kind!=='store'){box.innerHTML='';return}
   var model=salesStoreMatrixModel(state.rows||[]);if(!model.people.length){box.innerHTML='<div class="sales-empty">此門市在篩選區間內沒有銷售業績可製作月表。</div>';return}
   var formatter=new Intl.NumberFormat('zh-TW');var head='<thead><tr><th>日期</th>'+model.people.map(function(person){return '<th>'+salesEsc(person.name)+'</th>'}).join('')+'<th>銷售總額</th></tr></thead>';
-  var body='<tbody>'+model.rows.map(function(row){return '<tr><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="amount total '+(row.total>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
+  var body='<tbody>'+model.rows.map(function(row){if(row.specialSaleEnded)return '<tr class="sales-store-special-ended-row"><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th><td colspan="'+String(model.people.length+1)+'">特賣結束</td></tr>';return '<tr><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="amount total '+(row.total>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
   var foot='<tfoot><tr><th>合計</th>'+model.people.map(function(person){var amount=Number(model.totals.get(person.key)||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+formatter.format(amount)+'</td>'}).join('')+'<td class="amount grand">'+formatter.format(model.grandTotal)+'</td></tr></tfoot>';
   var width=Math.max(720,125+model.people.length*120+135);box.innerHTML='<div class="sales-store-matrix-note"><span>日期 × 銷售人員</span><b>'+String(model.people.length)+' 位人員・'+String(model.rows.length)+' 天</b></div><div class="sales-store-matrix-scroll"><table style="min-width:'+String(width)+'px">'+head+body+foot+'</table></div>';
 }
@@ -10987,7 +11007,7 @@ function ensureSalesStatDetailModal(){
   modal.id='salesStatDetailModal';
   modal.className='sales-stat-modal';
   modal.hidden=true;
-  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b></div><div id="salesStatDetailNetCard" class="net" hidden><span>當月業績</span><b id="salesStatDetailNet">$0</b></div><div><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
+  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b></div><div id="salesStatDetailNetCard" class="net" hidden><span>當月業績</span><b id="salesStatDetailNet">$0</b></div><div><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStorePrintEnding" class="sales-store-print-ending" hidden></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesStatDetail()});
   document.body.appendChild(modal);
   return modal;
@@ -11006,9 +11026,10 @@ function openSalesStatDetail(kind,key){
     var returnRows=salesAdminData.performanceReturns.filter(function(record){return String(record.assignedSalespersonLineUserId||'')===key}).slice().sort(function(a,b){return String(b.returnAssignedAt||'').localeCompare(String(a.returnAssignedAt||''))});
     rows=salesRows.concat(returnRows);
   }
-  salesStatDetailState={kind:kind,key:key,rows:rows,view:'list'};
+  salesStatDetailState={kind:kind,key:key,rows:rows,view:'list',summary:summary};
   var modal=ensureSalesStatDetailModal();
   modal.classList.toggle('store-detail-mode',kind==='store');
+  modal.classList.toggle('person-detail-mode',kind==='person');
   var title=kind==='store'?salesStoreText(summary):salesPersonName(summary.lineUserId,summary.name||'LINE 使用者');
   if(salesEl('salesStatDetailTitle'))salesEl('salesStatDetailTitle').textContent=title+'｜業績明細';
   if(salesEl('salesStatDetailPeriod'))salesEl('salesStatDetailPeriod').textContent='查詢區間：'+salesAdminPeriodLabel();
@@ -11020,7 +11041,13 @@ function openSalesStatDetail(kind,key){
   if(salesEl('salesStatDetailCount'))salesEl('salesStatDetailCount').textContent=String(rows.length)+' 筆';
   if(salesEl('salesStatDetailTargetHead'))salesEl('salesStatDetailTargetHead').textContent=kind==='store'?'銷售人員':'店點';
   if(salesEl('salesStatDetailViewSwitcher'))salesEl('salesStatDetailViewSwitcher').hidden=kind!=='store';
-  if(kind==='store')renderSalesStoreMissingNotice(summary);else if(salesEl('salesStoreMissingNotice'))salesEl('salesStoreMissingNotice').hidden=true;
+  if(kind==='store'){
+    renderSalesStoreMissingNotice(summary);
+    renderSalesStorePrintEnding(summary);
+  }else{
+    if(salesEl('salesStoreMissingNotice'))salesEl('salesStoreMissingNotice').hidden=true;
+    if(salesEl('salesStorePrintEnding'))salesEl('salesStorePrintEnding').hidden=true;
+  }
   var body=salesEl('salesStatDetailBody');
   if(body)body.innerHTML=rows.length?rows.map(function(record){
     var isReturn=salesRecordType(record)==='return';
@@ -11039,8 +11066,10 @@ function closeSalesStatDetail(){
 function printSalesStatDetail(){
   var modal=salesEl('salesStatDetailModal');
   if(!modal||modal.hidden)return;
+  var state=salesStatDetailState||{};var previousView=state.view||'list';
+  if(state.kind==='store'&&salesStoreMatrixModel(state.rows||[]).people.length)showSalesStatDetailView('matrix');
   document.body.classList.add('sales-stat-printing');
-  var clearPrintMode=function(){document.body.classList.remove('sales-stat-printing')};
+  var cleared=false;var clearPrintMode=function(){if(cleared)return;cleared=true;document.body.classList.remove('sales-stat-printing');showSalesStatDetailView(previousView)};
   window.addEventListener('afterprint',clearPrintMode,{once:true});
   window.print();
   setTimeout(clearPrintMode,30000);
@@ -12549,6 +12578,162 @@ body.sales-stat-modal-open{overflow:hidden}
 .sales-stat-modal.store-detail-mode .sales-stat-dialog>footer button{font-size:13px!important;font-weight:400!important}
 @media(max-width:620px){.sales-store-missing-notice{margin:0 14px 9px}.sales-store-missing-warning,.sales-store-ending-action,.sales-store-ending-current{align-items:stretch;flex-direction:column}.sales-store-ending-action button,.sales-store-ending-current button{width:100%}.sales-stat-modal.store-detail-mode .sales-store-matrix-scroll table{font-size:13px!important}}
 @media print{body.sales-stat-printing .sales-store-missing-notice{display:none!important}}
+</style>
+
+<style id="sales-print-a4-v25-style">
+/* v25：業績／上班天數明細統一 13px；友善列印每月以單張 A4 橫式輸出。 */
+.sales-store-print-ending{display:none}
+.sales-stat-modal .sales-stat-detail-table,
+.sales-stat-modal .sales-stat-detail-table th,
+.sales-stat-modal .sales-stat-detail-table td,
+.sales-stat-modal .sales-stat-type,
+.sales-stat-modal .sales-audit-plain,
+.sales-stat-modal .sales-audit-amount-btn,
+.sales-stat-modal .sales-audit-amount-btn b{
+  color:#294858;font-size:13px!important;font-weight:400!important;line-height:1.35
+}
+.sales-stat-modal .sales-stat-detail-table th{color:#fff}
+.sales-stat-modal .sales-stat-detail-table td:nth-child(3){color:#294858!important}
+.sales-workday-detail-dialog>header p,
+.sales-workday-detail-summary span,
+.sales-workday-detail-summary b,
+.sales-workday-detail-table,
+.sales-workday-detail-table th,
+.sales-workday-detail-table td,
+.sales-workday-status,
+.sales-workday-detail-confirmer{
+  font-size:13px!important;font-weight:400!important;line-height:1.35
+}
+.sales-workday-detail-table td{color:#294858}
+.sales-workday-detail-table th{color:#fff}
+.sales-workday-detail-confirmer{margin-top:3px;color:#536d7a!important}
+.sales-store-special-ended-row td{background:#fff7e5!important;color:#875600!important;font-size:13px!important;font-weight:400!important;text-align:center;letter-spacing:.04em}
+
+@page{size:A4 landscape;margin:5mm}
+@media print{
+  body.sales-stat-printing,
+  body.sales-person-detail-printing{
+    margin:0!important;background:#fff!important;color:#111!important;
+    -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important
+  }
+  body.sales-stat-printing #salesStatDetailModal,
+  body.sales-stat-printing .sales-stat-dialog,
+  body.sales-person-detail-printing #salesReportPersonDetailView{
+    width:100%!important;max-width:none!important;margin:0!important;padding:0!important;
+    color:#111!important;background:#fff!important;box-shadow:none!important;
+    break-inside:avoid-page!important;page-break-inside:avoid!important
+  }
+  body.sales-stat-printing .sales-stat-dialog *,
+  body.sales-person-detail-printing #salesReportPersonDetailView *{
+    box-shadow:none!important;text-shadow:none!important
+  }
+  body.sales-stat-printing .sales-stat-dialog>header{
+    min-height:0!important;margin:0 0 2mm!important;padding:0 0 2mm!important;border-bottom:1px solid #777!important
+  }
+  body.sales-stat-printing .sales-stat-dialog>header>div>span{display:none!important}
+  body.sales-stat-printing .sales-stat-dialog>header h3{margin:0!important;color:#111!important;font-size:18px!important;font-weight:500!important;line-height:1.15!important}
+  body.sales-stat-printing .sales-stat-dialog>header p{margin:2px 0 0!important;color:#111!important;font-size:13px!important;font-weight:400!important;line-height:1.15!important}
+  body.sales-stat-printing .sales-stat-detail-summary{
+    display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:2mm!important;
+    margin:0 0 2mm!important;padding:0!important;background:#fff!important
+  }
+  body.sales-stat-printing .sales-stat-detail-summary>div{
+    min-height:0!important;padding:2px 4px!important;border:1px solid #777!important;border-radius:0!important;background:#fff!important
+  }
+  body.sales-stat-printing .sales-stat-detail-summary span,
+  body.sales-stat-printing .sales-stat-detail-summary b{
+    display:inline!important;margin:0!important;color:#111!important;font-size:13px!important;font-weight:400!important;line-height:1.15!important
+  }
+  body.sales-stat-printing .sales-stat-detail-summary span:after{content:'：'}
+  body.sales-stat-printing .sales-store-print-ending[hidden]{display:none!important}
+  body.sales-stat-printing .sales-store-print-ending:not([hidden]){
+    display:flex!important;gap:4mm!important;align-items:center!important;margin:0 0 2mm!important;
+    padding:2px 5px!important;border:1px solid #777!important;background:#fff!important;
+    color:#111!important;font-size:13px!important;font-weight:400!important;line-height:1.2!important
+  }
+  body.sales-stat-printing .sales-store-print-ending b{color:#111!important;font-size:13px!important;font-weight:500!important}
+  body.sales-stat-printing .sales-stat-detail-switcher,
+  body.sales-stat-printing .sales-store-matrix-note,
+  body.sales-stat-printing .sales-store-missing-notice{display:none!important}
+  body.sales-stat-printing .sales-stat-detail-table-wrap,
+  body.sales-stat-printing .sales-store-matrix-scroll{
+    width:100%!important;margin:0!important;overflow:visible!important;border:1px solid #666!important;border-radius:0!important
+  }
+  body.sales-stat-printing .sales-stat-detail-table,
+  body.sales-stat-printing .sales-store-matrix-scroll table{
+    width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important;
+    color:#111!important;font-size:13px!important;font-weight:400!important;line-height:1.05!important
+  }
+  body.sales-stat-printing .sales-stat-detail-table th,
+  body.sales-stat-printing .sales-stat-detail-table td,
+  body.sales-stat-printing .sales-store-matrix-scroll th,
+  body.sales-stat-printing .sales-store-matrix-scroll td{
+    position:static!important;height:auto!important;min-height:0!important;padding:2px 3px!important;
+    border:1px solid #666!important;background:#fff!important;color:#111!important;
+    font-size:13px!important;font-weight:400!important;line-height:1.05!important;
+    break-inside:avoid!important;page-break-inside:avoid!important
+  }
+  body.sales-stat-printing .sales-stat-detail-table th,
+  body.sales-stat-printing .sales-store-matrix-scroll thead th{
+    color:#111!important;white-space:normal!important
+  }
+  body.sales-stat-printing .sales-stat-detail-table td,
+  body.sales-stat-printing .sales-store-matrix-scroll td{white-space:nowrap!important}
+  body.sales-stat-printing .sales-stat-type,
+  body.sales-stat-printing .sales-audit-plain,
+  body.sales-stat-printing .sales-audit-amount-btn,
+  body.sales-stat-printing .sales-audit-amount-btn b{
+    padding:0!important;border:0!important;background:transparent!important;color:#111!important;
+    font-size:13px!important;font-weight:400!important;line-height:1!important
+  }
+  body.sales-stat-printing .sales-audit-amount-btn small{display:none!important}
+  body.sales-stat-printing .sales-store-special-ended-row td{
+    background:#fff!important;color:#111!important;font-size:13px!important;font-weight:500!important;text-align:center!important
+  }
+  body.sales-stat-printing .sales-store-matrix-scroll tfoot th,
+  body.sales-stat-printing .sales-store-matrix-scroll tfoot td{background:#fff!important;color:#111!important;font-weight:500!important}
+
+  body.sales-person-detail-printing #salesReportPersonDetailView{
+    position:absolute!important;inset:0 auto auto 0!important;display:block!important
+  }
+  body.sales-person-detail-printing .sales-person-detail-toolbar{
+    min-height:0!important;margin:0 0 2mm!important;padding:0 0 2mm!important;border-bottom:1px solid #777!important;background:#fff!important
+  }
+  body.sales-person-detail-printing .sales-person-detail-toolbar b{color:#111!important;font-size:18px!important;font-weight:500!important;line-height:1.15!important}
+  body.sales-person-detail-printing .sales-person-detail-toolbar span{display:none!important}
+  body.sales-person-detail-printing .sales-person-detail-period{
+    padding:2px 4px!important;border:1px solid #777!important;border-bottom:0!important;
+    color:#111!important;font-size:13px!important;font-weight:400!important;line-height:1.15!important
+  }
+  body.sales-person-detail-printing .sales-person-detail-table-wrap,
+  body.sales-person-detail-printing .sales-person-detail-scroll{
+    width:100%!important;max-height:none!important;margin:0!important;overflow:visible!important;border-radius:0!important
+  }
+  body.sales-person-detail-printing .sales-person-detail-scroll table{
+    width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important;
+    color:#111!important;font-size:13px!important;font-weight:400!important;line-height:1.05!important
+  }
+  body.sales-person-detail-printing .sales-person-detail-scroll th,
+  body.sales-person-detail-printing .sales-person-detail-scroll td{
+    position:static!important;height:auto!important;min-height:0!important;padding:2px 3px!important;
+    border:1px solid #666!important;background:#fff!important;color:#111!important;
+    font-size:13px!important;font-weight:400!important;line-height:1.05!important;
+    break-inside:avoid!important;page-break-inside:avoid!important
+  }
+  body.sales-person-detail-printing .sales-person-detail-scroll thead th{color:#111!important;white-space:normal!important}
+  body.sales-person-detail-printing .sales-person-detail-scroll td{white-space:nowrap!important}
+  body.sales-person-detail-printing .sales-person-detail-scroll tfoot th,
+  body.sales-person-detail-printing .sales-person-detail-scroll tfoot td{color:#111!important;font-weight:500!important}
+}
+
+@media(max-width:620px){
+  .sales-stat-modal .sales-stat-detail-table,
+  .sales-stat-modal .sales-stat-detail-table th,
+  .sales-stat-modal .sales-stat-detail-table td,
+  .sales-workday-detail-table,
+  .sales-workday-detail-table th,
+  .sales-workday-detail-table td{font-size:13px!important}
+}
 </style>
 
 <style id="capacity-monitor-v21-style">
