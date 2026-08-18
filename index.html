@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260818-sales-gap-alert-v23 -->
+<!-- STARRED BUILD: 20260818-sales-active-period-v24 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4330,7 +4330,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260818-sales-gap-alert-v23";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260818-sales-active-period-v24";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -10445,14 +10445,9 @@ async function submitSalesRecord(){
     if(button)button.disabled=false;
   }
 }
-function salesBuildAdminData(records,performanceReturns,storesToInclude){
+function salesBuildAdminData(records,performanceReturns){
   var totals={grossAmount:0,returnAmount:0,recordCount:0};
   var storeMap=new Map();
-  (storesToInclude||[]).forEach(function(store){
-    var id=String(store&&store.id||'');
-    if(!id)return;
-    storeMap.set(id,{storeId:id,area:String(store.area||store.region||''),storeName:String(store.name||''),storeFloor:String(store.floor||''),grossAmount:0,returnAmount:0,recordCount:0});
-  });
   (records||[]).forEach(function(record){
     totals.grossAmount+=Number(record.grossAmount||0);
     totals.returnAmount+=Number(record.returnAmount||0);
@@ -10491,8 +10486,7 @@ function salesFilteredTestAdminData(){
   }).sort(function(a,b){return String(b.returnAssignedAt||'').localeCompare(String(a.returnAssignedAt||''))});
   var requests=salesReadTestRequests().slice().sort(function(a,b){return String(b.requestedAt).localeCompare(String(a.requestedAt))});
   var audits=salesReadTestAudits().slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))});
-  var testStores=person?[]:salesOrderStoreList().filter(function(store){return (!area||String(store.area||store.region||'')===String(area))&&(!storeId||String(store.id)===String(storeId))});
-  var result=salesBuildAdminData(rows,performanceReturns,testStores);
+  var result=salesBuildAdminData(rows,performanceReturns);
   var people=new Map();
   all.filter(function(record){return salesRecordType(record)==='sales'}).forEach(function(record){var id=salesCreditedLineUserId(record);if(id)people.set(id,salesCreditedName(record))});
   result.salespeople=Array.from(people.entries()).map(function(item){return {lineUserId:item[0],name:item[1]}}).sort(function(a,b){return a.name.localeCompare(b.name,'zh-Hant')});
@@ -10603,12 +10597,16 @@ function salesStoreMissingModel(row){
   var dates=salesMissingTrackingDates();
   if(!dates.length)return Object.assign({},empty,{enabled:true});
   var salesDates=new Set((salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&salesStoreRecordMatches(record,row)&&record.businessDate}).map(function(record){return String(record.businessDate)}));
+  if(!salesDates.size)return Object.assign({},empty,{enabled:true});
   var periods=(salesAdminData.reportingPeriods||[]).filter(function(setting){return storeId&&String(setting.storeId||'')===storeId}).slice().sort(function(a,b){return String(a.monthKey||'').localeCompare(String(b.monthKey||''))});
   var periodByMonth=new Map(periods.map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),setting]}));
-  var missingDates=dates.filter(function(date){var period=periodByMonth.get(date.slice(0,7));return !salesDates.has(date)&&!(period&&date>=String(period.endedFrom||''))});
+  var firstSalesDateByMonth=new Map();
+  Array.from(salesDates).sort().forEach(function(date){var monthKey=date.slice(0,7);if(!firstSalesDateByMonth.has(monthKey))firstSalesDateByMonth.set(monthKey,date)});
+  var activeDates=dates.filter(function(date){var firstSalesDate=firstSalesDateByMonth.get(date.slice(0,7));return firstSalesDate&&date>=firstSalesDate});
+  var missingDates=activeDates.filter(function(date){var period=periodByMonth.get(date.slice(0,7));return !salesDates.has(date)&&!(period&&date>=String(period.endedFrom||''))});
   var endCandidates=[];
   if(storeId){
-    var months=Array.from(new Set(dates.map(function(date){return date.slice(0,7)})));
+    var months=Array.from(new Set(activeDates.map(function(date){return date.slice(0,7)})));
     months.forEach(function(monthKey){
       if(periodByMonth.has(monthKey))return;
       var monthSales=Array.from(salesDates).filter(function(date){return date.slice(0,7)===monthKey}).sort();
@@ -10651,7 +10649,7 @@ function renderSalesStoreMissingNotice(summary){
   var model=salesStoreMissingModel(summary);var sections=[];
   if(model.enabled&&model.missingDates.length){
     var shown=model.missingDates.slice(0,18);var rest=model.missingDates.length-shown.length;
-    sections.push('<div class="sales-store-missing-warning"><strong>漏傳業績 '+String(model.missingDates.length)+' 天</strong><span>補上該店當天業績後，日期會自動從提示消失。</span><div class="sales-store-missing-dates">'+shown.map(function(date){return '<b>'+salesEsc(salesShortDate(date))+'</b>'}).join('')+(rest>0?'<em>另 '+String(rest)+' 天</em>':'')+'</div></div>');
+    sections.push('<div class="sales-store-missing-warning"><strong>漏傳業績 '+String(model.missingDates.length)+' 天</strong><span>從該店本月第一筆業績日起檢查；補上當天業績後，日期會自動消失。</span><div class="sales-store-missing-dates">'+shown.map(function(date){return '<b>'+salesEsc(salesShortDate(date))+'</b>'}).join('')+(rest>0?'<em>另 '+String(rest)+' 天</em>':'')+'</div></div>');
   }
   (model.endCandidates||[]).forEach(function(candidate){
     sections.push('<div class="sales-store-ending-action"><span>若 '+salesShortDate(candidate.endedFrom)+' 起已結束特賣，可一次排除後面 '+String(candidate.blankCount)+' 個空白日。</span><button type="button" data-store-id="'+salesEsc(summary.storeId)+'" data-ended-from="'+salesEsc(candidate.endedFrom)+'" onclick="markSalesStoreEnded(this.dataset.storeId,this.dataset.endedFrom)">從 '+salesEsc(salesShortDate(candidate.endedFrom))+' 起標記特賣結束</button></div>');
@@ -12513,8 +12511,8 @@ body.sales-stat-modal-open{overflow:hidden}
 }
 </style>
 
-<style id="sales-gap-alert-v23-style">
-/* v23：門市漏傳提示、特賣結束設定，以及門市明細資料統一為清單店點的 13px 字級。 */
+<style id="sales-active-period-v24-style">
+/* v24：僅從門市當月第一筆業績日起檢查漏傳；零業績月份視為尚未進櫃或已撤櫃。 */
 .sales-admin-list-row.has-missing{min-height:78px}
 .sales-store-missing-badge{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-top:6px;padding:4px 8px;border:1px solid #efc36e;border-radius:999px;background:#fff5df;color:#9a5d00;font-size:13px!important;font-weight:400!important;line-height:1.3;white-space:nowrap}
 .sales-store-missing-notice[hidden]{display:none!important}
