@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260818-sales-date-edit-v22 -->
+<!-- STARRED BUILD: 20260818-sales-gap-alert-v23 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4330,7 +4330,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260818-sales-date-edit-v22";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260818-sales-gap-alert-v23";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -9051,10 +9051,11 @@ var SALES_TEST_KEY = 'starred_sales_performance_test_v3';
 var SALES_TEST_REQUEST_KEY = 'starred_sales_edit_requests_test_v5';
 var SALES_TEST_AUDIT_KEY = 'starred_sales_audit_logs_test_v1';
 var SALES_TEST_ARCHIVE_KEY = 'starred_sales_backup_archives_test_v1';
+var SALES_TEST_REPORTING_PERIODS_KEY = 'starred_sales_store_reporting_periods_test_v23';
 var SALES_HIGH_VALUE_THRESHOLD = 10000;
 var salesOwnRecords = [];
 var salesRankings = {today:[], month:[], all:[], monthStoresTop10:[], monthStoresAll:[], storeDaily:[]};
-var salesAdminData = {records:[], performanceReturns:[], salespeople:[], totals:{grossAmount:0,returnAmount:0,recordCount:0}, byStore:[], byPerson:[], workDays:[], editRequests:[], auditLogs:[]};
+var salesAdminData = {records:[], performanceReturns:[], salespeople:[], totals:{grossAmount:0,returnAmount:0,recordCount:0}, byStore:[], byPerson:[], workDays:[], editRequests:[], auditLogs:[], reportingPeriods:[], missingTrackingEnabled:true};
 var salesBackupData = {archives:[],availableYears:[],currentYear:Number(salesToday().slice(0,4))};
 var SALES_OWN_PAGE_SIZE = 7;
 var SALES_RANKING_PAGE_SIZE = 10;
@@ -9222,6 +9223,13 @@ function salesReadTestArchives(){
 }
 function salesWriteTestArchives(archives){
   localStorage.setItem(SALES_TEST_ARCHIVE_KEY,JSON.stringify(archives||[]));
+}
+function salesReadTestReportingPeriods(){
+  try{return JSON.parse(localStorage.getItem(SALES_TEST_REPORTING_PERIODS_KEY)||'[]')||[]}
+  catch(_){return []}
+}
+function salesWriteTestReportingPeriods(rows){
+  localStorage.setItem(SALES_TEST_REPORTING_PERIODS_KEY,JSON.stringify(rows||[]));
 }
 function salesAddTestAudit(record,beforeData,afterData,action,reason,actorName){
   var logs=salesReadTestAudits();
@@ -10437,9 +10445,14 @@ async function submitSalesRecord(){
     if(button)button.disabled=false;
   }
 }
-function salesBuildAdminData(records,performanceReturns){
+function salesBuildAdminData(records,performanceReturns,storesToInclude){
   var totals={grossAmount:0,returnAmount:0,recordCount:0};
   var storeMap=new Map();
+  (storesToInclude||[]).forEach(function(store){
+    var id=String(store&&store.id||'');
+    if(!id)return;
+    storeMap.set(id,{storeId:id,area:String(store.area||store.region||''),storeName:String(store.name||''),storeFloor:String(store.floor||''),grossAmount:0,returnAmount:0,recordCount:0});
+  });
   (records||[]).forEach(function(record){
     totals.grossAmount+=Number(record.grossAmount||0);
     totals.returnAmount+=Number(record.returnAmount||0);
@@ -10452,7 +10465,7 @@ function salesBuildAdminData(records,performanceReturns){
     storeMap.set(key,current);
   });
   var personRows=(records||[]).filter(function(record){return salesRecordType(record)!=='return'}).concat(performanceReturns||[]);
-  return {records:records||[],performanceReturns:performanceReturns||[],salespeople:[],totals:totals,byStore:Array.from(storeMap.values()).sort(function(a,b){return b.grossAmount-a.grossAmount}),byPerson:salesBuildRanking(personRows,undefined,{attributeAssignedReturns:true,sortByNet:true}),workDays:salesBuildWorkdayStats(records||[],[]),editRequests:[]};
+  return {records:records||[],performanceReturns:performanceReturns||[],salespeople:[],totals:totals,byStore:Array.from(storeMap.values()).sort(function(a,b){return b.grossAmount-a.grossAmount}),byPerson:salesBuildRanking(personRows,undefined,{attributeAssignedReturns:true,sortByNet:true}),workDays:salesBuildWorkdayStats(records||[],[]),editRequests:[],auditLogs:[],reportingPeriods:[],missingTrackingEnabled:true};
 }
 function salesAttachEditRequests(records,requests){
   return (records||[]).map(function(record){
@@ -10478,7 +10491,8 @@ function salesFilteredTestAdminData(){
   }).sort(function(a,b){return String(b.returnAssignedAt||'').localeCompare(String(a.returnAssignedAt||''))});
   var requests=salesReadTestRequests().slice().sort(function(a,b){return String(b.requestedAt).localeCompare(String(a.requestedAt))});
   var audits=salesReadTestAudits().slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))});
-  var result=salesBuildAdminData(rows,performanceReturns);
+  var testStores=person?[]:salesOrderStoreList().filter(function(store){return (!area||String(store.area||store.region||'')===String(area))&&(!storeId||String(store.id)===String(storeId))});
+  var result=salesBuildAdminData(rows,performanceReturns,testStores);
   var people=new Map();
   all.filter(function(record){return salesRecordType(record)==='sales'}).forEach(function(record){var id=salesCreditedLineUserId(record);if(id)people.set(id,salesCreditedName(record))});
   result.salespeople=Array.from(people.entries()).map(function(item){return {lineUserId:item[0],name:item[1]}}).sort(function(a,b){return a.name.localeCompare(b.name,'zh-Hant')});
@@ -10487,6 +10501,11 @@ function salesFilteredTestAdminData(){
   result.records=result.records.map(function(record){return Object.assign({},record,{auditLogs:audits.filter(function(audit){return String(audit.salesReportId)===String(record.id)})})});
   result.editRequests=requests;
   result.auditLogs=audits;
+  result.reportingPeriods=salesReadTestReportingPeriods().filter(function(setting){
+    var month=String(setting.monthKey||'');
+    return month>=fromMonth&&month<=toMonth&&(!storeId||String(setting.storeId)===String(storeId));
+  });
+  result.missingTrackingEnabled=!person;
   return result;
 }
 function salesApplyRealNames(){
@@ -10534,7 +10553,9 @@ async function loadSalesAdminReport(){
       byPerson:Array.isArray(result.byPerson)?result.byPerson:[],
       workDays:Array.isArray(result.workDays)?result.workDays:[],
       editRequests:Array.isArray(result.editRequests)?result.editRequests:[],
-      auditLogs:Array.isArray(result.auditLogs)?result.auditLogs:[]
+      auditLogs:Array.isArray(result.auditLogs)?result.auditLogs:[],
+      reportingPeriods:Array.isArray(result.reportingPeriods)?result.reportingPeriods:[],
+      missingTrackingEnabled:result.missingTrackingEnabled!==false
     };
     salesApplyRealNames();
     salesAdminData.records=salesAttachEditRequests(salesAdminData.records,salesAdminData.editRequests);
@@ -10551,6 +10572,95 @@ function salesAdminPeriodLabel(){
   var to=(salesEl('salesAdminDateTo')||{}).value||'不限日期';
   return from+' ～ '+to;
 }
+function salesIsoAddDays(value,offset){
+  var date=new Date(String(value||'')+'T12:00:00Z');
+  if(Number.isNaN(date.getTime()))return '';
+  date.setUTCDate(date.getUTCDate()+Number(offset||0));
+  return date.toISOString().slice(0,10);
+}
+function salesShortDate(value){
+  var parts=String(value||'').split('-');
+  return parts.length===3?Number(parts[1])+'/'+Number(parts[2]):String(value||'');
+}
+function salesMissingTrackingDates(){
+  var from=String((salesEl('salesAdminDateFrom')||{}).value||salesMonth()+'-01');
+  var selectedTo=String((salesEl('salesAdminDateTo')||{}).value||salesToday());
+  var yesterday=salesIsoAddDays(salesToday(),-1);
+  var to=selectedTo<yesterday?selectedTo:yesterday;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to)return [];
+  var dates=[];var cursor=from;
+  while(cursor&&cursor<=to&&dates.length<370){dates.push(cursor);cursor=salesIsoAddDays(cursor,1)}
+  return dates;
+}
+function salesStoreRecordMatches(record,row){
+  if(row&&row.storeId)return String(record&&record.storeId||'')===String(row.storeId);
+  return salesStoreText(record)===salesStoreText(row);
+}
+function salesStoreMissingModel(row){
+  var empty={enabled:false,missingDates:[],periods:[],endCandidates:[]};
+  if(!row||salesAdminData.missingTrackingEnabled===false)return empty;
+  var storeId=String(row.storeId||'');
+  var dates=salesMissingTrackingDates();
+  if(!dates.length)return Object.assign({},empty,{enabled:true});
+  var salesDates=new Set((salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&salesStoreRecordMatches(record,row)&&record.businessDate}).map(function(record){return String(record.businessDate)}));
+  var periods=(salesAdminData.reportingPeriods||[]).filter(function(setting){return storeId&&String(setting.storeId||'')===storeId}).slice().sort(function(a,b){return String(a.monthKey||'').localeCompare(String(b.monthKey||''))});
+  var periodByMonth=new Map(periods.map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),setting]}));
+  var missingDates=dates.filter(function(date){var period=periodByMonth.get(date.slice(0,7));return !salesDates.has(date)&&!(period&&date>=String(period.endedFrom||''))});
+  var endCandidates=[];
+  if(storeId){
+    var months=Array.from(new Set(dates.map(function(date){return date.slice(0,7)})));
+    months.forEach(function(monthKey){
+      if(periodByMonth.has(monthKey))return;
+      var monthSales=Array.from(salesDates).filter(function(date){return date.slice(0,7)===monthKey}).sort();
+      if(!monthSales.length)return;
+      var endedFrom=salesIsoAddDays(monthSales[monthSales.length-1],1);
+      var monthTail=dates.filter(function(date){return date.slice(0,7)===monthKey&&date>=endedFrom});
+      if(monthTail.length&&monthTail.every(function(date){return !salesDates.has(date)}))endCandidates.push({monthKey:monthKey,endedFrom:endedFrom,blankCount:monthTail.length});
+    });
+  }
+  return {enabled:true,missingDates:missingDates,periods:periods,endCandidates:endCandidates};
+}
+async function markSalesStoreEnded(storeId,endedFrom){
+  storeId=String(storeId||'');endedFrom=String(endedFrom||'');
+  var summary=(salesAdminData.byStore||[]).find(function(row){return String(row.storeId||'')===storeId});
+  if(!summary||!/^\d{4}-\d{2}-\d{2}$/.test(endedFrom))return;
+  if(!confirm('確定將「'+salesStoreText(summary)+'」從 '+salesShortDate(endedFrom)+' 起標記為特賣結束？\n這一天之後的空白日期將不再顯示漏傳提示。'))return;
+  salesSetAdminStatus('正在標記特賣結束…','working');
+  try{
+    if(window.STARRED_SALES_TEST_MODE){
+      var monthKey=endedFrom.slice(0,7);var settings=salesReadTestReportingPeriods().filter(function(item){return !(String(item.storeId)===storeId&&String(item.monthKey)===monthKey)});
+      settings.push({id:'reporting-period-test-'+Date.now(),storeId:storeId,monthKey:monthKey,endedFrom:endedFrom,endedReason:'special_sale_ended',endedByName:'測試管理員',updatedAt:new Date().toISOString()});salesWriteTestReportingPeriods(settings);
+    }else await starredApi('sales_admin_set_store_reporting_end',{storeId:storeId,endedFrom:endedFrom});
+    await loadSalesAdminReport();openSalesStatDetail('store',storeId);
+    salesSetAdminStatus('已標記特賣結束；後續空白日期不再列為漏傳。','success');
+  }catch(error){salesSetAdminStatus('標記失敗：'+String(error&&error.message||error),'error')}
+}
+async function clearSalesStoreEnded(storeId,monthKey){
+  storeId=String(storeId||'');monthKey=String(monthKey||'');
+  if(!confirm('確定取消 '+monthKey+' 的特賣結束標記？\n取消後，空白日期會重新顯示漏傳提示。'))return;
+  salesSetAdminStatus('正在取消特賣結束標記…','working');
+  try{
+    if(window.STARRED_SALES_TEST_MODE)salesWriteTestReportingPeriods(salesReadTestReportingPeriods().filter(function(item){return !(String(item.storeId)===storeId&&String(item.monthKey)===monthKey)}));
+    else await starredApi('sales_admin_clear_store_reporting_end',{storeId:storeId,monthKey:monthKey});
+    await loadSalesAdminReport();openSalesStatDetail('store',storeId);
+    salesSetAdminStatus('已取消特賣結束標記。','success');
+  }catch(error){salesSetAdminStatus('取消失敗：'+String(error&&error.message||error),'error')}
+}
+function renderSalesStoreMissingNotice(summary){
+  var box=salesEl('salesStoreMissingNotice');if(!box)return;
+  var model=salesStoreMissingModel(summary);var sections=[];
+  if(model.enabled&&model.missingDates.length){
+    var shown=model.missingDates.slice(0,18);var rest=model.missingDates.length-shown.length;
+    sections.push('<div class="sales-store-missing-warning"><strong>漏傳業績 '+String(model.missingDates.length)+' 天</strong><span>補上該店當天業績後，日期會自動從提示消失。</span><div class="sales-store-missing-dates">'+shown.map(function(date){return '<b>'+salesEsc(salesShortDate(date))+'</b>'}).join('')+(rest>0?'<em>另 '+String(rest)+' 天</em>':'')+'</div></div>');
+  }
+  (model.endCandidates||[]).forEach(function(candidate){
+    sections.push('<div class="sales-store-ending-action"><span>若 '+salesShortDate(candidate.endedFrom)+' 起已結束特賣，可一次排除後面 '+String(candidate.blankCount)+' 個空白日。</span><button type="button" data-store-id="'+salesEsc(summary.storeId)+'" data-ended-from="'+salesEsc(candidate.endedFrom)+'" onclick="markSalesStoreEnded(this.dataset.storeId,this.dataset.endedFrom)">從 '+salesEsc(salesShortDate(candidate.endedFrom))+' 起標記特賣結束</button></div>');
+  });
+  (model.periods||[]).forEach(function(setting){
+    sections.push('<div class="sales-store-ending-current"><span>'+salesEsc(String(setting.monthKey||''))+' 已設定從 '+salesEsc(salesShortDate(setting.endedFrom))+' 起特賣結束'+(setting.endedByName?'（'+salesEsc(setting.endedByName)+'）':'')+'</span><button type="button" data-store-id="'+salesEsc(summary.storeId)+'" data-month-key="'+salesEsc(setting.monthKey)+'" onclick="clearSalesStoreEnded(this.dataset.storeId,this.dataset.monthKey)">取消標記</button></div>');
+  });
+  box.innerHTML=sections.join('');box.hidden=!sections.length;
+}
 function salesAdminStatListHtml(kind,rows){
   if(!rows.length)return '<div class="sales-empty">目前沒有'+(kind==='store'?'門市':'人員業績')+'統計資料。</div>';
   var isStore=kind==='store';
@@ -10562,7 +10672,9 @@ function salesAdminStatListHtml(kind,rows){
     var title=isStore?salesStoreText(row):salesPersonName(row.lineUserId,row.name||'LINE 使用者');
     var sub=isStore?((typeof areaText!=='undefined'&&areaText[row.area])||row.area||'未設定區域'):String((row.locations||[]).length)+' 個店點';
     var netAmount=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));
-    return '<button type="button" class="sales-admin-list-row" data-stat-key="'+salesEsc(key)+'" onclick="openSalesStatDetail(\''+kind+'\',this.dataset.statKey)"><span class="rank">'+String(index+1)+'</span><span class="identity"><span class="title">'+salesEsc(title)+'</span><small>'+salesEsc(sub)+'</small></span><span class="gross">'+salesMoney(row.grossAmount)+'</span><span class="return">'+salesMoney(row.returnAmount)+'</span>'+(isStore?'':'<span class="net">'+salesMoney(netAmount)+'</span>')+'<span class="count">'+String(row.recordCount||0)+' 筆</span><span class="open">查看 ›</span></button>';
+    var missing=isStore?salesStoreMissingModel(row):null;
+    var missingBadge=missing&&missing.enabled&&missing.missingDates.length?'<span class="sales-store-missing-badge">漏傳 '+String(missing.missingDates.length)+' 天</span>':'';
+    return '<button type="button" class="sales-admin-list-row'+(missingBadge?' has-missing':'')+'" data-stat-key="'+salesEsc(key)+'" onclick="openSalesStatDetail(\''+kind+'\',this.dataset.statKey)"><span class="rank">'+String(index+1)+'</span><span class="identity"><span class="title">'+salesEsc(title)+'</span><small>'+salesEsc(sub)+'</small>'+missingBadge+'</span><span class="gross">'+salesMoney(row.grossAmount)+'</span><span class="return">'+salesMoney(row.returnAmount)+'</span>'+(isStore?'':'<span class="net">'+salesMoney(netAmount)+'</span>')+'<span class="count">'+String(row.recordCount||0)+' 筆</span><span class="open">查看 ›</span></button>';
   }).join('');
   return '<div class="sales-admin-compact-list '+kind+'">'+header+body+'</div>';
 }
@@ -10877,7 +10989,7 @@ function ensureSalesStatDetailModal(){
   modal.id='salesStatDetailModal';
   modal.className='sales-stat-modal';
   modal.hidden=true;
-  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b></div><div id="salesStatDetailNetCard" class="net" hidden><span>當月業績</span><b id="salesStatDetailNet">$0</b></div><div><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
+  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b></div><div id="salesStatDetailNetCard" class="net" hidden><span>當月業績</span><b id="salesStatDetailNet">$0</b></div><div><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesStatDetail()});
   document.body.appendChild(modal);
   return modal;
@@ -10898,6 +11010,7 @@ function openSalesStatDetail(kind,key){
   }
   salesStatDetailState={kind:kind,key:key,rows:rows,view:'list'};
   var modal=ensureSalesStatDetailModal();
+  modal.classList.toggle('store-detail-mode',kind==='store');
   var title=kind==='store'?salesStoreText(summary):salesPersonName(summary.lineUserId,summary.name||'LINE 使用者');
   if(salesEl('salesStatDetailTitle'))salesEl('salesStatDetailTitle').textContent=title+'｜業績明細';
   if(salesEl('salesStatDetailPeriod'))salesEl('salesStatDetailPeriod').textContent='查詢區間：'+salesAdminPeriodLabel();
@@ -10909,6 +11022,7 @@ function openSalesStatDetail(kind,key){
   if(salesEl('salesStatDetailCount'))salesEl('salesStatDetailCount').textContent=String(rows.length)+' 筆';
   if(salesEl('salesStatDetailTargetHead'))salesEl('salesStatDetailTargetHead').textContent=kind==='store'?'銷售人員':'店點';
   if(salesEl('salesStatDetailViewSwitcher'))salesEl('salesStatDetailViewSwitcher').hidden=kind!=='store';
+  if(kind==='store')renderSalesStoreMissingNotice(summary);else if(salesEl('salesStoreMissingNotice'))salesEl('salesStoreMissingNotice').hidden=true;
   var body=salesEl('salesStatDetailBody');
   if(body)body.innerHTML=rows.length?rows.map(function(record){
     var isReturn=salesRecordType(record)==='return';
@@ -11919,6 +12033,8 @@ window.resetSalesAdminFilters=resetSalesAdminFilters;
 window.showSalesReportView=showSalesReportView;
 window.openSalesStatDetail=openSalesStatDetail;
 window.showSalesStatDetailView=showSalesStatDetailView;
+window.markSalesStoreEnded=markSalesStoreEnded;
+window.clearSalesStoreEnded=clearSalesStoreEnded;
 window.closeSalesStatDetail=closeSalesStatDetail;
 window.printSalesStatDetail=printSalesStatDetail;
 window.exportSalesStatDetailExcel=exportSalesStatDetailExcel;
@@ -12397,6 +12513,46 @@ body.sales-stat-modal-open{overflow:hidden}
 }
 </style>
 
+<style id="sales-gap-alert-v23-style">
+/* v23：門市漏傳提示、特賣結束設定，以及門市明細資料統一為清單店點的 13px 字級。 */
+.sales-admin-list-row.has-missing{min-height:78px}
+.sales-store-missing-badge{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-top:6px;padding:4px 8px;border:1px solid #efc36e;border-radius:999px;background:#fff5df;color:#9a5d00;font-size:13px!important;font-weight:400!important;line-height:1.3;white-space:nowrap}
+.sales-store-missing-notice[hidden]{display:none!important}
+.sales-store-missing-notice{display:grid;gap:7px;margin:0 20px 10px;color:#294858;font-size:13px;line-height:1.55}
+.sales-store-missing-warning,.sales-store-ending-action,.sales-store-ending-current{display:flex;align-items:center;flex-wrap:wrap;gap:7px 11px;padding:10px 12px;border-radius:11px}
+.sales-store-missing-warning{border:1px solid #efc36e;background:#fff8e8;color:#875600}
+.sales-store-missing-warning strong,.sales-store-missing-warning span,.sales-store-ending-action span,.sales-store-ending-current span{font-size:13px!important;font-weight:400!important}
+.sales-store-missing-warning strong{color:#9a5d00}
+.sales-store-missing-dates{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:5px}
+.sales-store-missing-dates b,.sales-store-missing-dates em{padding:3px 7px;border-radius:999px;background:#fff;color:#875600;font-size:13px!important;font-style:normal;font-weight:400!important}
+.sales-store-ending-action{border:1px solid #cbdce4;background:#f2f7f9}
+.sales-store-ending-current{border:1px solid #cfe2d5;background:#eef7f1;color:#32644a}
+.sales-store-ending-action span,.sales-store-ending-current span{flex:1 1 320px}
+.sales-store-ending-action button,.sales-store-ending-current button{min-height:36px;padding:7px 11px;border:1px solid #7894a2;border-radius:8px;background:#fff;color:#294858;font-size:13px!important;font-weight:400!important;cursor:pointer}
+.sales-store-ending-current button{border-color:#7aa189;color:#32644a}
+.sales-stat-modal.store-detail-mode .sales-stat-dialog>header p,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-summary span,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-summary b,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-switcher>span,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-switcher button,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-table,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-table th,
+.sales-stat-modal.store-detail-mode .sales-stat-detail-table td,
+.sales-stat-modal.store-detail-mode .sales-stat-type,
+.sales-stat-modal.store-detail-mode .sales-store-matrix-note,
+.sales-stat-modal.store-detail-mode .sales-store-matrix-note span,
+.sales-stat-modal.store-detail-mode .sales-store-matrix-note b,
+.sales-stat-modal.store-detail-mode .sales-store-matrix-scroll table,
+.sales-stat-modal.store-detail-mode .sales-store-matrix-scroll th,
+.sales-stat-modal.store-detail-mode .sales-store-matrix-scroll td,
+.sales-stat-modal.store-detail-mode .sales-audit-plain,
+.sales-stat-modal.store-detail-mode .sales-audit-amount-btn,
+.sales-stat-modal.store-detail-mode .sales-audit-amount-btn b,
+.sales-stat-modal.store-detail-mode .sales-stat-dialog>footer button{font-size:13px!important;font-weight:400!important}
+@media(max-width:620px){.sales-store-missing-notice{margin:0 14px 9px}.sales-store-missing-warning,.sales-store-ending-action,.sales-store-ending-current{align-items:stretch;flex-direction:column}.sales-store-ending-action button,.sales-store-ending-current button{width:100%}.sales-stat-modal.store-detail-mode .sales-store-matrix-scroll table{font-size:13px!important}}
+@media print{body.sales-stat-printing .sales-store-missing-notice{display:none!important}}
+</style>
+
 <style id="capacity-monitor-v21-style">
 .capacity-panel{display:grid;gap:14px}.capacity-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.capacity-heading>div:first-child>span,.capacity-breakdown-card header span{display:block;color:#688496;font-size:9px;font-weight:800;letter-spacing:.13em}.capacity-heading h2{margin:4px 0 0;color:#294858;font-size:23px}.capacity-heading p{margin:5px 0 0;color:#748994;font-size:11px;line-height:1.55}.capacity-heading-actions{display:flex;align-items:end;gap:8px;flex:0 0 auto}.capacity-heading-actions label{display:grid;gap:4px}.capacity-heading-actions label>span{color:#748994;font-size:9px}.capacity-heading-actions select,.capacity-heading-actions button{height:39px}.capacity-reference-note{padding:10px 12px;border:1px solid #d8e3e8;border-radius:11px;background:#f7fafb;color:#617985;font-size:10px;line-height:1.55}.capacity-status{min-height:18px;color:#748994;font-size:10px}.capacity-status.working{color:#315f79}.capacity-status.success{color:#2f714b}.capacity-status.error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#a13d35}.capacity-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.capacity-summary-grid article{min-width:0;padding:14px;border:1px solid #dbe5e9;border-radius:13px;background:#fff;box-shadow:0 3px 12px rgba(39,66,83,.045)}.capacity-summary-grid span,.capacity-summary-grid b,.capacity-summary-grid small{display:block}.capacity-summary-grid span{color:#78909b;font-size:9px}.capacity-summary-grid b{overflow:hidden;margin-top:5px;color:#294858;font-size:21px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}.capacity-summary-grid small{margin-top:4px;color:#8a9ba3;font-size:8px;line-height:1.4}.capacity-warning-list{display:grid;gap:7px}.capacity-warning{padding:9px 11px;border-radius:10px;background:#edf7f1;color:#2f714b;font-size:10px;line-height:1.5}.capacity-warning.warn{background:#fff8e8;color:#94610a}.capacity-warning.danger{background:#fff0ef;color:#a13d35}.capacity-project-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.capacity-project-card{padding:13px 14px;border:1px solid #d8e3e7;border-radius:13px;background:#fbfcfd}.capacity-project-card>header{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:10px}.capacity-project-card>header b{color:#365462;font-size:13px}.capacity-project-card>header small{color:#82959e;font-size:8px}.capacity-meter{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:9px;align-items:center;margin-top:8px}.capacity-meter>span{color:#637b87;font-size:9px}.capacity-meter>strong{min-width:68px;color:#45616f;font-size:9px;text-align:right}.capacity-meter-track{height:8px;overflow:hidden;border-radius:999px;background:#e7edf0}.capacity-meter-fill{height:100%;border-radius:inherit;background:#55a273}.capacity-meter-fill.warn{background:#d39a32}.capacity-meter-fill.danger{background:#cb5750}.capacity-breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.capacity-breakdown-card{min-width:0;overflow:hidden;border:1px solid #d8e3e7;border-radius:13px;background:#fff}.capacity-breakdown-card header{padding:12px 13px;border-bottom:1px solid #e3eaed;background:#f8fafb}.capacity-breakdown-card h3{margin:3px 0 0;color:#365462;font-size:14px}.capacity-table-wrap{max-height:310px;overflow:auto}.capacity-table{width:100%;border-collapse:collapse;color:#4d6875;font-size:9px}.capacity-table th,.capacity-table td{padding:8px 9px;border-bottom:1px solid #e7ecef;text-align:left}.capacity-table th{position:sticky;z-index:1;top:0;background:#2d4b5b;color:#fff;font-weight:500}.capacity-table td.amount{text-align:right;font-variant-numeric:tabular-nums}.capacity-table tr:last-child td{border-bottom:0}.capacity-table small{display:block;margin-top:2px;color:#8b9ba3;font-size:7px}.capacity-empty{padding:24px;color:#82959e;font-size:10px;text-align:center}.capacity-upgrade-guide{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 14px;border:1px solid #d8e3e8;border-radius:13px;background:#f4f8fa}.capacity-upgrade-guide b{color:#365462;font-size:12px}.capacity-upgrade-guide p{margin:4px 0 0;color:#6f8490;font-size:9px;line-height:1.55}.capacity-upgrade-guide a{flex:0 0 auto;padding:9px 12px;border-radius:9px;background:#294b5e;color:#fff;text-decoration:none;font-size:9px;font-weight:700}
 @media(max-width:900px){.capacity-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.capacity-project-list,.capacity-breakdown-grid{grid-template-columns:1fr}}
@@ -12407,7 +12563,7 @@ body.sales-stat-modal-open{overflow:hidden}
 var CAPACITY_PLAN_KEY='starred_capacity_reference_plan_v1';
 var capacityUsageData=null;
 var capacityLoading=false;
-var capacityTableLabels={orders:'訂單文字',order_photos:'訂單照片索引',sales_reports:'業績資料',sales_report_edit_requests:'業績修改申請',sales_report_audit_logs:'業績修改軌跡',sales_backup_archives:'業績年度備份索引',department_events:'活動資料',department_stores:'活動門市',event_images:'活動照片索引',admins:'後台帳號',line_users:'LINE 使用者',stores:'百貨門市'};
+var capacityTableLabels={orders:'訂單文字',order_photos:'訂單照片索引',sales_reports:'業績資料',sales_report_edit_requests:'業績修改申請',sales_report_audit_logs:'業績修改軌跡',sales_backup_archives:'業績年度備份索引',sales_store_reporting_periods:'特賣結束設定',department_events:'活動資料',department_stores:'活動門市',event_images:'活動照片索引',admins:'後台帳號',line_users:'LINE 使用者',stores:'百貨門市'};
 var capacityBucketLabels={'order-images':'訂單照片','activity-images':'活動照片','sales-backups':'年度業績備份'};
 function capacityEsc(value){return typeof escapeHtml==='function'?escapeHtml(value):String(value==null?'':value)}
 function capacityFormatBytes(value){var bytes=Math.max(0,Number(value||0));if(bytes<1024)return Math.round(bytes)+' B';var units=['KB','MB','GB','TB'];var size=bytes;var unit='B';for(var i=0;i<units.length&&size>=1024;i++){size/=1024;unit=units[i]}return size.toLocaleString('zh-TW',{minimumFractionDigits:size<10?2:size<100?1:0,maximumFractionDigits:size<10?2:size<100?1:0})+' '+unit}
