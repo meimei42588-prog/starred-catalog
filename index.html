@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260818-print-a4-v25 -->
+<!-- STARRED BUILD: 20260818-print-high-value-v26 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -10977,9 +10977,22 @@ function salesStoreMatrixModel(rows){
     var valueKey=String(record.businessDate||'')+'\u0001'+key;values.set(valueKey,Number(values.get(valueKey)||0)+Number(record.grossAmount||0));
   });
   var collator=salesPersonSortCollator();var people=Array.from(peopleMap.values()).sort(function(a,b){return collator.compare(salesPersonSurname(a.name),salesPersonSurname(b.name))||collator.compare(a.name,b.name)});var totals=new Map();people.forEach(function(person){totals.set(person.key,0)});
+  var firstSalesByMonth=new Map();salesRows.forEach(function(record){var date=String(record.businessDate||'');var monthKey=date.slice(0,7);if(date&&(!firstSalesByMonth.has(monthKey)||date<firstSalesByMonth.get(monthKey)))firstSalesByMonth.set(monthKey,date)});
   var endedByMonth=new Map(salesStoreReportingEndSettings((salesStatDetailState||{}).summary).map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),String(setting.endedFrom||'')]}));
-  var matrixRows=salesStoreMatrixDates(rows).map(function(date){var cells={};var total=0;people.forEach(function(person){var amount=Number(values.get(date+'\u0001'+person.key)||0);cells[person.key]=amount;totals.set(person.key,Number(totals.get(person.key)||0)+amount);total+=amount});var endedFrom=endedByMonth.get(String(date).slice(0,7));return {date:date,cells:cells,total:total,specialSaleEnded:Boolean(!total&&endedFrom&&date>=endedFrom)}});
+  var matrixRows=salesStoreMatrixDates(rows).map(function(date){var cells={};var total=0;people.forEach(function(person){var amount=Number(values.get(date+'\u0001'+person.key)||0);cells[person.key]=amount;totals.set(person.key,Number(totals.get(person.key)||0)+amount);total+=amount});var monthKey=String(date).slice(0,7);var firstSalesDate=firstSalesByMonth.get(monthKey);var endedFrom=endedByMonth.get(monthKey);return {date:date,cells:cells,total:total,beforeFirstSale:Boolean(!total&&firstSalesDate&&date<firstSalesDate),specialSaleEnded:Boolean(!total&&endedFrom&&date>=endedFrom)}});
   return {people:people,rows:matrixRows,totals:totals,grandTotal:matrixRows.reduce(function(sum,row){return sum+Number(row.total||0)},0)};
+}
+function salesStoreMatrixDisplayRows(rows){
+  var output=[];var current=null;
+  (rows||[]).forEach(function(row){
+    var status=row.beforeFirstSale?'not-started':row.specialSaleEnded?'ended':'';
+    if(status){
+      if(current&&current.rangeStatus===status&&String(current.rangeEnd||'').slice(0,7)===String(row.date||'').slice(0,7)&&salesIsoAddDays(current.rangeEnd,1)===row.date){current.rangeEnd=row.date;return}
+      current={rangeStatus:status,rangeStart:row.date,rangeEnd:row.date};output.push(current);return;
+    }
+    current=null;output.push(row);
+  });
+  return output;
 }
 function salesStoreMatrixExportRows(rows){
   var model=salesStoreMatrixModel(rows);var exportRows=model.rows.map(function(row){var result={'日期':row.date};model.people.forEach(function(person){result[person.name]=Number(row.cells[person.key]||0)});result['銷售總額']=Number(row.total||0);return result});
@@ -10990,8 +11003,8 @@ function renderSalesStoreMatrix(){
   if(state.kind!=='store'){box.innerHTML='';return}
   var model=salesStoreMatrixModel(state.rows||[]);if(!model.people.length){box.innerHTML='<div class="sales-empty">此門市在篩選區間內沒有銷售業績可製作月表。</div>';return}
   var formatter=new Intl.NumberFormat('zh-TW');var head='<thead><tr><th>日期</th>'+model.people.map(function(person){return '<th>'+salesEsc(person.name)+'</th>'}).join('')+'<th>銷售總額</th></tr></thead>';
-  var body='<tbody>'+model.rows.map(function(row){if(row.specialSaleEnded)return '<tr class="sales-store-special-ended-row"><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th><td colspan="'+String(model.people.length+1)+'">特賣結束</td></tr>';return '<tr><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="amount total '+(row.total>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
-  var foot='<tfoot><tr><th>合計</th>'+model.people.map(function(person){var amount=Number(model.totals.get(person.key)||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+formatter.format(amount)+'</td>'}).join('')+'<td class="amount grand">'+formatter.format(model.grandTotal)+'</td></tr></tfoot>';
+  var displayRows=salesStoreMatrixDisplayRows(model.rows);var body='<tbody>'+displayRows.map(function(row){if(row.rangeStatus){var rangeLabel=salesPersonDetailDateLabel(row.rangeStart)+(row.rangeEnd!==row.rangeStart?'～'+salesPersonDetailDateLabel(row.rangeEnd):'');var isEnded=row.rangeStatus==='ended';return '<tr class="'+(isEnded?'sales-store-special-ended-row':'sales-store-not-started-row')+'"><th class="date">'+salesEsc(rangeLabel)+'</th><td colspan="'+String(model.people.length+1)+'">'+(isEnded?'特賣結束':'尚未進櫃')+'</td></tr>'}return '<tr><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="amount total '+(row.total>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
+  var foot='<tfoot><tr><th>合計</th>'+model.people.map(function(person){var amount=Number(model.totals.get(person.key)||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+formatter.format(amount)+'</td>'}).join('')+'<td class="amount grand '+(model.grandTotal>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+formatter.format(model.grandTotal)+'</td></tr></tfoot>';
   var width=Math.max(720,125+model.people.length*120+135);box.innerHTML='<div class="sales-store-matrix-note"><span>日期 × 銷售人員</span><b>'+String(model.people.length)+' 位人員・'+String(model.rows.length)+' 天</b></div><div class="sales-store-matrix-scroll"><table style="min-width:'+String(width)+'px">'+head+body+foot+'</table></div>';
 }
 function showSalesStatDetailView(view,button){
@@ -11033,11 +11046,12 @@ function openSalesStatDetail(kind,key){
   var title=kind==='store'?salesStoreText(summary):salesPersonName(summary.lineUserId,summary.name||'LINE 使用者');
   if(salesEl('salesStatDetailTitle'))salesEl('salesStatDetailTitle').textContent=title+'｜業績明細';
   if(salesEl('salesStatDetailPeriod'))salesEl('salesStatDetailPeriod').textContent='查詢區間：'+salesAdminPeriodLabel();
-  if(salesEl('salesStatDetailGross'))salesEl('salesStatDetailGross').textContent=salesMoney(summary.grossAmount);
-  if(salesEl('salesStatDetailReturns'))salesEl('salesStatDetailReturns').textContent=salesMoney(summary.returnAmount);
+  var grossSummaryAmount=Number(summary.grossAmount||0);var returnSummaryAmount=Number(summary.returnAmount||0);var netSummaryAmount=Number(summary.netAmount!=null?summary.netAmount:grossSummaryAmount-returnSummaryAmount);
+  var grossSummaryEl=salesEl('salesStatDetailGross');if(grossSummaryEl){grossSummaryEl.textContent=salesMoney(grossSummaryAmount);grossSummaryEl.classList.toggle('sales-high-value',Math.abs(grossSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
+  var returnSummaryEl=salesEl('salesStatDetailReturns');if(returnSummaryEl){returnSummaryEl.textContent=salesMoney(returnSummaryAmount);returnSummaryEl.classList.toggle('sales-high-value',Math.abs(returnSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   if(salesEl('salesStatDetailReturnsLabel'))salesEl('salesStatDetailReturnsLabel').textContent=kind==='person'?'退貨':'退貨另計';
   if(salesEl('salesStatDetailNetCard'))salesEl('salesStatDetailNetCard').hidden=kind!=='person';
-  if(salesEl('salesStatDetailNet'))salesEl('salesStatDetailNet').textContent=salesMoney(summary.netAmount!=null?summary.netAmount:Number(summary.grossAmount||0)-Number(summary.returnAmount||0));
+  var netSummaryEl=salesEl('salesStatDetailNet');if(netSummaryEl){netSummaryEl.textContent=salesMoney(netSummaryAmount);netSummaryEl.classList.toggle('sales-high-value',Math.abs(netSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   if(salesEl('salesStatDetailCount'))salesEl('salesStatDetailCount').textContent=String(rows.length)+' 筆';
   if(salesEl('salesStatDetailTargetHead'))salesEl('salesStatDetailTargetHead').textContent=kind==='store'?'銷售人員':'店點';
   if(salesEl('salesStatDetailViewSwitcher'))salesEl('salesStatDetailViewSwitcher').hidden=kind!=='store';
@@ -12580,8 +12594,8 @@ body.sales-stat-modal-open{overflow:hidden}
 @media print{body.sales-stat-printing .sales-store-missing-notice{display:none!important}}
 </style>
 
-<style id="sales-print-a4-v25-style">
-/* v25：業績／上班天數明細統一 13px；友善列印每月以單張 A4 橫式輸出。 */
+<style id="sales-print-a4-v26-style">
+/* v26：友善列印恢復破萬紅字；進櫃前與特賣結束的連續日期合併顯示。 */
 .sales-store-print-ending{display:none}
 .sales-stat-modal .sales-stat-detail-table,
 .sales-stat-modal .sales-stat-detail-table th,
@@ -12607,6 +12621,7 @@ body.sales-stat-modal-open{overflow:hidden}
 .sales-workday-detail-table td{color:#294858}
 .sales-workday-detail-table th{color:#fff}
 .sales-workday-detail-confirmer{margin-top:3px;color:#536d7a!important}
+.sales-store-not-started-row td{background:#f2f7f9!important;color:#526e7d!important;font-size:13px!important;font-weight:400!important;text-align:center;letter-spacing:.04em}
 .sales-store-special-ended-row td{background:#fff7e5!important;color:#875600!important;font-size:13px!important;font-weight:400!important;text-align:center;letter-spacing:.04em}
 
 @page{size:A4 landscape;margin:5mm}
@@ -12687,11 +12702,19 @@ body.sales-stat-modal-open{overflow:hidden}
     font-size:13px!important;font-weight:400!important;line-height:1!important
   }
   body.sales-stat-printing .sales-audit-amount-btn small{display:none!important}
+  body.sales-stat-printing .sales-store-not-started-row td,
   body.sales-stat-printing .sales-store-special-ended-row td{
     background:#fff!important;color:#111!important;font-size:13px!important;font-weight:500!important;text-align:center!important
   }
   body.sales-stat-printing .sales-store-matrix-scroll tfoot th,
   body.sales-stat-printing .sales-store-matrix-scroll tfoot td{background:#fff!important;color:#111!important;font-weight:500!important}
+
+  body.sales-stat-printing .sales-stat-detail-summary .sales-high-value,
+  body.sales-stat-printing .sales-stat-detail-table .sales-high-value,
+  body.sales-stat-printing .sales-store-matrix-scroll .sales-high-value,
+  body.sales-person-detail-printing .sales-person-detail-scroll .sales-high-value{
+    color:#c62828!important
+  }
 
   body.sales-person-detail-printing #salesReportPersonDetailView{
     position:absolute!important;inset:0 auto auto 0!important;display:block!important
