@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260818-capacity-store-edit-v21 -->
+<!-- STARRED BUILD: 20260818-sales-date-edit-v22 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4330,7 +4330,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260818-capacity-store-edit-v21";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260818-sales-date-edit-v22";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -11006,7 +11006,7 @@ function ensureSalesAdminEditModal(){
   modal.id='salesAdminEditModal';
   modal.className='sales-admin-edit-modal';
   modal.hidden=true;
-  modal.innerHTML='<div class="sales-admin-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="salesAdminEditTitle"><header class="sales-admin-edit-head"><div><span>DIRECT EDIT</span><h3 id="salesAdminEditTitle">修改後台業績</h3></div><button type="button" class="sales-admin-edit-close" onclick="closeSalesAdminEdit()" aria-label="關閉">×</button></header><div class="sales-admin-edit-body"><div class="sales-admin-edit-meta"><div><span>原日期／店點</span><b id="salesAdminEditLocation">—</b></div><div><span>銷售／處理人員</span><b id="salesAdminEditPerson">—</b></div></div><label class="sales-admin-edit-field"><span>正確業績店點</span><select id="salesAdminEditStore"></select><small class="sales-admin-edit-store-note">若店點有變，多人同班的舊店點與新店點會自動重新判斷工時與薪資。</small></label><label id="salesAdminEditGrossWrap" class="sales-admin-edit-field"><span>營業總額</span><div class="sales-admin-edit-money"><span>$</span><input id="salesAdminEditGross" type="number" min="0" step="1" inputmode="numeric"></div></label><label id="salesAdminEditReturnWrap" class="sales-admin-edit-field" hidden><span>退貨金額</span><div class="sales-admin-edit-money"><span>$</span><input id="salesAdminEditReturn" type="number" min="1" step="1" inputmode="numeric"></div></label><label id="salesAdminEditInvoiceWrap" class="sales-admin-edit-field" hidden><span>原發票日期</span><input id="salesAdminEditInvoice" type="date"></label><div id="salesAdminEditStatus" class="sales-admin-edit-status" role="status"></div></div><footer class="sales-admin-edit-actions"><button type="button" class="secondary" onclick="closeSalesAdminEdit()">取消</button><button id="salesAdminEditSave" type="button" class="primary" onclick="saveSalesAdminEdit()">儲存修改</button></footer></div>';
+  modal.innerHTML='<div class="sales-admin-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="salesAdminEditTitle"><header class="sales-admin-edit-head"><div><span>DIRECT EDIT</span><h3 id="salesAdminEditTitle">修改後台業績</h3></div><button type="button" class="sales-admin-edit-close" onclick="closeSalesAdminEdit()" aria-label="關閉">×</button></header><div class="sales-admin-edit-body"><div class="sales-admin-edit-meta"><div><span>原日期／店點</span><b id="salesAdminEditLocation">—</b></div><div><span>銷售／處理人員</span><b id="salesAdminEditPerson">—</b></div></div><label id="salesAdminEditDateWrap" class="sales-admin-edit-field" hidden><span>正確業績日期</span><input id="salesAdminEditDate" type="date" onchange="syncSalesAdminEditDateLimits()"><small class="sales-admin-edit-store-note">只有系統管理員可修改；業績日期有變時，舊日期與新日期的工時及薪資會重新判定。</small></label><label class="sales-admin-edit-field"><span>正確業績店點</span><select id="salesAdminEditStore"></select><small class="sales-admin-edit-store-note">若店點有變，多人同班的舊店點與新店點會自動重新判斷工時與薪資。</small></label><label id="salesAdminEditGrossWrap" class="sales-admin-edit-field"><span>營業總額</span><div class="sales-admin-edit-money"><span>$</span><input id="salesAdminEditGross" type="number" min="0" step="1" inputmode="numeric"></div></label><label id="salesAdminEditReturnWrap" class="sales-admin-edit-field" hidden><span>退貨金額</span><div class="sales-admin-edit-money"><span>$</span><input id="salesAdminEditReturn" type="number" min="1" step="1" inputmode="numeric"></div></label><label id="salesAdminEditInvoiceWrap" class="sales-admin-edit-field" hidden><span>原發票日期</span><input id="salesAdminEditInvoice" type="date"></label><div id="salesAdminEditStatus" class="sales-admin-edit-status" role="status"></div></div><footer class="sales-admin-edit-actions"><button type="button" class="secondary" onclick="closeSalesAdminEdit()">取消</button><button id="salesAdminEditSave" type="button" class="primary" onclick="saveSalesAdminEdit()">儲存修改</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesAdminEdit()});
   document.body.appendChild(modal);
   return modal;
@@ -11028,6 +11028,14 @@ function salesAdminEditStoreOptions(selectedId,record){
   if(selectedId&&!list.some(function(store){return String(store.id)===String(selectedId)}))html='<option value="'+salesEsc(selectedId)+'">'+salesEsc(salesStoreText(record)||'目前店點')+'</option>'+html;
   return html||'<option value="">目前沒有可選店點</option>';
 }
+function syncSalesAdminEditDateLimits(){
+  var record=salesAdminData.records.find(function(item){return String(item.id)===String(salesAdminEditRecordId||'')});
+  var dateInput=salesEl('salesAdminEditDate');
+  var businessDate=String(dateInput&&dateInput.value||record&&record.businessDate||'');
+  if(dateInput)dateInput.max=salesToday();
+  var invoiceInput=salesEl('salesAdminEditInvoice');
+  if(invoiceInput)invoiceInput.max=businessDate||salesToday();
+}
 function openSalesAdminEdit(id){
   var record=salesAdminData.records.find(function(item){return String(item.id)===String(id)});
   if(!record){salesSetAdminStatus('找不到要修改的業績資料，請重新整理報表。','error');return}
@@ -11037,6 +11045,12 @@ function openSalesAdminEdit(id){
   if(salesEl('salesAdminEditTitle'))salesEl('salesAdminEditTitle').textContent=isReturn?'修改後台退貨':'修改後台業績';
   if(salesEl('salesAdminEditLocation'))salesEl('salesAdminEditLocation').textContent=String(record.businessDate||'—')+'・'+salesStoreText(record);
   if(salesEl('salesAdminEditPerson'))salesEl('salesAdminEditPerson').textContent=String(record.submitterName||'LINE 使用者');
+  var canEditDate=Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin');
+  if(salesEl('salesAdminEditDateWrap'))salesEl('salesAdminEditDateWrap').hidden=!canEditDate;
+  if(salesEl('salesAdminEditDate')){
+    salesEl('salesAdminEditDate').value=String(record.businessDate||'');
+    salesEl('salesAdminEditDate').max=salesToday();
+  }
   if(salesEl('salesAdminEditStore')){
     salesEl('salesAdminEditStore').innerHTML=salesAdminEditStoreOptions(String(record.storeId||''),record);
     salesEl('salesAdminEditStore').value=String(record.storeId||'');
@@ -11048,9 +11062,9 @@ function openSalesAdminEdit(id){
   if(salesEl('salesAdminEditReturn'))salesEl('salesAdminEditReturn').value=isReturn?String(Number(record.returnAmount||0)):'';
   if(salesEl('salesAdminEditInvoice')){
     salesEl('salesAdminEditInvoice').value=isReturn?String(record.originalInvoiceDate||''):'';
-    salesEl('salesAdminEditInvoice').max=String(record.businessDate||salesToday());
   }
-  salesSetAdminEditStatus('修改後會直接生效，不需再次審核。','');
+  syncSalesAdminEditDateLimits();
+  salesSetAdminEditStatus(canEditDate?'系統管理員修改日期後會直接生效，並保留完整修改紀錄。':'修改後會直接生效，不需再次審核。','');
   modal.hidden=false;
   document.body.classList.add('sales-admin-edit-open');
 }
@@ -11065,6 +11079,9 @@ async function saveSalesAdminEdit(){
   var record=salesAdminData.records.find(function(item){return String(item.id)===id});
   if(!record){salesSetAdminEditStatus('找不到這筆資料，請關閉後重新整理。','error');return}
   var isReturn=salesRecordType(record)==='return';
+  var canEditDate=Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin');
+  var businessDate=canEditDate?String((salesEl('salesAdminEditDate')||{}).value||'').trim():String(record.businessDate||'');
+  var dateChanged=businessDate!==String(record.businessDate||'');
   var grossRaw=String((salesEl('salesAdminEditGross')||{}).value||'').trim();
   var returnRaw=String((salesEl('salesAdminEditReturn')||{}).value||'').trim();
   var grossAmount=isReturn?0:Number(grossRaw);
@@ -11073,10 +11090,12 @@ async function saveSalesAdminEdit(){
   var storeId=String((salesEl('salesAdminEditStore')||{}).value||'');
   var selectedStore=salesOrderStoreList().find(function(store){return String(store.id)===storeId});
   var storeChanged=storeId!==String(record.storeId||'');
+  var workdayScopeChanged=(dateChanged||storeChanged)&&salesRecordType(record)==='sales'&&record.isProxySale!==true;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(businessDate)||businessDate>salesToday()){salesSetAdminEditStatus('請選擇今天或過去的正確業績日期。','error');return}
   if(!storeId||!selectedStore){salesSetAdminEditStatus('請重新選擇正確業績店點。','error');return}
   if(!isReturn&&(!grossRaw||!Number.isFinite(grossAmount)||grossAmount<0)){salesSetAdminEditStatus('請填寫正確的營業總額。','error');return}
   if(isReturn&&(!returnRaw||!Number.isFinite(returnAmount)||returnAmount<=0)){salesSetAdminEditStatus('請填寫大於 0 的退貨金額。','error');return}
-  if(isReturn&&(!originalInvoiceDate||originalInvoiceDate>String(record.businessDate||salesToday()))){salesSetAdminEditStatus('原發票日期不可空白或晚於退貨日期。','error');return}
+  if(isReturn&&(!originalInvoiceDate||originalInvoiceDate>businessDate)){salesSetAdminEditStatus('原發票日期不可空白或晚於退貨日期。','error');return}
   var button=salesEl('salesAdminEditSave');
   if(button)button.disabled=true;
   salesSetAdminEditStatus('正在儲存修改…','');
@@ -11086,15 +11105,21 @@ async function saveSalesAdminEdit(){
       var now=new Date().toISOString();
       var found=false;
       var updatedRecord=null;
-      var updatedRecords=salesReadTestRecords().map(function(item){
+      var testRecords=salesReadTestRecords();
+      if((dateChanged||storeChanged)&&!isReturn){
+        var creditedId=salesCreditedLineUserId(record);
+        var duplicate=testRecords.find(function(item){return String(item.id)!==id&&salesRecordType(item)==='sales'&&String(item.businessDate||'')===businessDate&&String(item.storeId||'')===storeId&&salesCreditedLineUserId(item)===creditedId});
+        if(duplicate)throw new Error('這位人員在同一天、所選店點已經有一筆業績，請先核對兩筆資料。');
+      }
+      var updatedRecords=testRecords.map(function(item){
         if(String(item.id)!==id)return item;
         found=true;
-        updatedRecord=Object.assign({},item,{storeId:storeId,area:String(selectedStore.area||selectedStore.region||''),storeName:String(selectedStore.name||''),storeFloor:String(selectedStore.floor||''),grossAmount:isReturn?0:grossAmount,returnAmount:isReturn?returnAmount:0,originalInvoiceDate:isReturn?originalInvoiceDate:'',workdayStatus:storeChanged&&salesRecordType(item)==='sales'&&item.isProxySale!==true?'auto':item.workdayStatus,workHours:storeChanged&&salesRecordType(item)==='sales'&&item.isProxySale!==true?null:item.workHours,workdayConfirmedAt:storeChanged&&salesRecordType(item)==='sales'&&item.isProxySale!==true?'':item.workdayConfirmedAt,workdayConfirmedByLineUserId:storeChanged&&salesRecordType(item)==='sales'&&item.isProxySale!==true?'':item.workdayConfirmedByLineUserId,workdayConfirmedByName:storeChanged&&salesRecordType(item)==='sales'&&item.isProxySale!==true?'':item.workdayConfirmedByName,updatedAt:now});
+        updatedRecord=Object.assign({},item,{businessDate:businessDate,storeId:storeId,area:String(selectedStore.area||selectedStore.region||''),storeName:String(selectedStore.name||''),storeFloor:String(selectedStore.floor||''),grossAmount:isReturn?0:grossAmount,returnAmount:isReturn?returnAmount:0,originalInvoiceDate:isReturn?originalInvoiceDate:'',workdayStatus:workdayScopeChanged?'auto':item.workdayStatus,workHours:workdayScopeChanged?null:item.workHours,workdayConfirmedAt:workdayScopeChanged?'':item.workdayConfirmedAt,workdayConfirmedByLineUserId:workdayScopeChanged?'':item.workdayConfirmedByLineUserId,workdayConfirmedByName:workdayScopeChanged?'':item.workdayConfirmedByName,updatedAt:now});
         return updatedRecord;
       });
       if(!found)throw new Error('找不到這筆業績資料');
-      if(!storeChanged&&isReturn&&Number(record.returnAmount||0)===returnAmount&&String(record.originalInvoiceDate||'')===originalInvoiceDate)throw new Error('店點與數字都沒有變更，不需要儲存');
-      if(!storeChanged&&!isReturn&&Number(record.grossAmount||0)===grossAmount)throw new Error('店點與數字都沒有變更，不需要儲存');
+      var amountChanged=isReturn?Number(record.returnAmount||0)!==returnAmount||String(record.originalInvoiceDate||'')!==originalInvoiceDate:Number(record.grossAmount||0)!==grossAmount;
+      if(!dateChanged&&!storeChanged&&!amountChanged)throw new Error('日期、店點與數字都沒有變更，不需要儲存');
       var actor=(currentUser&&currentUser.name)||'測試會計';
       var requests=salesReadTestRequests().map(function(request){
         if(String(request.salesReportId)!==id||!['pending','approved'].includes(String(request.status)))return request;
@@ -11102,15 +11127,17 @@ async function saveSalesAdminEdit(){
       });
       salesWriteTestRecords(updatedRecords);
       salesWriteTestRequests(requests);
-      salesAddTestAudit(updatedRecord,salesSnapshot(record),salesSnapshot(updatedRecord),'direct_update',storeChanged?'後台直接修改：店點':'後台直接修改：金額',actor);
-      updateResult={storeChanged:storeChanged,workdayReviewRequired:storeChanged&&salesRecordType(record)==='sales'&&record.isProxySale!==true};
+      var changedParts=[dateChanged?'日期':'',storeChanged?'店點':'',amountChanged?'金額':''].filter(Boolean).join('、');
+      salesAddTestAudit(updatedRecord,salesSnapshot(record),salesSnapshot(updatedRecord),'direct_update','後台直接修改：'+changedParts,actor);
+      updateResult={dateChanged:dateChanged,storeChanged:storeChanged,workdayReviewRequired:workdayScopeChanged};
     }else{
-      updateResult=await starredApi('sales_admin_update_report',{recordId:id,storeId:storeId,grossAmount:grossAmount,returnAmount:returnAmount,originalInvoiceDate:originalInvoiceDate});
+      updateResult=await starredApi('sales_admin_update_report',{recordId:id,businessDate:businessDate,storeId:storeId,grossAmount:grossAmount,returnAmount:returnAmount,originalInvoiceDate:originalInvoiceDate});
     }
     closeSalesAdminEdit();
     await Promise.all([loadSalesAdminReport(),loadSalesData()]);
-    var message=(isReturn?'退貨':'業績')+(storeChanged?'店點與資料':'資料')+'已直接修改完成。';
-    if(storeChanged&&updateResult&&updateResult.workdayReviewRequired)message+=' 新店點為多人同班，已移到「待確認工時與薪資」。';
+    var changedLabels=[dateChanged?'日期':'',storeChanged?'店點':''].filter(Boolean).join('與');
+    var message=(isReturn?'退貨':'業績')+(changedLabels?changedLabels+'及資料':'資料')+'已直接修改完成。';
+    if(workdayScopeChanged&&updateResult&&updateResult.workdayReviewRequired)message+=' 新日期／店點為多人同班，已移到「待確認工時與薪資」。';
     salesSetAdminStatus(message,'success');
   }catch(error){
     salesSetAdminEditStatus('修改失敗：'+String(error&&error.message||error),'error');
