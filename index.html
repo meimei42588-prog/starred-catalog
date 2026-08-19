@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
+<!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -12913,6 +12914,151 @@ document.addEventListener('DOMContentLoaded',function(){var select=document.getE
 @media(max-width:720px){.expense-hero{align-items:stretch;flex-direction:column;padding:19px}.expense-current-user{min-width:0}.expense-form-grid,.expense-conditional-grid{grid-template-columns:1fr}.expense-wide{grid-column:auto}.expense-receipt-preview{grid-template-columns:repeat(3,1fr)}.expense-own-filter{grid-template-columns:1fr 1fr}.expense-own-filter button{grid-column:1/-1}.expense-admin-heading{align-items:stretch;flex-direction:column}.expense-admin-filter{grid-template-columns:1fr 1fr}.expense-admin-keyword{grid-column:1/-1}.expense-admin-summary{grid-template-columns:1fr 1fr}.expense-admin-card{grid-template-columns:1fr 1fr}.expense-admin-card .detail,.expense-admin-card .review{grid-column:1/-1}.expense-admin-card .amount{text-align:left}.sales-person-expense-heading{align-items:flex-start;flex-direction:column}.sales-person-expense-totals{text-align:left}.sales-person-expense-list article{grid-template-columns:80px 52px 1fr}.sales-person-expense-list article>strong{grid-column:2;text-align:left}.sales-person-expense-receipt{grid-column:3;justify-self:end}}
 @media(max-width:620px){.nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}.expense-entry-panel,.expense-own-panel,.expense-admin-panel{padding:13px!important}.sales-person-expense-section{margin:10px 14px 0}.sales-person-expense-list article{font-size:13px}.sales-person-expense-list article>div b,.sales-person-expense-list article>strong{font-size:13px}}
 @media print{body.sales-stat-printing .sales-person-expense-section{margin:2mm 0 0!important;padding:2mm!important;border:1px solid #777!important;border-radius:0!important;background:#fff!important;break-inside:avoid!important}body.sales-stat-printing .sales-person-expense-heading{margin-bottom:1mm!important}body.sales-stat-printing .sales-person-expense-heading span,body.sales-stat-printing .sales-person-expense-heading p{display:none!important}body.sales-stat-printing .sales-person-expense-heading h4,body.sales-stat-printing .sales-person-expense-totals b,body.sales-stat-printing .sales-person-expense-totals small{color:#111!important;font-size:13px!important;font-weight:500!important}body.sales-stat-printing .sales-person-expense-list{gap:0!important}body.sales-stat-printing .sales-person-expense-list article{grid-template-columns:24mm 15mm 1fr 24mm!important;padding:1mm!important;border:1px solid #777!important;border-bottom:0!important;border-radius:0!important;color:#111!important;font-size:13px!important;break-inside:avoid!important}body.sales-stat-printing .sales-person-expense-list article:last-child{border-bottom:1px solid #777!important}body.sales-stat-printing .sales-person-expense-list article>div b,body.sales-stat-printing .sales-person-expense-list article>div small,body.sales-stat-printing .sales-person-expense-list article>strong{color:#111!important;font-size:13px!important;font-weight:400!important}body.sales-stat-printing .sales-person-expense-receipt{display:none!important}}
+</style>
+
+<style id="expense-admin-layout-v28-style">
+/* 費用明細：放大主要資訊、移除粗體，並以清楚欄位層次重新排版。 */
+.expense-admin-card{
+  grid-template-columns:minmax(150px,.7fr) minmax(190px,.82fr) minmax(280px,1.35fr) minmax(110px,.5fr) minmax(190px,.78fr);
+  gap:20px;
+  min-height:126px;
+  padding:20px 22px;
+  border-radius:18px;
+  box-shadow:0 7px 22px rgba(39,66,83,.055);
+}
+.expense-admin-card.pending{
+  border-color:#e8cf82;
+  background:linear-gradient(100deg,#fffdf8 0%,#fffaf0 100%);
+}
+.expense-admin-card .date,
+.expense-admin-card .person,
+.expense-admin-card .detail{
+  min-width:0;
+  align-self:stretch;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.expense-admin-card .date::before,
+.expense-admin-card .person::before,
+.expense-admin-card .detail::before,
+.expense-admin-card .amount::before{
+  display:block;
+  margin-bottom:7px;
+  color:#7c909a;
+  font-size:12px;
+  font-weight:400;
+  letter-spacing:.04em;
+  line-height:1.2;
+}
+.expense-admin-card .date::before{content:"申請日期"}
+.expense-admin-card .person::before{content:"申請人員"}
+.expense-admin-card .detail::before{content:"申請內容"}
+.expense-admin-card .amount::before{content:"金額／時數"}
+.expense-admin-card .date b,
+.expense-admin-card .person b,
+.expense-admin-card .detail b{
+  color:#294b5d;
+  font-size:17px;
+  font-weight:400;
+  line-height:1.45;
+}
+.expense-admin-card .detail b{
+  overflow:visible;
+  white-space:normal;
+  text-overflow:clip;
+}
+.expense-admin-card .date small,
+.expense-admin-card .person small,
+.expense-admin-card .detail small,
+.expense-admin-card .review small{
+  margin-top:6px;
+  color:#718893;
+  font-size:12.5px;
+  font-weight:400;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+.expense-admin-card .amount{
+  align-self:center;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:center;
+  color:#28704a;
+  font-size:20px;
+  font-weight:400;
+  line-height:1.35;
+  text-align:right;
+}
+.expense-admin-card .review{
+  align-items:flex-end;
+  justify-content:center;
+  gap:9px;
+}
+.expense-admin-actions{
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+}
+.expense-admin-actions button,
+.expense-admin-card .expense-receipt-link{
+  min-height:42px;
+  padding:9px 14px!important;
+  border-radius:11px;
+  font-size:15px!important;
+  font-weight:400!important;
+  line-height:1.2;
+}
+.expense-admin-card .expense-status-pill{
+  padding:7px 11px;
+  font-size:13px;
+  font-weight:400;
+}
+.expense-admin-card b,
+.expense-admin-card strong{
+  font-weight:400!important;
+}
+@media(max-width:1180px){
+  .expense-admin-card{
+    grid-template-columns:minmax(145px,.72fr) minmax(175px,.82fr) minmax(240px,1.25fr) minmax(105px,.45fr);
+  }
+  .expense-admin-card .review{
+    grid-column:1/-1;
+    align-items:center;
+    flex-direction:row;
+    justify-content:flex-end;
+  }
+}
+@media(max-width:720px){
+  .expense-admin-card{
+    grid-template-columns:1fr 1fr;
+    gap:18px 14px;
+    min-height:0;
+    padding:18px;
+  }
+  .expense-admin-card .detail,
+  .expense-admin-card .review{
+    grid-column:1/-1;
+  }
+  .expense-admin-card .amount{
+    align-items:flex-start;
+    text-align:left;
+  }
+  .expense-admin-card .review{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .expense-admin-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    width:100%;
+  }
+  .expense-admin-actions button,
+  .expense-admin-card .expense-receipt-link{
+    width:100%;
+  }
+}
 </style>
 
 <script id="expense-request-v27-script">
