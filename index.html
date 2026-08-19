@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
+<!-- UI PATCH: 20260819-expense-admin-list-v29 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -13061,6 +13062,153 @@ document.addEventListener('DOMContentLoaded',function(){var select=document.getE
 }
 </style>
 
+<style id="expense-admin-list-v29-style">
+/* 費用明細改為表格式清單；欄位標題只出現一次，操作按鈕保留舒適間距。 */
+.expense-admin-list{
+  display:block;
+  overflow:hidden;
+  border:1px solid #d7e2e7;
+  border-radius:16px;
+  background:#fff;
+}
+.expense-admin-list-head,
+.expense-admin-card{
+  display:grid;
+  grid-template-columns:minmax(145px,.7fr) minmax(175px,.82fr) minmax(260px,1.35fr) minmax(110px,.52fr) minmax(245px,.95fr);
+  gap:18px;
+  align-items:center;
+}
+.expense-admin-list-head{
+  padding:13px 20px;
+  background:#315568;
+  color:#fff;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.35;
+}
+.expense-admin-list-head span:last-child{text-align:center}
+.expense-admin-card{
+  min-height:98px;
+  padding:16px 20px;
+  border:0;
+  border-bottom:1px solid #dfe7eb;
+  border-radius:0;
+  background:#fff;
+  box-shadow:none;
+}
+.expense-admin-card:last-child{border-bottom:0}
+.expense-admin-card.pending{
+  border-color:#eadcae;
+  background:#fffcf5;
+}
+.expense-admin-card .date::before,
+.expense-admin-card .person::before,
+.expense-admin-card .detail::before,
+.expense-admin-card .amount::before{
+  display:none;
+}
+.expense-admin-card .date,
+.expense-admin-card .person,
+.expense-admin-card .detail{
+  align-self:center;
+}
+.expense-admin-card .date b,
+.expense-admin-card .person b,
+.expense-admin-card .detail b{
+  font-size:16px;
+  font-weight:400;
+}
+.expense-admin-card .date small,
+.expense-admin-card .detail small,
+.expense-admin-card .review small{
+  margin-top:5px;
+  font-size:12px;
+  font-weight:400;
+}
+.expense-admin-card .person small{display:none!important}
+.expense-admin-card .amount{
+  align-items:flex-start;
+  font-size:19px;
+  font-weight:400;
+  text-align:left;
+}
+.expense-admin-card .review{
+  align-self:center;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  width:100%;
+}
+.expense-admin-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  width:100%;
+}
+.expense-admin-actions button,
+.expense-admin-card .expense-receipt-link{
+  width:100%;
+  min-height:42px;
+  margin:0;
+  padding:9px 13px!important;
+  font-size:14px!important;
+  font-weight:400!important;
+}
+.expense-admin-card .expense-receipt-link{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.expense-admin-card .expense-status-pill{
+  justify-self:start;
+  font-size:13px;
+  font-weight:400;
+}
+@media(max-width:1180px){
+  .expense-admin-list-head,
+  .expense-admin-card{
+    grid-template-columns:130px 150px minmax(220px,1fr) 100px 220px;
+    gap:13px;
+  }
+  .expense-admin-list-head{padding:12px 15px;font-size:13px}
+  .expense-admin-card{padding:15px}
+}
+@media(max-width:820px){
+  .expense-admin-list{
+    display:grid;
+    gap:10px;
+    overflow:visible;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .expense-admin-list-head{display:none}
+  .expense-admin-card{
+    grid-template-columns:1fr 1fr;
+    gap:17px 14px;
+    min-height:0;
+    padding:17px;
+    border:1px solid #d7e2e7;
+    border-radius:14px;
+  }
+  .expense-admin-card.pending{border-color:#e6cc7b}
+  .expense-admin-card .date::before,
+  .expense-admin-card .person::before,
+  .expense-admin-card .detail::before,
+  .expense-admin-card .amount::before{
+    display:block;
+  }
+  .expense-admin-card .detail,
+  .expense-admin-card .review{
+    grid-column:1/-1;
+  }
+  .expense-admin-card .review{
+    align-items:stretch;
+    flex-direction:column;
+  }
+}
+</style>
+
 <script id="expense-request-v27-script">
 (function(){
 'use strict';
@@ -13096,7 +13244,38 @@ async function submitExpenseRequest(){var type=String((expenseEl('expenseRequest
 
 function openExpenseReceipts(scope,requestId){var source=scope==='admin'?expenseAdminData:scope==='sales'&&window.salesAdminData?window.salesAdminData.expenses:expenseOwnData;var item=(source||[]).find(function(row){return String(row.id||'')===String(requestId||'')});var urls=item&&Array.isArray(item.receiptUrls)?item.receiptUrls.filter(Boolean):[];if(!urls.length){alert('這筆申請沒有可查看的單據照片。');return}if(typeof openLightboxGallery==='function')openLightboxGallery(urls,0);else window.open(urls[0],'_blank','noopener')}
 function expenseAdminFilteredRows(){var type=String((expenseEl('expenseAdminType')||{}).value||'');var keyword=String((expenseEl('expenseAdminKeyword')||{}).value||'').trim().toLocaleLowerCase('zh-Hant');return expenseAdminData.filter(function(item){var text=[item.submitterName,item.storeName,item.storeFloor,item.reason,item.requestDate,expenseTypeLabel(item.requestType),expenseStatusLabel(item.status)].join(' ').toLocaleLowerCase('zh-Hant');return (!type||item.requestType===type)&&(!keyword||text.includes(keyword))})}
-function renderExpenseAdminList(){var box=expenseEl('expenseAdminList');if(!box)return;var rows=expenseAdminFilteredRows();var pending=rows.filter(function(item){return item.status==='pending'}).length;var amount=rows.filter(function(item){return item.status==='approved'&&item.requestType==='expense'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0);var overtime=rows.filter(function(item){return item.requestType==='overtime'}).length;if(expenseEl('expenseAdminPendingCount'))expenseEl('expenseAdminPendingCount').textContent=String(pending)+' 筆';if(expenseEl('expenseAdminApprovedAmount'))expenseEl('expenseAdminApprovedAmount').textContent=expenseMoney(amount);if(expenseEl('expenseAdminOvertimeCount'))expenseEl('expenseAdminOvertimeCount').textContent=String(overtime)+' 筆';if(expenseEl('expenseAdminTotalCount'))expenseEl('expenseAdminTotalCount').textContent=String(rows.length)+' 筆';if(!rows.length){box.innerHTML='<div class="expense-empty">目前篩選條件沒有費用或加班申請。</div>';return}box.innerHTML=rows.map(function(item){var isExpense=item.requestType==='expense';var photos=Array.isArray(item.receiptUrls)?item.receiptUrls.length:0;var photoBtn=photos?'<button type="button" class="secondary expense-receipt-link" onclick="openExpenseReceipts(\'admin\',\''+expenseEsc(item.id)+'\')">單據 '+String(photos)+' 張</button>':'';var actions=item.status==='pending'?'<div class="expense-admin-actions"><button type="button" class="primary" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'approved\')">核准</button><button type="button" class="secondary expense-reject-btn" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'rejected\')">駁回</button></div>':'<span class="expense-status-pill '+expenseEsc(item.status)+'">'+expenseStatusLabel(item.status)+'</span>';return '<article class="expense-admin-card '+expenseEsc(item.status||'pending')+'"><div class="date"><b>'+expenseEsc(item.requestDate||'—')+'</b><small>'+expenseTypeLabel(item.requestType)+'・'+expenseEsc(expenseDateTime(item.createdAt))+'</small></div><div class="person"><b>'+expenseEsc(item.submitterName||'LINE 使用者')+'</b><small>'+expenseEsc(item.submitterLineUserId||'')+'</small></div><div class="detail"><b>'+expenseEsc(expenseDetailText(item))+'</b><small>'+(item.requestType==='overtime'?expenseEsc(areaText[item.area]||item.area||''):'費用另列，不計入業績')+'</small></div><b class="amount">'+(isExpense?expenseMoney(item.amount):expenseEsc(expenseDuration(item.overtimeStart,item.overtimeEnd)||'—'))+'</b><div class="review">'+actions+(item.reviewerName?'<small>審核：'+expenseEsc(item.reviewerName)+(item.reviewNote?'・'+expenseEsc(item.reviewNote):'')+'</small>':'')+photoBtn+'</div></article>'}).join('')}
+function renderExpenseAdminList(){
+  var box=expenseEl('expenseAdminList');
+  if(!box)return;
+  var rows=expenseAdminFilteredRows();
+  var pending=rows.filter(function(item){return item.status==='pending'}).length;
+  var amount=rows.filter(function(item){return item.status==='approved'&&item.requestType==='expense'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0);
+  var overtime=rows.filter(function(item){return item.requestType==='overtime'}).length;
+  if(expenseEl('expenseAdminPendingCount'))expenseEl('expenseAdminPendingCount').textContent=String(pending)+' 筆';
+  if(expenseEl('expenseAdminApprovedAmount'))expenseEl('expenseAdminApprovedAmount').textContent=expenseMoney(amount);
+  if(expenseEl('expenseAdminOvertimeCount'))expenseEl('expenseAdminOvertimeCount').textContent=String(overtime)+' 筆';
+  if(expenseEl('expenseAdminTotalCount'))expenseEl('expenseAdminTotalCount').textContent=String(rows.length)+' 筆';
+  if(!rows.length){
+    box.innerHTML='<div class="expense-empty">目前篩選條件沒有費用或加班申請。</div>';
+    return;
+  }
+  var listHead='<div class="expense-admin-list-head" role="row"><span>申請日期</span><span>申請人員</span><span>申請內容</span><span>金額／時數</span><span>審核操作</span></div>';
+  box.innerHTML=listHead+rows.map(function(item){
+    var isExpense=item.requestType==='expense';
+    var photos=Array.isArray(item.receiptUrls)?item.receiptUrls.length:0;
+    var photoBtn=photos?'<button type="button" class="secondary expense-receipt-link" onclick="openExpenseReceipts(\'admin\',\''+expenseEsc(item.id)+'\')">查看單據 '+String(photos)+' 張</button>':'';
+    var actions=item.status==='pending'
+      ?'<div class="expense-admin-actions"><button type="button" class="primary" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'approved\')">核准</button><button type="button" class="secondary expense-reject-btn" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'rejected\')">駁回</button></div>'
+      :'<span class="expense-status-pill '+expenseEsc(item.status)+'">'+expenseStatusLabel(item.status)+'</span>';
+    return '<article class="expense-admin-card '+expenseEsc(item.status||'pending')+'" role="row">'
+      +'<div class="date"><b>'+expenseEsc(item.requestDate||'—')+'</b><small>'+expenseTypeLabel(item.requestType)+'・'+expenseEsc(expenseDateTime(item.createdAt))+'</small></div>'
+      +'<div class="person"><b>'+expenseEsc(item.submitterName||'LINE 使用者')+'</b></div>'
+      +'<div class="detail"><b>'+expenseEsc(expenseDetailText(item))+'</b><small>'+(item.requestType==='overtime'?expenseEsc(areaText[item.area]||item.area||''):'費用另列，不計入業績')+'</small></div>'
+      +'<b class="amount">'+(isExpense?expenseMoney(item.amount):expenseEsc(expenseDuration(item.overtimeStart,item.overtimeEnd)||'—'))+'</b>'
+      +'<div class="review">'+actions+(item.reviewerName?'<small>審核：'+expenseEsc(item.reviewerName)+(item.reviewNote?'・'+expenseEsc(item.reviewNote):'')+'</small>':'')+photoBtn+'</div>'
+      +'</article>';
+  }).join('');
+}
 async function loadExpenseAdminReport(){if(!currentUser)return;expenseSetMessage('expenseAdminMessage','正在讀取費用明細…','working');try{var result=await starredApi('expense_admin_report',{dateFrom:String((expenseEl('expenseAdminDateFrom')||{}).value||''),dateTo:String((expenseEl('expenseAdminDateTo')||{}).value||''),status:String((expenseEl('expenseAdminStatusFilter')||{}).value||'')});expenseAdminData=Array.isArray(result.requests)?result.requests:[];renderExpenseAdminList();expenseSetMessage('expenseAdminMessage','明細已更新，共 '+String(expenseAdminData.length)+' 筆。','success')}catch(error){expenseSetMessage('expenseAdminMessage','費用明細載入失敗：'+String(error&&error.message||error),'error')}}
 function resetExpenseAdminFilters(){var today=expenseToday();if(expenseEl('expenseAdminDateFrom'))expenseEl('expenseAdminDateFrom').value=today.slice(0,7)+'-01';if(expenseEl('expenseAdminDateTo'))expenseEl('expenseAdminDateTo').value=today;if(expenseEl('expenseAdminType'))expenseEl('expenseAdminType').value='';if(expenseEl('expenseAdminStatusFilter'))expenseEl('expenseAdminStatusFilter').value='';if(expenseEl('expenseAdminKeyword'))expenseEl('expenseAdminKeyword').value='';loadExpenseAdminReport()}
 async function reviewExpenseRequest(requestId,decision){var isApprove=decision==='approved';var note='';if(isApprove){if(!confirm('確定核准這筆申請？核准後會顯示在人員業績明細底部。'))return}else{note=String(prompt('請輸入駁回原因（至少 2 個字）：')||'').trim();if(note.length<2)return}expenseSetMessage('expenseAdminMessage',isApprove?'正在核准申請…':'正在駁回申請…','working');try{await starredApi('expense_admin_review',{requestId:requestId,decision:decision,reviewNote:note});expenseSetMessage('expenseAdminMessage',isApprove?'申請已核准。':'申請已駁回。','success');await loadExpenseAdminReport()}catch(error){expenseSetMessage('expenseAdminMessage','審核失敗：'+String(error&&error.message||error),'error')}}
