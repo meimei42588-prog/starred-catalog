@@ -2,7 +2,7 @@
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
 <!-- UI PATCH: 20260819-expense-admin-list-v29 -->
-<!-- UI PATCH: 20260819-mobile-nav-single-row-v30 -->
+<!-- UI PATCH: 20260819-mobile-fit-expense-only-person-v31 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -9776,6 +9776,10 @@ function rebuildSalesAdminPersonOptions(records,salespeople){
     var id=String(person.lineUserId||person.line_user_id||'');
     if(id)people.set(id,String(person.name||person.employeeName||person.employee_name||person.lineDisplayName||person.line_display_name||'LINE 使用者'));
   });
+  (salesAdminData.byPerson||[]).forEach(function(person){
+    var id=String(person.lineUserId||'');
+    if(id)people.set(id,salesPersonName(id,person.name||'LINE 使用者'));
+  });
   if(window.STARRED_SALES_TEST_MODE)salesReadTestRecords().forEach(function(record){
     var id=salesRecordType(record)==='return'?String(record.assignedSalespersonLineUserId||record.submitterLineUserId||''):salesCreditedLineUserId(record);
     if(id)people.set(id,salesRecordType(record)==='return'?salesPersonName(id,record.assignedSalespersonName||record.submitterName):salesCreditedName(record));
@@ -10578,6 +10582,50 @@ function salesFilteredTestAdminData(){
   result.missingTrackingEnabled=!person;
   return result;
 }
+function salesIncludeApprovedExpensePeople(){
+  var expenseByPerson=new Map();
+  (salesAdminData.expenses||[]).forEach(function(item){
+    if(String(item&&item.requestType||'')!=='expense')return;
+    var status=String(item&&item.status||'approved');
+    if(status!=='approved')return;
+    var lineUserId=String(item&&item.submitterLineUserId||'');
+    if(!lineUserId)return;
+    var current=expenseByPerson.get(lineUserId)||{
+      lineUserId:lineUserId,
+      name:salesPersonName(lineUserId,item.submitterName||'LINE 使用者'),
+      amount:0,
+      count:0
+    };
+    current.name=salesPersonName(lineUserId,item.submitterName||current.name);
+    current.amount+=Number(item.amount||0);
+    current.count+=1;
+    expenseByPerson.set(lineUserId,current);
+  });
+  var rows=(salesAdminData.byPerson||[]).map(function(person){
+    var expense=expenseByPerson.get(String(person.lineUserId||''));
+    return expense?Object.assign({},person,{approvedExpenseAmount:expense.amount,approvedExpenseCount:expense.count}):person;
+  });
+  var existing=new Set(rows.map(function(person){return String(person.lineUserId||'')}));
+  var expenseOnly=[];
+  expenseByPerson.forEach(function(expense,lineUserId){
+    if(existing.has(lineUserId))return;
+    expenseOnly.push({
+      rank:null,
+      lineUserId:lineUserId,
+      name:expense.name,
+      grossAmount:0,
+      returnAmount:0,
+      netAmount:0,
+      recordCount:0,
+      locations:[],
+      expenseOnly:true,
+      approvedExpenseAmount:expense.amount,
+      approvedExpenseCount:expense.count
+    });
+  });
+  expenseOnly.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant')});
+  salesAdminData.byPerson=rows.concat(expenseOnly);
+}
 function salesApplyRealNames(){
   function decorateRecord(record){
     record=Object.assign({},record);
@@ -10596,6 +10644,7 @@ function salesApplyRealNames(){
   salesAdminData.editRequests=(salesAdminData.editRequests||[]).map(function(request){return Object.assign({},request,{requesterName:salesPersonName(request.requesterLineUserId,request.requesterName)})});
   salesAdminData.auditLogs=(salesAdminData.auditLogs||[]).map(function(log){return Object.assign({},log,{actorName:salesPersonName(log.actorLineUserId,log.actorName)})});
   salesAdminData.expenses=(salesAdminData.expenses||[]).map(function(item){return Object.assign({},item,{submitterName:salesPersonName(item.submitterLineUserId,item.submitterName)})});
+  salesIncludeApprovedExpensePeople();
   salesAdminData.workDays=salesBuildWorkdayStats(salesAdminData.records,salesAdminData.salespeople);
 }
 async function loadSalesAdminReport(){
@@ -10765,11 +10814,12 @@ function salesAdminStatListHtml(kind,rows){
   var body=rows.map(function(row,index){
     var key=isStore?String(row.storeId||('label:'+salesStoreText(row))):String(row.lineUserId||'');
     var title=isStore?salesStoreText(row):salesPersonName(row.lineUserId,row.name||'LINE 使用者');
-    var sub=isStore?((typeof areaText!=='undefined'&&areaText[row.area])||row.area||'未設定區域'):String((row.locations||[]).length)+' 個店點';
+    var expenseOnly=!isStore&&row.expenseOnly===true;
+    var sub=isStore?((typeof areaText!=='undefined'&&areaText[row.area])||row.area||'未設定區域'):expenseOnly?('核准費用 '+salesMoney(row.approvedExpenseAmount||0)+'・不計入業績'):String((row.locations||[]).length)+' 個店點';
     var netAmount=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));
     var missing=isStore?salesStoreMissingModel(row):null;
     var missingBadge=missing&&missing.enabled&&missing.missingDates.length?'<span class="sales-store-missing-badge">漏傳 '+String(missing.missingDates.length)+' 天</span>':'';
-    return '<button type="button" class="sales-admin-list-row'+(missingBadge?' has-missing':'')+'" data-stat-key="'+salesEsc(key)+'" onclick="openSalesStatDetail(\''+kind+'\',this.dataset.statKey)"><span class="rank">'+String(index+1)+'</span><span class="identity"><span class="title">'+salesEsc(title)+'</span><small>'+salesEsc(sub)+'</small>'+missingBadge+'</span><span class="gross">'+salesMoney(row.grossAmount)+'</span><span class="return">'+salesMoney(row.returnAmount)+'</span>'+(isStore?'':'<span class="net">'+salesMoney(netAmount)+'</span>')+'<span class="count">'+String(row.recordCount||0)+' 筆</span><span class="open">查看 ›</span></button>';
+    return '<button type="button" class="sales-admin-list-row'+(missingBadge?' has-missing':'')+(expenseOnly?' expense-only':'')+'" data-stat-key="'+salesEsc(key)+'" onclick="openSalesStatDetail(\''+kind+'\',this.dataset.statKey)"><span class="rank">'+(expenseOnly?'—':String(index+1))+'</span><span class="identity"><span class="title">'+salesEsc(title)+'</span><small>'+salesEsc(sub)+'</small>'+missingBadge+'</span><span class="gross">'+salesMoney(row.grossAmount)+'</span><span class="return">'+salesMoney(row.returnAmount)+'</span>'+(isStore?'':'<span class="net">'+salesMoney(netAmount)+'</span>')+'<span class="count">'+String(row.recordCount||0)+' 筆</span><span class="open">查看 ›</span></button>';
   }).join('');
   return '<div class="sales-admin-compact-list '+kind+'">'+header+body+'</div>';
 }
@@ -11169,7 +11219,7 @@ function openSalesStatDetail(kind,key){
     var isReturn=salesRecordType(record)==='return';
     var target=kind==='store'?(isReturn?salesSubmitterName(record):salesCreditedName(record)+(record.isProxySale?'（代銷售）':'')):(salesStoreText(record)+(isReturn?' ・ 處理：'+salesSubmitterName(record):record.isProxySale?' ・ 代填：'+salesSubmitterName(record):''));
     return '<tr class="'+(isReturn&&kind==='person'?'sales-stat-return-deduction':'')+'"><td>'+salesEsc(record.businessDate||'—')+'</td><td><span class="sales-stat-type '+(isReturn?'return':'gross')+'">'+(isReturn&&kind==='person'?'退貨扣除':(isReturn?'退貨':'業績'))+'</span></td><td>'+salesEsc(target)+'</td><td class="amount gross">'+(isReturn?'—':salesAdminAmountHtml(record,'gross'))+'</td><td class="amount return">'+(isReturn?salesAdminAmountHtml(record,'return'):'—')+'</td><td>'+salesEsc(record.originalInvoiceDate||'—')+'</td><td>'+salesEsc(salesDateTime(isReturn&&kind==='person'?record.returnAssignedAt:record.updatedAt))+'</td></tr>';
-  }).join(''):'<tr><td colspan="7" class="sales-table-empty">此區間沒有明細。</td></tr>';
+  }).join(''):'<tr><td colspan="7" class="sales-table-empty">'+(kind==='person'&&summary.expenseOnly?'本月沒有上班業績；下方另列核准費用，不計入業績。':'此區間沒有明細。')+'</td></tr>';
   if(kind==='person')renderSalesPersonExpenseSection(key);else{var expenseSection=salesEl('salesStatDetailExpenseSection');if(expenseSection){expenseSection.hidden=true;expenseSection.innerHTML=''}}
   renderSalesStoreMatrix();showSalesStatDetailView('list');
   modal.hidden=false;
@@ -13314,6 +13364,107 @@ document.addEventListener('DOMContentLoaded',function(){var select=document.getE
   .brand-home-btn{font-size:15px!important}
   .nav button{font-size:10.5px!important}
   #adminNav{font-size:11.5px!important}
+}
+</style>
+
+<style id="mobile-fit-expense-only-person-v31-style">
+/* 業績總覽：只有核准費用的人員仍顯示，但不佔排名、不計入業績。 */
+.sales-admin-list-row.expense-only{
+  background:linear-gradient(90deg,#f7fbf8 0%,#fff 62%)!important;
+}
+.sales-admin-list-row.expense-only .rank,
+.sales-admin-list-row.expense-only .identity small{
+  color:#2f714b!important;
+}
+
+/* 手機版：防止頂部品牌與費用申請表單造成水平溢出。 */
+@media(max-width:760px){
+  html,body{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:hidden!important;
+  }
+  .topbar-inner{
+    width:100%!important;
+    max-width:100vw!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  .brand{
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+  .brand-home-btn{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    font-size:clamp(12px,3.35vw,14px)!important;
+    letter-spacing:0!important;
+    line-height:1.2!important;
+    text-align:left!important;
+    text-indent:0!important;
+    transform:none!important;
+  }
+  #expensePage,
+  #expensePage .expense-front-layout,
+  #expensePage .expense-entry-panel,
+  #expensePage .expense-own-panel,
+  #expensePage .expense-form-grid,
+  #expensePage .expense-conditional-grid,
+  #expensePage .expense-conditional-grid>.field,
+  #expensePage .expense-duration-preview{
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #expensePage{
+    overflow:hidden!important;
+  }
+  #expensePage .expense-front-layout{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  #expensePage .expense-entry-panel,
+  #expensePage .expense-own-panel{
+    overflow:hidden!important;
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+  #expensePage .expense-form-grid,
+  #expensePage .expense-conditional-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  #expensePage .expense-conditional-grid{
+    padding:12px 10px!important;
+    overflow:hidden!important;
+  }
+  #expensePage .expense-wide{
+    grid-column:1!important;
+  }
+  #expensePage input,
+  #expensePage select,
+  #expensePage textarea,
+  #expensePage .expense-money-input,
+  #expensePage .expense-money-input input{
+    box-sizing:border-box!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #expensePage .expense-money-input{
+    display:flex!important;
+  }
+  #expensePage .expense-money-input input{
+    flex:1 1 auto!important;
+  }
+  #expensePage .expense-duration-preview{
+    overflow:hidden!important;
+  }
 }
 </style>
 
