@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <!-- STARRED BUILD: 20260826-operations-workflow-v30 -->
+<!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
 <!-- UI PATCH: 20260819-expense-admin-list-v29 -->
@@ -3838,7 +3839,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <div>
       <span class="expense-eyebrow">OVERTIME &amp; EXPENSE</span>
       <h1>費用申請</h1>
-      <p>選擇加班或費用，送出後可在下方追蹤審核狀態。</p>
+      <p>選擇移櫃／加班或費用，送出後可在下方追蹤審核狀態。</p>
     </div>
     <div class="expense-current-user"><span>目前申請人</span><b id="expenseCurrentUser">LINE 登入後自動帶入</b></div>
   </section>
@@ -3847,31 +3848,31 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <section class="panel expense-entry-panel">
       <div class="expense-section-head"><div><span>01</span><h2>新增申請</h2></div></div>
       <div class="expense-form-grid">
-        <div class="field expense-wide"><label>申請類型 *</label><select id="expenseRequestType" onchange="toggleExpenseRequestType()"><option value="overtime">加班</option><option value="expense">費用</option></select></div>
+        <div class="field expense-wide"><label>申請類型 *</label><select id="expenseRequestType" onchange="toggleExpenseRequestType()"><option value="overtime">移櫃／加班</option><option value="expense">費用</option></select></div>
 
         <div id="expenseOvertimeFields" class="expense-conditional-grid expense-wide">
           <div class="field"><label>區域 *</label><select id="expenseArea" onchange="rebuildExpenseStoreOptions()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div>
           <div class="field"><label>店點 *</label><select id="expenseStore"><option value="">請先選擇區域</option></select></div>
-          <div class="field"><label>加班日期 *</label><input id="expenseOvertimeDate" type="date"></div>
-          <div class="field"><label>開始時間 *</label><input id="expenseStartTime" type="time"></div>
-          <div class="field"><label>結束時間 *</label><input id="expenseEndTime" type="time"></div>
+          <div class="field expense-mobile-date-field"><label>移櫃／加班日期 *</label><div class="expense-mobile-date-control"><input id="expenseOvertimeDate" type="date"></div></div>
+          <div class="field expense-mobile-date-field"><label>開始時間 *</label><div class="expense-mobile-date-control"><input id="expenseStartTime" type="time"></div></div>
+          <div class="field expense-mobile-date-field"><label>結束時間 *</label><div class="expense-mobile-date-control"><input id="expenseEndTime" type="time"></div></div>
           <div class="expense-duration-preview"><span>預估時數</span><b id="expenseDurationPreview">—</b></div>
         </div>
 
         <div id="expenseCostFields" class="expense-conditional-grid expense-wide" hidden>
-          <div class="field"><label>費用日期 *</label><input id="expenseDate" type="date"></div>
+          <div class="field expense-mobile-date-field"><label>費用日期 *</label><div class="expense-mobile-date-control"><input id="expenseDate" type="date"></div></div>
           <div class="field"><label>費用金額 *</label><div class="expense-money-input"><span>$</span><input id="expenseAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="0"></div></div>
           <div class="field expense-wide"><label>費用緣由 *</label><textarea id="expenseReason" rows="4" maxlength="500" placeholder="例如：臨時購買包材、交通費、停車費"></textarea></div>
           <div class="field expense-wide"><label>發票／明細照片（最多 5 張）</label><input id="expenseReceiptFiles" type="file" accept="image/*" multiple onchange="previewExpenseReceipts(event)"><div class="note">可上傳發票、收據或消費明細；送出前會自動壓縮。</div><div id="expenseReceiptPreview" class="expense-receipt-preview"></div></div>
         </div>
       </div>
       <div id="expenseFormStatus" class="expense-form-status" role="status" aria-live="polite"></div>
-      <button id="expenseSubmitBtn" type="button" class="primary expense-submit-btn" onclick="submitExpenseRequest()">送出加班申請</button>
+      <button id="expenseSubmitBtn" type="button" class="primary expense-submit-btn" onclick="submitExpenseRequest()">送出移櫃／加班申請</button>
     </section>
 
     <section class="panel expense-own-panel">
       <div class="expense-section-head"><div><span>02</span><h2>我的申請紀錄</h2></div><b id="expenseOwnCount" class="expense-count-pill">0 筆</b></div>
-      <div class="expense-own-filter"><select id="expenseOwnType" onchange="renderExpenseOwnList()"><option value="">全部類型</option><option value="overtime">加班</option><option value="expense">費用</option></select><select id="expenseOwnStatus" onchange="renderExpenseOwnList()"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option><option value="cancelled">已取消</option></select><button type="button" class="secondary" onclick="loadExpenseData()">重新整理</button></div>
+      <div class="expense-own-filter"><select id="expenseOwnType" onchange="renderExpenseOwnList()"><option value="">全部類型</option><option value="overtime">移櫃／加班</option><option value="expense">費用</option></select><select id="expenseOwnStatus" onchange="renderExpenseOwnList()"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option><option value="cancelled">已取消</option></select><button type="button" class="secondary" onclick="loadExpenseData()">重新整理</button></div>
       <div id="expenseOwnList" class="expense-own-list"><div class="expense-empty">尚無申請紀錄。</div></div>
     </section>
   </div>
@@ -4060,13 +4061,13 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <div id="expenseAdminTab" class="admin-tab-panel">
       <section class="panel expense-admin-panel">
         <div class="expense-admin-heading">
-          <div><span>EXPENSE REVIEW</span><h2>費用明細</h2><p>查看人員提出的加班與費用申請，核准後會顯示在該人員的業績明細底部。</p></div>
+          <div><span>EXPENSE REVIEW</span><h2>費用明細</h2><p>查看人員提出的移櫃／加班與費用申請，核准後會顯示在該人員的業績明細底部。</p></div>
           <button type="button" class="secondary" onclick="loadExpenseAdminReport()">重新整理</button>
         </div>
         <div class="expense-admin-filter">
-          <div class="field"><label>開始日期</label><input id="expenseAdminDateFrom" type="date" onchange="loadExpenseAdminReport()"></div>
-          <div class="field"><label>結束日期</label><input id="expenseAdminDateTo" type="date" onchange="loadExpenseAdminReport()"></div>
-          <div class="field"><label>類型</label><select id="expenseAdminType" onchange="renderExpenseAdminList()"><option value="">全部類型</option><option value="overtime">加班</option><option value="expense">費用</option></select></div>
+          <div class="field expense-mobile-date-field"><label>開始日期</label><div class="expense-mobile-date-control"><input id="expenseAdminDateFrom" type="date" onchange="loadExpenseAdminReport()"></div></div>
+          <div class="field expense-mobile-date-field"><label>結束日期</label><div class="expense-mobile-date-control"><input id="expenseAdminDateTo" type="date" onchange="loadExpenseAdminReport()"></div></div>
+          <div class="field"><label>類型</label><select id="expenseAdminType" onchange="renderExpenseAdminList()"><option value="">全部類型</option><option value="overtime">移櫃／加班</option><option value="expense">費用</option></select></div>
           <div class="field"><label>狀態</label><select id="expenseAdminStatusFilter" onchange="loadExpenseAdminReport()"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option><option value="cancelled">已取消</option></select></div>
           <div class="field expense-admin-keyword"><label>搜尋</label><input id="expenseAdminKeyword" type="search" placeholder="人名、店點、緣由" oninput="renderExpenseAdminList()"></div>
           <button type="button" class="secondary" onclick="resetExpenseAdminFilters()">清除篩選</button>
@@ -4075,7 +4076,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div class="expense-admin-summary">
           <div><span>待審核</span><b id="expenseAdminPendingCount">0 筆</b></div>
           <div><span>已核准費用</span><b id="expenseAdminApprovedAmount">$0</b></div>
-          <div><span>加班申請</span><b id="expenseAdminOvertimeCount">0 筆</b></div>
+          <div><span>移櫃／加班申請</span><b id="expenseAdminOvertimeCount">0 筆</b></div>
           <div><span>目前結果</span><b id="expenseAdminTotalCount">0 筆</b></div>
         </div>
         <div id="expenseAdminList" class="expense-admin-list"><div class="expense-empty">切換到此頁後會載入費用明細。</div></div>
@@ -11215,7 +11216,7 @@ function renderSalesPersonExpenseSection(lineUserId){
   var expenseTotal=rows.filter(function(item){return item.requestType==='expense'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0);
   var overtimeCount=rows.filter(function(item){return item.requestType==='overtime'}).length;
   section.hidden=false;
-  section.innerHTML='<div class="sales-person-expense-heading"><div><span>APPROVED REQUESTS</span><h4>核准加班／費用</h4><p>另外列示，不計入營業額、退貨或排行榜。</p></div><div class="sales-person-expense-totals"><b>'+salesEsc(salesMoney(expenseTotal))+'</b><small>核准費用・加班 '+String(overtimeCount)+' 筆</small></div></div><div class="sales-person-expense-list">'+rows.map(function(item){var isExpense=item.requestType==='expense';var place=[item.storeName,item.storeFloor].filter(Boolean).join('｜');var detail=isExpense?String(item.reason||'未填寫緣由'):[place||'未指定店點',[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),salesExpenseDuration(item)].filter(Boolean).join('・');var receiptButton=isExpense&&Array.isArray(item.receiptUrls)&&item.receiptUrls.length?'<button type="button" class="secondary sales-person-expense-receipt" onclick="openSalesExpenseReceipts(\''+salesEsc(item.id)+'\')">查看單據 '+String(item.receiptUrls.length)+' 張</button>':'';return '<article><time>'+salesEsc(item.requestDate||'—')+'</time><span class="sales-person-expense-type '+(isExpense?'expense':'overtime')+'">'+(isExpense?'費用':'加班')+'</span><div><b>'+salesEsc(detail)+'</b><small>'+salesEsc(item.reviewerName?'核准人：'+item.reviewerName:'已核准')+'</small></div><strong>'+(isExpense?salesEsc(salesMoney(item.amount||0)):'—')+'</strong>'+receiptButton+'</article>'}).join('')+'</div>';
+  section.innerHTML='<div class="sales-person-expense-heading"><div><span>APPROVED REQUESTS</span><h4>核准移櫃／加班／費用</h4><p>另外列示，不計入營業額、退貨或排行榜。</p></div><div class="sales-person-expense-totals"><b>'+salesEsc(salesMoney(expenseTotal))+'</b><small>核准費用・移櫃／加班 '+String(overtimeCount)+' 筆</small></div></div><div class="sales-person-expense-list">'+rows.map(function(item){var isExpense=item.requestType==='expense';var place=[item.storeName,item.storeFloor].filter(Boolean).join('｜');var detail=isExpense?String(item.reason||'未填寫緣由'):[place||'未指定店點',[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),salesExpenseDuration(item)].filter(Boolean).join('・');var receiptButton=isExpense&&Array.isArray(item.receiptUrls)&&item.receiptUrls.length?'<button type="button" class="secondary sales-person-expense-receipt" onclick="openSalesExpenseReceipts(\''+salesEsc(item.id)+'\')">查看單據 '+String(item.receiptUrls.length)+' 張</button>':'';return '<article><time>'+salesEsc(item.requestDate||'—')+'</time><span class="sales-person-expense-type '+(isExpense?'expense':'overtime')+'">'+(isExpense?'費用':'移櫃／加班')+'</span><div><b>'+salesEsc(detail)+'</b><small>'+salesEsc(item.reviewerName?'核准人：'+item.reviewerName:'已核准')+'</small></div><strong>'+(isExpense?salesEsc(salesMoney(item.amount||0)):'—')+'</strong>'+receiptButton+'</article>'}).join('')+'</div>';
 }
 function openSalesStatDetail(kind,key){
   kind=kind==='person'?'person':'store';
@@ -11779,11 +11780,11 @@ async function exportSalesStatDetailExcel(){
     var matrixHeaders=matrix.model.people.map(function(person){return person.name}).concat(['銷售總額']);var matrixWidths=[13].concat(matrix.model.people.map(function(){return 14})).concat([16]);
     try{salesSetAdminStatus('正在匯出門市人員月表…','working');await salesExportSingleSheetExcel('門市人員月表',matrix.rows,matrixWidths,title+'_人員月表_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',matrixHeaders);salesSetAdminStatus('門市人員月表已匯出。','success')}catch(error){salesSetAdminStatus('月表匯出失敗：'+String(error&&error.message||error),'error')}return;
   }
-  var exportRows=rows.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':isReturn?'退貨':'業績','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':salesStoreText(record),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'是否代銷售':record.isProxySale?'是':'否','上班時數':isReturn?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursValue(record)),'薪資狀態':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'營業額':Number(record.grossAmount||0),'退貨':Number(record.returnAmount||0),'核准費用':0,'加班／費用說明':'','原發票日期':record.originalInvoiceDate||'','最後更新':salesDateTime(isReturn&&state.kind==='person'?record.returnAssignedAt:record.updatedAt)}});
+  var exportRows=rows.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':isReturn?'退貨':'業績','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':salesStoreText(record),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'是否代銷售':record.isProxySale?'是':'否','上班時數':isReturn?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursValue(record)),'薪資狀態':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'營業額':Number(record.grossAmount||0),'退貨':Number(record.returnAmount||0),'核准費用':0,'移櫃／加班／費用說明':'','原發票日期':record.originalInvoiceDate||'','最後更新':salesDateTime(isReturn&&state.kind==='person'?record.returnAssignedAt:record.updatedAt)}});
   if(state.kind==='person'){
-    (salesAdminData.expenses||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(state.key||'')}).forEach(function(item){var isExpense=item.requestType==='expense';exportRows.push({'日期':item.requestDate||'','類型':isExpense?'核准費用':'核准加班','區域':(typeof areaText!=='undefined'&&areaText[item.area])||item.area||'','門市':isExpense?'':salesStoreText(item),'銷售／處理人員':salesPersonName(item.submitterLineUserId,item.submitterName),'回傳人員':salesPersonName(item.submitterLineUserId,item.submitterName),'是否代銷售':'','上班時數':isExpense?'':salesExpenseDuration(item).replace(' 小時',''),'薪資狀態':'另列，不計入業績','營業額':0,'退貨':0,'核准費用':isExpense?Number(item.amount||0):0,'加班／費用說明':isExpense?String(item.reason||''):[salesStoreText(item),item.overtimeStart+'～'+item.overtimeEnd].filter(Boolean).join('・'),'原發票日期':'','最後更新':salesDateTime(item.reviewedAt||item.updatedAt)})});
+    (salesAdminData.expenses||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(state.key||'')}).forEach(function(item){var isExpense=item.requestType==='expense';exportRows.push({'日期':item.requestDate||'','類型':isExpense?'核准費用':'核准移櫃／加班','區域':(typeof areaText!=='undefined'&&areaText[item.area])||item.area||'','門市':isExpense?'':salesStoreText(item),'銷售／處理人員':salesPersonName(item.submitterLineUserId,item.submitterName),'回傳人員':salesPersonName(item.submitterLineUserId,item.submitterName),'是否代銷售':'','上班時數':isExpense?'':salesExpenseDuration(item).replace(' 小時',''),'薪資狀態':'另列，不計入業績','營業額':0,'退貨':0,'核准費用':isExpense?Number(item.amount||0):0,'移櫃／加班／費用說明':isExpense?String(item.reason||''):[salesStoreText(item),item.overtimeStart+'～'+item.overtimeEnd].filter(Boolean).join('・'),'原發票日期':'','最後更新':salesDateTime(item.reviewedAt||item.updatedAt)})});
   }
-  try{salesSetAdminStatus('正在匯出明細 Excel…','working');await salesExportSingleSheetExcel('業績明細',exportRows,[13,10,10,24,16,16,12,12,14,14,14,14,28,14,21],title+'_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',['營業額']);salesSetAdminStatus('明細 Excel 已匯出；核准加班與費用列在業績資料下方。','success')}catch(error){salesSetAdminStatus('明細匯出失敗：'+String(error&&error.message||error),'error')}
+  try{salesSetAdminStatus('正在匯出明細 Excel…','working');await salesExportSingleSheetExcel('業績明細',exportRows,[13,10,10,24,16,16,12,12,14,14,14,14,28,14,21],title+'_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',['營業額']);salesSetAdminStatus('明細 Excel 已匯出；核准移櫃／加班與費用列在業績資料下方。','success')}catch(error){salesSetAdminStatus('明細匯出失敗：'+String(error&&error.message||error),'error')}
 }
 async function exportSalesPersonDetailExcel(){
   var model=salesPersonDetailModel();if(!model.people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}
@@ -12966,7 +12967,7 @@ body.sales-stat-modal-open{overflow:hidden}
 var CAPACITY_PLAN_KEY='starred_capacity_reference_plan_v1';
 var capacityUsageData=null;
 var capacityLoading=false;
-var capacityTableLabels={orders:'訂單文字',order_photos:'訂單照片索引',sales_reports:'業績資料',sales_report_edit_requests:'業績修改申請',sales_report_audit_logs:'業績修改軌跡',sales_backup_archives:'業績年度備份索引',sales_store_reporting_periods:'特賣結束設定',expense_requests:'費用／加班申請',department_events:'活動資料',department_stores:'活動門市',event_images:'活動照片索引',admins:'後台帳號',line_users:'LINE 使用者',stores:'百貨門市'};
+var capacityTableLabels={orders:'訂單文字',order_photos:'訂單照片索引',sales_reports:'業績資料',sales_report_edit_requests:'業績修改申請',sales_report_audit_logs:'業績修改軌跡',sales_backup_archives:'業績年度備份索引',sales_store_reporting_periods:'特賣結束設定',expense_requests:'費用／移櫃／加班申請',department_events:'活動資料',department_stores:'活動門市',event_images:'活動照片索引',admins:'後台帳號',line_users:'LINE 使用者',stores:'百貨門市'};
 var capacityBucketLabels={'order-images':'訂單照片','activity-images':'活動照片','sales-backups':'年度業績備份','expense-receipts':'費用單據'};
 function capacityEsc(value){return typeof escapeHtml==='function'?escapeHtml(value):String(value==null?'':value)}
 function capacityFormatBytes(value){var bytes=Math.max(0,Number(value||0));if(bytes<1024)return Math.round(bytes)+' B';var units=['KB','MB','GB','TB'];var size=bytes;var unit='B';for(var i=0;i<units.length&&size>=1024;i++){size/=1024;unit=units[i]}return size.toLocaleString('zh-TW',{minimumFractionDigits:size<10?2:size<100?1:0,maximumFractionDigits:size<10?2:size<100?1:0})+' '+unit}
@@ -13523,7 +13524,7 @@ function expenseMoney(value){return '$'+Math.max(0,Number(value||0)).toLocaleStr
 function expenseDateTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(value)}}
 function expenseIdentity(){var profile=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;var verified=window.starredVerifiedLineUser||{};return {id:String((profile&&profile.id)||verified.lineUserId||''),name:String(verified.employeeName||(profile&&(profile.employeeName||profile.name))||verified.lineDisplayName||(profile&&profile.displayName)||'LINE 使用者')}}
 function expenseStatusLabel(value){return value==='approved'?'已核准':value==='rejected'?'未通過':value==='cancelled'?'已取消':'待審核'}
-function expenseTypeLabel(value){return value==='overtime'?'加班':'費用'}
+function expenseTypeLabel(value){return value==='overtime'?'移櫃／加班':'費用'}
 function expenseStoreText(item){return [item&&item.storeName,item&&item.storeFloor].filter(Boolean).join('｜')||'未指定店點'}
 function expenseDuration(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3));var b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';var hours=(b-a)/60;return (Number.isInteger(hours)?String(hours):String(Math.round(hours*10)/10))+' 小時'}
 function expenseSetMessage(id,text,type){var box=expenseEl(id);if(!box)return;box.className='expense-form-status'+(text?' show '+(type||'working'):'');box.textContent=text||''}
@@ -13531,7 +13532,7 @@ function expenseDetailText(item){return item.requestType==='overtime'?[expenseSt
 
 function updateExpenseDuration(){var text=expenseDuration((expenseEl('expenseStartTime')||{}).value,(expenseEl('expenseEndTime')||{}).value);if(expenseEl('expenseDurationPreview'))expenseEl('expenseDurationPreview').textContent=text||'—'}
 function rebuildExpenseStoreOptions(){var select=expenseEl('expenseStore');if(!select)return;var area=String((expenseEl('expenseArea')||{}).value||'');var list=(typeof stores!=='undefined'?stores:[]).filter(function(store){return (!area||String(store.area||store.region||'')===area)&&store.is_enabled!==false&&store.enabled!==false}).slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant')||String(a.floor||'').localeCompare(String(b.floor||''),'zh-Hant')});select.innerHTML='<option value="">'+(area?'請選擇店點':'請先選擇區域')+'</option>'+list.map(function(store){return '<option value="'+expenseEsc(store.id)+'">'+expenseEsc([store.name,store.floor].filter(Boolean).join('｜'))+'</option>'}).join('')}
-function toggleExpenseRequestType(){var type=String((expenseEl('expenseRequestType')||{}).value||'overtime');if(expenseEl('expenseOvertimeFields'))expenseEl('expenseOvertimeFields').hidden=type!=='overtime';if(expenseEl('expenseCostFields'))expenseEl('expenseCostFields').hidden=type!=='expense';if(expenseEl('expenseSubmitBtn'))expenseEl('expenseSubmitBtn').textContent=type==='overtime'?'送出加班申請':'送出費用申請';expenseSetMessage('expenseFormStatus','')}
+function toggleExpenseRequestType(){var type=String((expenseEl('expenseRequestType')||{}).value||'overtime');if(expenseEl('expenseOvertimeFields'))expenseEl('expenseOvertimeFields').hidden=type!=='overtime';if(expenseEl('expenseCostFields'))expenseEl('expenseCostFields').hidden=type!=='expense';if(expenseEl('expenseSubmitBtn'))expenseEl('expenseSubmitBtn').textContent=type==='overtime'?'送出移櫃／加班申請':'送出費用申請';expenseSetMessage('expenseFormStatus','')}
 function renderExpenseReceiptPreview(){var box=expenseEl('expenseReceiptPreview');if(!box)return;box.innerHTML=expenseReceiptData.map(function(url,index){return '<div class="expense-receipt-item"><img src="'+expenseEsc(url)+'" alt="單據照片 '+String(index+1)+'"><button type="button" onclick="removeExpenseReceipt('+String(index)+')" aria-label="移除第 '+String(index+1)+' 張">×</button></div>'}).join('')}
 async function previewExpenseReceipts(event){var files=Array.from(event&&event.target&&event.target.files||[]);if(!files.length)return;if(files.length>5){alert('發票或明細照片最多 5 張。');files=files.slice(0,5)}expenseReceiptData=[];expenseSetMessage('expenseFormStatus','正在壓縮單據照片…','working');try{for(var i=0;i<files.length;i++){if(!String(files[i].type||'').startsWith('image/'))throw new Error('請選擇圖片檔');expenseReceiptData.push(await compressOrderPhoto(files[i]))}renderExpenseReceiptPreview();expenseSetMessage('expenseFormStatus','已加入 '+String(expenseReceiptData.length)+' 張單據照片。','success')}catch(error){expenseReceiptData=[];renderExpenseReceiptPreview();expenseSetMessage('expenseFormStatus','照片處理失敗：'+String(error&&error.message||error),'error')}finally{if(event&&event.target)event.target.value=''}}
 function removeExpenseReceipt(index){expenseReceiptData.splice(Number(index),1);renderExpenseReceiptPreview();expenseSetMessage('expenseFormStatus',expenseReceiptData.length?'目前保留 '+String(expenseReceiptData.length)+' 張單據照片。':'')}
@@ -13558,7 +13559,7 @@ function renderExpenseOwnList(){
 }
 async function loadExpenseData(){if(expenseLoading)return;expenseLoading=true;var identity=expenseIdentity();if(expenseEl('expenseCurrentUser'))expenseEl('expenseCurrentUser').textContent=identity.name||'LINE 使用者';expenseSetMessage('expenseFormStatus','正在讀取申請紀錄…','working');try{var result=await starredApi('expense_bootstrap',{});expenseOwnData=Array.isArray(result.requests)?result.requests:[];renderExpenseOwnList();expenseSetMessage('expenseFormStatus','')}catch(error){expenseSetMessage('expenseFormStatus','申請紀錄載入失敗：'+String(error&&error.message||error),'error')}finally{expenseLoading=false}}
 function resetExpenseForm(type){var today=expenseToday();['expenseReason','expenseAmount','expenseStartTime','expenseEndTime'].forEach(function(id){if(expenseEl(id))expenseEl(id).value=''});if(expenseEl('expenseOvertimeDate'))expenseEl('expenseOvertimeDate').value=today;if(expenseEl('expenseDate'))expenseEl('expenseDate').value=today;expenseReceiptData=[];renderExpenseReceiptPreview();updateExpenseDuration();if(type==='overtime'){if(expenseEl('expenseStore'))expenseEl('expenseStore').value=''}}
-async function submitExpenseRequest(){var type=String((expenseEl('expenseRequestType')||{}).value||'overtime');var requestDate=type==='overtime'?String((expenseEl('expenseOvertimeDate')||{}).value||''):String((expenseEl('expenseDate')||{}).value||'');var payload={requestType:type,requestDate:requestDate,area:type==='overtime'?String((expenseEl('expenseArea')||{}).value||''):'',storeId:type==='overtime'?String((expenseEl('expenseStore')||{}).value||''):'',overtimeStart:type==='overtime'?String((expenseEl('expenseStartTime')||{}).value||''):'',overtimeEnd:type==='overtime'?String((expenseEl('expenseEndTime')||{}).value||''):'',reason:type==='expense'?String((expenseEl('expenseReason')||{}).value||'').trim():'',amount:type==='expense'?Number((expenseEl('expenseAmount')||{}).value||0):0,receiptDataList:type==='expense'?expenseReceiptData:[]};if(!requestDate){expenseSetMessage('expenseFormStatus','請填寫申請日期。','error');return}if(type==='overtime'&&(!payload.area||!payload.storeId||!payload.overtimeStart||!payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','請完整選擇區域、店點、日期與加班時間。','error');return}if(type==='overtime'&&!expenseDuration(payload.overtimeStart,payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','加班結束時間必須晚於開始時間。','error');return}if(type==='expense'&&(payload.reason.length<2||payload.amount<=0)){expenseSetMessage('expenseFormStatus','請填寫費用緣由與正確金額。','error');return}var button=expenseEl('expenseSubmitBtn');if(button)button.disabled=true;expenseSetMessage('expenseFormStatus','正在送出申請…','working');try{await starredApi('expense_submit',payload);resetExpenseForm(type);expenseSetMessage('expenseFormStatus',(type==='overtime'?'加班':'費用')+'申請已送出，等待後台審核。','success');await loadExpenseData()}catch(error){expenseSetMessage('expenseFormStatus','送出失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
+async function submitExpenseRequest(){var type=String((expenseEl('expenseRequestType')||{}).value||'overtime');var requestDate=type==='overtime'?String((expenseEl('expenseOvertimeDate')||{}).value||''):String((expenseEl('expenseDate')||{}).value||'');var payload={requestType:type,requestDate:requestDate,area:type==='overtime'?String((expenseEl('expenseArea')||{}).value||''):'',storeId:type==='overtime'?String((expenseEl('expenseStore')||{}).value||''):'',overtimeStart:type==='overtime'?String((expenseEl('expenseStartTime')||{}).value||''):'',overtimeEnd:type==='overtime'?String((expenseEl('expenseEndTime')||{}).value||''):'',reason:type==='expense'?String((expenseEl('expenseReason')||{}).value||'').trim():'',amount:type==='expense'?Number((expenseEl('expenseAmount')||{}).value||0):0,receiptDataList:type==='expense'?expenseReceiptData:[]};if(!requestDate){expenseSetMessage('expenseFormStatus','請填寫申請日期。','error');return}if(type==='overtime'&&(!payload.area||!payload.storeId||!payload.overtimeStart||!payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','請完整選擇區域、店點、日期與移櫃／加班時間。','error');return}if(type==='overtime'&&!expenseDuration(payload.overtimeStart,payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','移櫃／加班結束時間必須晚於開始時間。','error');return}if(type==='expense'&&(payload.reason.length<2||payload.amount<=0)){expenseSetMessage('expenseFormStatus','請填寫費用緣由與正確金額。','error');return}var button=expenseEl('expenseSubmitBtn');if(button)button.disabled=true;expenseSetMessage('expenseFormStatus','正在送出申請…','working');try{await starredApi('expense_submit',payload);resetExpenseForm(type);expenseSetMessage('expenseFormStatus',(type==='overtime'?'移櫃／加班':'費用')+'申請已送出，等待後台審核。','success');await loadExpenseData()}catch(error){expenseSetMessage('expenseFormStatus','送出失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
 
 function openExpenseReceipts(scope,requestId){var source=scope==='admin'?expenseAdminData:scope==='sales'&&window.salesAdminData?window.salesAdminData.expenses:expenseOwnData;var item=(source||[]).find(function(row){return String(row.id||'')===String(requestId||'')});var urls=item&&Array.isArray(item.receiptUrls)?item.receiptUrls.filter(Boolean):[];if(!urls.length){alert('這筆申請沒有可查看的單據照片。');return}if(typeof openLightboxGallery==='function')openLightboxGallery(urls,0);else window.open(urls[0],'_blank','noopener')}
 function expenseAdminFilteredRows(){var type=String((expenseEl('expenseAdminType')||{}).value||'');var keyword=String((expenseEl('expenseAdminKeyword')||{}).value||'').trim().toLocaleLowerCase('zh-Hant');return expenseAdminData.filter(function(item){var text=[item.submitterName,item.storeName,item.storeFloor,item.reason,item.requestDate,expenseTypeLabel(item.requestType),expenseStatusLabel(item.status)].join(' ').toLocaleLowerCase('zh-Hant');return (!type||item.requestType===type)&&(!keyword||text.includes(keyword))})}
@@ -13575,7 +13576,7 @@ function renderExpenseAdminList(){
   if(expenseEl('expenseAdminOvertimeCount'))expenseEl('expenseAdminOvertimeCount').textContent=String(overtime)+' 筆';
   if(expenseEl('expenseAdminTotalCount'))expenseEl('expenseAdminTotalCount').textContent=String(rows.length)+' 筆';
   if(!rows.length){
-    box.innerHTML='<div class="expense-empty">目前篩選條件沒有費用或加班申請。</div>';
+    box.innerHTML='<div class="expense-empty">目前篩選條件沒有費用或移櫃／加班申請。</div>';
     return;
   }
   var listHead='<div class="expense-admin-list-head" role="row"><span>申請日期</span><span>申請人員</span><span>申請內容</span><span>金額／時數</span><span>審核操作</span></div>';
@@ -13870,7 +13871,7 @@ function v30StoreRows(){return (typeof stores!=='undefined'?stores:[]).filter(fu
 function ensureExpenseV30Modal(){
   var modal=v30El('expenseV30Modal');if(modal)return modal;
   modal=document.createElement('div');modal.id='expenseV30Modal';modal.className='expense-v30-modal';modal.hidden=true;
-  modal.innerHTML='<section class="expense-v30-dialog" role="dialog" aria-modal="true" aria-labelledby="expenseV30Title"><header><div><span>EDIT &amp; RE-SUBMIT</span><h3 id="expenseV30Title">編輯申請</h3></div><button type="button" class="expense-v30-close" onclick="closeExpenseV30Editor()" aria-label="關閉">×</button></header><div class="expense-v30-body"><div id="expenseV30Kind" class="expense-v30-kind"></div><div id="expenseV30Reapproval" class="expense-v30-reapproval" hidden>這筆已經核准；儲存修改後會改回待審核，重新由後台確認。</div><div class="expense-v30-grid"><div class="field"><label>申請日期 *</label><input id="expenseV30Date" type="date"></div><div id="expenseV30AreaField" class="field"><label>區域 *</label><select id="expenseV30Area" onchange="rebuildExpenseV30Stores()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div><div id="expenseV30StoreField" class="field"><label>店點 *</label><select id="expenseV30Store"><option value="">請先選擇區域</option></select></div><div id="expenseV30StartField" class="field"><label>開始時間 *</label><input id="expenseV30Start" type="time"></div><div id="expenseV30EndField" class="field"><label>結束時間 *</label><input id="expenseV30End" type="time"></div><div id="expenseV30AmountField" class="field"><label>費用金額 *</label><input id="expenseV30Amount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div><div id="expenseV30ReasonField" class="field wide"><label>費用緣由 *</label><textarea id="expenseV30Reason" rows="4" maxlength="500"></textarea></div><div id="expenseV30PhotosField" class="field wide"><label>已上傳的單據（可移除）</label><div id="expenseV30Existing" class="expense-v30-existing"></div><label style="margin-top:12px">新增單據照片（總數最多 5 張）</label><input id="expenseV30Files" type="file" accept="image/*" multiple onchange="previewExpenseV30Files(event)"><div id="expenseV30New" class="expense-v30-new"></div></div></div><div id="expenseV30Status" class="expense-v30-status" role="status" aria-live="polite"></div></div><footer><button type="button" class="secondary" onclick="closeExpenseV30Editor()">返回</button><button id="expenseV30Save" type="button" class="primary" onclick="saveExpenseV30Edit()">儲存並送審</button></footer></section>';
+  modal.innerHTML='<section class="expense-v30-dialog" role="dialog" aria-modal="true" aria-labelledby="expenseV30Title"><header><div><span>EDIT &amp; RE-SUBMIT</span><h3 id="expenseV30Title">編輯申請</h3></div><button type="button" class="expense-v30-close" onclick="closeExpenseV30Editor()" aria-label="關閉">×</button></header><div class="expense-v30-body"><div id="expenseV30Kind" class="expense-v30-kind"></div><div id="expenseV30Reapproval" class="expense-v30-reapproval" hidden>這筆已經核准；儲存修改後會改回待審核，重新由後台確認。</div><div class="expense-v30-grid"><div class="field expense-mobile-date-field"><label>申請日期 *</label><div class="expense-mobile-date-control"><input id="expenseV30Date" type="date"></div></div><div id="expenseV30AreaField" class="field"><label>區域 *</label><select id="expenseV30Area" onchange="rebuildExpenseV30Stores()"><option value="">請選擇區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></div><div id="expenseV30StoreField" class="field"><label>店點 *</label><select id="expenseV30Store"><option value="">請先選擇區域</option></select></div><div id="expenseV30StartField" class="field expense-mobile-date-field"><label>開始時間 *</label><div class="expense-mobile-date-control"><input id="expenseV30Start" type="time"></div></div><div id="expenseV30EndField" class="field expense-mobile-date-field"><label>結束時間 *</label><div class="expense-mobile-date-control"><input id="expenseV30End" type="time"></div></div><div id="expenseV30AmountField" class="field"><label>費用金額 *</label><input id="expenseV30Amount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div><div id="expenseV30ReasonField" class="field wide"><label>費用緣由 *</label><textarea id="expenseV30Reason" rows="4" maxlength="500"></textarea></div><div id="expenseV30PhotosField" class="field wide"><label>已上傳的單據（可移除）</label><div id="expenseV30Existing" class="expense-v30-existing"></div><label style="margin-top:12px">新增單據照片（總數最多 5 張）</label><input id="expenseV30Files" type="file" accept="image/*" multiple onchange="previewExpenseV30Files(event)"><div id="expenseV30New" class="expense-v30-new"></div></div></div><div id="expenseV30Status" class="expense-v30-status" role="status" aria-live="polite"></div></div><footer><button type="button" class="secondary" onclick="closeExpenseV30Editor()">返回</button><button id="expenseV30Save" type="button" class="primary" onclick="saveExpenseV30Edit()">儲存並送審</button></footer></section>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeExpenseV30Editor()});document.body.appendChild(modal);return modal;
 }
 function rebuildExpenseV30Stores(selectedId){var select=v30El('expenseV30Store');if(!select)return;var area=String((v30El('expenseV30Area')||{}).value||'');var rows=v30StoreRows().filter(function(store){return !area||String(store.area||store.region||'')===area}).sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant')||String(a.floor||'').localeCompare(String(b.floor||''),'zh-Hant')});select.innerHTML='<option value="">'+(area?'請選擇店點':'請先選擇區域')+'</option>'+rows.map(function(store){return '<option value="'+v30Esc(store.id)+'">'+v30Esc([store.name,store.floor].filter(Boolean).join('｜'))+'</option>'}).join('');if(selectedId)select.value=String(selectedId)}
@@ -13882,7 +13883,7 @@ function renderExpenseV30Photos(){
 function openExpenseV30Editor(scope,id){
   var item=v30ExpenseRows(scope).find(function(row){return String(row.id||'')===String(id||'')});if(!item){alert('找不到這筆申請，請重新整理。');return}
   expenseV30State={scope:scope,item:item,keepPaths:Array.isArray(item.receiptPaths)?item.receiptPaths.slice():[],newData:[]};var modal=ensureExpenseV30Modal();var isExpense=item.requestType==='expense';
-  v30El('expenseV30Title').textContent=(scope==='admin'?'後台修改｜':'')+(isExpense?'費用申請':'加班申請');v30El('expenseV30Kind').textContent=(isExpense?'費用':'加班')+'・第 '+String(item.revisionNo||1)+' 版';v30El('expenseV30Reapproval').hidden=item.status!=='approved';
+  v30El('expenseV30Title').textContent=(scope==='admin'?'後台修改｜':'')+(isExpense?'費用申請':'移櫃／加班申請');v30El('expenseV30Kind').textContent=(isExpense?'費用':'移櫃／加班')+'・第 '+String(item.revisionNo||1)+' 版';v30El('expenseV30Reapproval').hidden=item.status!=='approved';
   v30El('expenseV30Date').value=String(item.requestDate||'');v30El('expenseV30Date').max=v30Today();v30El('expenseV30Area').value=String(item.area||'');rebuildExpenseV30Stores(item.storeId);v30El('expenseV30Start').value=String(item.overtimeStart||'');v30El('expenseV30End').value=String(item.overtimeEnd||'');v30El('expenseV30Amount').value=isExpense?String(item.amount||''):'';v30El('expenseV30Reason').value=String(item.reason||'');
   ['expenseV30AreaField','expenseV30StoreField','expenseV30StartField','expenseV30EndField'].forEach(function(field){v30El(field).hidden=isExpense});['expenseV30AmountField','expenseV30ReasonField','expenseV30PhotosField'].forEach(function(field){v30El(field).hidden=!isExpense});renderExpenseV30Photos();v30SetStatus('expenseV30Status','');modal.hidden=false;document.body.classList.add('expense-v30-open');
 }
@@ -13892,7 +13893,7 @@ function removeExpenseV30New(index){expenseV30State.newData.splice(Number(index)
 async function previewExpenseV30Files(event){var files=Array.from(event&&event.target&&event.target.files||[]);if(event&&event.target)event.target.value='';var remaining=5-expenseV30State.keepPaths.length-expenseV30State.newData.length;if(remaining<=0){v30SetStatus('expenseV30Status','單據照片最多 5 張；請先移除一張。','error');return}if(files.length>remaining)files=files.slice(0,remaining);v30SetStatus('expenseV30Status','正在壓縮新增照片…','working');try{for(var i=0;i<files.length;i++){if(!String(files[i].type||'').startsWith('image/'))throw new Error('請選擇圖片檔');expenseV30State.newData.push(await compressOrderPhoto(files[i]))}renderExpenseV30Photos();v30SetStatus('expenseV30Status','已加入 '+String(files.length)+' 張照片。','working')}catch(error){v30SetStatus('expenseV30Status','照片處理失敗：'+String(error&&error.message||error),'error')}}
 async function saveExpenseV30Edit(){
   var item=expenseV30State.item;if(!item)return;var isExpense=item.requestType==='expense';var payload={requestId:item.id,requestDate:String((v30El('expenseV30Date')||{}).value||''),area:isExpense?'':String((v30El('expenseV30Area')||{}).value||''),storeId:isExpense?'':String((v30El('expenseV30Store')||{}).value||''),overtimeStart:isExpense?'':String((v30El('expenseV30Start')||{}).value||''),overtimeEnd:isExpense?'':String((v30El('expenseV30End')||{}).value||''),amount:isExpense?Number((v30El('expenseV30Amount')||{}).value||0):0,reason:isExpense?String((v30El('expenseV30Reason')||{}).value||'').trim():'',keepReceiptPaths:expenseV30State.keepPaths,receiptDataList:expenseV30State.newData};
-  if(!payload.requestDate){v30SetStatus('expenseV30Status','請填寫申請日期。','error');return}if(isExpense&&(payload.amount<=0||payload.reason.length<2)){v30SetStatus('expenseV30Status','請填寫正確金額與至少 2 個字的費用緣由。','error');return}if(!isExpense&&(!payload.area||!payload.storeId||!payload.overtimeStart||!payload.overtimeEnd)){v30SetStatus('expenseV30Status','請完整填寫區域、店點與加班時間。','error');return}
+  if(!payload.requestDate){v30SetStatus('expenseV30Status','請填寫申請日期。','error');return}if(isExpense&&(payload.amount<=0||payload.reason.length<2)){v30SetStatus('expenseV30Status','請填寫正確金額與至少 2 個字的費用緣由。','error');return}if(!isExpense&&(!payload.area||!payload.storeId||!payload.overtimeStart||!payload.overtimeEnd)){v30SetStatus('expenseV30Status','請完整填寫區域、店點與移櫃／加班時間。','error');return}
   if(item.status==='approved'&&!confirm('這筆已經核准。儲存修改後會重新變成「待審核」，確定繼續嗎？'))return;var button=v30El('expenseV30Save');if(button)button.disabled=true;v30SetStatus('expenseV30Status','正在儲存並重新送審…','working');try{var scope=expenseV30State.scope;var result=await starredApi(scope==='admin'?'expense_admin_update':'expense_update',payload);closeExpenseV30Editor();if(scope==='admin'){await window.loadExpenseAdminReport();}else{await window.loadExpenseData()}var message=result&&result.reapprovalRequired?'修改完成，已重新送交後台審核。':'修改完成，申請目前為待審核。';if(scope==='admin'){var box=v30El('expenseAdminMessage');if(box){box.className='expense-form-status show success';box.textContent=message}}else alert(message)}catch(error){v30SetStatus('expenseV30Status','儲存失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
 async function cancelExpenseV30(id){if(!confirm('確定取消這筆待審核申請？取消後仍可編輯並重新送審。'))return;try{await starredApi('expense_cancel',{requestId:id});await window.loadExpenseData()}catch(error){alert('取消失敗：'+String(error&&error.message||error))}}
 async function deleteExpenseV30(scope,id){var text=scope==='admin'?'後台刪除後，前台與後台清單都不再顯示，但系統會保留稽核軌跡。確定刪除？':'確定刪除這筆申請？刪除後清單將不再顯示。';if(!confirm(text))return;try{await starredApi(scope==='admin'?'expense_admin_delete':'expense_delete',{requestId:id});if(scope==='admin')await window.loadExpenseAdminReport();else await window.loadExpenseData()}catch(error){alert('刪除失敗：'+String(error&&error.message||error))}}
@@ -13911,5 +13912,103 @@ window.openExpenseV30Editor=openExpenseV30Editor;window.closeExpenseV30Editor=cl
 document.addEventListener('DOMContentLoaded',installSalesProxyCreateButton);
 })();
 </script>
+<style id="expense-overtime-mobile-date-v31-style">
+/* iPhone Safari 的 date/time 具有較大的內建寬度；外層控制框負責固定寬度與圓角。 */
+.expense-mobile-date-field{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+}
+.expense-mobile-date-control{
+  display:block;
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  height:46px;
+  overflow:hidden;
+  border:1px solid #d5e0e6;
+  border-radius:11px;
+  background:#fff;
+}
+.expense-mobile-date-control:focus-within{
+  border-color:#7895a5;
+  box-shadow:0 0 0 3px rgba(39,66,83,.08);
+}
+.expense-mobile-date-control>input[type="date"],
+.expense-mobile-date-control>input[type="time"]{
+  display:block!important;
+  box-sizing:border-box!important;
+  inline-size:100%!important;
+  width:100%!important;
+  min-inline-size:0!important;
+  min-width:0!important;
+  max-inline-size:100%!important;
+  max-width:100%!important;
+  height:44px!important;
+  min-height:44px!important;
+  margin:0!important;
+  padding:0 12px!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#274253!important;
+  font:inherit!important;
+  font-size:16px!important;
+  line-height:normal!important;
+  text-align:left!important;
+}
+.expense-mobile-date-control>input::-webkit-date-and-time-value{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  text-align:left!important;
+}
+.expense-mobile-date-control>input::-webkit-calendar-picker-indicator{
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:5px!important;
+}
+@media(max-width:760px){
+  #expensePage .expense-conditional-grid{
+    overflow:visible!important;
+  }
+  #expensePage .expense-mobile-date-field,
+  #expenseAdminTab .expense-mobile-date-field,
+  .expense-v30-dialog .expense-mobile-date-field{
+    overflow:visible!important;
+  }
+  #expensePage .expense-mobile-date-control,
+  #expenseAdminTab .expense-mobile-date-control,
+  .expense-v30-dialog .expense-mobile-date-control{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:50px!important;
+    overflow:hidden!important;
+    border-radius:12px!important;
+  }
+  #expensePage .expense-mobile-date-control>input,
+  #expenseAdminTab .expense-mobile-date-control>input,
+  .expense-v30-dialog .expense-mobile-date-control>input{
+    inline-size:100%!important;
+    width:100%!important;
+    min-inline-size:0!important;
+    min-width:0!important;
+    max-inline-size:100%!important;
+    max-width:100%!important;
+    height:48px!important;
+    min-height:48px!important;
+    padding:0 12px!important;
+    font-size:16px!important;
+  }
+}
+</style>
 </body>
 </html>
