@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260827-external-account-workflow-v33 -->
+<!-- STARRED BUILD: 20260827-performance-total-compact-admin-v34 -->
 <!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
@@ -11267,7 +11267,7 @@ function ensureSalesStatDetailModal(){
   modal.id='salesStatDetailModal';
   modal.className='sales-stat-modal';
   modal.hidden=true;
-  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b></div><div id="salesStatDetailNetCard" class="net" hidden><span>當月業績</span><b id="salesStatDetailNet">$0</b></div><div><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStorePrintEnding" class="sales-store-print-ending" hidden></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><section id="salesStatDetailExpenseSection" class="sales-person-expense-section" hidden></section><section id="salesStatDetailExternalAccountSection" class="sales-person-external-account-section" hidden></section><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
+  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b></div><div id="salesStatDetailOtherCard" class="other" hidden><span>其他費用</span><b id="salesStatDetailOther">$0</b><small>費用＋外帳</small></div><div id="salesStatDetailNetCard" class="net" hidden><span>業績合計</span><b id="salesStatDetailNet">$0</b><small>當月業績＋其他費用</small></div><div><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStorePrintEnding" class="sales-store-print-ending" hidden></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><section id="salesStatDetailExpenseSection" class="sales-person-expense-section" hidden></section><section id="salesStatDetailExternalAccountSection" class="sales-person-external-account-section" hidden></section><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesStatDetail()});
   document.body.appendChild(modal);
   return modal;
@@ -11325,10 +11325,16 @@ function openSalesStatDetail(kind,key){
   var title=kind==='store'?salesStoreText(summary):salesPersonName(summary.lineUserId,summary.name||'LINE 使用者');
   if(salesEl('salesStatDetailTitle'))salesEl('salesStatDetailTitle').textContent=title+'｜業績明細';
   if(salesEl('salesStatDetailPeriod'))salesEl('salesStatDetailPeriod').textContent='查詢區間：'+salesAdminPeriodLabel();
-  var grossSummaryAmount=Number(summary.grossAmount||0);var returnSummaryAmount=Number(summary.returnAmount||0);var netSummaryAmount=Number(summary.netAmount!=null?summary.netAmount:grossSummaryAmount-returnSummaryAmount);
+  var grossSummaryAmount=Number(summary.grossAmount||0);var returnSummaryAmount=Number(summary.returnAmount||0);var baseNetSummaryAmount=Number(summary.netAmount!=null?summary.netAmount:grossSummaryAmount-returnSummaryAmount);
+  var approvedExpenseSummaryAmount=kind==='person'?(salesAdminData.expenses||[]).filter(function(item){return String(item.submitterLineUserId||'')===key&&String(item.requestType||'')==='expense'&&String(item.status||'approved')==='approved'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0):0;
+  var approvedExternalSummaryAmount=kind==='person'?(salesAdminData.externalAccounts||[]).filter(function(item){return String(item.submitterLineUserId||'')===key&&String(item.status||'approved')==='approved'}).reduce(function(sum,item){return sum+Number(item.customerAmount||0)},0):0;
+  var otherSummaryAmount=approvedExpenseSummaryAmount+approvedExternalSummaryAmount;
+  var netSummaryAmount=baseNetSummaryAmount+otherSummaryAmount;
   var grossSummaryEl=salesEl('salesStatDetailGross');if(grossSummaryEl){grossSummaryEl.textContent=salesMoney(grossSummaryAmount);grossSummaryEl.classList.toggle('sales-high-value',Math.abs(grossSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   var returnSummaryEl=salesEl('salesStatDetailReturns');if(returnSummaryEl){returnSummaryEl.textContent=salesMoney(returnSummaryAmount);returnSummaryEl.classList.toggle('sales-high-value',Math.abs(returnSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   if(salesEl('salesStatDetailReturnsLabel'))salesEl('salesStatDetailReturnsLabel').textContent=kind==='person'?'退貨':'退貨另計';
+  if(salesEl('salesStatDetailOtherCard'))salesEl('salesStatDetailOtherCard').hidden=kind!=='person';
+  var otherSummaryEl=salesEl('salesStatDetailOther');if(otherSummaryEl){otherSummaryEl.textContent=salesMoney(otherSummaryAmount);otherSummaryEl.classList.toggle('sales-high-value',Math.abs(otherSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   if(salesEl('salesStatDetailNetCard'))salesEl('salesStatDetailNetCard').hidden=kind!=='person';
   var netSummaryEl=salesEl('salesStatDetailNet');if(netSummaryEl){netSummaryEl.textContent=salesMoney(netSummaryAmount);netSummaryEl.classList.toggle('sales-high-value',Math.abs(netSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   if(salesEl('salesStatDetailCount'))salesEl('salesStatDetailCount').textContent=String(rows.length)+' 筆';
@@ -13671,6 +13677,10 @@ function renderExpenseAdminList(){
   box.innerHTML=listHead+rows.map(function(item){
     var isExpense=item.requestType==='expense';
     var photos=Array.isArray(item.receiptUrls)?item.receiptUrls.length:0;
+    var reviewerLabel=item.status==='approved'?'核准人':item.status==='rejected'?'駁回人':'審核人';
+    var reviewerMeta=item.reviewerName
+      ?'<small class="expense-approval-meta">'+reviewerLabel+'：'+expenseEsc(item.reviewerName)+(item.reviewedAt?'・'+expenseEsc(expenseDateTime(item.reviewedAt)):'')+(item.reviewNote?'<br>審核備註：'+expenseEsc(item.reviewNote):'')+'</small>'
+      :(item.status==='pending'?'<small class="expense-approval-meta pending">尚未核准</small>':'');
     var photoBtn=photos?'<button type="button" class="secondary expense-receipt-link" onclick="openExpenseReceipts(\'admin\',\''+expenseEsc(item.id)+'\')">查看單據 '+String(photos)+' 張</button>':'';
     var reviewActions=item.status==='pending'
       ?'<div class="expense-admin-actions expense-review-actions"><button type="button" class="primary" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'approved\')">核准</button><button type="button" class="secondary expense-reject-btn" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'rejected\')">駁回</button></div>'
@@ -13681,7 +13691,7 @@ function renderExpenseAdminList(){
       +'<div class="person"><b>'+expenseEsc(item.submitterName||'LINE 使用者')+'</b></div>'
       +'<div class="detail"><b>'+expenseEsc(expenseDetailText(item))+'</b><small>'+(item.requestType==='overtime'?expenseEsc(areaText[item.area]||item.area||''):'費用另列，不計入業績')+(item.note?'<br>備註：'+expenseEsc(item.note):'')+'</small></div>'
       +'<b class="amount">'+(isExpense?expenseMoney(item.amount):expenseEsc(expenseDuration(item.overtimeStart,item.overtimeEnd)||'—'))+'</b>'
-      +'<div class="review">'+reviewActions+manageActions+(item.reviewerName?'<small>審核：'+expenseEsc(item.reviewerName)+(item.reviewNote?'・'+expenseEsc(item.reviewNote):'')+'</small>':'')+(Number(item.revisionNo||1)>1?'<small>目前版本：第 '+String(item.revisionNo)+' 版</small>':'')+photoBtn+'</div>'
+      +'<div class="review">'+reviewActions+manageActions+reviewerMeta+(Number(item.revisionNo||1)>1?'<small>目前版本：第 '+String(item.revisionNo)+' 版</small>':'')+photoBtn+'</div>'
       +'</article>';
   }).join('');
 }
@@ -14182,6 +14192,121 @@ document.addEventListener('DOMContentLoaded',installSalesProxyCreateButton);
   .external-account-own-actions{grid-template-columns:1fr 1fr}
 }
 </style>
+<style id="performance-account-expense-v34-style">
+/* v34：個人業績合計、精簡匯款帳號、明確核准人與緊湊費用清單 */
+.sales-stat-detail-summary{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.sales-stat-detail-summary small{display:block;margin-top:2px;color:#8798a1;font-size:8px;line-height:1.3}
+.sales-stat-detail-summary .other b{color:#2f7658}
+.sales-stat-detail-summary .net{border-color:#cfe4d7;background:#edf7f1}
+.sales-stat-detail-summary .net b{color:#245c40}
+
+.external-account-bank-card{padding:16px 18px!important}
+.external-account-bank-card header{margin-bottom:10px!important}
+.external-account-bank-info{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:0!important;
+  overflow:hidden;
+  border:1px solid var(--ea-line);
+  border-radius:12px;
+  background:#f6f9fa;
+}
+.external-account-bank-info article{
+  min-width:0;
+  padding:9px 11px!important;
+  border:0!important;
+  border-right:1px solid var(--ea-line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.external-account-bank-info article:nth-child(4){border-right:0!important}
+.external-account-bank-info span{font-size:10px!important}
+.external-account-bank-info b{margin-top:2px!important;font-size:14px!important;line-height:1.35;overflow-wrap:anywhere}
+.external-account-bank-info .external-account-bank-note{
+  grid-column:1/-1!important;
+  padding:8px 11px!important;
+  border-top:1px solid var(--ea-line)!important;
+  border-right:0!important;
+}
+.external-account-bank-info .external-account-bank-note b{font-size:11px!important;line-height:1.4!important}
+
+#expenseAdminList.expense-admin-list{border-radius:12px}
+#expenseAdminList .expense-admin-list-head,
+#expenseAdminList .expense-admin-card{
+  grid-template-columns:108px 116px minmax(210px,1fr) 88px minmax(210px,auto)!important;
+  gap:9px!important;
+}
+#expenseAdminList .expense-admin-list-head{padding:9px 12px!important;font-size:11px!important}
+#expenseAdminList .expense-admin-list-head span:last-child{text-align:left}
+#expenseAdminList .expense-admin-card{min-height:0!important;padding:9px 12px!important}
+#expenseAdminList .expense-admin-card .date b,
+#expenseAdminList .expense-admin-card .person b,
+#expenseAdminList .expense-admin-card .detail b{font-size:12px!important;line-height:1.4}
+#expenseAdminList .expense-admin-card .date small,
+#expenseAdminList .expense-admin-card .detail small,
+#expenseAdminList .expense-admin-card .review small{margin-top:2px!important;font-size:9px!important;line-height:1.4}
+#expenseAdminList .expense-admin-card .amount{font-size:14px!important}
+#expenseAdminList .expense-admin-card .review{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  gap:4px!important;
+  width:auto!important;
+}
+#expenseAdminList .expense-admin-actions{display:flex!important;grid-template-columns:none!important;gap:4px!important;width:auto!important}
+#expenseAdminList .expense-admin-actions button,
+#expenseAdminList .expense-admin-card .expense-receipt-link{
+  width:auto!important;
+  min-width:0!important;
+  min-height:30px!important;
+  padding:5px 8px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+#expenseAdminList .expense-status-pill{padding:4px 7px!important;font-size:10px!important}
+#expenseAdminList .expense-approval-meta{flex-basis:100%;margin-top:1px!important;color:#506b78;font-weight:700!important}
+#expenseAdminList .expense-approval-meta.pending{color:#8b6a2e}
+.external-account-approval-meta{display:block;margin-top:7px;color:#506b78;font-size:11px;font-weight:800;line-height:1.45}
+
+@media(max-width:820px){
+  .sales-stat-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .sales-stat-detail-summary .net{grid-column:1/-1}
+  #expenseAdminList.expense-admin-list{display:grid;gap:8px}
+  #expenseAdminList .expense-admin-card{
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:6px 10px!important;
+    padding:10px 11px!important;
+    border-radius:11px!important;
+  }
+  #expenseAdminList .expense-admin-card .date{grid-column:1;grid-row:1}
+  #expenseAdminList .expense-admin-card .amount{grid-column:2;grid-row:1;text-align:right}
+  #expenseAdminList .expense-admin-card .person{grid-column:1/-1;grid-row:2}
+  #expenseAdminList .expense-admin-card .detail{grid-column:1/-1;grid-row:3}
+  #expenseAdminList .expense-admin-card .review{grid-column:1/-1;grid-row:4}
+  #expenseAdminList .expense-admin-card .date::before,
+  #expenseAdminList .expense-admin-card .person::before,
+  #expenseAdminList .expense-admin-card .detail::before,
+  #expenseAdminList .expense-admin-card .amount::before{display:none!important}
+}
+@media(max-width:760px){
+  .external-account-bank-card{padding:13px!important}
+  .external-account-bank-card header{align-items:center!important;margin-bottom:8px!important}
+  .external-account-bank-card header h2{font-size:20px!important}
+  .external-account-bank-card header button{min-height:44px}
+  .external-account-bank-info{grid-template-columns:1fr 1fr!important}
+  .external-account-bank-info article{padding:7px 9px!important}
+  .external-account-bank-info article:nth-child(2){border-right:0!important}
+  .external-account-bank-info article:nth-child(3),
+  .external-account-bank-info article:nth-child(4){border-top:1px solid var(--ea-line)!important}
+  .external-account-bank-info article:nth-child(3){border-right:1px solid var(--ea-line)!important}
+  .external-account-bank-info b{font-size:13px!important}
+  .external-account-bank-info .external-account-bank-note{padding:7px 9px!important}
+  .external-account-admin-mobile article{padding:11px!important}
+  .external-account-admin-mobile footer{gap:5px;margin-top:9px}
+  .external-account-admin-mobile footer button{min-width:70px!important;min-height:32px!important;padding:5px 7px!important;font-size:10px!important}
+}
+</style>
 <script id="external-account-v33-script">
 (function(){
 'use strict';
@@ -14295,11 +14420,14 @@ function renderExternalAccountAdmin(){
   var body=eaEl('externalAccountAdminBody');var mobile=eaEl('externalAccountAdminMobile');
   if(body)body.innerHTML=rows.length?rows.map(function(item){
     var note=item.note?'<span class="external-account-admin-note">申請備註：'+eaEsc(item.note)+'</span>':'';
-    var audit=(item.reviewerName?'審核：'+eaEsc(item.reviewerName):'尚未審核')+(item.editedAt?'<br>修改：'+eaEsc(eaDateTime(item.editedAt)):'')+(item.reviewNote?'<br>'+eaEsc(item.reviewNote):'');
+    var reviewerLabel=item.status==='approved'?'核准人':item.status==='rejected'?'駁回人':'審核人';
+    var audit=(item.reviewerName?reviewerLabel+'：'+eaEsc(item.reviewerName)+(item.reviewedAt?'<br>審核時間：'+eaEsc(eaDateTime(item.reviewedAt)):''):'尚未核准')+(item.editedAt?'<br>修改：'+eaEsc(eaDateTime(item.editedAt)):'')+(item.reviewNote?'<br>審核備註：'+eaEsc(item.reviewNote):'');
     return '<tr class="'+eaEsc(item.status||'pending')+'"><td>'+eaEsc(item.transactionDate||'—')+'</td><td><b>'+eaEsc(item.submitterName||'LINE 使用者')+'</b>'+note+'</td><td class="amount">'+eaMoney(item.customerAmount)+'</td><td><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></td><td><small>'+audit+'</small></td><td>'+eaAdminActionHtml(item)+'</td></tr>';
   }).join(''):'<tr><td colspan="6"><div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div></td></tr>';
   if(mobile)mobile.innerHTML=rows.length?rows.map(function(item){
-    return '<article class="'+eaEsc(item.status||'pending')+'"><header><h4>'+eaEsc(item.transactionDate||'—')+'・'+eaEsc(item.submitterName||'LINE 使用者')+'</h4><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></header><p>客戶交易金額</p><strong>'+eaMoney(item.customerAmount)+'</strong>'+(item.note?'<span class="external-account-admin-note">備註：'+eaEsc(item.note)+'</span>':'')+(item.reviewNote?'<small>審核備註：'+eaEsc(item.reviewNote)+'</small>':'')+'<footer>'+eaAdminActionHtml(item)+'</footer></article>';
+    var reviewerLabel=item.status==='approved'?'核准人':item.status==='rejected'?'駁回人':'審核人';
+    var reviewerMeta=item.reviewerName?reviewerLabel+'：'+eaEsc(item.reviewerName)+(item.reviewedAt?'・'+eaEsc(eaDateTime(item.reviewedAt)):''):'尚未核准';
+    return '<article class="'+eaEsc(item.status||'pending')+'"><header><h4>'+eaEsc(item.transactionDate||'—')+'・'+eaEsc(item.submitterName||'LINE 使用者')+'</h4><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></header><p>客戶交易金額</p><strong>'+eaMoney(item.customerAmount)+'</strong>'+(item.note?'<span class="external-account-admin-note">備註：'+eaEsc(item.note)+'</span>':'')+'<small class="external-account-approval-meta">'+reviewerMeta+'</small>'+(item.reviewNote?'<small>審核備註：'+eaEsc(item.reviewNote)+'</small>':'')+'<footer>'+eaAdminActionHtml(item)+'</footer></article>';
   }).join(''):'<div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div>';
   renderExternalAccountPagination();eaFillSettingsForm();eaFillAdminPeople();
 }
