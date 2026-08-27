@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260827-line-master-detail-konde-other-v38 -->
-<!-- UI PATCH: 20260827-expense-compact-actions-v39 -->
+<!-- STARRED BUILD: 20260827-store-keyword-flat-controls-v40 -->
+<!-- UI PATCH: 20260827-store-keyword-flat-controls-v40 -->
 <!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
@@ -1682,6 +1682,54 @@ button.danger,.btn.danger,.cancel-action{background:#fff1ef!important;color:var(
   #homePage .event-summary{
     grid-template-columns:minmax(190px,1.4fr) minmax(130px,.7fr) minmax(200px,.85fr) auto 24px!important;
   }
+}
+
+/* v40：補貨／追加店點改為輕字重；操作按鈕改為一般平面樣式。 */
+.lg38-store-button{padding-top:9px!important;padding-bottom:9px!important}
+.lg38-store-button>span:first-of-type{
+  display:block!important;
+  min-width:0!important;
+  height:auto!important;
+  padding:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:inherit!important;
+  font-size:inherit!important;
+  font-weight:400!important;
+}
+.lg38-store-button strong{font-weight:400!important}
+.lg38-store-button small{display:none!important}
+.lg38-action,
+.lg38-action.clear,
+.lg38-action.ai,
+.lg38-action.print{
+  border:1px solid #cbdbe2!important;
+  border-radius:9px!important;
+  background:#f3f7f9!important;
+  color:#315568!important;
+  box-shadow:none!important;
+  font-weight:500!important;
+  transform:none!important;
+}
+.lg38-action:hover,
+.lg38-action.clear:hover,
+.lg38-action.ai:hover,
+.lg38-action.print:hover{background:#e9f1f4!important;box-shadow:none!important;transform:none!important}
+.lg38-action:active{box-shadow:none!important;transform:none!important}
+.lg38-action i{display:none!important}
+.lg38-to-other{
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 28px!important;
+  width:28px!important;
+  min-width:28px!important;
+  max-width:28px!important;
+  height:28px!important;
+  min-height:28px!important;
+  max-height:28px!important;
+  padding:0!important;
+  border-radius:6px!important;
+  line-height:1!important;
 }
 </style>
 
@@ -4474,7 +4522,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260827-line-master-detail-konde-other-v38";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260827-store-keyword-flat-controls-v40";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
