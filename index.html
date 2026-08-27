@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- STARRED BUILD: 20260827-line-master-detail-konde-other-v38 -->
-<!-- UI PATCH: 20260827-line-master-detail-konde-other-v38 -->
+<!-- UI PATCH: 20260827-expense-compact-actions-v39 -->
 <!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
@@ -14529,7 +14529,7 @@ function actionHtml(item){
   var photos=Array.isArray(item.receiptUrls)?item.receiptUrls.length:0;
   var review=item.status==='pending'?'<button type="button" class="primary" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'approved\')">核准</button><button type="button" class="secondary" onclick="reviewExpenseRequest(\''+expenseEsc(item.id)+'\',\'rejected\')">駁回</button>':'';
   var manage='<button type="button" class="secondary" onclick="openExpenseV30Editor(\'admin\',\''+expenseEsc(item.id)+'\')">編輯</button><button type="button" class="secondary expense-v37-delete" onclick="deleteExpenseV30(\'admin\',\''+expenseEsc(item.id)+'\')">刪除</button>';
-  var receipt=photos?'<button type="button" class="secondary" onclick="openExpenseReceipts(\'admin\',\''+expenseEsc(item.id)+'\')">查看單據 '+String(photos)+' 張</button>':'';
+  var receipt=photos?'<button type="button" class="secondary" onclick="openExpenseReceipts(\'admin\',\''+expenseEsc(item.id)+'\')">單據 '+String(photos)+' 張</button>':'';
   return '<div class="expense-v35-actions">'+receipt+review+manage+'</div>';
 }
 function renderExpenseAdminListV35(){
@@ -14882,5 +14882,94 @@ window.loadLineGroupMessages=load;window.renderLineGroupMessages=render;window.e
 document.addEventListener('DOMContentLoaded',build);
 })();
 </script>
+<style id="expense-compact-actions-v39-style">
+/* v39：費用明細比照外帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
+#expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
+#expenseAdminList .expense-v37-table col.expense-v37-date{width:9.5%!important}
+#expenseAdminList .expense-v37-table col.expense-v37-person{width:9%!important}
+#expenseAdminList .expense-v37-table col.expense-v37-detail{width:24%!important}
+#expenseAdminList .expense-v37-table col.expense-v37-value{width:9.5%!important}
+#expenseAdminList .expense-v37-table col.expense-v37-review{width:48%!important}
+#expenseAdminList .expense-v37-table th{padding:11px 12px!important;font-size:12px!important;font-weight:500!important}
+#expenseAdminList .expense-v37-table td{height:64px!important;padding:10px 12px!important;font-size:13px!important;font-weight:400!important;line-height:1.45!important}
+#expenseAdminList .expense-v37-table td b{font-size:13px!important;font-weight:500!important}
+#expenseAdminList .expense-v37-table td small{font-size:10px!important;font-weight:400!important;line-height:1.4!important}
+#expenseAdminList .expense-v37-table td.amount{font-size:16px!important;font-weight:700!important}
+#expenseAdminList .expense-v37-table td:nth-child(3)>b,
+#expenseAdminList .expense-v37-table td:nth-child(3)>small,
+#expenseAdminList .expense-v37-review-cell>.expense-v35-reviewer{
+  display:-webkit-box!important;
+  overflow:hidden!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+}
+#expenseAdminList .expense-v37-table tbody tr:hover td:nth-child(3)>b,
+#expenseAdminList .expense-v37-table tbody tr:hover td:nth-child(3)>small,
+#expenseAdminList .expense-v37-table tbody tr:hover .expense-v35-reviewer{-webkit-line-clamp:unset}
+#expenseAdminList .expense-v37-review-cell{
+  display:grid!important;
+  grid-template-columns:minmax(135px,.72fr) auto minmax(285px,1.28fr)!important;
+  gap:8px!important;
+  align-items:center!important;
+}
+#expenseAdminList .expense-v37-review-cell>.expense-v35-reviewer{margin:0!important;color:#506b78!important;font-size:11px!important;font-weight:500!important}
+#expenseAdminList .expense-v37-review-cell>.expense-status-pill{min-height:28px!important;padding:5px 8px!important;font-size:11px!important;white-space:nowrap!important}
+#expenseAdminList .expense-v37-review-cell .expense-v35-actions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:nowrap!important;
+  gap:6px!important;
+  min-width:0!important;
+  white-space:nowrap!important;
+}
+#expenseAdminList .expense-v37-review-cell .expense-v35-actions button{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  min-height:36px!important;
+  padding:7px 10px!important;
+  border-radius:9px!important;
+  font-size:12px!important;
+  font-weight:500!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+#expenseAdminList .expense-v37-review-cell .expense-v37-delete{
+  border-color:#cbdbe2!important;
+  background:#f3f7f9!important;
+  color:#315568!important;
+}
+@media(max-width:760px){
+  #expenseAdminList .expense-v35-mobile article{padding:14px!important}
+  #expenseAdminList .expense-v35-mobile h4{font-size:14px!important;font-weight:600!important}
+  #expenseAdminList .expense-v35-mobile-main p{font-size:13px!important;line-height:1.5!important}
+  #expenseAdminList .expense-v35-mobile-main strong{font-size:18px!important}
+  #expenseAdminList .expense-v35-mobile .expense-v35-reviewer{font-size:11px!important;line-height:1.45!important}
+  #expenseAdminList .expense-v35-mobile footer{display:block!important;margin-top:10px!important}
+  #expenseAdminList .expense-v35-mobile footer .expense-v35-actions{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:6px!important;
+    width:100%!important;
+  }
+  #expenseAdminList .expense-v35-mobile footer .expense-v35-actions button{
+    width:100%!important;
+    min-width:0!important;
+    min-height:36px!important;
+    padding:6px 5px!important;
+    border-radius:8px!important;
+    font-size:11px!important;
+    font-weight:500!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+  }
+  #expenseAdminList .expense-v35-mobile footer .expense-v37-delete{
+    border-color:#cbdbe2!important;
+    background:#f3f7f9!important;
+    color:#315568!important;
+  }
+}
+</style>
 </body>
 </html>
