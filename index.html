@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260827-admin-alert-line-workflow-picking-pdf-v35 -->
+<!-- STARRED BUILD: 20260827-notification-permissions-performance-layout-v36 -->
 <!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
@@ -4472,7 +4472,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260827-admin-alert-line-workflow-v35";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260827-notification-permissions-performance-layout-v36";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -11294,14 +11294,16 @@ function renderSalesPersonExpenseSection(lineUserId){
   var expenseTotal=rows.filter(function(item){return item.requestType==='expense'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0);
   var overtimeCount=rows.filter(function(item){return item.requestType==='overtime'}).length;
   section.hidden=false;
-  section.innerHTML='<div class="sales-person-expense-heading"><div><span>APPROVED REQUESTS</span><h4>核准移櫃／加班／費用</h4><p>另外列示，不計入營業額、退貨或排行榜。</p></div><div class="sales-person-expense-totals"><b>'+salesEsc(salesMoney(expenseTotal))+'</b><small>費用含跨月刪除沖減・移櫃／加班 '+String(overtimeCount)+' 筆</small></div></div><div class="sales-person-expense-list">'+rows.map(function(item){
+  section.innerHTML='<div class="sales-person-ledger-heading sales-person-expense-heading"><div><span>APPROVED REQUESTS</span><h4>核准移櫃／加班／費用</h4><p>另外列示，不計入營業額、退貨或排行榜。</p></div><div class="sales-person-ledger-total sales-person-expense-totals"><b>'+salesEsc(salesMoney(expenseTotal))+'</b><small>費用合計・移櫃／加班 '+String(overtimeCount)+' 筆</small></div></div><div class="sales-person-ledger-head"><span>日期</span><span>類型</span><span>明細／備註</span><span>審核資訊</span><span>金額／時數</span><span>單據</span></div><div class="sales-person-ledger-list sales-person-expense-list">'+rows.map(function(item){
     var isAdjustment=item.isDeletionAdjustment===true;
     var isExpense=item.requestType==='expense';
     var place=[item.storeName,item.storeFloor].filter(Boolean).join('｜');
-    var detail=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalRequestDate||'原日期')+' 的費用')):(isExpense?String(item.reason||'未填寫緣由'):[place||'未指定店點',[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),salesExpenseDuration(item)].filter(Boolean).join('・'));
-    if(item.note&&!isAdjustment)detail+='；備註：'+String(item.note);
+    var detail=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalRequestDate||'原日期')+' 的費用')):(isExpense?String(item.reason||'未填寫緣由'):[place||'未指定店點',[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～')].filter(Boolean).join('・'));
+    var detailMeta=!isAdjustment&&item.note?'備註：'+String(item.note):isAdjustment?'原日期：'+String(item.originalRequestDate||'—'):(isExpense?'費用申請':salesExpenseDuration(item));
+    var reviewerText=isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准');
+    var reviewer=salesEsc(reviewerText);if(item.reviewedAt&&!isAdjustment)reviewer+='<small>'+salesEsc(salesDateTime(item.reviewedAt))+'</small>';
     var receiptButton=!isAdjustment&&isExpense&&Array.isArray(item.receiptUrls)&&item.receiptUrls.length?'<button type="button" class="secondary sales-person-expense-receipt" onclick="openSalesExpenseReceipts(\''+salesEsc(item.id)+'\')">查看單據 '+String(item.receiptUrls.length)+' 張</button>':'';
-    return '<article class="'+(isAdjustment?'deletion-adjustment':'')+'"><time>'+salesEsc(item.requestDate||'—')+'</time><span class="sales-person-expense-type '+(isExpense?'expense':'overtime')+'">'+(isAdjustment?'刪除沖減':(isExpense?'費用':'移櫃／加班'))+'</span><div><b>'+salesEsc(detail)+'</b><small>'+salesEsc(isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准'))+'</small></div><strong>'+(isExpense?salesEsc(salesMoney(item.amount||0)):'—')+'</strong>'+receiptButton+'</article>';
+    return '<article class="sales-person-ledger-row '+(isAdjustment?'deletion-adjustment':'')+'"><time data-label="日期">'+salesEsc(item.requestDate||'—')+'</time><span data-label="類型" class="sales-person-expense-type '+(isExpense?'expense':'overtime')+'">'+(isAdjustment?'刪除沖減':(isExpense?'費用':'移櫃／加班'))+'</span><div data-label="明細／備註" class="sales-person-ledger-detail"><b>'+salesEsc(detail)+'</b><small>'+salesEsc(detailMeta||'—')+'</small></div><span data-label="審核資訊" class="sales-person-ledger-review">'+reviewer+'</span><strong data-label="金額／時數">'+(isExpense?salesEsc(salesMoney(item.amount||0)):salesEsc(salesExpenseDuration(item)||'—'))+'</strong><span data-label="單據" class="sales-person-ledger-action">'+(receiptButton||'—')+'</span></article>';
   }).join('')+'</div>';
 }
 function openSalesStatDetail(kind,key){
@@ -14449,12 +14451,13 @@ function renderSalesPersonExternalAccountSection(lineUserId){
   if(!rows.length){section.hidden=true;section.innerHTML='';return}
   var total=rows.reduce(function(sum,item){return sum+Number(item.customerAmount||0)},0);
   section.hidden=false;
-  section.innerHTML='<div class="sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准外帳</h4><p>列在個人業績底部；跨月刪除會在刪除當月沖減。</p></div><div><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-external-account-list">'+rows.map(function(item){
+  section.innerHTML='<div class="sales-person-ledger-heading sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准外帳</h4><p>列在個人業績底部；跨月刪除會在刪除當月沖減。</p></div><div class="sales-person-ledger-total"><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-ledger-head"><span>日期</span><span>類型</span><span>明細／備註</span><span>審核資訊</span><span>金額／時數</span><span>單據</span></div><div class="sales-person-ledger-list sales-person-external-account-list">'+rows.map(function(item){
     var isAdjustment=item.isDeletionAdjustment===true;
     var title=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalTransactionDate||'原日期')+' 的外帳')):'客戶交易';
-    var meta=isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准');
-    if(item.note&&!isAdjustment)meta+='・備註：'+item.note;
-    return '<article class="'+(isAdjustment?'deletion-adjustment':'')+'"><time>'+eaEsc(item.transactionDate||'—')+'</time><div><b>'+eaEsc(title)+'</b><small>'+eaEsc(meta)+'</small></div><strong>'+eaMoney(item.customerAmount)+'</strong></article>';
+    var detailMeta=isAdjustment?'原日期：'+String(item.originalTransactionDate||'—'):(item.note?'備註：'+item.note:'無備註');
+    var reviewerText=isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准');
+    var reviewer=eaEsc(reviewerText);if(item.reviewedAt&&!isAdjustment)reviewer+='<small>'+eaEsc(eaDateTime(item.reviewedAt))+'</small>';
+    return '<article class="sales-person-ledger-row '+(isAdjustment?'deletion-adjustment':'')+'"><time data-label="日期">'+eaEsc(item.transactionDate||'—')+'</time><span data-label="類型" class="sales-person-expense-type external">'+(isAdjustment?'刪除沖減':'外帳')+'</span><div data-label="明細／備註" class="sales-person-ledger-detail"><b>'+eaEsc(title)+'</b><small>'+eaEsc(detailMeta)+'</small></div><span data-label="審核資訊" class="sales-person-ledger-review">'+reviewer+'</span><strong data-label="金額／時數">'+eaMoney(item.customerAmount)+'</strong><span data-label="單據" class="sales-person-ledger-action">—</span></article>';
   }).join('')+'</div>';
 }
 var eaPreviousShowPage=window.showPage;window.showPage=function(page){if(page==='externalAccount'){if(typeof enforceLineUserAccess==='function'&&!enforceLineUserAccess())return;if(typeof eaPreviousShowPage==='function')eaPreviousShowPage('home');['homePage','orderPage','salesPage','expensePage','adminPage'].forEach(function(id){eaEl(id)?.classList.remove('active')});['homeNav','orderNav','salesNav','expenseNav','adminNav'].forEach(function(id){eaEl(id)?.classList.remove('active')});eaEl('externalAccountPage')?.classList.add('active');eaEl('externalAccountNav')?.classList.add('active');loadExternalAccountData();window.scrollTo({top:0,behavior:'smooth'});return}if(typeof eaPreviousShowPage==='function')eaPreviousShowPage(page);eaEl('externalAccountPage')?.classList.remove('active');eaEl('externalAccountNav')?.classList.remove('active')};
@@ -14552,7 +14555,8 @@ function timeText(value){if(!value)return '—';try{return new Date(value).toLoc
 function uploadedText(value){return /([已己](?:經)?上傳|上傳(?:完成|成功|好了)|康德.*上傳)/i.test(String(value||'').normalize('NFKC').replace(/\s+/g,''))}
 function kindLabel(value){return value==='restock'?'補貨':value==='addition'?'追加':'其他'}
 function statusLabel(value){return value==='printed'?'已印單':value==='konde_uploaded'?'康德系統上傳':'未處理'}
-function allowed(){return !!window.currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin'}
+function activeAdminUser(){try{return typeof currentUser!=='undefined'?currentUser:null}catch(_){return null}}
+function allowed(){var user=activeAdminUser();if(!user||!user.adminSessionToken||typeof normalizeCurrentAdminRole!=='function')return false;var role=normalizeCurrentAdminRole(user.role);return role==='admin'||role==='accounting'||role==='manager'}
 function setStatus(text,type){var box=el('lineGroupStatus');if(!box)return;box.className='lg35-status'+(text?' show '+(type||'working'):'');box.textContent=text||''}
 function range(){var from=String((el('lineGroupDateFrom')||{}).value||''),to=String((el('lineGroupDateTo')||{}).value||''),now=today();if(!from||!to){setStatus('請選擇開始與結束日期。','error');return null}if(from>to){setStatus('開始日期不可晚於結束日期。','error');return null}if(to>now){setStatus('結束日期不可晚於今天。','error');return null}var days=Math.round((Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000)+1;if(days>31){setStatus('一次最多查詢 31 天。','error');return null}return {dateFrom:from,dateTo:to}}
 function selectedGroup(){var id=String((el('lineGroupSelect')||{}).value||'');return state.groups.find(function(row){return String(row.groupId||'')===id})||null}
@@ -14594,7 +14598,7 @@ function exportExcel(){var rows=filteredRows();if(!rows.length||!window.XLSX)ret
 function setStatusFilter(value){state.status=String(value||'all');state.selected.clear();render()}
 function changeGroup(){state.selected.clear();renderActive();load()}
 function build(){var oldButton=el('lineGroupMessagesTabBtn'),oldPanel=el('lineGroupMessagesTab');if(oldButton)oldButton.remove();if(oldPanel)oldPanel.remove();var tabs=document.querySelector('#adminContent>.admin-tabs'),admin=el('adminContent');if(!tabs||!admin)return;var button=document.createElement('button');button.id='lineGroupMessagesTabBtn';button.type='button';button.textContent='補貨／追加整理';button.setAttribute('onclick',"showAdminTab('lineGroupMessages')");tabs.insertBefore(button,el('accountTabBtn')||null);var panel=document.createElement('div');panel.id='lineGroupMessagesTab';panel.className='admin-tab-panel';panel.innerHTML='<section class="panel lg35-panel"><header class="lg35-heading"><div><small>LINE GROUP WORKFLOW</small><h2>補貨／追加訊息整理</h2><p>系統自動判斷補貨／追加與店點；人工只需確認店點。同店同日訊息會集中在一起。</p></div><div id="lineGroupAiState" class="lg35-ai-state">正在確認 AI…</div></header><div class="lg35-toolbar"><label><span>LINE 群組</span><select id="lineGroupSelect" onchange="lgm35ChangeGroup()"></select></label><label><span>開始日期</span><input id="lineGroupDateFrom" type="date"></label><label><span>結束日期</span><input id="lineGroupDateTo" type="date"></label><label><span>搜尋訊息／人員／店點</span><input id="lineGroupKeyword" placeholder="例如：麗寶、補貨、已上傳" oninput="lgm35Render()"></label><div class="lg35-toolbar-actions"><button type="button" class="primary" onclick="loadLineGroupMessages()">查詢</button><button type="button" class="secondary" onclick="exportLineGroupMessagesExcel()">匯出 Excel</button></div></div><div id="lineGroupActiveRow" class="lg35-active-row" hidden><span id="lineGroupActiveText"></span><button id="lineGroupSetActiveBtn" type="button" class="secondary" onclick="setActiveLineGroup()">設為指定群組</button></div><div id="lineGroupStatus" class="lg35-status" role="status"></div><div id="lineGroupStatusTabs" class="lg35-status-tabs"><button data-status="unprocessed" onclick="lgm35SetStatusFilter(\'unprocessed\')"><b>未處理</b><span>0</span></button><button data-status="printed" onclick="lgm35SetStatusFilter(\'printed\')"><b>已印單</b><span>0</span></button><button data-status="konde_uploaded" onclick="lgm35SetStatusFilter(\'konde_uploaded\')"><b>康德系統上傳</b><span>0</span></button><button data-status="all" onclick="lgm35SetStatusFilter(\'all\')"><b>全部</b><span>0</span></button></div><div class="lg35-summary"><article><span>目前顯示</span><b id="lineGroupTotalCount">0</b></article><article><span>已辨識店點</span><b id="lineGroupStoreCount">0</b></article><article><span>補貨／追加</span><b><i id="lineGroupRestockCount">0</i> ／ <i id="lineGroupAdditionCount">0</i></b></article><article><span>待辨識店點</span><b id="lineGroupUnresolvedCount">0</b></article></div><div class="lg35-batch"><label><input id="lineGroupSelectAllV35" type="checkbox" onchange="lgm35SelectVisible(this.checked)">全選目前顯示</label><b id="lineGroupSelectedCountV35">已選 0 筆</b><button type="button" class="secondary" onclick="lgm35ClearSelection()">清除</button><button type="button" class="ai" onclick="lgm35AIClassify()">AI 重新辨識</button><button type="button" class="print" onclick="lgm35PrintSelected()">預覽列印</button></div><div id="lineGroupList"><div class="lg35-empty">正在準備群組訊息…</div></div></section>';admin.appendChild(panel);var now=today();el('lineGroupDateFrom').value=now;el('lineGroupDateTo').value=now;el('lineGroupDateFrom').max=now;el('lineGroupDateTo').max=now;if(typeof window.loadAdminAttentionSummaryV35==='function')window.loadAdminAttentionSummaryV35()}
-var previousShow=window.showAdminTab;window.showAdminTab=function(name){if(name==='lineGroupMessages'){if(!allowed()){alert('此功能僅開放系統管理員。');return}if(typeof previousShow==='function')previousShow('dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(panel){panel.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs button').forEach(function(button){button.classList.remove('active')});el('lineGroupMessagesTab').classList.add('active');el('lineGroupMessagesTabBtn').classList.add('active');load();return}if(typeof previousShow==='function')previousShow(name);if(el('lineGroupMessagesTab'))el('lineGroupMessagesTab').classList.remove('active');if(el('lineGroupMessagesTabBtn'))el('lineGroupMessagesTabBtn').classList.remove('active')};
+var previousShow=window.showAdminTab;window.showAdminTab=function(name){if(name==='lineGroupMessages'){if(!allowed()){alert('此功能僅開放主管、會計與系統管理員。');return}if(typeof previousShow==='function')previousShow('dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(panel){panel.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs button').forEach(function(button){button.classList.remove('active')});el('lineGroupMessagesTab').classList.add('active');el('lineGroupMessagesTabBtn').classList.add('active');load();return}if(typeof previousShow==='function')previousShow(name);if(el('lineGroupMessagesTab'))el('lineGroupMessagesTab').classList.remove('active');if(el('lineGroupMessagesTabBtn'))el('lineGroupMessagesTabBtn').classList.remove('active')};
 window.loadLineGroupMessages=load;window.renderLineGroupMessages=render;window.exportLineGroupMessagesExcel=exportExcel;window.setActiveLineGroup=setActive;window.lgm35Render=render;window.lgm35SetStatusFilter=setStatusFilter;window.lgm35ChangeGroup=changeGroup;window.lgm35ToggleOne=toggleOne;window.lgm35SelectVisible=selectVisible;window.lgm35ClearSelection=function(){state.selected.clear();render()};window.lgm35SelectStore=selectStore;window.lgm35SelectDay=selectDay;window.lgm35ManualUpdate=manualUpdate;window.lgm35DragStart=dragStart;window.lgm35DragEnd=dragEnd;window.lgm35DragOver=dragOver;window.lgm35DragLeave=dragLeave;window.lgm35DropStore=dropStore;window.lgm35AIClassify=aiClassify;window.lgm35PrintSelected=printSelected;window.lgm35MarkPrinted=markPrinted;
 document.addEventListener('DOMContentLoaded',build);
 })();
@@ -14606,10 +14610,11 @@ var baseApi=null,loading=false,lastResult=null,baseTitle=document.title,refreshT
 var refreshActions=new Set([
   'expense_submit','expense_update','expense_cancel','expense_delete','expense_admin_review','expense_admin_update','expense_admin_delete',
   'external_account_submit','external_account_update','external_account_cancel','external_account_delete','external_account_admin_review','external_account_admin_update','external_account_admin_delete',
-  'sales_submit','sales_admin_review_edit','sales_admin_update_report','sales_admin_delete_report','sales_assign_return','sales_confirm_workday_group','sales_admin_set_store_reporting_end','sales_admin_clear_store_reporting_end',
+  'sales_save','sales_request_edit','sales_admin_create_proxy','sales_admin_review_edit','sales_admin_update_report','sales_admin_delete_report','sales_assign_return','sales_confirm_workday_group','sales_admin_set_store_reporting_end','sales_admin_clear_store_reporting_end',
   'bulk_order_status','update_order','line_group_message_update','line_group_messages_mark_printed','line_group_messages_ai_classify'
 ]);
 function el(id){return document.getElementById(id)}
+function activeAdminUser(){try{return typeof currentUser!=='undefined'?currentUser:null}catch(_){return null}}
 function number(value){value=Number(value||0);return Number.isFinite(value)&&value>0?Math.round(value):0}
 function compact(value){value=number(value);return value>99?'99+':String(value)}
 function ensureBanner(){var banner=el('adminAttentionSummaryV35');if(banner)return banner;var tabs=document.querySelector('#adminContent>.admin-tabs');if(!tabs)return null;banner=document.createElement('div');banner.id='adminAttentionSummaryV35';banner.className='admin-attention-summary-v35';banner.hidden=true;banner.innerHTML='<strong>待處理提醒</strong><span></span><button type="button">立即更新</button>';banner.querySelector('button').addEventListener('click',function(){load(true)});tabs.insertAdjacentElement('afterend',banner);return banner}
@@ -14626,7 +14631,7 @@ function render(result){lastResult=result||{};var expense=number(result.expenseP
   document.title=total>0?'（'+compact(total)+'）'+baseTitle:baseTitle;
 }
 function clear(){['expenseAdminTabBtn','externalAccountAdminTabBtn','salesReportTabBtn','orderAdminTabBtn','lineGroupMessagesTabBtn','dashboardTabBtn'].forEach(function(id){setBadge(id,0,'')});var banner=el('adminAttentionSummaryV35');if(banner)banner.hidden=true;document.title=baseTitle}
-async function load(force){if(loading||!baseApi||document.hidden)return;if(!window.currentUser){clear();return}var admin=el('adminContent');if(!force&&admin&&getComputedStyle(admin).display==='none')return;loading=true;try{var result=await baseApi('admin_attention_summary',{});render(result)}catch(error){if(force&&el('adminAttentionSummaryV35')){var banner=el('adminAttentionSummaryV35');banner.hidden=false;banner.querySelector('span').textContent='提醒讀取失敗：'+String(error&&error.message||error)}}finally{loading=false}}
+async function load(force){if(loading||!baseApi||document.hidden)return;if(!activeAdminUser()){clear();return}var admin=el('adminContent');if(!force&&admin&&getComputedStyle(admin).display==='none')return;loading=true;try{var result=await baseApi('admin_attention_summary',{});render(result)}catch(error){if(force&&el('adminAttentionSummaryV35')){var banner=el('adminAttentionSummaryV35');banner.hidden=false;banner.querySelector('span').textContent='提醒讀取失敗：'+String(error&&error.message||error)}}finally{loading=false}}
 function schedule(){clearTimeout(refreshTimer);refreshTimer=setTimeout(function(){load(true)},550)}
 function init(){baseApi=typeof window.starredApi==='function'?window.starredApi.bind(window):null;if(!baseApi)return;var wrapped=async function(action,payload){var result=await baseApi(action,payload);if(refreshActions.has(String(action||'')))schedule();return result};window.starredApi=wrapped;window.loadAdminAttentionSummaryV35=function(){return load(true)};var previousShow=window.showAdminTab;window.showAdminTab=function(name){var result=typeof previousShow==='function'?previousShow.apply(this,arguments):undefined;if(name)load(true);return result};ensureBanner();load(false);setInterval(function(){load(false)},60000);window.addEventListener('focus',function(){load(false)});document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)})}
 document.addEventListener('DOMContentLoaded',init);
@@ -14651,5 +14656,78 @@ async function exportPickingPdfV35(){var list=typeof selectedOrdersForExport==='
 window.exportPickingPdf=exportPickingPdfV35;
 })();
 </script>
+<style id="notification-permissions-performance-layout-v36-style">
+/* v36：後台分頁待處理數量要直接看得見，不擠壓標題寬度。 */
+#adminContent>.admin-tabs button.has-attention{padding-right:34px!important}
+#adminContent>.admin-tabs button .admin-attention-badge{position:absolute;top:5px;right:7px;min-width:21px;height:21px;margin:0;padding:0 6px;border:2px solid #fff;font-size:10px;box-shadow:0 2px 8px rgba(150,45,37,.25)}
+#adminContent>.admin-tabs button.active .admin-attention-badge{border-color:#315568;background:#e9564c;color:#fff}
+
+/* 個人業績底部：費用與外帳共用同一組欄寬、字距與列高。 */
+.sales-person-expense-section,
+.sales-person-external-account-section{margin:14px 20px 0!important;padding:14px!important;border:1px solid #d5e1e6!important;border-radius:14px!important;background:#f7fafb!important;color:#294858}
+.sales-person-external-account-section{border-color:#cfe2d7!important;background:#f5faf7!important}
+.sales-person-ledger-heading{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:16px!important;margin:0 0 10px!important}
+.sales-person-ledger-heading>div:first-child{min-width:0}
+.sales-person-ledger-heading span{display:block;color:#7d919b!important;font-size:9px!important;font-weight:600!important;letter-spacing:.12em}
+.sales-person-ledger-heading h4{margin:3px 0 0!important;color:#294858!important;font-size:16px!important;font-weight:600!important;line-height:1.35}
+.sales-person-ledger-heading p{margin:4px 0 0!important;color:#748a95!important;font-size:10px!important;font-weight:400!important;line-height:1.5}
+.sales-person-ledger-total{text-align:right;white-space:nowrap}.sales-person-ledger-total b,.sales-person-ledger-total small{display:block}.sales-person-ledger-total b{color:#28704b!important;font-size:18px!important;font-weight:650!important;line-height:1.2}.sales-person-ledger-total small{margin-top:3px;color:#7c919b!important;font-size:9px!important;font-weight:400!important;letter-spacing:0!important}
+.sales-person-ledger-head,
+.sales-person-ledger-list .sales-person-ledger-row{display:grid!important;grid-template-columns:100px 92px minmax(250px,1fr) 155px 110px 128px!important;column-gap:0!important;align-items:stretch!important}
+.sales-person-ledger-head{overflow:hidden;border:1px solid #315568;border-radius:10px 10px 0 0;background:#315568;color:#fff}
+.sales-person-ledger-head span{display:flex;align-items:center;min-height:34px;padding:7px 10px;border-right:1px solid rgba(255,255,255,.18);font-size:10px;font-weight:500;line-height:1.25}.sales-person-ledger-head span:last-child{border-right:0}
+.sales-person-ledger-list{display:block!important;overflow:hidden;border:1px solid #d7e2e7;border-top:0;border-radius:0 0 10px 10px;background:#fff}
+.sales-person-ledger-list .sales-person-ledger-row{min-height:54px;padding:0!important;border:0!important;border-bottom:1px solid #e0e8ec!important;border-radius:0!important;background:#fff!important;color:#3c5968!important;font-size:11px!important;line-height:1.45!important}
+.sales-person-ledger-list .sales-person-ledger-row:last-child{border-bottom:0!important}
+.sales-person-ledger-list .sales-person-ledger-row.deletion-adjustment{background:#fff7f6!important}
+.sales-person-ledger-row>[data-label]{box-sizing:border-box;display:flex;align-items:center;min-width:0;margin:0!important;padding:9px 10px;border-right:1px solid #edf1f3;font-size:11px;font-weight:400;overflow-wrap:anywhere}
+.sales-person-ledger-row>[data-label]:last-child{border-right:0}
+.sales-person-ledger-row time{color:#506b78!important;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sales-person-ledger-row .sales-person-expense-type{align-self:stretch;justify-content:flex-start;border-radius:0!important;background:transparent!important;color:#315f79!important;font-size:11px!important;font-weight:500!important;white-space:normal!important}
+.sales-person-ledger-row .sales-person-expense-type.expense,.sales-person-ledger-row .sales-person-expense-type.external{color:#28704b!important}.sales-person-ledger-row .sales-person-expense-type.overtime{color:#315f79!important}
+.sales-person-ledger-detail{display:block!important}.sales-person-ledger-detail b,.sales-person-ledger-detail small{display:block}.sales-person-ledger-detail b{color:#294858!important;font-size:12px!important;font-weight:500!important;line-height:1.45}.sales-person-ledger-detail small{margin-top:3px;color:#7f929b!important;font-size:9px!important;font-weight:400!important;line-height:1.4}
+.sales-person-ledger-review{display:flex!important;align-items:flex-start!important;justify-content:center!important;flex-direction:column;color:#56717e!important;font-size:10px!important;line-height:1.4!important}.sales-person-ledger-review small{display:block;margin-top:2px;color:#8a9aa2;font-size:8px}
+.sales-person-ledger-row>strong{justify-content:flex-end;color:#28704b!important;font-size:14px!important;font-weight:600!important;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sales-person-ledger-action{justify-content:center;color:#8a9aa2!important;text-align:center}.sales-person-ledger-action button{width:auto!important;min-width:0!important;min-height:31px!important;padding:5px 8px!important;border-radius:7px!important;font-size:9px!important;font-weight:500!important;white-space:nowrap}
+
+@media(max-width:820px){
+  .sales-person-expense-section,.sales-person-external-account-section{margin:11px 14px 0!important;padding:11px!important}
+  .sales-person-ledger-heading{align-items:flex-start!important;flex-direction:column!important}.sales-person-ledger-total{text-align:left}
+  .sales-person-ledger-head{display:none!important}
+  .sales-person-ledger-list{border-top:1px solid #d7e2e7;border-radius:10px}
+  .sales-person-ledger-list .sales-person-ledger-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;padding:10px!important;gap:8px!important}
+  .sales-person-ledger-row>[data-label]{display:block;min-height:0;padding:0 0 7px!important;border:0!important;border-bottom:1px dashed #dce5e9!important}
+  .sales-person-ledger-row>[data-label]::before{content:attr(data-label);display:block;margin-bottom:3px;color:#8798a1;font-size:8px;font-weight:400;letter-spacing:.04em}
+  .sales-person-ledger-row .sales-person-ledger-detail{grid-column:1/-1}.sales-person-ledger-row .sales-person-ledger-review{display:block!important}.sales-person-ledger-row .sales-person-ledger-action{grid-column:1/-1;text-align:left}.sales-person-ledger-row .sales-person-ledger-action button{width:100%!important}
+  .sales-person-ledger-row>strong{justify-content:flex-start;text-align:left}
+}
+
+/* 友善列印：畫面與列印使用同一欄位，讓費用與外帳上下完全對齊。 */
+@media print{
+  body.sales-stat-printing .sales-person-expense-section,
+  body.sales-stat-printing .sales-person-external-account-section{margin:2.5mm 0 0!important;padding:0!important;border:0!important;border-radius:0!important;background:#fff!important;break-inside:auto!important;page-break-inside:auto!important}
+  body.sales-stat-printing .sales-person-ledger-heading{display:flex!important;align-items:flex-end!important;flex-direction:row!important;margin:0 0 1mm!important;padding:0!important;break-after:avoid!important;page-break-after:avoid!important}
+  body.sales-stat-printing .sales-person-ledger-heading>div:first-child>span,
+  body.sales-stat-printing .sales-person-ledger-heading p{display:none!important}
+  body.sales-stat-printing .sales-person-ledger-heading h4{margin:0!important;color:#111!important;font-size:12px!important;font-weight:600!important}
+  body.sales-stat-printing .sales-person-ledger-total{text-align:right!important}
+  body.sales-stat-printing .sales-person-ledger-total b,
+  body.sales-stat-printing .sales-person-ledger-total small{display:inline!important;color:#111!important;font-size:10px!important;font-weight:400!important}
+  body.sales-stat-printing .sales-person-ledger-total b:after{content:'  '}
+  body.sales-stat-printing .sales-person-ledger-head,
+  body.sales-stat-printing .sales-person-ledger-list .sales-person-ledger-row{display:grid!important;grid-template-columns:22mm 20mm minmax(0,1fr) 31mm 25mm 28mm!important;column-gap:0!important}
+  body.sales-stat-printing .sales-person-ledger-head{border:1px solid #666!important;border-radius:0!important;background:#e8edef!important;color:#111!important;break-after:avoid!important;page-break-after:avoid!important}
+  body.sales-stat-printing .sales-person-ledger-head span{min-height:0!important;padding:1.2mm 1.5mm!important;border-right:1px solid #777!important;color:#111!important;font-size:9px!important;font-weight:500!important}
+  body.sales-stat-printing .sales-person-ledger-list{overflow:visible!important;border:1px solid #666!important;border-top:0!important;border-radius:0!important}
+  body.sales-stat-printing .sales-person-ledger-list .sales-person-ledger-row{min-height:0!important;border-bottom:1px solid #777!important;background:#fff!important;break-inside:avoid!important;page-break-inside:avoid!important}
+  body.sales-stat-printing .sales-person-ledger-row>[data-label]{display:flex!important;min-height:8mm!important;padding:1.2mm 1.5mm!important;border-right:1px solid #777!important;border-bottom:0!important;color:#111!important;font-size:9px!important;font-weight:400!important;line-height:1.25!important}
+  body.sales-stat-printing .sales-person-ledger-row>[data-label]::before{display:none!important;content:none!important}
+  body.sales-stat-printing .sales-person-ledger-detail{display:block!important}.sales-person-ledger-detail b{font-size:9px!important}.sales-person-ledger-detail small{font-size:7.5px!important}
+  body.sales-stat-printing .sales-person-ledger-review{display:flex!important;font-size:8px!important}.sales-person-ledger-review small{font-size:7px!important}
+  body.sales-stat-printing .sales-person-ledger-row>strong{justify-content:flex-end!important;color:#111!important;font-size:9px!important;font-weight:500!important}
+  body.sales-stat-printing .sales-person-ledger-action{justify-content:center!important;color:#666!important;font-size:8px!important}
+  body.sales-stat-printing .sales-person-ledger-action button{min-height:0!important;padding:0!important;border:0!important;background:transparent!important;color:#111!important;font-size:8px!important;font-weight:400!important}
+}
+</style>
 </body>
 </html>
