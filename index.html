@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED BUILD: 20260826-external-account-v32 -->
+<!-- STARRED BUILD: 20260827-external-account-workflow-v33 -->
 <!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
 <!-- STARRED BUILD: 20260818-expense-request-v27 -->
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
@@ -3897,13 +3897,14 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div class="field"><label>姓名</label><input id="externalAccountSubmitterName" readonly></div>
         <div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountDate" type="date"></div></div>
         <div class="field external-account-wide"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="0"></div></div>
+        <div class="field external-account-wide"><label>備註（選填）</label><textarea id="externalAccountNote" rows="3" maxlength="500" placeholder="有需要再補充；沒有填也可以送出"></textarea><div class="note">最多 500 個字，不強制填寫。</div></div>
       </div>
       <div id="externalAccountFormStatus" class="external-account-status" role="status" aria-live="polite"></div>
       <button id="externalAccountSubmitBtn" type="button" class="primary external-account-submit-btn" onclick="submitExternalAccountTransaction()">送出外帳交易</button>
     </section>
     <section class="panel external-account-own-card">
       <div class="external-account-section-head"><div><span>02</span><h2>我的外帳紀錄</h2></div><b id="externalAccountOwnCount">0 筆</b></div>
-      <div class="external-account-own-filter"><label><span>月份</span><input id="externalAccountOwnMonth" type="month" onchange="renderExternalAccountOwnList()"></label><label><span>狀態</span><select id="externalAccountOwnStatus" onchange="renderExternalAccountOwnList()"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option></select></label><button type="button" class="secondary" onclick="loadExternalAccountData()">重新整理</button></div>
+      <div class="external-account-own-filter"><label><span>月份</span><input id="externalAccountOwnMonth" type="month" onchange="renderExternalAccountOwnList()"></label><label><span>狀態</span><select id="externalAccountOwnStatus" onchange="renderExternalAccountOwnList()"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option><option value="cancelled">已取消</option></select></label><button type="button" class="secondary" onclick="loadExternalAccountData()">重新整理</button></div>
       <div id="externalAccountOwnList" class="external-account-own-list"><div class="external-account-empty">尚無外帳紀錄。</div></div>
     </section>
   </div>
@@ -4134,7 +4135,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div class="external-account-admin-filter">
           <div class="field external-account-date-field"><label>開始日期</label><div class="external-account-date-control"><input id="externalAccountAdminDateFrom" type="date"></div></div>
           <div class="field external-account-date-field"><label>結束日期</label><div class="external-account-date-control"><input id="externalAccountAdminDateTo" type="date"></div></div>
-          <div class="field"><label>狀態</label><select id="externalAccountAdminStatus"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option></select></div>
+          <div class="field"><label>狀態</label><select id="externalAccountAdminStatus"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option><option value="cancelled">已取消</option></select></div>
           <div class="field"><label>人員</label><select id="externalAccountAdminPerson"><option value="">全部人員</option></select></div>
           <div class="field external-account-admin-keyword"><label>搜尋姓名</label><input id="externalAccountAdminKeyword" type="search" placeholder="輸入人員姓名"></div>
           <div class="field"><label>每頁筆數</label><select id="externalAccountAdminPageSize"><option value="25">25 筆</option><option value="50" selected>50 筆</option><option value="100">100 筆</option></select></div>
@@ -4471,7 +4472,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260826-external-account-v32";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260827-external-account-workflow-v33";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -11293,7 +11294,15 @@ function renderSalesPersonExpenseSection(lineUserId){
   var expenseTotal=rows.filter(function(item){return item.requestType==='expense'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0);
   var overtimeCount=rows.filter(function(item){return item.requestType==='overtime'}).length;
   section.hidden=false;
-  section.innerHTML='<div class="sales-person-expense-heading"><div><span>APPROVED REQUESTS</span><h4>核准移櫃／加班／費用</h4><p>另外列示，不計入營業額、退貨或排行榜。</p></div><div class="sales-person-expense-totals"><b>'+salesEsc(salesMoney(expenseTotal))+'</b><small>核准費用・移櫃／加班 '+String(overtimeCount)+' 筆</small></div></div><div class="sales-person-expense-list">'+rows.map(function(item){var isExpense=item.requestType==='expense';var place=[item.storeName,item.storeFloor].filter(Boolean).join('｜');var detail=isExpense?String(item.reason||'未填寫緣由'):[place||'未指定店點',[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),salesExpenseDuration(item)].filter(Boolean).join('・');if(item.note)detail+='；備註：'+String(item.note);var receiptButton=isExpense&&Array.isArray(item.receiptUrls)&&item.receiptUrls.length?'<button type="button" class="secondary sales-person-expense-receipt" onclick="openSalesExpenseReceipts(\''+salesEsc(item.id)+'\')">查看單據 '+String(item.receiptUrls.length)+' 張</button>':'';return '<article><time>'+salesEsc(item.requestDate||'—')+'</time><span class="sales-person-expense-type '+(isExpense?'expense':'overtime')+'">'+(isExpense?'費用':'移櫃／加班')+'</span><div><b>'+salesEsc(detail)+'</b><small>'+salesEsc(item.reviewerName?'核准人：'+item.reviewerName:'已核准')+'</small></div><strong>'+(isExpense?salesEsc(salesMoney(item.amount||0)):'—')+'</strong>'+receiptButton+'</article>'}).join('')+'</div>';
+  section.innerHTML='<div class="sales-person-expense-heading"><div><span>APPROVED REQUESTS</span><h4>核准移櫃／加班／費用</h4><p>另外列示，不計入營業額、退貨或排行榜。</p></div><div class="sales-person-expense-totals"><b>'+salesEsc(salesMoney(expenseTotal))+'</b><small>費用含跨月刪除沖減・移櫃／加班 '+String(overtimeCount)+' 筆</small></div></div><div class="sales-person-expense-list">'+rows.map(function(item){
+    var isAdjustment=item.isDeletionAdjustment===true;
+    var isExpense=item.requestType==='expense';
+    var place=[item.storeName,item.storeFloor].filter(Boolean).join('｜');
+    var detail=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalRequestDate||'原日期')+' 的費用')):(isExpense?String(item.reason||'未填寫緣由'):[place||'未指定店點',[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),salesExpenseDuration(item)].filter(Boolean).join('・'));
+    if(item.note&&!isAdjustment)detail+='；備註：'+String(item.note);
+    var receiptButton=!isAdjustment&&isExpense&&Array.isArray(item.receiptUrls)&&item.receiptUrls.length?'<button type="button" class="secondary sales-person-expense-receipt" onclick="openSalesExpenseReceipts(\''+salesEsc(item.id)+'\')">查看單據 '+String(item.receiptUrls.length)+' 張</button>':'';
+    return '<article class="'+(isAdjustment?'deletion-adjustment':'')+'"><time>'+salesEsc(item.requestDate||'—')+'</time><span class="sales-person-expense-type '+(isExpense?'expense':'overtime')+'">'+(isAdjustment?'刪除沖減':(isExpense?'費用':'移櫃／加班'))+'</span><div><b>'+salesEsc(detail)+'</b><small>'+salesEsc(isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准'))+'</small></div><strong>'+(isExpense?salesEsc(salesMoney(item.amount||0)):'—')+'</strong>'+receiptButton+'</article>';
+  }).join('')+'</div>';
 }
 function openSalesStatDetail(kind,key){
   kind=kind==='person'?'person':'store';
@@ -14089,7 +14098,7 @@ document.addEventListener('DOMContentLoaded',installSalesProxyCreateButton);
   }
 }
 </style>
-<style id="external-account-v32-style">
+<style id="external-account-base-style">
 #externalAccountPage{--ea-ink:#294858;--ea-muted:#6e8490;--ea-line:#d8e3e8;--ea-soft:#f4f8fa;--ea-green:#2f7658;--ea-blue:#315f79;--ea-red:#9a4038}
 .external-account-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px;padding:24px;border:1px solid #d7e3e8;border-radius:20px;background:linear-gradient(135deg,#f3f8fa 0%,#fff 60%,#eef7f2 100%)}
 .external-account-hero>div>span,.external-account-bank-card header span,.external-account-admin-heading span{display:block;margin-bottom:5px;color:#7a909b;font-size:11px;font-weight:800;letter-spacing:.14em}
@@ -14113,7 +14122,67 @@ document.addEventListener('DOMContentLoaded',installSalesProxyCreateButton);
   .external-account-hero{align-items:stretch;flex-direction:column;padding:18px}.external-account-user{min-width:0}.external-account-front-grid{grid-template-columns:1fr}.external-account-bank-card{grid-column:auto!important}.external-account-bank-card header{align-items:flex-start}.external-account-bank-info{grid-template-columns:1fr 1fr}.external-account-bank-note{grid-column:1/-1!important}.external-account-form-grid,.external-account-settings-grid{grid-template-columns:1fr}.external-account-wide,.external-account-settings-wide{grid-column:auto}.external-account-own-filter{grid-template-columns:1fr 1fr}.external-account-own-filter button{grid-column:1/-1}.external-account-own-item{grid-template-columns:1fr auto}.external-account-own-item>div{grid-column:1/-1;grid-row:2}.external-account-own-item strong{grid-column:2;grid-row:1}.external-account-date-control input{height:48px!important;padding:0 12px!important}.external-account-admin-filter{grid-template-columns:1fr 1fr}.external-account-admin-keyword{grid-column:1/-1}.external-account-admin-filter button{width:100%}.external-account-admin-summary{grid-template-columns:1fr 1fr}.external-account-admin-table-wrap{display:none}.external-account-admin-mobile{display:grid;gap:10px}.external-account-admin-mobile article{padding:15px;border:1px solid var(--ea-line);border-radius:14px;background:#fff}.external-account-admin-mobile article.pending{border-color:#e3ca76;background:#fffdf7}.external-account-admin-mobile header{display:flex;justify-content:space-between;gap:10px}.external-account-admin-mobile h4{margin:0;color:var(--ea-ink)}.external-account-admin-mobile p{margin:10px 0;color:#4c6876}.external-account-admin-mobile strong{color:#28704b;font-size:20px}.external-account-admin-mobile footer{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.external-account-admin-mobile footer button{flex:1;min-width:90px}.external-account-settings-section summary small{display:block;margin:4px 0 0}.external-account-settings-grid,.external-account-settings-section>.external-account-status,.external-account-settings-section>button{margin-left:12px;margin-right:12px}.sales-person-external-account-heading{align-items:flex-start;flex-direction:column}.sales-person-external-account-list article{grid-template-columns:1fr auto}.sales-person-external-account-list article small{grid-column:1/-1}.external-account-edit-modal{align-items:end;padding:0}.external-account-edit-dialog{width:100%;max-height:92vh;border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}
 }
 </style>
-<script id="external-account-v32-script">
+<style id="external-account-v33-style">
+/* 外帳 v33：手機篩選、緊湊紀錄、前台操作與跨月沖減 */
+.external-account-own-filter>*{min-width:0}
+.external-account-own-filter label{display:block;min-width:0}
+.external-account-own-filter input,
+.external-account-own-filter select{box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:100%!important}
+.external-account-pill.cancelled{background:#eef1f3;color:#667982}
+.external-account-own-item{
+  display:block!important;
+  min-width:0;
+  padding:12px 14px!important;
+}
+.external-account-own-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.external-account-own-title{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-width:0}
+.external-account-own-title time{color:#294858!important;font-size:13px!important;font-weight:700;font-variant-numeric:tabular-nums}
+.external-account-own-title small{color:#81939c;font-size:10px}
+.external-account-own-amount{color:var(--ea-green);font-size:19px;font-weight:800;white-space:nowrap}
+.external-account-own-note{margin:7px 0 0;color:#4f6976;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.external-account-own-note.empty{color:#9aa8ae}
+.external-account-own-meta{margin-top:6px;color:#80929a;font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.external-account-own-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed #dbe4e8}
+.external-account-own-actions button{min-height:34px;padding:6px 10px!important;font-size:11px!important}
+.external-account-own-item.rejected{border-color:#efd0cd;background:#fffafa}
+.external-account-own-item.cancelled{border-color:#dde3e6;background:#f8fafb}
+.external-account-own-item.deletion-adjustment,
+.sales-person-expense-list article.deletion-adjustment,
+.sales-person-external-account-list article.deletion-adjustment{border-color:#edc5c0!important;background:#fff7f6!important}
+.sales-person-expense-list article.deletion-adjustment strong,
+.sales-person-external-account-list article.deletion-adjustment strong{color:#a1443b!important}
+.external-account-admin-note{display:block;margin-top:5px;color:#627b87;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.external-account-admin-mobile .external-account-admin-note{margin-top:7px;padding:7px 9px;border-radius:8px;background:#f3f7f9}
+.external-account-edit-grid textarea{box-sizing:border-box;width:100%;min-height:92px;resize:vertical}
+@media(max-width:760px){
+  .external-account-own-card{padding:13px!important}
+  .external-account-own-filter{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+  .external-account-own-filter button{grid-column:auto!important;width:100%!important}
+  .external-account-own-filter input[type="month"]{
+    display:block!important;
+    height:48px!important;
+    padding:0 12px!important;
+    border-radius:12px!important;
+    font-size:16px!important;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .external-account-own-filter select{height:48px!important;font-size:16px!important}
+  .external-account-own-list{gap:7px!important}
+  .external-account-own-item{padding:10px 11px!important;border-radius:11px!important}
+  .external-account-own-title{gap:5px}
+  .external-account-own-title time{font-size:12px!important}
+  .external-account-own-amount{font-size:17px}
+  .external-account-own-note{margin-top:5px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .external-account-own-meta{margin-top:4px;font-size:9px}
+  .external-account-own-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:7px;padding-top:7px}
+  .external-account-own-actions button{width:100%;min-width:0!important;padding:6px 4px!important;font-size:10px!important}
+}
+@media(max-width:380px){
+  .external-account-own-actions{grid-template-columns:1fr 1fr}
+}
+</style>
+<script id="external-account-v33-script">
 (function(){
 'use strict';
 var eaOwnData=[],eaSetting={},eaLoading=false,eaAdminLoading=false,eaAdminState={rows:[],people:[],setting:{},summary:{},page:1,pageSize:50,total:0,canEditSettings:false};
@@ -14121,25 +14190,119 @@ function eaEl(id){return document.getElementById(id)}
 function eaEsc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]})}
 function eaToday(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'})}
 function eaMonth(){return eaToday().slice(0,7)}
-function eaMoney(value){return '$'+Math.max(0,Number(value||0)).toLocaleString('zh-TW',{maximumFractionDigits:0})}
+function eaMoney(value){var amount=Number(value||0);if(!Number.isFinite(amount))amount=0;return (amount<0?'-$':'$')+Math.abs(amount).toLocaleString('zh-TW',{maximumFractionDigits:0})}
 function eaDateTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(value)}}
 function eaIdentity(){var profile=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;var verified=window.starredVerifiedLineUser||{};return {id:String((profile&&profile.id)||verified.lineUserId||''),name:String(verified.employeeName||(profile&&(profile.employeeName||profile.name))||verified.lineDisplayName||(profile&&profile.displayName)||'LINE 使用者')}}
-function eaStatusLabel(status){return status==='approved'?'已核准':status==='rejected'?'未通過':'待審核'}
+function eaStatusLabel(status){return status==='approved'?'已核准':status==='rejected'?'未通過':status==='cancelled'?'已取消':'待審核'}
 function eaSetStatus(id,text,type){var box=eaEl(id);if(!box)return;box.className=(id==='externalAccountCopyStatus'?'external-account-copy-status':'external-account-status')+(text?' show '+(type||'working'):'');box.textContent=text||''}
 function eaHasSetting(setting){return Boolean(setting&&setting.bankName&&setting.accountName&&setting.accountNumber)}
 function eaSettingCopyText(setting){if(!eaHasSetting(setting))return '';return [setting.displayTitle||'公司匯款帳號',[setting.bankCode,setting.bankName,setting.branchName].filter(Boolean).join('｜'),'戶名：'+setting.accountName,'帳號：'+setting.accountNumber,setting.remittanceNote?'說明：'+setting.remittanceNote:''].filter(Boolean).join('\n')}
 function renderExternalAccountSetting(){var setting=eaSetting||{};if(eaEl('externalAccountDisplayTitle'))eaEl('externalAccountDisplayTitle').textContent=setting.displayTitle||'公司匯款帳號';var box=eaEl('externalAccountBankInfo');if(!box)return;if(!eaHasSetting(setting)){box.innerHTML='<div class="external-account-empty">公司帳號尚未設定，請聯絡系統管理員。</div>';if(eaEl('externalAccountCopyBtn'))eaEl('externalAccountCopyBtn').disabled=true;return}if(eaEl('externalAccountCopyBtn'))eaEl('externalAccountCopyBtn').disabled=false;box.innerHTML='<article><span>銀行</span><b>'+eaEsc([setting.bankCode,setting.bankName].filter(Boolean).join('｜'))+'</b></article><article><span>分行</span><b>'+eaEsc(setting.branchName||'—')+'</b></article><article><span>戶名</span><b>'+eaEsc(setting.accountName)+'</b></article><article><span>帳號</span><b>'+eaEsc(setting.accountNumber)+'</b></article>'+(setting.remittanceNote?'<article class="external-account-bank-note"><span>匯款說明</span><b>'+eaEsc(setting.remittanceNote)+'</b></article>':'')}
 async function copyExternalAccountInfo(){var text=eaSettingCopyText(eaSetting);if(!text){eaSetStatus('externalAccountCopyStatus','公司帳號尚未設定。','error');return}try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(text);else{var area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();document.execCommand('copy');area.remove()}eaSetStatus('externalAccountCopyStatus','公司帳號資訊已複製。','success')}catch(error){eaSetStatus('externalAccountCopyStatus','複製失敗，請手動選取帳號。','error')}}
-function renderExternalAccountOwnList(){var box=eaEl('externalAccountOwnList');if(!box)return;var month=String((eaEl('externalAccountOwnMonth')||{}).value||'');var status=String((eaEl('externalAccountOwnStatus')||{}).value||'');var rows=eaOwnData.filter(function(item){return (!month||String(item.transactionDate||'').slice(0,7)===month)&&(!status||item.status===status)});if(eaEl('externalAccountOwnCount'))eaEl('externalAccountOwnCount').textContent=String(rows.length)+' 筆';box.innerHTML=rows.length?rows.map(function(item){return '<article class="external-account-own-item '+eaEsc(item.status||'pending')+'"><time>'+eaEsc(item.transactionDate||'—')+'</time><div><span class="external-account-pill '+eaEsc(item.status||'pending')+'">'+eaStatusLabel(item.status)+'</span><b>客戶交易</b><small>送出：'+eaEsc(eaDateTime(item.createdAt))+(item.reviewerName?'・審核：'+eaEsc(item.reviewerName):'')+(item.reviewNote?'・'+eaEsc(item.reviewNote):'')+'</small></div><strong>'+eaMoney(item.customerAmount)+'</strong></article>'}).join(''):'<div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div>'}
+function renderExternalAccountOwnList(){
+  var box=eaEl('externalAccountOwnList');if(!box)return;
+  var month=String((eaEl('externalAccountOwnMonth')||{}).value||'');
+  var status=String((eaEl('externalAccountOwnStatus')||{}).value||'');
+  var rows=eaOwnData.filter(function(item){return (!month||String(item.transactionDate||'').slice(0,7)===month)&&(!status||item.status===status)});
+  if(eaEl('externalAccountOwnCount'))eaEl('externalAccountOwnCount').textContent=String(rows.length)+' 筆';
+  box.innerHTML=rows.length?rows.map(function(item){
+    var itemStatus=String(item.status||'pending');
+    var editButton='<button type="button" class="secondary" onclick="openExternalAccountOwnEdit(\''+eaEsc(item.id)+'\')">編輯</button>';
+    var cancelButton=itemStatus==='pending'?'<button type="button" class="secondary" onclick="cancelExternalAccountOwn(\''+eaEsc(item.id)+'\')">取消</button>':'';
+    var deleteButton=itemStatus!=='approved'?'<button type="button" class="secondary" onclick="deleteExternalAccountOwn(\''+eaEsc(item.id)+'\')">刪除</button>':'';
+    var note=String(item.note||'').trim();
+    var reviewMeta=item.reviewerName?'審核：'+item.reviewerName:(itemStatus==='pending'?'等待後台審核':'');
+    if(item.reviewNote)reviewMeta+=(reviewMeta?'・':'')+item.reviewNote;
+    return '<article class="external-account-own-item '+eaEsc(itemStatus)+'">'
+      +'<div class="external-account-own-main"><div class="external-account-own-title"><time>'+eaEsc(item.transactionDate||'—')+'</time><span class="external-account-pill '+eaEsc(itemStatus)+'">'+eaStatusLabel(itemStatus)+'</span><small>v'+eaEsc(item.revisionNo||1)+'</small></div><strong class="external-account-own-amount">'+eaMoney(item.customerAmount)+'</strong></div>'
+      +'<p class="external-account-own-note '+(note?'':'empty')+'">'+eaEsc(note||'無備註')+'</p>'
+      +'<div class="external-account-own-meta">送出 '+eaEsc(eaDateTime(item.createdAt))+(item.editedAt?'・最後編輯 '+eaEsc(eaDateTime(item.editedAt)):'')+(reviewMeta?'<br>'+eaEsc(reviewMeta):'')+'</div>'
+      +'<div class="external-account-own-actions">'+editButton+cancelButton+deleteButton+'</div></article>';
+  }).join(''):'<div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div>';
+}
 async function loadExternalAccountData(){if(eaLoading)return;eaLoading=true;var identity=eaIdentity();if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;eaSetStatus('externalAccountFormStatus','正在讀取外帳資料…','working');try{var result=await starredApi('external_account_bootstrap',{});eaSetting=result.setting||{};eaOwnData=Array.isArray(result.transactions)?result.transactions:[];renderExternalAccountSetting();renderExternalAccountOwnList();eaSetStatus('externalAccountFormStatus','')}catch(error){eaSetStatus('externalAccountFormStatus','外帳資料載入失敗：'+String(error&&error.message||error),'error')}finally{eaLoading=false}}
-async function submitExternalAccountTransaction(){var transactionDate=String((eaEl('externalAccountDate')||{}).value||'');var customerAmount=Number((eaEl('externalAccountAmount')||{}).value||0);if(!transactionDate){eaSetStatus('externalAccountFormStatus','請選擇交易日期。','error');return}if(transactionDate>eaToday()){eaSetStatus('externalAccountFormStatus','交易日期不可晚於今天。','error');return}if(!Number.isFinite(customerAmount)||customerAmount<=0){eaSetStatus('externalAccountFormStatus','請輸入正確的客戶交易金額。','error');return}var button=eaEl('externalAccountSubmitBtn');if(button)button.disabled=true;eaSetStatus('externalAccountFormStatus','正在送出外帳交易…','working');try{await starredApi('external_account_submit',{transactionDate:transactionDate,customerAmount:customerAmount});if(eaEl('externalAccountAmount'))eaEl('externalAccountAmount').value='';eaSetStatus('externalAccountFormStatus','外帳交易已送出，等待後台核准。','success');await loadExternalAccountData()}catch(error){eaSetStatus('externalAccountFormStatus','送出失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
+async function submitExternalAccountTransaction(){
+  var transactionDate=String((eaEl('externalAccountDate')||{}).value||'');
+  var customerAmount=Number((eaEl('externalAccountAmount')||{}).value||0);
+  var note=String((eaEl('externalAccountNote')||{}).value||'').trim();
+  if(!transactionDate){eaSetStatus('externalAccountFormStatus','請選擇交易日期。','error');return}
+  if(transactionDate>eaToday()){eaSetStatus('externalAccountFormStatus','交易日期不可晚於今天。','error');return}
+  if(!Number.isFinite(customerAmount)||customerAmount<=0){eaSetStatus('externalAccountFormStatus','請輸入正確的客戶交易金額。','error');return}
+  if(note.length>500){eaSetStatus('externalAccountFormStatus','備註最多 500 個字。','error');return}
+  var button=eaEl('externalAccountSubmitBtn');if(button)button.disabled=true;
+  eaSetStatus('externalAccountFormStatus','正在送出外帳交易…','working');
+  try{
+    await starredApi('external_account_submit',{transactionDate:transactionDate,customerAmount:customerAmount,note:note});
+    if(eaEl('externalAccountAmount'))eaEl('externalAccountAmount').value='';
+    if(eaEl('externalAccountNote'))eaEl('externalAccountNote').value='';
+    eaSetStatus('externalAccountFormStatus','外帳交易已送出，等待後台核准。','success');
+    await loadExternalAccountData();
+  }catch(error){eaSetStatus('externalAccountFormStatus','送出失敗：'+String(error&&error.message||error),'error')}
+  finally{if(button)button.disabled=false}
+}
+function ensureExternalAccountOwnEditModal(){
+  var modal=eaEl('externalAccountOwnEditModal');if(modal)return modal;
+  modal=document.createElement('div');modal.id='externalAccountOwnEditModal';modal.className='external-account-edit-modal';modal.hidden=true;
+  modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="externalAccountOwnEditTitle"><header><div><h3 id="externalAccountOwnEditTitle">編輯外帳</h3><small>儲存後會重新送到後台審核</small></div><button type="button" onclick="closeExternalAccountOwnEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="externalAccountOwnEditId" type="hidden"><div class="external-account-edit-grid"><div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountOwnEditDate" type="date"></div></div><div class="field"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountOwnEditAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div></div><div class="field"><label>備註（選填）</label><textarea id="externalAccountOwnEditNote" maxlength="500" rows="3" placeholder="沒有填也可以儲存"></textarea></div></div><div id="externalAccountOwnEditStatus" class="external-account-status" role="status"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountOwnEdit()">不編輯了</button><button id="externalAccountOwnEditSave" type="button" class="primary" onclick="saveExternalAccountOwnEdit()">儲存並重新送審</button></footer></section>';
+  modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountOwnEdit()});
+  document.body.appendChild(modal);return modal;
+}
+function openExternalAccountOwnEdit(id){
+  var item=eaOwnData.find(function(row){return String(row.id)===String(id)});if(!item){alert('找不到這筆外帳，請重新整理。');return}
+  var modal=ensureExternalAccountOwnEditModal();
+  eaEl('externalAccountOwnEditId').value=String(item.id||'');
+  eaEl('externalAccountOwnEditDate').value=String(item.transactionDate||'');
+  eaEl('externalAccountOwnEditDate').max=eaToday();
+  eaEl('externalAccountOwnEditAmount').value=String(item.customerAmount||'');
+  eaEl('externalAccountOwnEditNote').value=String(item.note||'');
+  eaSetStatus('externalAccountOwnEditStatus','');modal.hidden=false;document.body.style.overflow='hidden';
+}
+function closeExternalAccountOwnEdit(){var modal=eaEl('externalAccountOwnEditModal');if(modal)modal.hidden=true;document.body.style.overflow=''}
+async function saveExternalAccountOwnEdit(){
+  var transactionId=String((eaEl('externalAccountOwnEditId')||{}).value||'');
+  var item=eaOwnData.find(function(row){return String(row.id)===transactionId});
+  var payload={transactionId:transactionId,transactionDate:String((eaEl('externalAccountOwnEditDate')||{}).value||''),customerAmount:Number((eaEl('externalAccountOwnEditAmount')||{}).value||0),note:String((eaEl('externalAccountOwnEditNote')||{}).value||'').trim()};
+  if(!payload.transactionDate||payload.transactionDate>eaToday()||!Number.isFinite(payload.customerAmount)||payload.customerAmount<=0){eaSetStatus('externalAccountOwnEditStatus','請填寫正確的交易日期與金額。','error');return}
+  if(payload.note.length>500){eaSetStatus('externalAccountOwnEditStatus','備註最多 500 個字。','error');return}
+  if(item&&item.status==='approved'&&!confirm('這筆外帳已核准。編輯後會先改為「待審核」，後台再次核准後才會計入業績，確定儲存？'))return;
+  var button=eaEl('externalAccountOwnEditSave');if(button)button.disabled=true;eaSetStatus('externalAccountOwnEditStatus','正在儲存並重新送審…','working');
+  try{await starredApi('external_account_update',payload);closeExternalAccountOwnEdit();await loadExternalAccountData();eaSetStatus('externalAccountFormStatus','外帳已更新，目前為待審核。','success')}
+  catch(error){eaSetStatus('externalAccountOwnEditStatus','編輯失敗：'+String(error&&error.message||error),'error')}
+  finally{if(button)button.disabled=false}
+}
+async function cancelExternalAccountOwn(id){
+  if(!confirm('確定取消這筆待審核外帳？取消後仍可編輯並重新送審。'))return;
+  try{await starredApi('external_account_cancel',{transactionId:id});await loadExternalAccountData()}
+  catch(error){alert('取消失敗：'+String(error&&error.message||error))}
+}
+async function deleteExternalAccountOwn(id){
+  if(!confirm('確定刪除這筆外帳？刪除後前台清單不再顯示。'))return;
+  try{await starredApi('external_account_delete',{transactionId:id});await loadExternalAccountData()}
+  catch(error){alert('刪除失敗：'+String(error&&error.message||error))}
+}
 function eaCanManageAdmin(){return Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)!=='manager')}
 function eaCanSystemAdmin(){return Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin')}
 function eaSyncAdminRole(){var button=eaEl('externalAccountAdminTabBtn');if(button)button.classList.toggle('hidden-by-role',!eaCanManageAdmin())}
 function eaFillSettingsForm(){var setting=eaAdminState.setting||{};var values={externalAccountSettingTitle:setting.displayTitle||'公司匯款帳號',externalAccountSettingBank:setting.bankName||'',externalAccountSettingBankCode:setting.bankCode||'',externalAccountSettingBranch:setting.branchName||'',externalAccountSettingName:setting.accountName||'',externalAccountSettingNumber:setting.accountNumber||'',externalAccountSettingNote:setting.remittanceNote||''};Object.keys(values).forEach(function(id){var input=eaEl(id);if(input){input.value=values[id];input.disabled=!eaAdminState.canEditSettings}});if(eaEl('externalAccountSettingSave'))eaEl('externalAccountSettingSave').disabled=!eaAdminState.canEditSettings;if(eaEl('externalAccountSettingsPermission'))eaEl('externalAccountSettingsPermission').textContent=eaAdminState.canEditSettings?'目前可編輯':'只有系統管理員可以修改'}
 function eaFillAdminPeople(){var select=eaEl('externalAccountAdminPerson');if(!select)return;var old=select.value;select.innerHTML='<option value="">全部人員</option>'+eaAdminState.people.map(function(person){return '<option value="'+eaEsc(person.lineUserId)+'">'+eaEsc(person.name)+(person.enabled===false?'（已停用）':'')+'</option>'}).join('');select.value=old}
 function eaAdminActionHtml(item){var review=item.status==='pending'?'<button type="button" class="primary" onclick="reviewExternalAccountTransaction(\''+eaEsc(item.id)+'\',\'approved\')">核准</button><button type="button" class="secondary" onclick="reviewExternalAccountTransaction(\''+eaEsc(item.id)+'\',\'rejected\')">駁回</button>':'';return '<div class="external-account-admin-actions">'+review+'<button type="button" class="secondary" onclick="openExternalAccountEdit(\''+eaEsc(item.id)+'\')">編輯</button><button type="button" class="secondary" onclick="deleteExternalAccountTransaction(\''+eaEsc(item.id)+'\')">刪除</button></div>'}
-function renderExternalAccountAdmin(){var state=eaAdminState;var rows=state.rows||[];var summary=state.summary||{};if(eaEl('externalAccountAdminPending'))eaEl('externalAccountAdminPending').textContent=String(summary.pendingCount||0)+' 筆';if(eaEl('externalAccountAdminApproved'))eaEl('externalAccountAdminApproved').textContent=String(summary.approvedCount||0)+' 筆';if(eaEl('externalAccountAdminApprovedAmount'))eaEl('externalAccountAdminApprovedAmount').textContent=eaMoney(summary.approvedAmount||0);if(eaEl('externalAccountAdminTotal'))eaEl('externalAccountAdminTotal').textContent=String(state.total||0)+' 筆';var body=eaEl('externalAccountAdminBody');var mobile=eaEl('externalAccountAdminMobile');if(body)body.innerHTML=rows.length?rows.map(function(item){return '<tr class="'+eaEsc(item.status||'pending')+'"><td>'+eaEsc(item.transactionDate||'—')+'</td><td><b>'+eaEsc(item.submitterName||'LINE 使用者')+'</b></td><td class="amount">'+eaMoney(item.customerAmount)+'</td><td><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></td><td><small>'+(item.reviewerName?'審核：'+eaEsc(item.reviewerName):'尚未審核')+(item.editedAt?'<br>修改：'+eaEsc(eaDateTime(item.editedAt)):'')+(item.reviewNote?'<br>'+eaEsc(item.reviewNote):'')+'</small></td><td>'+eaAdminActionHtml(item)+'</td></tr>'}).join(''):'<tr><td colspan="6"><div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div></td></tr>';if(mobile)mobile.innerHTML=rows.map(function(item){return '<article class="'+eaEsc(item.status||'pending')+'"><header><h4>'+eaEsc(item.transactionDate||'—')+'・'+eaEsc(item.submitterName||'LINE 使用者')+'</h4><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></header><p>客戶交易金額</p><strong>'+eaMoney(item.customerAmount)+'</strong>'+(item.reviewNote?'<small>審核備註：'+eaEsc(item.reviewNote)+'</small>':'')+'<footer>'+eaAdminActionHtml(item)+'</footer></article>'}).join('');renderExternalAccountPagination();eaFillSettingsForm();eaFillAdminPeople()}
+function renderExternalAccountAdmin(){
+  var state=eaAdminState;var rows=state.rows||[];var summary=state.summary||{};
+  if(eaEl('externalAccountAdminPending'))eaEl('externalAccountAdminPending').textContent=String(summary.pendingCount||0)+' 筆';
+  if(eaEl('externalAccountAdminApproved'))eaEl('externalAccountAdminApproved').textContent=String(summary.approvedCount||0)+' 筆';
+  if(eaEl('externalAccountAdminApprovedAmount'))eaEl('externalAccountAdminApprovedAmount').textContent=eaMoney(summary.approvedAmount||0);
+  if(eaEl('externalAccountAdminTotal'))eaEl('externalAccountAdminTotal').textContent=String(state.total||0)+' 筆';
+  var body=eaEl('externalAccountAdminBody');var mobile=eaEl('externalAccountAdminMobile');
+  if(body)body.innerHTML=rows.length?rows.map(function(item){
+    var note=item.note?'<span class="external-account-admin-note">申請備註：'+eaEsc(item.note)+'</span>':'';
+    var audit=(item.reviewerName?'審核：'+eaEsc(item.reviewerName):'尚未審核')+(item.editedAt?'<br>修改：'+eaEsc(eaDateTime(item.editedAt)):'')+(item.reviewNote?'<br>'+eaEsc(item.reviewNote):'');
+    return '<tr class="'+eaEsc(item.status||'pending')+'"><td>'+eaEsc(item.transactionDate||'—')+'</td><td><b>'+eaEsc(item.submitterName||'LINE 使用者')+'</b>'+note+'</td><td class="amount">'+eaMoney(item.customerAmount)+'</td><td><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></td><td><small>'+audit+'</small></td><td>'+eaAdminActionHtml(item)+'</td></tr>';
+  }).join(''):'<tr><td colspan="6"><div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div></td></tr>';
+  if(mobile)mobile.innerHTML=rows.length?rows.map(function(item){
+    return '<article class="'+eaEsc(item.status||'pending')+'"><header><h4>'+eaEsc(item.transactionDate||'—')+'・'+eaEsc(item.submitterName||'LINE 使用者')+'</h4><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></header><p>客戶交易金額</p><strong>'+eaMoney(item.customerAmount)+'</strong>'+(item.note?'<span class="external-account-admin-note">備註：'+eaEsc(item.note)+'</span>':'')+(item.reviewNote?'<small>審核備註：'+eaEsc(item.reviewNote)+'</small>':'')+'<footer>'+eaAdminActionHtml(item)+'</footer></article>';
+  }).join(''):'<div class="external-account-empty">目前篩選條件沒有外帳紀錄。</div>';
+  renderExternalAccountPagination();eaFillSettingsForm();eaFillAdminPeople();
+}
 function renderExternalAccountPagination(){var box=eaEl('externalAccountAdminPagination');if(!box)return;var totalPages=Math.max(1,Math.ceil(Number(eaAdminState.total||0)/Number(eaAdminState.pageSize||50)));var page=Math.min(totalPages,Math.max(1,Number(eaAdminState.page||1)));var buttons=['<button type="button" onclick="goExternalAccountAdminPage(1)" '+(page===1?'disabled':'')+'>«</button>','<button type="button" onclick="goExternalAccountAdminPage('+(page-1)+')" '+(page===1?'disabled':'')+'>‹</button>'];for(var value=Math.max(1,page-2);value<=Math.min(totalPages,page+2);value++)buttons.push('<button type="button" class="'+(value===page?'active':'')+'" onclick="goExternalAccountAdminPage('+value+')">'+value+'</button>');buttons.push('<button type="button" onclick="goExternalAccountAdminPage('+(page+1)+')" '+(page===totalPages?'disabled':'')+'>›</button>','<button type="button" onclick="goExternalAccountAdminPage('+totalPages+')" '+(page===totalPages?'disabled':'')+'>»</button>');box.innerHTML=buttons.join('')}
 async function loadExternalAccountAdminReport(page){if(!eaCanManageAdmin()){eaSetStatus('externalAccountAdminStatusMessage','外帳管理只開放會計與系統管理員。','error');return}if(eaAdminLoading)return;eaAdminLoading=true;eaAdminState.page=Math.max(1,Number(page||eaAdminState.page||1));eaAdminState.pageSize=Number((eaEl('externalAccountAdminPageSize')||{}).value||50);eaSetStatus('externalAccountAdminStatusMessage','正在載入外帳清單…','working');try{var result=await starredApi('external_account_admin_report',{dateFrom:String((eaEl('externalAccountAdminDateFrom')||{}).value||''),dateTo:String((eaEl('externalAccountAdminDateTo')||{}).value||''),status:String((eaEl('externalAccountAdminStatus')||{}).value||''),lineUserId:String((eaEl('externalAccountAdminPerson')||{}).value||''),keyword:String((eaEl('externalAccountAdminKeyword')||{}).value||'').trim(),page:eaAdminState.page,pageSize:eaAdminState.pageSize});eaAdminState.rows=Array.isArray(result.transactions)?result.transactions:[];eaAdminState.people=Array.isArray(result.people)?result.people:[];eaAdminState.setting=result.setting||{};eaAdminState.summary=result.summary||{};eaAdminState.total=Number(result.total||0);eaAdminState.page=Number(result.page||eaAdminState.page);eaAdminState.pageSize=Number(result.pageSize||eaAdminState.pageSize);eaAdminState.canEditSettings=result.canEditSettings===true;renderExternalAccountAdmin();eaSetStatus('externalAccountAdminStatusMessage','外帳清單已更新，共 '+String(eaAdminState.total)+' 筆。','success')}catch(error){eaSetStatus('externalAccountAdminStatusMessage','外帳清單載入失敗：'+String(error&&error.message||error),'error')}finally{eaAdminLoading=false}}
 function reloadExternalAccountAdminReport(){eaAdminState.page=1;loadExternalAccountAdminReport(1)}
@@ -14147,16 +14310,29 @@ function goExternalAccountAdminPage(page){var totalPages=Math.max(1,Math.ceil(Nu
 function resetExternalAccountAdminFilters(){var today=eaToday();if(eaEl('externalAccountAdminDateFrom'))eaEl('externalAccountAdminDateFrom').value=today.slice(0,7)+'-01';if(eaEl('externalAccountAdminDateTo'))eaEl('externalAccountAdminDateTo').value=today;if(eaEl('externalAccountAdminStatus'))eaEl('externalAccountAdminStatus').value='';if(eaEl('externalAccountAdminPerson'))eaEl('externalAccountAdminPerson').value='';if(eaEl('externalAccountAdminKeyword'))eaEl('externalAccountAdminKeyword').value='';if(eaEl('externalAccountAdminPageSize'))eaEl('externalAccountAdminPageSize').value='50';reloadExternalAccountAdminReport()}
 async function saveExternalAccountSettings(){if(!eaAdminState.canEditSettings){eaSetStatus('externalAccountSettingStatus','只有系統管理員可以修改公司帳號。','error');return}var payload={displayTitle:String((eaEl('externalAccountSettingTitle')||{}).value||'').trim(),bankName:String((eaEl('externalAccountSettingBank')||{}).value||'').trim(),bankCode:String((eaEl('externalAccountSettingBankCode')||{}).value||'').trim(),branchName:String((eaEl('externalAccountSettingBranch')||{}).value||'').trim(),accountName:String((eaEl('externalAccountSettingName')||{}).value||'').trim(),accountNumber:String((eaEl('externalAccountSettingNumber')||{}).value||'').trim(),remittanceNote:String((eaEl('externalAccountSettingNote')||{}).value||'').trim()};if(!payload.displayTitle||!payload.bankName||!payload.accountName||!payload.accountNumber){eaSetStatus('externalAccountSettingStatus','請填寫顯示標題、銀行名稱、戶名與帳號。','error');return}var button=eaEl('externalAccountSettingSave');if(button)button.disabled=true;eaSetStatus('externalAccountSettingStatus','正在儲存公司帳號…','working');try{var result=await starredApi('external_account_settings_update',payload);eaAdminState.setting=result.setting||payload;eaSetting=eaAdminState.setting;eaFillSettingsForm();renderExternalAccountSetting();eaSetStatus('externalAccountSettingStatus','公司帳號已更新，前台會立即顯示。','success')}catch(error){eaSetStatus('externalAccountSettingStatus','儲存失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=!eaAdminState.canEditSettings}}
 async function reviewExternalAccountTransaction(id,decision){var approve=decision==='approved';var note='';if(approve){if(!confirm('確定核准這筆外帳？核准後會列在該人員當月個人業績底部。'))return}else{note=String(prompt('請輸入駁回原因（至少 2 個字）：')||'').trim();if(note.length<2)return}eaSetStatus('externalAccountAdminStatusMessage',approve?'正在核准外帳…':'正在駁回外帳…','working');try{await starredApi('external_account_admin_review',{transactionId:id,decision:decision,reviewNote:note});await loadExternalAccountAdminReport(eaAdminState.page)}catch(error){eaSetStatus('externalAccountAdminStatusMessage','審核失敗：'+String(error&&error.message||error),'error')}}
-function ensureExternalAccountEditModal(){var modal=eaEl('externalAccountEditModal');if(modal)return modal;modal=document.createElement('div');modal.id='externalAccountEditModal';modal.className='external-account-edit-modal';modal.hidden=true;modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true"><header><h3>編輯外帳</h3><button type="button" onclick="closeExternalAccountEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="externalAccountEditId" type="hidden"><div class="external-account-edit-grid"><div class="field"><label>人員 *</label><select id="externalAccountEditPerson"></select></div><div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountEditDate" type="date"></div></div><div class="field"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountEditAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div></div></div><div id="externalAccountEditStatus" class="external-account-status" role="status"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountEdit()">取消</button><button id="externalAccountEditSave" type="button" class="primary" onclick="saveExternalAccountEdit()">儲存修改</button></footer></section>';modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountEdit()});document.body.appendChild(modal);return modal}
-function openExternalAccountEdit(id){var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item){alert('找不到這筆外帳，請重新整理。');return}var modal=ensureExternalAccountEditModal();eaEl('externalAccountEditId').value=item.id;var person=eaEl('externalAccountEditPerson');person.innerHTML=eaAdminState.people.map(function(row){return '<option value="'+eaEsc(row.lineUserId)+'">'+eaEsc(row.name)+'</option>'}).join('');person.value=String(item.submitterLineUserId||'');eaEl('externalAccountEditDate').value=String(item.transactionDate||'');eaEl('externalAccountEditDate').max=eaToday();eaEl('externalAccountEditAmount').value=String(item.customerAmount||'');eaSetStatus('externalAccountEditStatus','');modal.hidden=false;document.body.style.overflow='hidden'}
+function ensureExternalAccountEditModal(){var modal=eaEl('externalAccountEditModal');if(modal)return modal;modal=document.createElement('div');modal.id='externalAccountEditModal';modal.className='external-account-edit-modal';modal.hidden=true;modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true"><header><h3>編輯外帳</h3><button type="button" onclick="closeExternalAccountEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="externalAccountEditId" type="hidden"><div class="external-account-edit-grid"><div class="field"><label>人員 *</label><select id="externalAccountEditPerson"></select></div><div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountEditDate" type="date"></div></div><div class="field"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountEditAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div></div><div class="field"><label>備註（選填）</label><textarea id="externalAccountEditNote" maxlength="500" rows="3"></textarea></div></div><div id="externalAccountEditStatus" class="external-account-status" role="status"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountEdit()">取消</button><button id="externalAccountEditSave" type="button" class="primary" onclick="saveExternalAccountEdit()">儲存修改</button></footer></section>';modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountEdit()});document.body.appendChild(modal);return modal}
+function openExternalAccountEdit(id){var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item){alert('找不到這筆外帳，請重新整理。');return}var modal=ensureExternalAccountEditModal();eaEl('externalAccountEditId').value=item.id;var person=eaEl('externalAccountEditPerson');person.innerHTML=eaAdminState.people.map(function(row){return '<option value="'+eaEsc(row.lineUserId)+'">'+eaEsc(row.name)+'</option>'}).join('');person.value=String(item.submitterLineUserId||'');eaEl('externalAccountEditDate').value=String(item.transactionDate||'');eaEl('externalAccountEditDate').max=eaToday();eaEl('externalAccountEditAmount').value=String(item.customerAmount||'');eaEl('externalAccountEditNote').value=String(item.note||'');eaSetStatus('externalAccountEditStatus','');modal.hidden=false;document.body.style.overflow='hidden'}
 function closeExternalAccountEdit(){var modal=eaEl('externalAccountEditModal');if(modal)modal.hidden=true;document.body.style.overflow=''}
-async function saveExternalAccountEdit(){var payload={transactionId:String((eaEl('externalAccountEditId')||{}).value||''),submitterLineUserId:String((eaEl('externalAccountEditPerson')||{}).value||''),transactionDate:String((eaEl('externalAccountEditDate')||{}).value||''),customerAmount:Number((eaEl('externalAccountEditAmount')||{}).value||0)};if(!payload.submitterLineUserId||!payload.transactionDate||payload.transactionDate>eaToday()||payload.customerAmount<=0){eaSetStatus('externalAccountEditStatus','請完整填寫人員、正確日期與金額。','error');return}var button=eaEl('externalAccountEditSave');if(button)button.disabled=true;eaSetStatus('externalAccountEditStatus','正在儲存修改…','working');try{await starredApi('external_account_admin_update',payload);closeExternalAccountEdit();await loadExternalAccountAdminReport(eaAdminState.page)}catch(error){eaSetStatus('externalAccountEditStatus','修改失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
+async function saveExternalAccountEdit(){var payload={transactionId:String((eaEl('externalAccountEditId')||{}).value||''),submitterLineUserId:String((eaEl('externalAccountEditPerson')||{}).value||''),transactionDate:String((eaEl('externalAccountEditDate')||{}).value||''),customerAmount:Number((eaEl('externalAccountEditAmount')||{}).value||0),note:String((eaEl('externalAccountEditNote')||{}).value||'').trim()};if(!payload.submitterLineUserId||!payload.transactionDate||payload.transactionDate>eaToday()||payload.customerAmount<=0){eaSetStatus('externalAccountEditStatus','請完整填寫人員、正確日期與金額。','error');return}if(payload.note.length>500){eaSetStatus('externalAccountEditStatus','備註最多 500 個字。','error');return}var button=eaEl('externalAccountEditSave');if(button)button.disabled=true;eaSetStatus('externalAccountEditStatus','正在儲存修改…','working');try{await starredApi('external_account_admin_update',payload);closeExternalAccountEdit();await loadExternalAccountAdminReport(eaAdminState.page)}catch(error){eaSetStatus('externalAccountEditStatus','修改失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
 async function deleteExternalAccountTransaction(id){var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item)return;if(!confirm('確定刪除 '+String(item.transactionDate||'')+'・'+String(item.submitterName||'')+' 的外帳 '+eaMoney(item.customerAmount)+'？\n清單會隱藏，但系統保留操作軌跡。'))return;eaSetStatus('externalAccountAdminStatusMessage','正在刪除外帳…','working');try{await starredApi('external_account_admin_delete',{transactionId:id});var page=eaAdminState.page;if(eaAdminState.rows.length===1&&page>1)page-=1;await loadExternalAccountAdminReport(page)}catch(error){eaSetStatus('externalAccountAdminStatusMessage','刪除失敗：'+String(error&&error.message||error),'error')}}
-function renderSalesPersonExternalAccountSection(lineUserId){var section=document.getElementById('salesStatDetailExternalAccountSection');if(!section)return;var rows=((window.salesAdminData&&window.salesAdminData.externalAccounts)||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(lineUserId||'')&&String(item.status||'approved')==='approved'}).slice().sort(function(a,b){return String(b.transactionDate||'').localeCompare(String(a.transactionDate||''))});if(!rows.length){section.hidden=true;section.innerHTML='';return}var total=rows.reduce(function(sum,item){return sum+Number(item.customerAmount||0)},0);section.hidden=false;section.innerHTML='<div class="sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准外帳</h4><p>列在個人業績底部，不併入門市營業額與排行榜。</p></div><div><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-external-account-list">'+rows.map(function(item){return '<article><time>'+eaEsc(item.transactionDate||'—')+'</time><div><b>客戶交易</b><small>'+(item.reviewerName?'核准人：'+eaEsc(item.reviewerName):'已核准')+'</small></div><strong>'+eaMoney(item.customerAmount)+'</strong></article>'}).join('')+'</div>'}
+function renderSalesPersonExternalAccountSection(lineUserId){
+  var section=document.getElementById('salesStatDetailExternalAccountSection');if(!section)return;
+  var rows=((window.salesAdminData&&window.salesAdminData.externalAccounts)||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(lineUserId||'')&&String(item.status||'approved')==='approved'}).slice().sort(function(a,b){return String(b.transactionDate||'').localeCompare(String(a.transactionDate||''))});
+  if(!rows.length){section.hidden=true;section.innerHTML='';return}
+  var total=rows.reduce(function(sum,item){return sum+Number(item.customerAmount||0)},0);
+  section.hidden=false;
+  section.innerHTML='<div class="sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准外帳</h4><p>列在個人業績底部；跨月刪除會在刪除當月沖減。</p></div><div><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-external-account-list">'+rows.map(function(item){
+    var isAdjustment=item.isDeletionAdjustment===true;
+    var title=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalTransactionDate||'原日期')+' 的外帳')):'客戶交易';
+    var meta=isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准');
+    if(item.note&&!isAdjustment)meta+='・備註：'+item.note;
+    return '<article class="'+(isAdjustment?'deletion-adjustment':'')+'"><time>'+eaEsc(item.transactionDate||'—')+'</time><div><b>'+eaEsc(title)+'</b><small>'+eaEsc(meta)+'</small></div><strong>'+eaMoney(item.customerAmount)+'</strong></article>';
+  }).join('')+'</div>';
+}
 var eaPreviousShowPage=window.showPage;window.showPage=function(page){if(page==='externalAccount'){if(typeof enforceLineUserAccess==='function'&&!enforceLineUserAccess())return;if(typeof eaPreviousShowPage==='function')eaPreviousShowPage('home');['homePage','orderPage','salesPage','expensePage','adminPage'].forEach(function(id){eaEl(id)?.classList.remove('active')});['homeNav','orderNav','salesNav','expenseNav','adminNav'].forEach(function(id){eaEl(id)?.classList.remove('active')});eaEl('externalAccountPage')?.classList.add('active');eaEl('externalAccountNav')?.classList.add('active');loadExternalAccountData();window.scrollTo({top:0,behavior:'smooth'});return}if(typeof eaPreviousShowPage==='function')eaPreviousShowPage(page);eaEl('externalAccountPage')?.classList.remove('active');eaEl('externalAccountNav')?.classList.remove('active')};
 var eaPreviousShowAdminTab=window.showAdminTab;window.showAdminTab=function(name){if(name==='externalAccountAdmin'){if(!eaCanManageAdmin()){alert('外帳管理僅開放會計與系統管理員。');return}if(typeof eaPreviousShowAdminTab==='function')eaPreviousShowAdminTab('dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(panel){panel.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs button').forEach(function(button){button.classList.remove('active')});eaEl('externalAccountAdminTab')?.classList.add('active');eaEl('externalAccountAdminTabBtn')?.classList.add('active');loadExternalAccountAdminReport(eaAdminState.page);return}if(typeof eaPreviousShowAdminTab==='function')eaPreviousShowAdminTab(name);eaEl('externalAccountAdminTab')?.classList.remove('active');eaEl('externalAccountAdminTabBtn')?.classList.remove('active')};
 var eaPreviousApplyAdminRoleUI=window.applyAdminRoleUI;if(typeof eaPreviousApplyAdminRoleUI==='function')window.applyAdminRoleUI=function(){var result=eaPreviousApplyAdminRoleUI.apply(this,arguments);eaSyncAdminRole();return result};
-window.copyExternalAccountInfo=copyExternalAccountInfo;window.renderExternalAccountOwnList=renderExternalAccountOwnList;window.loadExternalAccountData=loadExternalAccountData;window.submitExternalAccountTransaction=submitExternalAccountTransaction;window.loadExternalAccountAdminReport=loadExternalAccountAdminReport;window.reloadExternalAccountAdminReport=reloadExternalAccountAdminReport;window.goExternalAccountAdminPage=goExternalAccountAdminPage;window.resetExternalAccountAdminFilters=resetExternalAccountAdminFilters;window.saveExternalAccountSettings=saveExternalAccountSettings;window.reviewExternalAccountTransaction=reviewExternalAccountTransaction;window.openExternalAccountEdit=openExternalAccountEdit;window.closeExternalAccountEdit=closeExternalAccountEdit;window.saveExternalAccountEdit=saveExternalAccountEdit;window.deleteExternalAccountTransaction=deleteExternalAccountTransaction;window.renderSalesPersonExternalAccountSection=renderSalesPersonExternalAccountSection;
+window.copyExternalAccountInfo=copyExternalAccountInfo;window.renderExternalAccountOwnList=renderExternalAccountOwnList;window.loadExternalAccountData=loadExternalAccountData;window.submitExternalAccountTransaction=submitExternalAccountTransaction;window.openExternalAccountOwnEdit=openExternalAccountOwnEdit;window.closeExternalAccountOwnEdit=closeExternalAccountOwnEdit;window.saveExternalAccountOwnEdit=saveExternalAccountOwnEdit;window.cancelExternalAccountOwn=cancelExternalAccountOwn;window.deleteExternalAccountOwn=deleteExternalAccountOwn;window.loadExternalAccountAdminReport=loadExternalAccountAdminReport;window.reloadExternalAccountAdminReport=reloadExternalAccountAdminReport;window.goExternalAccountAdminPage=goExternalAccountAdminPage;window.resetExternalAccountAdminFilters=resetExternalAccountAdminFilters;window.saveExternalAccountSettings=saveExternalAccountSettings;window.reviewExternalAccountTransaction=reviewExternalAccountTransaction;window.openExternalAccountEdit=openExternalAccountEdit;window.closeExternalAccountEdit=closeExternalAccountEdit;window.saveExternalAccountEdit=saveExternalAccountEdit;window.deleteExternalAccountTransaction=deleteExternalAccountTransaction;window.renderSalesPersonExternalAccountSection=renderSalesPersonExternalAccountSection;
 document.addEventListener('DOMContentLoaded',function(){var today=eaToday();if(eaEl('externalAccountDate')){eaEl('externalAccountDate').value=today;eaEl('externalAccountDate').max=today}if(eaEl('externalAccountOwnMonth'))eaEl('externalAccountOwnMonth').value=today.slice(0,7);if(eaEl('externalAccountAdminDateFrom')){eaEl('externalAccountAdminDateFrom').value=today.slice(0,7)+'-01';eaEl('externalAccountAdminDateFrom').max=today}if(eaEl('externalAccountAdminDateTo')){eaEl('externalAccountAdminDateTo').value=today;eaEl('externalAccountAdminDateTo').max=today}var identity=eaIdentity();if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;eaSyncAdminRole()});
 })();
 </script>
