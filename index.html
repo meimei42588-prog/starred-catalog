@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TEST BUILD: 20260828-employee-rules-ui-v43.1-expense-row-layout; base: index(20260828-101015).html -->
+<!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260826-expense-overtime-mobile-date-v31 -->
@@ -4567,7 +4567,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260827-same-day-sender-store-v42";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260828-employee-rules-ui-test-v43";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -15260,12 +15260,16 @@ function installExpenseRendererV43(){
   window.renderExpenseAdminList=renderExpenseAdminListV43;
 }
 
+/* 補貨／追加整理：所有能成功登入後台的人員都顯示分頁。 */
+function syncLineWorkflowAccessV43(){var button=v43El('lineGroupMessagesTabBtn');if(!button)return;var user=typeof currentUser!=='undefined'?currentUser:null;if(user&&user.adminSessionToken)button.classList.remove('hidden-by-role')}
+function installLineWorkflowAccessV43(){var previous=window.applyAdminRoleUI;if(typeof previous==='function'&&!previous.__v43LineWorkflowAccess){var wrapped=function(){var result=previous.apply(this,arguments);syncLineWorkflowAccessV43();return result};wrapped.__v43LineWorkflowAccess=true;window.applyAdminRoleUI=wrapped}document.addEventListener('DOMContentLoaded',function(){setTimeout(syncLineWorkflowAccessV43,0)});setTimeout(syncLineWorkflowAccessV43,0)}
+
 /* 修正列印預覽：捕捉原本彈窗後，由主頁直接綁定按鈕事件，避開行內程式被瀏覽器阻擋。 */
 function installPrintFixV43(){var original=window.lgm38PrintSelected;if(typeof original!=='function'||original.__v43Fixed)return;function fixed(){var opened=null,realOpen=window.open;window.open=function(){opened=realOpen.apply(window,arguments);return opened};try{original.apply(this,arguments)}finally{window.open=realOpen;setTimeout(function(){wirePrintPopupV43(opened)},0)}}fixed.__v43Fixed=true;window.lgm38PrintSelected=fixed}
 function wirePrintPopupV43(popup){if(!popup||popup.closed)return;try{var doc=popup.document,button=doc.querySelector('.preview button'),select=doc.querySelector('.preview select');if(!button)return;var ids=Array.isArray(popup.ids)?popup.ids:[];if(!ids.length){var script=Array.from(doc.scripts||[]).find(function(node){return /var\s+ids\s*=/.test(node.textContent||'')}),match=script&&String(script.textContent||'').match(/var\s+ids\s*=\s*(\[[\s\S]*?\])\s*;/);if(match)try{ids=JSON.parse(match[1])}catch(_){ids=[]}}button.removeAttribute('onclick');button.onclick=null;if(select){select.removeAttribute('onchange');select.onchange=null;select.addEventListener('change',function(){doc.documentElement.style.setProperty('--message-font',String(select.value||16)+'px')})}button.addEventListener('click',function(){if(button.dataset.printing==='1')return;button.dataset.printing='1';button.disabled=true;button.textContent='正在開啟列印…';popup.focus();try{popup.print()}catch(error){button.disabled=false;button.dataset.printing='';button.textContent='開始列印';alert('無法開啟列印視窗：'+String(error&&error.message||error));return}setTimeout(function(){if(ids.length&&typeof window.lgm38MarkPrinted==='function')window.lgm38MarkPrinted(ids);if(!popup.closed)button.textContent='列印已完成'},500)})}catch(error){console.error('v43 print preview wiring failed',error)}}
 
 if(typeof capacityTableLabels==='object'){capacityTableLabels.employee_rule_categories='員工守則分類';capacityTableLabels.employee_rules='員工守則內容'}
-buildRulesV43();installPrintFixV43();installExpenseRendererV43();
+buildRulesV43();installPrintFixV43();installExpenseRendererV43();installLineWorkflowAccessV43();
 document.addEventListener('keydown',function(event){if(event.key==='Escape'&&v43El('storeModalV43')?.classList.contains('open'))window.closeStoreV43()});
 })();
 </script>
