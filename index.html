@@ -3854,19 +3854,21 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 
 <section id="salesPage" class="page">
 <section class="sales-hero">
-    <div>
-      <span class="sales-eyebrow">DAILY SALES</span>
-      <h1>每日業績回傳</h1>
+    <div class="sales-hero-copy">
+      <div class="sales-hero-title-row">
+        <div>
+          <span class="sales-eyebrow">DAILY SALES</span>
+          <h1>每日業績回傳</h1>
+        </div>
+        <button id="salesMissingStoresBtn" type="button" class="sales-missing-store-btn" onclick="openSalesMissingStores()" aria-haspopup="dialog">
+          <span>漏上傳店點</span><b id="salesMissingStoresCount" hidden>0</b>
+        </button>
+      </div>
       <p>營業額與退貨分開回傳，送出後可在下方查看自己的紀錄。</p>
     </div>
-    <div class="sales-hero-side">
-      <div class="sales-hero-user">
-        <span>目前回傳人員</span>
-        <b id="salesCurrentUser">LINE 登入後自動帶入</b>
-      </div>
-      <button id="salesMissingStoresBtn" type="button" class="sales-missing-store-btn" onclick="openSalesMissingStores()" aria-haspopup="dialog">
-        <span>漏上傳店點</span><b id="salesMissingStoresCount" hidden>0</b><i aria-hidden="true">›</i>
-      </button>
+    <div class="sales-hero-user">
+      <span>目前回傳人員</span>
+      <b id="salesCurrentUser">LINE 登入後自動帶入</b>
     </div>
   </section>
 
@@ -15279,14 +15281,16 @@ document.addEventListener('keydown',function(event){if(event.key==='Escape'&&v43
 })();
 </script>
 <style id="sales-missing-stores-v44-style">
-/* v44：前台漏上傳店點清單；業績報表三個指定分頁整體字級加大。 */
-.sales-hero-side{display:grid;flex:0 0 auto;gap:8px;min-width:210px}
-.sales-hero-side .sales-hero-user{min-width:0}
-.sales-missing-store-btn{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;width:100%;min-height:44px;padding:9px 12px;border:1px solid #d2dee4;border-radius:13px;background:#fff;color:#315f79;font-size:14px;font-weight:500;text-align:left;box-shadow:0 4px 14px rgba(39,66,83,.055);cursor:pointer}
+/* v44：前台漏上傳店點清單與標題列對齊；業績報表三個指定分頁整體字級加大。 */
+.sales-hero-copy{flex:1 1 auto;min-width:0}
+.sales-hero-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.sales-hero-title-row>div{min-width:0}
+.sales-missing-store-btn{position:relative;display:flex;flex:0 0 auto;align-items:center;justify-content:center;min-width:142px;min-height:46px;padding:10px 17px;border:1px solid #d2dee4;border-radius:13px;background:#fff;color:#315f79;font-size:14px;font-weight:500;text-align:center;white-space:nowrap;box-shadow:0 4px 14px rgba(39,66,83,.055);cursor:pointer}
 .sales-missing-store-btn:hover{border-color:#94aeba;background:#f8fbfc}
-.sales-missing-store-btn.has-missing{border-color:#e5bd6b;background:#fff9ea;color:#895900}
-.sales-missing-store-btn>b{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:#c9473e;color:#fff;font-size:12px;font-weight:500}
-.sales-missing-store-btn>i{color:#81949e;font-size:21px;font-style:normal;line-height:1}
+.sales-missing-store-btn:focus-visible{outline:3px solid rgba(49,95,121,.2);outline-offset:2px}
+.sales-missing-store-btn.has-missing{border-color:#ccdce3;background:#fff;color:#315f79}
+.sales-missing-store-btn>b{position:absolute;top:-9px;right:-8px;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border:2px solid #fff;border-radius:999px;background:#df3f40;color:#fff;font-size:11px;font-weight:700;line-height:1;box-shadow:0 2px 6px rgba(121,35,35,.18)}
+.sales-missing-store-btn>b[hidden]{display:none!important}
 .sales-missing-modal[hidden]{display:none!important}
 .sales-missing-modal{position:fixed;z-index:12100;inset:0;display:grid;place-items:center;padding:18px;background:rgba(22,44,56,.58);backdrop-filter:blur(4px)}
 .sales-missing-dialog{display:flex;width:min(560px,100%);max-height:min(720px,calc(100vh - 36px));overflow:hidden;flex-direction:column;border-radius:20px;background:#fff;box-shadow:0 28px 85px rgba(14,36,48,.3)}
@@ -15373,7 +15377,10 @@ body.sales-missing-open{overflow:hidden}
 #salesPersonPickerModal .sales-person-picker-dialog>footer button{font-size:13px!important}
 
 @media(max-width:760px){
-  .sales-hero-side{width:100%;min-width:0}
+  .sales-hero{gap:14px}
+  .sales-hero-copy{width:100%}
+  .sales-hero-title-row{align-items:center;gap:12px}
+  .sales-missing-store-btn{min-width:132px;min-height:46px;padding:9px 14px}
   .sales-missing-modal{padding:8px}
   .sales-missing-dialog{max-height:calc(100vh - 16px);border-radius:16px}
   .sales-missing-dialog>header{padding:16px}
@@ -15381,11 +15388,22 @@ body.sales-missing-open{overflow:hidden}
   .sales-missing-dialog>footer{padding:11px 12px 13px}
 }
 @media(max-width:620px){
+  .sales-hero{padding:17px 16px 18px;border-radius:20px}
+  .sales-eyebrow{display:none}
+  .sales-hero h1{font-size:25px}
+  .sales-hero p{margin-top:14px;font-size:14px;line-height:1.7}
+  .sales-hero-user{padding:13px 15px}
+  .sales-missing-store-btn{min-width:128px;min-height:46px;padding:9px 13px;border-radius:13px;font-size:14px}
   #salesReportTab .sales-report-switcher button[data-sales-view="proxy"],
   #salesReportTab .sales-report-switcher button[data-sales-view="personDetail"],
   #salesReportTab .sales-report-switcher button[data-sales-view="workdays"]{font-size:14px!important}
   .sales-missing-list-head,.sales-missing-row{grid-template-columns:112px minmax(0,1fr);gap:9px}
   .sales-missing-row{padding:10px 11px}
+}
+@media(max-width:390px){
+  .sales-hero-title-row{gap:8px}
+  .sales-hero h1{font-size:22px}
+  .sales-missing-store-btn{min-width:114px;min-height:43px;padding:8px 10px;font-size:13px}
 }
 </style>
 <script id="sales-missing-stores-v44-script">
