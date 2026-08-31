@@ -3859,9 +3859,14 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       <h1>每日業績回傳</h1>
       <p>營業額與退貨分開回傳，送出後可在下方查看自己的紀錄。</p>
     </div>
-    <div class="sales-hero-user">
-      <span>目前回傳人員</span>
-      <b id="salesCurrentUser">LINE 登入後自動帶入</b>
+    <div class="sales-hero-side">
+      <div class="sales-hero-user">
+        <span>目前回傳人員</span>
+        <b id="salesCurrentUser">LINE 登入後自動帶入</b>
+      </div>
+      <button id="salesMissingStoresBtn" type="button" class="sales-missing-store-btn" onclick="openSalesMissingStores()" aria-haspopup="dialog">
+        <span>漏上傳店點</span><b id="salesMissingStoresCount" hidden>0</b><i aria-hidden="true">›</i>
+      </button>
     </div>
   </section>
 
@@ -4567,7 +4572,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260828-employee-rules-ui-test-v43";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260831-sales-missing-stores-v44";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -15271,6 +15276,138 @@ function wirePrintPopupV43(popup){if(!popup||popup.closed)return;try{var doc=pop
 if(typeof capacityTableLabels==='object'){capacityTableLabels.employee_rule_categories='員工守則分類';capacityTableLabels.employee_rules='員工守則內容'}
 buildRulesV43();installPrintFixV43();installExpenseRendererV43();installLineWorkflowAccessV43();
 document.addEventListener('keydown',function(event){if(event.key==='Escape'&&v43El('storeModalV43')?.classList.contains('open'))window.closeStoreV43()});
+})();
+</script>
+<style id="sales-missing-stores-v44-style">
+/* v44：前台漏上傳店點清單；業績報表三個指定分頁整體字級加大。 */
+.sales-hero-side{display:grid;flex:0 0 auto;gap:8px;min-width:210px}
+.sales-hero-side .sales-hero-user{min-width:0}
+.sales-missing-store-btn{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;width:100%;min-height:44px;padding:9px 12px;border:1px solid #d2dee4;border-radius:13px;background:#fff;color:#315f79;font-size:14px;font-weight:500;text-align:left;box-shadow:0 4px 14px rgba(39,66,83,.055);cursor:pointer}
+.sales-missing-store-btn:hover{border-color:#94aeba;background:#f8fbfc}
+.sales-missing-store-btn.has-missing{border-color:#e5bd6b;background:#fff9ea;color:#895900}
+.sales-missing-store-btn>b{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:#c9473e;color:#fff;font-size:12px;font-weight:500}
+.sales-missing-store-btn>i{color:#81949e;font-size:21px;font-style:normal;line-height:1}
+.sales-missing-modal[hidden]{display:none!important}
+.sales-missing-modal{position:fixed;z-index:12100;inset:0;display:grid;place-items:center;padding:18px;background:rgba(22,44,56,.58);backdrop-filter:blur(4px)}
+.sales-missing-dialog{display:flex;width:min(560px,100%);max-height:min(720px,calc(100vh - 36px));overflow:hidden;flex-direction:column;border-radius:20px;background:#fff;box-shadow:0 28px 85px rgba(14,36,48,.3)}
+.sales-missing-dialog>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:19px 21px 15px;border-bottom:1px solid #e0e8eb;background:linear-gradient(135deg,#fffaf0,#f7fafb)}
+.sales-missing-dialog>header span{display:block;color:#a37322;font-size:10px;font-weight:500;letter-spacing:.12em}
+.sales-missing-dialog>header h3{margin:4px 0 0;color:#294858;font-size:22px;font-weight:500}
+.sales-missing-dialog>header p{margin:6px 0 0;color:#6f8490;font-size:13px;line-height:1.55}
+.sales-missing-close{display:grid;flex:0 0 auto;place-items:center;width:35px;height:35px;padding:0;border:0;border-radius:50%;background:#fff;color:#536d7a;font-size:22px;cursor:pointer}
+.sales-missing-body{min-height:0;overflow:auto;padding:15px 20px}
+.sales-missing-list{overflow:hidden;border:1px solid #d8e2e6;border-radius:13px;background:#fff}
+.sales-missing-list-head,.sales-missing-row{display:grid;grid-template-columns:minmax(145px,.65fr) minmax(0,1.35fr);gap:12px;align-items:center}
+.sales-missing-list-head{padding:9px 13px;background:#2d4b5b;color:#fff;font-size:13px;font-weight:400}
+.sales-missing-row{min-height:62px;padding:10px 13px;border-top:1px solid #e3eaed}
+.sales-missing-row:nth-child(odd){background:#fafcfd}
+.sales-missing-row time span,.sales-missing-row time small,.sales-missing-store-name,.sales-missing-store-meta{display:block}
+.sales-missing-row time span{color:#294858;font-size:14px;font-weight:400}
+.sales-missing-row time small{margin-top:3px;color:#8798a1;font-size:12px}
+.sales-missing-store-name{color:#294858;font-size:15px;font-weight:400;line-height:1.4}
+.sales-missing-store-meta{margin-top:3px;color:#758a95;font-size:12px;line-height:1.4}
+.sales-missing-empty{padding:34px 18px;border:1px dashed #c9d8de;border-radius:13px;background:#f8fbfc;color:#607985;font-size:14px;line-height:1.65;text-align:center}
+.sales-missing-empty span{display:block;margin-top:3px;color:#81939d;font-size:12px}
+.sales-missing-dialog>footer{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:13px 20px 17px;border-top:1px solid #e2e9ec}
+.sales-missing-dialog>footer button{width:100%;min-height:43px;font-size:14px}
+body.sales-missing-open{overflow:hidden}
+
+#salesReportTab .sales-report-switcher button[data-sales-view="proxy"],
+#salesReportTab .sales-report-switcher button[data-sales-view="personDetail"],
+#salesReportTab .sales-report-switcher button[data-sales-view="workdays"]{font-size:15px!important}
+
+#salesReportProxyView .sales-proxy-toolbar>div b{font-size:16px!important}
+#salesReportProxyView .sales-proxy-toolbar>div span,
+#salesReportProxyView .sales-proxy-toolbar>strong{font-size:13px!important;line-height:1.5}
+#salesReportProxyView .sales-table,
+#salesReportProxyView .sales-table th,
+#salesReportProxyView .sales-table td,
+#salesReportProxyView .sales-table td *{font-size:13px!important;line-height:1.45}
+#salesReportProxyView .sales-proxy-card header time,
+#salesReportProxyView .sales-proxy-people span small{font-size:12px!important}
+#salesReportProxyView .sales-proxy-card header b,
+#salesReportProxyView .sales-proxy-people span b,
+#salesReportProxyView .sales-proxy-card header>strong{font-size:14px!important}
+#salesReportProxyView .sales-proxy-work,
+#salesReportProxyView .sales-record-status,
+#salesReportProxyView button{font-size:12px!important}
+
+#salesReportWorkdaysView .sales-workday-note{font-size:13px!important;line-height:1.65}
+#salesReportWorkdaysView .sales-workday-review-heading p,
+#salesReportWorkdaysView .sales-workday-review-heading>b,
+#salesReportWorkdaysView .sales-workday-confirmed-section>summary{font-size:12px!important;line-height:1.55}
+#salesReportWorkdaysView .sales-workday-review-card>header time,
+#salesReportWorkdaysView .sales-workday-review-card>header>span,
+#salesReportWorkdaysView .sales-workday-review-person small,
+#salesReportWorkdaysView .sales-workday-hours-field>span:first-child,
+#salesReportWorkdaysView .sales-workday-review-card>footer small{font-size:12px!important;line-height:1.45}
+#salesReportWorkdaysView .sales-workday-review-card>header b,
+#salesReportWorkdaysView .sales-workday-review-copy .title,
+#salesReportWorkdaysView .sales-workday-row .name .title{font-size:14px!important;font-weight:400!important}
+#salesReportWorkdaysView .sales-workday-hours-input,
+#salesReportWorkdaysView .sales-workday-wage-result,
+#salesReportWorkdaysView .sales-workday-row,
+#salesReportWorkdaysView .sales-workday-row>span,
+#salesReportWorkdaysView .sales-workday-row button,
+#salesReportWorkdaysView .sales-workday-status{font-size:13px!important}
+#salesReportWorkdaysView .sales-workday-row .name small{font-size:12px!important}
+#salesReportWorkdaysView .sales-workday-review-card>footer button{font-size:13px!important}
+
+#salesReportPersonDetailView .sales-person-detail-toolbar b{font-size:16px!important}
+#salesReportPersonDetailView .sales-person-detail-toolbar span,
+#salesReportPersonDetailView .sales-person-filter-status span,
+#salesReportPersonDetailView .sales-person-detail-period{font-size:12px!important;line-height:1.5}
+#salesReportPersonDetailView .sales-person-filter-status b{font-size:14px!important}
+#salesReportPersonDetailView .sales-person-filter-chip,
+#salesReportPersonDetailView .sales-person-filter-more,
+#salesReportPersonDetailView .sales-person-filter-empty,
+#salesReportPersonDetailView button{font-size:13px!important}
+#salesReportPersonDetailView .sales-person-detail-scroll table,
+#salesReportPersonDetailView .sales-person-detail-scroll th,
+#salesReportPersonDetailView .sales-person-detail-scroll td{font-size:13px!important;line-height:1.4}
+#salesPersonPickerModal .sales-person-picker-search>span,
+#salesPersonPickerModal .sales-person-picker-actions>b,
+#salesPersonPickerModal .sales-person-picker-dialog>footer small{font-size:12px!important}
+#salesPersonPickerModal .sales-person-picker-search input,
+#salesPersonPickerModal .sales-person-picker-actions button,
+#salesPersonPickerModal .sales-person-picker-dialog>footer button{font-size:13px!important}
+
+@media(max-width:760px){
+  .sales-hero-side{width:100%;min-width:0}
+  .sales-missing-modal{padding:8px}
+  .sales-missing-dialog{max-height:calc(100vh - 16px);border-radius:16px}
+  .sales-missing-dialog>header{padding:16px}
+  .sales-missing-body{padding:12px}
+  .sales-missing-dialog>footer{padding:11px 12px 13px}
+}
+@media(max-width:620px){
+  #salesReportTab .sales-report-switcher button[data-sales-view="proxy"],
+  #salesReportTab .sales-report-switcher button[data-sales-view="personDetail"],
+  #salesReportTab .sales-report-switcher button[data-sales-view="workdays"]{font-size:14px!important}
+  .sales-missing-list-head,.sales-missing-row{grid-template-columns:112px minmax(0,1fr);gap:9px}
+  .sales-missing-row{padding:10px 11px}
+}
+</style>
+<script id="sales-missing-stores-v44-script">
+(function(){
+'use strict';
+var missingRowsV44=[];
+var missingLastFocusV44=null;
+function v44El(id){return document.getElementById(id)}
+function v44Esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]})}
+function v44DateText(value){var parts=String(value||'').split('-'),date=new Date(String(value||'')+'T12:00:00+08:00'),week=['日','一','二','三','四','五','六'];if(parts.length!==3||Number.isNaN(date.getTime()))return {main:String(value||'—'),sub:''};return {main:Number(parts[1])+'月'+Number(parts[2])+'日',sub:'星期'+week[date.getDay()]}}
+function v44Area(value){return ({north:'北部',central:'中部',south:'南部',east:'東部／離島'})[String(value||'')]||''}
+function v44NormalizeRows(rows){var seen=new Set();return (Array.isArray(rows)?rows:[]).map(function(row){return {businessDate:String(row&&row.businessDate||'').slice(0,10),storeId:String(row&&row.storeId||''),area:String(row&&row.area||''),storeName:String(row&&row.storeName||'未指定門市'),storeFloor:String(row&&row.storeFloor||'')}}).filter(function(row){var key=row.businessDate+'|'+row.storeId+'|'+row.storeName+'|'+row.storeFloor;if(!/^\d{4}-\d{2}-\d{2}$/.test(row.businessDate)||seen.has(key))return false;seen.add(key);return true}).sort(function(a,b){return a.businessDate.localeCompare(b.businessDate)||String(a.storeName+a.storeFloor).localeCompare(String(b.storeName+b.storeFloor),'zh-Hant')})}
+function v44TestMissingRows(){if(!window.STARRED_SALES_TEST_MODE||typeof salesReadTestRecords!=='function'||typeof salesToday!=='function'||typeof salesIsoAddDays!=='function')return [];var today=salesToday(),month=today.slice(0,7),through=salesIsoAddDays(today,-1);if(through<month+'-01')return [];var groups=new Map();salesReadTestRecords().forEach(function(record){if(typeof salesRecordType==='function'&&salesRecordType(record)==='return')return;var date=String(record.businessDate||'').slice(0,10),storeId=String(record.storeId||'');if(date.slice(0,7)!==month||date>through||!storeId)return;var row=groups.get(storeId)||{storeId:storeId,area:String(record.area||''),storeName:String(record.storeName||'未指定門市'),storeFloor:String(record.storeFloor||''),dates:new Set()};row.dates.add(date);groups.set(storeId,row)});var ended=new Map();if(typeof salesReadTestReportingPeriods==='function')salesReadTestReportingPeriods().forEach(function(item){if(String(item.monthKey||String(item.endedFrom||'').slice(0,7))===month&&item.storeId&&item.endedFrom)ended.set(String(item.storeId),String(item.endedFrom).slice(0,10))});var result=[];groups.forEach(function(group){var first=Array.from(group.dates).sort()[0]||'',cursor=first,end=ended.get(group.storeId)||'',guard=0;while(cursor&&cursor<=through&&guard<370){if(!group.dates.has(cursor)&&!(end&&cursor>=end))result.push({businessDate:cursor,storeId:group.storeId,area:group.area,storeName:group.storeName,storeFloor:group.storeFloor});cursor=salesIsoAddDays(cursor,1);guard+=1}});return result}
+function v44RenderButton(){var button=v44El('salesMissingStoresBtn'),count=v44El('salesMissingStoresCount');if(!button||!count)return;var total=missingRowsV44.length;button.classList.toggle('has-missing',total>0);count.hidden=total===0;count.textContent=total>99?'99+':String(total);button.setAttribute('aria-label',total?'漏上傳店點，共 '+String(total)+' 筆':'漏上傳店點，目前沒有漏傳')}
+function v44SetRows(rows){missingRowsV44=v44NormalizeRows(rows);v44RenderButton();var modal=v44El('salesMissingStoresModal');if(modal&&!modal.hidden)v44RenderModal()}
+function v44EnsureModal(){var modal=v44El('salesMissingStoresModal');if(modal)return modal;modal=document.createElement('div');modal.id='salesMissingStoresModal';modal.className='sales-missing-modal';modal.hidden=true;modal.innerHTML='<section class="sales-missing-dialog" role="dialog" aria-modal="true" aria-labelledby="salesMissingStoresTitle"><header><div><span>MISSING SALES REPORT</span><h3 id="salesMissingStoresTitle">漏上傳店點</h3><p>從本月各店第一筆業績起檢查至昨天；補傳後會自動從清單移除。</p></div><button type="button" class="sales-missing-close" onclick="closeSalesMissingStores()" aria-label="關閉">×</button></header><div id="salesMissingStoresBody" class="sales-missing-body"></div><footer><button type="button" class="secondary" onclick="closeSalesMissingStores()">返回</button><button type="button" class="primary" onclick="closeSalesMissingStores()">確定</button></footer></section>';modal.addEventListener('click',function(event){if(event.target===modal)window.closeSalesMissingStores()});document.body.appendChild(modal);return modal}
+function v44RenderModal(){var body=v44El('salesMissingStoresBody');if(!body)return;if(!missingRowsV44.length){body.innerHTML='<div class="sales-missing-empty">目前沒有漏上傳店點<span>今天的業績不列入漏傳，會從隔天開始檢查。</span></div>';return}body.innerHTML='<div class="sales-missing-list"><div class="sales-missing-list-head"><span>時間</span><span>店點</span></div>'+missingRowsV44.map(function(row){var date=v44DateText(row.businessDate),meta=[v44Area(row.area),row.storeFloor].filter(Boolean).join('・');return '<div class="sales-missing-row"><time datetime="'+v44Esc(row.businessDate)+'"><span>'+v44Esc(date.main)+'</span><small>'+v44Esc(date.sub)+'</small></time><div><span class="sales-missing-store-name">'+v44Esc(row.storeName)+'</span>'+(meta?'<span class="sales-missing-store-meta">'+v44Esc(meta)+'</span>':'')+'</div></div>'}).join('')+'</div>'}
+window.openSalesMissingStores=async function(){missingLastFocusV44=document.activeElement;var modal=v44EnsureModal(),button=v44El('salesMissingStoresBtn'),body=v44El('salesMissingStoresBody');v44RenderModal();modal.hidden=false;document.body.classList.add('sales-missing-open');if(button)button.disabled=true;if(body)body.innerHTML='<div class="sales-missing-empty">正在更新漏上傳清單…<span>請稍候一下。</span></div>';try{if(typeof window.loadSalesData==='function')await window.loadSalesData()}finally{if(button)button.disabled=false;v44RenderModal();if(!modal.hidden)setTimeout(function(){var close=modal.querySelector('.sales-missing-close');if(close)close.focus()},0)}};
+window.closeSalesMissingStores=function(){var modal=v44El('salesMissingStoresModal');if(modal)modal.hidden=true;document.body.classList.remove('sales-missing-open');if(missingLastFocusV44&&typeof missingLastFocusV44.focus==='function')missingLastFocusV44.focus()};
+function v44Install(){var original=window.loadSalesData;if(typeof original==='function'&&!original.__v44MissingStores){var wrapped=async function(){var result=await original.apply(this,arguments);if(result){var rows=Array.isArray(result.missingStoreDates)?result.missingStoreDates:v44TestMissingRows();v44SetRows(rows)}return result};wrapped.__v44MissingStores=true;window.loadSalesData=wrapped}v44RenderButton()}
+document.addEventListener('keydown',function(event){var modal=v44El('salesMissingStoresModal');if(event.key==='Escape'&&modal&&!modal.hidden)window.closeSalesMissingStores()});
+v44Install();
 })();
 </script>
 </body>
