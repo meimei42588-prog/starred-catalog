@@ -4288,11 +4288,11 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div id="salesReportPersonView" class="sales-report-view"><div id="salesAdminPersonStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b>業績明細</b><span>可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesPersonDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesPersonDetailExcel()">匯出 Excel</button></div></div><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div>
         <div id="salesReportWorkdaysView" class="sales-report-view">
-          <div class="sales-workday-note">業績與薪資分開計算：同店同日只有一人本人回傳時自動計 1 日薪；同店多人或同一人同日跨兩個門市時，會進入核准。代銷售不計日薪。0.5～7.5 小時自動計時薪，其餘工時由會計或系統管理員確認。</div>
+          <div class="sales-workday-note">業績與薪資分開計算：同店同日只有一人本人回傳時自動計 1 日薪；同店多人或同一人同日跨兩個門市時，會進入核准。代銷售不計日薪。0.5～7.5 小時自動計時薪；若請人代班但薪資仍算原人員，可直接按「確認日薪」。</div>
           <section class="sales-workday-review-panel">
-            <header class="sales-workday-review-heading"><div><span>WORK HOURS &amp; PAY REVIEW</span><h3>待確認工時與薪資</h3><p>工時以 0.5 小時為單位；0.5～7.5 小時自動計時薪，其他工時由會計／系統管理員確認是否計 1 日薪。</p></div><b id="salesWorkdayPendingSummary">待確認 0 組</b></header>
+            <header class="sales-workday-review-heading"><div><span>WORK HOURS &amp; PAY REVIEW</span><h3>待確認工時與薪資</h3><p>一般情況可填工時後確認；請人代班、薪資仍算原人員時，可直接確認 1 日薪，不必填工時。</p></div><b id="salesWorkdayPendingSummary">待確認 0 組</b></header>
             <div id="salesWorkdayPendingList" class="sales-workday-review-list"></div>
-            <details id="salesWorkdayConfirmedSection" class="sales-workday-confirmed-section"><summary>查看／修改已確認的多人同班工時與薪資</summary><div id="salesWorkdayConfirmedList" class="sales-workday-review-list confirmed"></div></details>
+            <details id="salesWorkdayConfirmedSection" class="sales-workday-confirmed-section"><summary>查看／修改已確認的工時與薪資</summary><div id="salesWorkdayConfirmedList" class="sales-workday-review-list confirmed"></div></details>
           </section>
           <div class="sales-workday-stats-heading"><div><span>WORKDAY SUMMARY</span><h3>上班天數統計</h3></div><small>同一人同一天最多計 1 天</small></div>
           <div id="salesAdminWorkdayStats" class="sales-stat-list"></div>
@@ -4574,7 +4574,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260831-sales-missing-stores-v44";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260831-daily-wage-confirm-v45";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -11059,14 +11059,15 @@ function salesWorkdayReviewCardHtml(group,confirmed){
   var confirmedAt=group.people.map(function(person){return person.confirmedAt}).filter(Boolean).sort().reverse()[0]||'';
   var people=group.people.map(function(person){
     var hours=person.workHours===null||person.workHours===undefined?'':String(person.workHours);
-    var hourly=salesWorkdayIsHourly(hours);var checked=confirmed&&person.status==='counted'&&!hourly;
-    var resultText=hours===''?(confirmed?'未填工時':'請填工時'):salesWorkdayPayText(hours,checked?'counted':'excluded');
+    var hourly=salesWorkdayIsHourly(hours);var checked=person.status==='counted'&&!hourly;
+    var resultText=hours===''?(checked?'計 1 日薪':confirmed?'未填工時':'請填工時'):salesWorkdayPayText(hours,checked?'counted':'excluded');
     var resultClass=hourly?'hourly':checked?'counted':'excluded';
     return '<div class="sales-workday-review-person'+(hourly?' hourly':'')+'"><label class="sales-workday-wage-choice"><input type="checkbox" data-line-user-id="'+salesEsc(person.lineUserId)+'"'+(checked?' checked':'')+(hourly?' disabled':'')+' onchange="syncSalesWorkdayWageResult(this)" aria-label="'+salesEsc(person.name)+'是否計 1 日薪"><span class="sales-workday-review-copy"><span class="title">'+salesEsc(person.name)+'</span><small>'+salesMoney(person.grossAmount)+' 業績</small></span></label><label class="sales-workday-hours-field"><span>上班時數</span><span class="sales-workday-hours-control"><input class="sales-workday-hours-input" type="number" min="0" max="24" step="0.5" inputmode="decimal" data-line-user-id="'+salesEsc(person.lineUserId)+'" value="'+salesEsc(hours)+'" placeholder="必填" aria-label="'+salesEsc(person.name)+'上班時數" oninput="syncSalesWorkdayHoursRow(this)"><em>小時</em></span></label><span class="sales-workday-wage-result '+resultClass+'">'+salesEsc(resultText)+'</span></div>';
   }).join('');
   var reasonLabel=group.reviewReason==='dual_store'?'一日雙門市':group.reviewReason==='mixed'?'同店多人＋一日雙門市':'同店多人';
-  var note=confirmed?'<small class="sales-workday-review-confirmed-note">最後確認：'+salesEsc(confirmer||'後台人員')+'・'+salesEsc(salesDateTime(confirmedAt))+'；可直接修改後再次確認。</small>':'<small class="sales-workday-review-warning">'+(group.reviewReason==='dual_store'?'同一人同一天跨兩個門市，請確認整天總工時與是否計 1 日薪。':'0.5～7.5 小時自動計時薪且不計日薪；其他工時不會自動進位，請手動勾選日薪。')+'</small>';
-  return '<article class="sales-workday-review-card '+(confirmed?'confirmed':'pending')+'" data-business-date="'+salesEsc(group.businessDate)+'" data-store-id="'+salesEsc(group.storeId)+'" data-record-ids="'+salesEsc((group.recordIds||[]).join(','))+'"><header><div><time>'+salesEsc(String(group.businessDate).replace(/-/g,'/'))+'</time><b>'+salesEsc(salesStoreText(group))+'</b></div><span class="sales-workday-review-reason">'+salesEsc(reasonLabel)+'・'+String(group.people.length)+' 人・'+salesMoney(group.grossAmount)+'</span></header><div class="sales-workday-review-people">'+people+'</div><footer>'+note+'<button type="button" class="primary" onclick="confirmSalesWorkdayGroup(this)">'+(confirmed?'修改工時與薪資':'確認工時與薪資')+'</button></footer></article>';
+  var note=confirmed?'<small class="sales-workday-review-confirmed-note">最後確認：'+salesEsc(confirmer||'後台人員')+'・'+salesEsc(salesDateTime(confirmedAt))+'；可直接修改後再次確認。</small>':'<small class="sales-workday-review-warning">'+(group.reviewReason==='dual_store'?'同一人同一天跨兩個門市；若為請人代班且薪資仍算此人，可直接確認日薪。':'0.5～7.5 小時自動計時薪且不計日薪；其他工時不會自動進位，請手動勾選日薪。')+'</small>';
+  var dailyWageButton=!confirmed&&group.people.length===1?'<button type="button" class="secondary sales-workday-daily-wage-btn" data-line-user-id="'+salesEsc(group.people[0].lineUserId)+'" onclick="confirmSalesDailyWage(this)">確認日薪</button>':'';
+  return '<article class="sales-workday-review-card '+(confirmed?'confirmed':'pending')+'" data-business-date="'+salesEsc(group.businessDate)+'" data-store-id="'+salesEsc(group.storeId)+'" data-record-ids="'+salesEsc((group.recordIds||[]).join(','))+'"><header><div><time>'+salesEsc(String(group.businessDate).replace(/-/g,'/'))+'</time><b>'+salesEsc(salesStoreText(group))+'</b></div><span class="sales-workday-review-reason">'+salesEsc(reasonLabel)+'・'+String(group.people.length)+' 人・'+salesMoney(group.grossAmount)+'</span></header><div class="sales-workday-review-people">'+people+'</div><footer>'+note+'<span class="sales-workday-review-actions">'+dailyWageButton+'<button type="button" class="primary" onclick="confirmSalesWorkdayGroup(this)">'+(confirmed?'修改工時與薪資':'確認工時與薪資')+'</button></span></footer></article>';
 }
 function renderSalesWorkdayReviews(){
   var pendingList=salesEl('salesWorkdayPendingList');var confirmedList=salesEl('salesWorkdayConfirmedList');if(!pendingList||!confirmedList)return;
@@ -11084,7 +11085,7 @@ function renderSalesWorkdayReviews(){
   if(salesEl('salesWorkdayPendingSummary'))salesEl('salesWorkdayPendingSummary').textContent='待確認 '+String(pending.length)+' 組';
   if(salesEl('salesWorkdayTabCount'))salesEl('salesWorkdayTabCount').textContent=pending.length?String(pending.length):'';
   pendingList.innerHTML=pending.length?pending.map(function(group){return salesWorkdayReviewCardHtml(group,false)}).join(''):'<div class="sales-workday-review-empty"><b>目前沒有待確認資料</b><span>同店同日多人，或同一人同日跨門市時，會自動出現在這裡。</span></div>';
-  confirmedList.innerHTML=confirmed.length?confirmed.map(function(group){return salesWorkdayReviewCardHtml(group,true)}).join(''):'<div class="sales-empty">目前篩選區間內沒有已確認的多人同班。</div>';
+  confirmedList.innerHTML=confirmed.length?confirmed.map(function(group){return salesWorkdayReviewCardHtml(group,true)}).join(''):'<div class="sales-empty">目前篩選區間內沒有已確認的工時與薪資資料。</div>';
   if(salesEl('salesWorkdayConfirmedSection'))salesEl('salesWorkdayConfirmedSection').hidden=!confirmed.length;
 }
 function syncSalesWorkdayWageResult(input){
@@ -11096,6 +11097,31 @@ function syncSalesWorkdayWageResult(input){
 }
 function syncSalesWorkdayHoursRow(input){
   input.classList.remove('invalid');var row=input&&input.closest?input.closest('.sales-workday-review-person'):null;var checkbox=row&&row.querySelector('.sales-workday-wage-choice input[type="checkbox"]');if(checkbox)syncSalesWorkdayWageResult(checkbox);
+}
+async function confirmSalesDailyWage(button){
+  var card=button&&button.closest?button.closest('.sales-workday-review-card'):null;if(!card)return;
+  var businessDate=String(card.dataset.businessDate||'');var recordIds=String(card.dataset.recordIds||'').split(',').map(function(value){return value.trim()}).filter(Boolean);
+  var lineUserId=String(button.dataset.lineUserId||'');var personRow=card.querySelector('.sales-workday-review-person');var nameEl=personRow&&personRow.querySelector('.sales-workday-review-copy .title');var personName=String(nameEl&&nameEl.textContent||'此人員').trim();
+  if(!businessDate||!recordIds.length||!lineUserId){salesSetAdminStatus('日薪核准資料不完整，請重新整理後再操作。','error');return}
+  if(!window.confirm('確認將 '+businessDate+' 的 '+personName+' 核定為 1 日薪？\n\n適用於請人代班，但薪資仍算給 '+personName+'，再由本人轉交代班人員。\n此操作不需要填寫工時。'))return;
+  var actionButtons=Array.from(card.querySelectorAll('.sales-workday-review-actions button'));actionButtons.forEach(function(item){item.disabled=true});salesSetAdminStatus('正在確認 '+personName+' 的 1 日薪…','working');
+  try{
+    if(window.STARRED_SALES_TEST_MODE){
+      var targetIds=new Set(recordIds);var now=new Date().toISOString();var actor=(currentUser&&currentUser.name)||'測試會計';var beforeRows=[];var afterRows=[];
+      var records=salesReadTestRecords().map(function(record){
+        if(!targetIds.has(String(record.id||''))||salesRecordType(record)!=='sales'||record.isProxySale===true||salesCreditedLineUserId(record)!==lineUserId)return record;
+        var before=Object.assign({},record);var after=Object.assign({},record,{workdayStatus:'counted',workHours:null,workdayConfirmedAt:now,workdayConfirmedByLineUserId:salesIdentity().id||'sales-test-admin',workdayConfirmedByName:actor,updatedAt:now});beforeRows.push(before);afterRows.push(after);return after;
+      });
+      if(!afterRows.length)throw new Error('找不到可確認的本人業績資料');
+      salesWriteTestRecords(records);
+      afterRows.forEach(function(after,index){salesAddTestAudit(after,salesSnapshot(beforeRows[index]),salesSnapshot(after),'workday_confirm','代班薪資仍歸原人員；確認計 1 日薪（未填工時）',actor)});
+    }else{
+      await starredApi('sales_confirm_workday_group',{businessDate:businessDate,storeId:String(card.dataset.storeId||''),recordIds:recordIds,countedLineUserIds:[lineUserId],dailyWageOnlyLineUserId:lineUserId,workHours:[]});
+    }
+    await Promise.all([loadSalesAdminReport(),loadSalesData()]);
+    salesSetAdminStatus(personName+' 已確認計 1 日薪；工時保持未填，薪資可由本人轉交代班人員。','success');
+  }catch(error){salesSetAdminStatus('確認日薪失敗：'+String(error&&error.message||error),'error')}
+  finally{actionButtons.forEach(function(item){item.disabled=false})}
 }
 async function confirmSalesWorkdayGroup(button){
   var card=button&&button.closest?button.closest('.sales-workday-review-card'):null;if(!card)return;
@@ -15404,6 +15430,13 @@ body.sales-missing-open{overflow:hidden}
   .sales-hero-title-row{gap:8px}
   .sales-hero h1{font-size:22px}
   .sales-missing-store-btn{min-width:114px;min-height:43px;padding:8px 10px;font-size:13px}
+}
+#salesReportWorkdaysView .sales-workday-review-actions{display:flex;flex:0 0 auto;align-items:center;gap:8px;white-space:nowrap}
+#salesReportWorkdaysView .sales-workday-daily-wage-btn{border-color:#8dbda1;background:#edf7f1;color:#2f714b}
+#salesReportWorkdaysView .sales-workday-daily-wage-btn:hover{border-color:#63a17d;background:#e3f2e9}
+@media(max-width:620px){
+  #salesReportWorkdaysView .sales-workday-review-actions{display:grid;width:100%;grid-template-columns:1fr 1fr;gap:8px}
+  #salesReportWorkdaysView .sales-workday-review-actions button{width:auto!important;min-width:0;white-space:nowrap}
 }
 </style>
 <script id="sales-missing-stores-v44-script">
