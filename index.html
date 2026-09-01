@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED UI BUILD: 20260901-current-view-a4-print-v54; API compatible: 20260901-expense-sync-edit-v52 -->
+<!-- STARRED UI BUILD: 20260901-print-export-runtime-fix-v55; API compatible: 20260901-expense-sync-edit-v52 -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
@@ -4296,7 +4296,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
           <button type="button" data-sales-view="requests" onclick="showSalesReportView('requests',this)">修改審核 <b id="salesRequestTabCount" class="sales-tab-count"></b></button>
         </div>
         <div id="salesReportDailyView" class="sales-report-view active"><div class="sales-table-wrap"><table class="sales-table"><thead><tr><th>業績日期</th><th>區域</th><th>門市／樓層</th><th>銷售人員</th><th>營業總額</th><th>退貨金額</th><th>原發票日期</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminDailyBody"></tbody></table></div><div id="salesAdminDailyMobile" class="sales-admin-daily-mobile"></div></div>
-        <div id="salesReportProxyView" class="sales-report-view"><div class="sales-proxy-toolbar"><div><b>代銷售明細</b><span>代銷售只調整業績歸屬，不會自動增加對方的日薪天數。</span></div><strong id="salesProxySummary">共 0 筆</strong></div><div class="sales-table-wrap sales-proxy-table-wrap"><table class="sales-table sales-proxy-table"><thead><tr><th>業績日期</th><th>區域／門市</th><th>回傳人員</th><th>業績歸屬</th><th>日薪狀態</th><th>營業總額</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminProxyBody"></tbody></table></div><div id="salesAdminProxyMobile" class="sales-admin-proxy-mobile"></div></div>
+        <div id="salesReportProxyView" class="sales-report-view"><div class="sales-proxy-toolbar"><div><b>代銷售明細</b><span>代銷售只調整業績歸屬，不會自動增加對方的日薪天數。</span></div><div class="sales-proxy-toolbar-actions"><strong id="salesProxySummary">共 0 筆</strong><button id="salesAdminCreateProxyBtn" type="button" class="secondary sales-admin-create-proxy" onclick="openSalesAdminProxyCreate()">＋ 新增代銷售</button></div></div><div class="sales-table-wrap sales-proxy-table-wrap"><table class="sales-table sales-proxy-table"><thead><tr><th>業績日期</th><th>區域／門市</th><th>回傳人員</th><th>業績歸屬</th><th>日薪狀態</th><th>營業總額</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminProxyBody"></tbody></table></div><div id="salesAdminProxyMobile" class="sales-admin-proxy-mobile"></div></div>
         <div id="salesReportStoreView" class="sales-report-view"><div id="salesAdminStoreStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonView" class="sales-report-view"><div id="salesAdminPersonStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b id="salesComparisonHeading">業績對比</b><span id="salesComparisonDescription">可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesComparisonCurrent()">友善列印</button><button type="button" class="primary" onclick="exportSalesComparisonCurrentExcel()">匯出 Excel</button></div></div><div class="sales-comparison-switcher" role="tablist" aria-label="業績對比檢視"><button type="button" class="active" data-sales-comparison-view="detail" onclick="showSalesComparisonView('detail',this)">業績對比</button><button type="button" data-sales-comparison-view="average" onclick="showSalesComparisonView('average',this)">平均業績</button></div><div id="salesComparisonDetailPanel"><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div><div id="salesComparisonAveragePanel" hidden><div class="sales-average-inline-note">平均業績＝個人營業總額 ÷ 已確認上班日期；同一天只算 1 天，計日薪與時薪日期都納入，代銷售不增加上班天數。</div><div id="salesAveragePerformanceTable" class="sales-average-table-wrap"></div></div></div>
@@ -12663,6 +12663,47 @@ window.exportSalesAveragePerformanceExcel=exportSalesAveragePerformanceExcel;
 window.salesAveragePerformanceModel=salesAveragePerformanceModel;
 window.salesExpenseOperationPayModel=salesExpenseOperationPayModel;
 window.salesApprovedExpenseReportRows=salesApprovedExpenseReportRows;
+/* v55：以明確橋接提供目前報表的即時資料與格式工具。
+   後續列印／Excel 程式位於另一個 IIFE，不能直接讀取本 IIFE 的私有變數。 */
+window.STARRED_SALES_REPORT_BRIDGE_V55={
+  getData:function(){return salesAdminData},
+  getDetailState:function(){return salesStatDetailState},
+  esc:salesEsc,
+  money:salesMoney,
+  periodLabel:salesAdminPeriodLabel,
+  dateTime:salesDateTime,
+  areaLabel:function(value){var labels={north:'北部',central:'中部',south:'南部',east:'東部／離島'};return labels[value]||value||'—'},
+  storeText:salesStoreText,
+  personName:salesPersonName,
+  recordType:salesRecordType,
+  submitterName:salesSubmitterName,
+  creditedName:salesCreditedName,
+  statusMeta:salesStatusMeta,
+  recordStatus:salesRecordStatus,
+  workHoursNumberText:salesWorkHoursNumberText,
+  proxyRows:salesProxyReportRows,
+  averageExportRows:salesAveragePerformanceExportRows,
+  comparisonExportRows:salesPersonDetailExportRows,
+  comparisonModel:salesPersonDetailModel,
+  rowsWithFilterDates:salesRowsWithFilterDates,
+  ensureExcel:salesEnsureExcelJs,
+  createStyledSheet:salesCreateStyledExcelSheet,
+  markHighValueCells:salesMarkHighValueExcelCells,
+  createSheetJs:salesCreateSheetJsReportSheet,
+  downloadExcel:salesDownloadExcelBuffer,
+  setStatus:salesSetAdminStatus,
+  storeMatrixModel:salesStoreMatrixModel,
+  storeMatrixDisplayRows:salesStoreMatrixDisplayRows,
+  personDetailDateLabel:salesPersonDetailDateLabel,
+  storeMissingModel:salesStoreMissingModel,
+  storeReportingEndSettings:salesStoreReportingEndSettings,
+  shortDate:salesShortDate,
+  workdayNote:salesWorkdayNoteForRecordIds,
+  averageModel:salesAveragePerformanceModel,
+  expensePayModel:salesExpenseOperationPayModel,
+  renderAverage:renderSalesAveragePerformance,
+  renderComparison:renderSalesPersonDetail
+};
 window.openSalesAdminEdit=openSalesAdminEdit;
 window.closeSalesAdminEdit=closeSalesAdminEdit;
 window.saveSalesAdminEdit=saveSalesAdminEdit;
@@ -13028,9 +13069,9 @@ body.sales-stat-modal-open{overflow:hidden}
 
 <style id="sales-proxy-order-photo-edit-v26-style">
 .order-edit-photo-field{display:grid;gap:9px;padding:12px;border:1px solid #d9e4e8;border-radius:12px;background:#f8fbfc}.order-edit-photo-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.order-edit-photo-heading b{color:#385361;font-size:13px}.order-edit-photo-heading span{color:#7b909a;font-size:10px}.order-edit-photo-field .order-photo-picker{margin:0}.order-edit-photo-field .order-photo-preview-grid{margin-top:0}.order-edit-photo-field .edit-photo-empty{color:#b04444;background:#fff7f7}
-.sales-proxy-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px;padding:12px 14px;border:1px solid #d9e5df;border-radius:12px;background:#f4f9f6}.sales-proxy-toolbar>div b,.sales-proxy-toolbar>div span{display:block}.sales-proxy-toolbar>div b{color:#315f49;font-size:15px}.sales-proxy-toolbar>div span{margin-top:3px;color:#738a7c;font-size:10px}.sales-proxy-toolbar>strong{flex:0 0 auto;color:#315f49;font-size:12px}.sales-proxy-table td:nth-child(2) b,.sales-proxy-table td:nth-child(2) small{display:block}.sales-proxy-table td:nth-child(2) b{font-size:11px}.sales-proxy-table td:nth-child(2) small{margin-top:2px;color:#7b909a;font-size:9px}.sales-proxy-work{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.sales-proxy-work.yes{background:#e8f5ec;color:#2f714b}.sales-proxy-work.no{background:#fff0e5;color:#a85a00}.sales-admin-proxy-mobile{display:none}
+.sales-proxy-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px;padding:12px 14px;border:1px solid #d9e5df;border-radius:12px;background:#f4f9f6}.sales-proxy-toolbar>div b,.sales-proxy-toolbar>div span{display:block}.sales-proxy-toolbar>div b{color:#315f49;font-size:15px}.sales-proxy-toolbar>div span{margin-top:3px;color:#738a7c;font-size:10px}.sales-proxy-toolbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex:0 0 auto}.sales-proxy-toolbar-actions>strong{color:#315f49;font-size:12px;white-space:nowrap}.sales-proxy-table td:nth-child(2) b,.sales-proxy-table td:nth-child(2) small{display:block}.sales-proxy-table td:nth-child(2) b{font-size:11px}.sales-proxy-table td:nth-child(2) small{margin-top:2px;color:#7b909a;font-size:9px}.sales-proxy-work{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.sales-proxy-work.yes{background:#e8f5ec;color:#2f714b}.sales-proxy-work.no{background:#fff0e5;color:#a85a00}.sales-admin-proxy-mobile{display:none}
 .sales-proxy-card{overflow:hidden;border:1px solid #d9e3e7;border-radius:13px;background:#fff;box-shadow:0 3px 10px rgba(39,66,83,.06)}.sales-proxy-card header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;background:#f6f9fa}.sales-proxy-card header div time,.sales-proxy-card header div b{display:block}.sales-proxy-card header time{color:#718894;font-size:10px}.sales-proxy-card header b{margin-top:2px;color:#294858;font-size:13px}.sales-proxy-card header>strong{color:#315f49;font-size:14px}.sales-proxy-people{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:12px}.sales-proxy-people span small,.sales-proxy-people span b{display:block}.sales-proxy-people span small{color:#83959e;font-size:9px}.sales-proxy-people span b{margin-top:3px;color:#405d6c;font-size:12px}.sales-proxy-people i{color:#94a5ad;font-style:normal}.sales-proxy-card footer{display:flex;align-items:center;gap:7px;padding:9px 12px;border-top:1px solid #e6ecef}.sales-proxy-card footer>div{margin-left:auto}
-@media(max-width:760px){.order-edit-photo-heading{align-items:flex-start;flex-direction:column;gap:3px}.sales-proxy-toolbar{align-items:flex-start}.sales-proxy-toolbar>div span{max-width:240px}.sales-proxy-table-wrap{display:none!important}.sales-admin-proxy-mobile{display:grid;gap:9px}}
+@media(max-width:760px){.order-edit-photo-heading{align-items:flex-start;flex-direction:column;gap:8px}.sales-proxy-toolbar{align-items:stretch;flex-direction:column}.sales-proxy-toolbar>div span{max-width:none}.sales-proxy-toolbar-actions{justify-content:space-between;width:100%}.sales-proxy-table-wrap{display:none!important}.sales-admin-proxy-mobile{display:grid;gap:9px}}
 </style>
 
 <style id="sales-performance-v18-selection-style">
@@ -14292,7 +14333,12 @@ function salesProxyPeople(){var report=window.salesAdminData&&Array.isArray(wind
 function openSalesAdminProxyCreate(){var modal=ensureSalesProxyCreateModal();var date=v30El('salesProxyCreateDate');date.value=v30Today();date.max=v30Today();var storeSelect=v30El('salesProxyCreateStore');storeSelect.innerHTML='<option value="">請選擇門市</option>'+v30StoreRows().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant')}).map(function(store){return '<option value="'+v30Esc(store.id)+'">'+v30Esc([store.name,store.floor].filter(Boolean).join('｜'))+'</option>'}).join('');var personSelect=v30El('salesProxyCreatePerson');personSelect.innerHTML='<option value="">請選擇業績歸屬人員</option>'+salesProxyPeople().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant')}).map(function(person){return '<option value="'+v30Esc(person.lineUserId)+'">'+v30Esc(person.name)+'</option>'}).join('');v30El('salesProxyCreateAmount').value='';v30SetStatus('salesProxyCreateStatus','');modal.hidden=false;document.body.classList.add('sales-proxy-create-open')}
 function closeSalesAdminProxyCreate(){var modal=v30El('salesProxyCreateModal');if(modal)modal.hidden=true;document.body.classList.remove('sales-proxy-create-open')}
 async function saveSalesAdminProxyCreate(){var payload={businessDate:String((v30El('salesProxyCreateDate')||{}).value||''),storeId:String((v30El('salesProxyCreateStore')||{}).value||''),salespersonLineUserId:String((v30El('salesProxyCreatePerson')||{}).value||''),grossAmount:Number((v30El('salesProxyCreateAmount')||{}).value||0)};if(!payload.businessDate||!payload.storeId||!payload.salespersonLineUserId||payload.grossAmount<0){v30SetStatus('salesProxyCreateStatus','請完整填寫日期、門市、人員與營業總額。','error');return}var button=v30El('salesProxyCreateSave');if(button)button.disabled=true;v30SetStatus('salesProxyCreateStatus','正在新增代銷售…','working');try{await starredApi('sales_admin_create_proxy',payload);closeSalesAdminProxyCreate();await window.loadSalesAdminReport();if(typeof window.showSalesReportView==='function'){var tab=document.querySelector('[data-sales-view="proxy"]');window.showSalesReportView('proxy',tab)}if(typeof salesSetAdminStatus==='function')salesSetAdminStatus('代銷售已由後台新增；不計入日薪。','success')}catch(error){v30SetStatus('salesProxyCreateStatus','新增失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
-function installSalesProxyCreateButton(){var exportButton=v30El('salesExportBtn');if(!exportButton||v30El('salesAdminCreateProxyBtn'))return;var parent=exportButton.parentNode;var wrap=document.createElement('div');wrap.className='sales-admin-heading-actions';parent.insertBefore(wrap,exportButton);var button=document.createElement('button');button.id='salesAdminCreateProxyBtn';button.type='button';button.className='secondary sales-admin-create-proxy';button.textContent='＋ 新增代銷售';button.addEventListener('click',openSalesAdminProxyCreate);wrap.appendChild(button);wrap.appendChild(exportButton)}
+function installSalesProxyCreateButton(){
+  if(v30El('salesAdminCreateProxyBtn'))return;
+  var toolbar=document.querySelector('#salesReportProxyView .sales-proxy-toolbar');if(!toolbar)return;
+  var actions=toolbar.querySelector('.sales-proxy-toolbar-actions');if(!actions){actions=document.createElement('div');actions.className='sales-proxy-toolbar-actions';toolbar.appendChild(actions)}
+  var button=document.createElement('button');button.id='salesAdminCreateProxyBtn';button.type='button';button.className='secondary sales-admin-create-proxy';button.textContent='＋ 新增代銷售';button.addEventListener('click',openSalesAdminProxyCreate);actions.appendChild(button)
+}
 window.openExpenseV30Editor=openExpenseV30Editor;window.closeExpenseV30Editor=closeExpenseV30Editor;window.rebuildExpenseV30Stores=rebuildExpenseV30Stores;window.syncExpenseV30Type=syncExpenseV30Type;window.calculateExpenseV30Amount=calculateExpenseV30Amount;window.removeExpenseV30Existing=removeExpenseV30Existing;window.removeExpenseV30New=removeExpenseV30New;window.previewExpenseV30Files=previewExpenseV30Files;window.saveExpenseV30Edit=saveExpenseV30Edit;window.cancelExpenseV30=cancelExpenseV30;window.deleteExpenseV30=deleteExpenseV30;window.openSalesAdminProxyCreate=openSalesAdminProxyCreate;window.closeSalesAdminProxyCreate=closeSalesAdminProxyCreate;window.saveSalesAdminProxyCreate=saveSalesAdminProxyCreate;
 document.addEventListener('DOMContentLoaded',installSalesProxyCreateButton);
 })();
@@ -15817,15 +15863,64 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   body.sales-stat-printing .sales-store-average-section table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;font-size:8.5px!important}body.sales-stat-printing .sales-store-average-section th,body.sales-stat-printing .sales-store-average-section td{padding:1.4mm!important;border:1px solid #777!important;text-align:left!important}body.sales-stat-printing .sales-store-average-section th{background:#e8edef!important;font-weight:600!important}body.sales-stat-printing .sales-store-average-section .num{text-align:right!important}
 }
 </style>
-<style id="sales-current-view-print-v54-style">
+<style id="sales-current-view-print-v55-style">
 .sales-comparison-switcher{display:flex;gap:5px;margin:0 0 12px;padding:5px;border-radius:11px;background:#edf2f5}.sales-comparison-switcher button{min-width:118px;padding:8px 14px;border:0;border-radius:8px;background:transparent;color:#607985;font-weight:700;cursor:pointer}.sales-comparison-switcher button.active{background:#fff;color:#294858;box-shadow:0 2px 8px rgba(39,66,83,.12)}
 #salesComparisonAveragePanel[hidden],#salesComparisonDetailPanel[hidden]{display:none!important}.sales-average-inline-note{margin:0 0 8px;padding:9px 12px;border-left:4px solid #9bbdaf;background:#f4f8f6;color:#5f776d;font-size:12px;line-height:1.55}
 #salesReportDailyView .sales-table th,#salesReportDailyView .sales-table td{vertical-align:middle}#salesReportDailyView .sales-table th:nth-child(5),#salesReportDailyView .sales-table th:nth-child(6),#salesReportDailyView .sales-table td:nth-child(5),#salesReportDailyView .sales-table td:nth-child(6){text-align:center!important;font-variant-numeric:tabular-nums}#salesReportDailyView .sales-table td:nth-child(5) .sales-audit-amount-btn,#salesReportDailyView .sales-table td:nth-child(6) .sales-audit-amount-btn{justify-content:center;width:100%;text-align:center}
+#salesReportProxyView .sales-proxy-toolbar-actions>strong{font-size:13px!important;line-height:1.5}
 @media(max-width:620px){.sales-comparison-switcher button{flex:1;min-width:0}.sales-person-detail-toolbar{align-items:stretch;flex-direction:column}.sales-person-detail-actions{display:grid;grid-template-columns:1fr 1fr}.sales-person-detail-actions button{width:100%}}
 </style>
-<script id="sales-current-view-print-v54-script">
+<script id="sales-current-view-print-v55-script">
 (function(){
 'use strict';
+var reportBridge=window.STARRED_SALES_REPORT_BRIDGE_V55;
+if(!reportBridge){
+  var missingBridge=function(){var message='報表元件未完成載入，請重新整理頁面後再試。';console.error('[v55] '+message);var box=document.getElementById('salesAdminStatus');if(box){box.className='sales-form-status show error';box.textContent=message}else if(typeof window.alert==='function')window.alert(message)};
+  window.printCurrentSalesReport=missingBridge;
+  window.exportCurrentSalesReportExcel=missingBridge;
+  window.printSalesComparisonCurrent=missingBridge;
+  window.exportSalesComparisonCurrentExcel=missingBridge;
+  window.printSalesStatDetail=missingBridge;
+  return;
+}
+var salesEsc=reportBridge.esc;
+var salesMoney=reportBridge.money;
+var salesAdminPeriodLabel=reportBridge.periodLabel;
+var salesDateTime=reportBridge.dateTime;
+var salesStoreText=reportBridge.storeText;
+var salesPersonName=reportBridge.personName;
+var salesRecordType=reportBridge.recordType;
+var salesSubmitterName=reportBridge.submitterName;
+var salesCreditedName=reportBridge.creditedName;
+var salesStatusMeta=reportBridge.statusMeta;
+var salesRecordStatus=reportBridge.recordStatus;
+var salesWorkHoursNumberText=reportBridge.workHoursNumberText;
+var salesProxyReportRows=reportBridge.proxyRows;
+var salesAveragePerformanceExportRows=reportBridge.averageExportRows;
+var salesPersonDetailExportRows=reportBridge.comparisonExportRows;
+var salesPersonDetailModel=reportBridge.comparisonModel;
+var salesRowsWithFilterDates=reportBridge.rowsWithFilterDates;
+var salesEnsureExcelJs=reportBridge.ensureExcel;
+var salesCreateStyledExcelSheet=reportBridge.createStyledSheet;
+var salesMarkHighValueExcelCells=reportBridge.markHighValueCells;
+var salesCreateSheetJsReportSheet=reportBridge.createSheetJs;
+var salesDownloadExcelBuffer=reportBridge.downloadExcel;
+var salesSetAdminStatus=reportBridge.setStatus;
+var salesStoreMatrixModel=reportBridge.storeMatrixModel;
+var salesStoreMatrixDisplayRows=reportBridge.storeMatrixDisplayRows;
+var salesPersonDetailDateLabel=reportBridge.personDetailDateLabel;
+var salesStoreMissingModel=reportBridge.storeMissingModel;
+var salesStoreReportingEndSettings=reportBridge.storeReportingEndSettings;
+var salesShortDate=reportBridge.shortDate;
+var salesWorkdayNoteForRecordIds=reportBridge.workdayNote;
+var salesAveragePerformanceModel=reportBridge.averageModel;
+var salesExpenseOperationPayModel=reportBridge.expensePayModel;
+var renderSalesAveragePerformance=reportBridge.renderAverage;
+var renderSalesPersonDetail=reportBridge.renderComparison;
+var salesAdminData={};
+['records','performanceReturns','salespeople','totals','byStore','byPerson','workDays','editRequests','auditLogs','reportingPeriods','expenses','externalAccounts','missingTrackingEnabled'].forEach(function(key){Object.defineProperty(salesAdminData,key,{enumerable:true,get:function(){var data=reportBridge.getData()||{};return data[key]}})});
+var salesStatDetailState={};
+['kind','key','rows','view','summary'].forEach(function(key){Object.defineProperty(salesStatDetailState,key,{enumerable:true,get:function(){var state=reportBridge.getDetailState()||{};return state[key]}})});
 var comparisonView='detail';
 var exportBusy=false;
 function v54El(id){return document.getElementById(id)}
@@ -15833,7 +15928,7 @@ function v54Esc(value){return typeof salesEsc==='function'?salesEsc(value):Strin
 function v54Money(value){return typeof salesMoney==='function'?salesMoney(Number(value||0)):'$'+Math.round(Number(value||0)).toLocaleString('zh-TW')}
 function v54Number(value){return new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(Number(value||0))}
 function v54CurrentView(){var button=document.querySelector('[data-sales-view].active');return String(button&&button.dataset.salesView||'daily')}
-function v54Area(value){return (typeof areaText!=='undefined'&&areaText[value])||value||'—'}
+function v54Area(value){return reportBridge.areaLabel(value)}
 function v54NumericHeader(header){return /排名|金額|總額|業績|天數|工時|時數|時薪|筆數|回傳|日期數|平均|合計|薪資/.test(String(header||''))}
 function v54SummaryRaw(){var totals=salesAdminData.totals||{},records=salesAdminData.records||[],pending=(salesAdminData.editRequests||[]).filter(function(item){return item&&item.status==='pending'}).length;return {'營業總額':Number(totals.grossAmount||0),'退貨總額（另計）':Number(totals.returnAmount||0),'回傳筆數':Number(totals.recordCount||records.length),'待審核修改':pending}}
 function v54SummaryHtml(){var summary=v54SummaryRaw();return '<div class="print-summary"><div><span>營業總額</span><b>'+v54Esc(v54Money(summary['營業總額']))+'</b></div><div><span>退貨總額（另計）</span><b>'+v54Esc(v54Money(summary['退貨總額（另計）']))+'</b></div><div><span>回傳筆數</span><b>'+String(summary['回傳筆數'])+' 筆</b></div><div><span>待審核修改</span><b>'+String(summary['待審核修改'])+' 筆</b></div></div>'}
@@ -15871,7 +15966,7 @@ function v54PageSpec(view,excel){
 function v54FilePart(value){return String(value||'').replace(/[\\/:*?\"<>|\s]+/g,'_')}
 async function v54ExportWorkbook(spec){
   var filterRows=salesRowsWithFilterDates(spec.rows),summaryRows=salesRowsWithFilterDates([v54SummaryRaw()]),widths=[16,16].concat(spec.widths||[]),summaryWidths=[16,16,16,18,14,16];var ready=await salesEnsureExcelJs();
-  if(ready){var workbook=new window.ExcelJS.Workbook();workbook.creator='星紅織品業績系統 v54';var summarySheet=salesCreateStyledExcelSheet(workbook,'統計摘要',summaryRows,summaryWidths);var sheet=salesCreateStyledExcelSheet(workbook,spec.title,filterRows,widths);salesMarkHighValueExcelCells(summarySheet,['營業總額']);salesMarkHighValueExcelCells(sheet,spec.high||[]);var buffer=await workbook.xlsx.writeBuffer();salesDownloadExcelBuffer(buffer,'星紅織品_'+v54FilePart(spec.title)+'_'+v54FilePart(salesAdminPeriodLabel())+'.xlsx');return}
+  if(ready){var workbook=new window.ExcelJS.Workbook();workbook.creator='星紅織品業績系統 v55';var summarySheet=salesCreateStyledExcelSheet(workbook,'統計摘要',summaryRows,summaryWidths);var sheet=salesCreateStyledExcelSheet(workbook,spec.title,filterRows,widths);salesMarkHighValueExcelCells(summarySheet,['營業總額']);salesMarkHighValueExcelCells(sheet,spec.high||[]);var buffer=await workbook.xlsx.writeBuffer();salesDownloadExcelBuffer(buffer,'星紅織品_'+v54FilePart(spec.title)+'_'+v54FilePart(salesAdminPeriodLabel())+'.xlsx');return}
   if(!window.XLSX||!window.XLSX.utils)throw new Error('Excel 元件載入失敗，請重新整理後再試');var book=window.XLSX.utils.book_new();window.XLSX.utils.book_append_sheet(book,salesCreateSheetJsReportSheet(summaryRows,summaryWidths,['營業總額']),'統計摘要');window.XLSX.utils.book_append_sheet(book,salesCreateSheetJsReportSheet(filterRows,widths,spec.high||[]),spec.title);var fallback=window.XLSX.write(book,{bookType:'xlsx',type:'array',compression:true,cellStyles:true});salesDownloadExcelBuffer(fallback,'星紅織品_'+v54FilePart(spec.title)+'_'+v54FilePart(salesAdminPeriodLabel())+'.xlsx');
 }
 function v54StoreMatrixHtml(state){
@@ -15895,14 +15990,15 @@ function v54PersonDetailPrint(){
   return v54OpenPrint(name+'｜個人業績明細',content,{compact:false});
 }
 window.showSalesComparisonView=function(view,button){comparisonView=view==='average'?'average':'detail';document.querySelectorAll('[data-sales-comparison-view]').forEach(function(item){item.classList.toggle('active',String(item.dataset.salesComparisonView)===comparisonView)});var detail=v54El('salesComparisonDetailPanel'),average=v54El('salesComparisonAveragePanel');if(detail)detail.hidden=comparisonView!=='detail';if(average)average.hidden=comparisonView!=='average';var heading=v54El('salesComparisonHeading'),description=v54El('salesComparisonDescription');if(heading)heading.textContent=comparisonView==='average'?'平均業績':'業績對比';if(description)description.textContent=comparisonView==='average'?'比較每個人的總營業額、上班天數與平均業績。':'可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。';if(comparisonView==='average')renderSalesAveragePerformance();else renderSalesPersonDetail();if(button&&button.focus)button.focus()};
-window.printCurrentSalesReport=function(){var view=v54CurrentView();if(view==='personDetail'){window.printSalesComparisonCurrent();return}var spec=v54PageSpec(view,false);v54OpenPrint('星紅織品｜'+spec.title,v54SummaryHtml()+v54PrintTable(spec.title,spec.rows,spec.note,'current-view-table'),{})};
-window.printSalesComparisonCurrent=function(){var spec=v54PageSpec('personDetail',false);if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}v54OpenPrint('星紅織品｜'+spec.title,v54SummaryHtml()+v54PrintTable(spec.title,spec.rows,spec.note,comparisonView==='average'?'average-table':'comparison-table'),{})};
+function v55ActionError(label,error){var detail=String(error&&error.message||error||'未知錯誤'),message=label+'失敗：'+detail;console.error('[v55] '+message,error);if(typeof salesSetAdminStatus==='function')salesSetAdminStatus(message,'error');else if(typeof window.alert==='function')window.alert(message)}
+window.printCurrentSalesReport=function(){try{var view=v54CurrentView();if(view==='personDetail'){window.printSalesComparisonCurrent();return}var spec=v54PageSpec(view,false);v54OpenPrint('星紅織品｜'+spec.title,v54SummaryHtml()+v54PrintTable(spec.title,spec.rows,spec.note,'current-view-table'),{})}catch(error){v55ActionError('友善列印',error)}};
+window.printSalesComparisonCurrent=function(){try{var spec=v54PageSpec('personDetail',false);if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}v54OpenPrint('星紅織品｜'+spec.title,v54SummaryHtml()+v54PrintTable(spec.title,spec.rows,spec.note,comparisonView==='average'?'average-table':'comparison-table'),{})}catch(error){v55ActionError('友善列印',error)}};
 window.printSalesPersonDetail=window.printSalesComparisonCurrent;
-window.printSalesAveragePerformance=function(){var previous=comparisonView;comparisonView='average';var spec=v54PageSpec('personDetail',false);comparisonView=previous;v54OpenPrint('星紅織品｜平均業績',v54SummaryHtml()+v54PrintTable('平均業績',spec.rows,spec.note,'average-table'),{})};
-window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true),button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');try{await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；檔案只包含統計摘要與目前分頁。','success')}catch(error){salesSetAdminStatus('Excel 匯出失敗：'+String(error&&error.message||error),'error')}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
-window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');try{await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){salesSetAdminStatus('Excel 匯出失敗：'+String(error&&error.message||error),'error')}finally{exportBusy=false}};
-window.printSalesStatDetail=function(){var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden)return;var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()};
-window.STARRED_UI_BUILD='20260901-current-view-a4-print-v54';
+window.printSalesAveragePerformance=function(){var previous=comparisonView;try{comparisonView='average';var spec=v54PageSpec('personDetail',false);comparisonView=previous;v54OpenPrint('星紅織品｜平均業績',v54SummaryHtml()+v54PrintTable('平均業績',spec.rows,spec.note,'average-table'),{})}catch(error){comparisonView=previous;v55ActionError('友善列印',error)}};
+window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';try{var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true);exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；檔案包含統計摘要與目前分頁的完整資料。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
+window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;try{if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false}};
+window.printSalesStatDetail=function(){try{var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden){salesSetAdminStatus('請先點選一間門市或一位人員，再使用友善列印。','error');return}var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()}catch(error){v55ActionError('友善列印',error)}};
+window.STARRED_UI_BUILD='20260901-print-export-runtime-fix-v55';
 })();
 </script>
 </body>
