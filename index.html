@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED UI BUILD: 20260902-hours-minutes-display-v57; API compatible: 20260901-expense-sync-edit-v52 -->
+<!-- STARRED UI BUILD: 20260902-expense-hours-scope-fix-v58; API compatible: 20260901-expense-sync-edit-v52 -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
@@ -27,6 +27,20 @@ if(typeof window.eventSearchText!=='function'){
   window.eventSearchText=function(event){
     return [event&&event.mall,event&&event.location,event&&event.campaign,event&&event.note,Array.isArray(event&&event.products)?event.products.join(' '):(event&&event.products)||''].join(' ').toLocaleLowerCase('zh-Hant');
   };
+}
+if(typeof window.starredHoursMinutesNumberText!=='function'){
+  window.starredHoursMinutesNumberText=function(value){
+    var hours=Number(value);
+    if(!Number.isFinite(hours))return '0';
+    var sign=hours<0?'-':'';
+    var totalMinutes=Math.round(Math.abs(hours)*60);
+    var wholeHours=Math.floor(totalMinutes/60);
+    var minutes=totalMinutes%60;
+    return sign+String(wholeHours)+(minutes?'.'+String(minutes).padStart(2,'0'):'');
+  };
+}
+if(typeof window.salesWorkHoursNumberText!=='function'){
+  window.salesWorkHoursNumberText=window.starredHoursMinutesNumberText;
 }
 </script>
 <style>
@@ -9808,13 +9822,7 @@ function salesWorkHoursText(value){
   return Number.isFinite(hours)?salesWorkHoursNumberText(hours)+' 小時':'未填';
 }
 function salesWorkHoursNumberText(value){
-  var hours=Number(value);
-  if(!Number.isFinite(hours))return '0';
-  var sign=hours<0?'-':'';
-  var totalMinutes=Math.round(Math.abs(hours)*60);
-  var wholeHours=Math.floor(totalMinutes/60);
-  var minutes=totalMinutes%60;
-  return sign+String(wholeHours)+(minutes?'.'+String(minutes).padStart(2,'0'):'');
+  return window.starredHoursMinutesNumberText(value);
 }
 function salesWorkdayIsHourly(value){
   var hours=Number(value);return Number.isFinite(hours)&&hours>=0.5&&hours<=7.5;
@@ -13946,7 +13954,7 @@ function expenseStatusLabel(value){return value==='approved'?'已核准':value==
 function expenseTypeLabel(value){return value==='move_out'?'撤櫃':value==='move_in'?'進櫃':value==='overtime'?'移櫃／加班':value==='other'?'其他':'費用'}
 function expenseIsOperationType(value){return value==='move_out'||value==='move_in'||value==='overtime'||value==='other'}
 function expenseStoreText(item){return [item&&item.storeName,item&&item.storeFloor].filter(Boolean).join('｜')||'未指定店點'}
-function expenseDuration(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3));var b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return salesWorkHoursNumberText((b-a)/60)+' 小時'}
+function expenseDuration(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3));var b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return window.starredHoursMinutesNumberText((b-a)/60)+' 小時'}
 function expenseSetMessage(id,text,type){var box=expenseEl(id);if(!box)return;box.className='expense-form-status'+(text?' show '+(type||'working'):'');box.textContent=text||''}
 function expenseDetailText(item){return expenseIsOperationType(item.requestType)?[expenseStoreText(item),[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),expenseDuration(item.overtimeStart,item.overtimeEnd)].filter(Boolean).join('・'):String(item.reason||'未填寫緣由')}
 
@@ -15481,7 +15489,7 @@ function expenseIsOperationV43(value){return value==='move_out'||value==='move_i
 function expenseStatusLabelV43(value){return value==='approved'?'已核准':value==='rejected'?'未通過':value==='cancelled'?'已取消':'待審核'}
 function expenseMoneyV43(value){return '$'+Math.max(0,Number(value||0)).toLocaleString('zh-TW',{maximumFractionDigits:0})}
 function expenseDateTimeV43(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(value)}}
-function expenseDurationV43(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3)),b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return salesWorkHoursNumberText((b-a)/60)+' 小時'}
+function expenseDurationV43(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3)),b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return window.starredHoursMinutesNumberText((b-a)/60)+' 小時'}
 function expenseStoreTextV43(item){return [item&&item.storeName,item&&item.storeFloor].filter(Boolean).join('｜')||'未指定店點'}
 function expenseDetailTextV43(item){return expenseIsOperationV43(item.requestType)?[expenseStoreTextV43(item),[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'),expenseDurationV43(item.overtimeStart,item.overtimeEnd)].filter(Boolean).join('・'):String(item.reason||'未填寫緣由')}
 function expenseAreaTextV43(value){return ({north:'北部',central:'中部',south:'南部',east:'東部／離島'})[String(value||'')]||String(value||'')}
@@ -15687,7 +15695,7 @@ function el(id){return document.getElementById(id)}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]})}
 function typeLabel(value){return value==='move_out'?'撤櫃':value==='move_in'?'進櫃':value==='overtime'?'移櫃／加班':value==='other'?'其他':'費用'}
 function statusLabel(value){return value==='approved'?'已核准':value==='rejected'?'未通過':value==='cancelled'?'已取消':'待審核'}
-function duration(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3)),b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return salesWorkHoursNumberText((b-a)/60)+' 小時'}
+function duration(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3)),b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return window.starredHoursMinutesNumberText((b-a)/60)+' 小時'}
 function dateTime(value){if(!value)return '';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(value)}}
 function money(value){return '$'+Number(value||0).toLocaleString('zh-TW',{maximumFractionDigits:0})}
 function store(item){return [item&&item.storeName,item&&item.storeFloor].filter(Boolean).join('｜')}
@@ -15709,6 +15717,7 @@ window.printExpenseAdminReport=function(){var list=rows();if(!list.length){alert
 <script id="expense-selection-rates-v47-script">
 (function(){'use strict';
 var RATE_KEY='starred_expense_operation_rates_v47';window.expenseV47SelectedIds=window.expenseV47SelectedIds||new Set();
+var salesWorkHoursNumberText=window.starredHoursMinutesNumberText;
 function el(id){return document.getElementById(id)}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}function money(v){return '$'+Math.round(Number(v||0)).toLocaleString('zh-TW')}function hours(a,b){if(!/^\d{2}:\d{2}$/.test(String(a||''))||!/^\d{2}:\d{2}$/.test(String(b||'')))return null;var x=Number(a.slice(0,2))*60+Number(a.slice(3)),y=Number(b.slice(0,2))*60+Number(b.slice(3));return y>x?(y-x)/60:null}function rates(){try{var v=JSON.parse(localStorage.getItem(RATE_KEY)||'{}');return {move_out:Math.max(0,Number(v.move_out||0)),move_in:Math.max(0,Number(v.move_in||0)),other:Math.max(0,Number(v.other||0))}}catch(_){return {move_out:0,move_in:0,other:0}}}function typeLabel(v){return v==='move_out'?'撤櫃':v==='move_in'?'進櫃':v==='overtime'?'移櫃／加班':v==='other'?'其他':'費用'}function statusLabel(v){return v==='approved'?'已核准':v==='rejected'?'未通過':v==='cancelled'?'已取消':'待審核'}function duration(a,b){var h=hours(a,b);return h===null?'':salesWorkHoursNumberText(h)+' 小時'}function store(i){return [i.storeName,i.storeFloor].filter(Boolean).join('｜')}function detail(i){return i.requestType==='expense'?String(i.reason||''):[store(i),[i.overtimeStart,i.overtimeEnd].filter(Boolean).join('～'),duration(i.overtimeStart,i.overtimeEnd)].filter(Boolean).join('・')}function dateTime(v){if(!v)return '';try{return new Date(v).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(v)}}function filtered(){var source=Array.isArray(window.expenseV30AdminData)?window.expenseV30AdminData:[],type=String((el('expenseAdminType')||{}).value||''),keyword=String((el('expenseAdminKeyword')||{}).value||'').trim().toLocaleLowerCase('zh-Hant');return source.filter(function(i){var text=[i.submitterName,i.storeName,i.storeFloor,i.reason,i.note,i.reviewNote,i.requestDate,typeLabel(i.requestType),statusLabel(i.status)].join(' ').toLocaleLowerCase('zh-Hant');return (!type||i.requestType===type)&&(!keyword||text.includes(keyword))})}function outputRows(){var rows=filtered(),chosen=rows.filter(function(i){return window.expenseV47SelectedIds.has(String(i.id||''))});return chosen.length?chosen:rows}function filePeriod(){return String((el('expenseAdminDateFrom')||{}).value||'全部')+'_至_'+String((el('expenseAdminDateTo')||{}).value||'全部')}
 window.expenseV47Amount=function(item){if(item.requestType==='expense'||Number(item.amount||0)>0)return Number(item.amount||0);var type=String(item.requestType||'');if(!['move_out','move_in','overtime','other'].includes(type))return null;var h=hours(item.overtimeStart,item.overtimeEnd),rateType=type==='overtime'?'other':type;return h===null?null:h*rates()[rateType]};window.expenseV47AmountText=function(item){var amount=window.expenseV47Amount(item);return amount===null?'—':money(amount)};
 window.saveExpenseOperationRates=function(){var value={move_out:Math.max(0,Number((el('expenseMoveOutRate')||{}).value||0)),move_in:Math.max(0,Number((el('expenseMoveInRate')||{}).value||0)),other:Math.max(0,Number((el('expenseOtherRate')||{}).value||0))};localStorage.setItem(RATE_KEY,JSON.stringify(value));if(window.renderExpenseAdminList)window.renderExpenseAdminList();var msg=el('expenseAdminMessage');if(msg){msg.className='expense-form-status show success';msg.textContent='撤櫃、進櫃、其他與既有移櫃／加班時薪已套用，金額已重新換算。'}};
@@ -16037,7 +16046,7 @@ function v54FilePart(value){return String(value||'').replace(/[\\/:*?\"<>|\s]+/g
 async function v54ExportWorkbook(spec){
   var rows=Array.isArray(spec.rows)?spec.rows:[],summary=v54SummaryRaw(),headers=rows.length?Object.keys(rows[0]):['資料'],dataRows=rows.length?rows:[{'資料':'目前沒有資料'}],highHeaders=Array.isArray(spec.high)?spec.high:[],maxColumns=Math.max(4,headers.length),fileName='星紅織品_'+v54FilePart(spec.title)+'_'+v54FilePart(salesAdminPeriodLabel())+'.xlsx',ready=await salesEnsureExcelJs();
   if(ready){
-    var workbook=new window.ExcelJS.Workbook();workbook.creator='星紅織品業績系統 v57';workbook.created=new Date();
+    var workbook=new window.ExcelJS.Workbook();workbook.creator='星紅織品業績系統 v58';workbook.created=new Date();
     var sheet=workbook.addWorksheet(spec.title,{views:[{state:'frozen',ySplit:7}]});
     sheet.mergeCells(1,1,1,maxColumns);var titleCell=sheet.getCell(1,1);titleCell.value='星紅織品｜'+spec.title;titleCell.font={name:'Microsoft JhengHei',size:16,bold:true,color:{argb:'FFFFFFFF'}};titleCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF294B5E'}};titleCell.alignment={vertical:'middle',horizontal:'left'};sheet.getRow(1).height=27;
     sheet.mergeCells(2,2,2,maxColumns);sheet.getCell(2,1).value='查詢區間';sheet.getCell(2,2).value=salesAdminPeriodLabel();sheet.getRow(2).font={name:'Microsoft JhengHei',size:11,color:{argb:'FF526D7A'}};
@@ -16076,7 +16085,7 @@ function v54PersonDetailPrint(){
   return v54OpenPrint(name+'｜個人業績明細',content,{compact:false});
 }
 window.showSalesComparisonView=function(view,button){comparisonView=view==='average'?'average':'detail';document.querySelectorAll('[data-sales-comparison-view]').forEach(function(item){item.classList.toggle('active',String(item.dataset.salesComparisonView)===comparisonView)});var detail=v54El('salesComparisonDetailPanel'),average=v54El('salesComparisonAveragePanel');if(detail)detail.hidden=comparisonView!=='detail';if(average)average.hidden=comparisonView!=='average';var heading=v54El('salesComparisonHeading'),description=v54El('salesComparisonDescription');if(heading)heading.textContent=comparisonView==='average'?'平均業績':'業績對比';if(description)description.textContent=comparisonView==='average'?'比較每個人的總營業額、上班天數與平均業績。':'可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。';if(comparisonView==='average')renderSalesAveragePerformance();else renderSalesPersonDetail();if(button&&button.focus)button.focus()};
-function v55ActionError(label,error){var detail=String(error&&error.message||error||'未知錯誤'),message=label+'失敗：'+detail;console.error('[v57] '+message,error);if(typeof salesSetAdminStatus==='function')salesSetAdminStatus(message,'error');else if(typeof window.alert==='function')window.alert(message)}
+function v55ActionError(label,error){var detail=String(error&&error.message||error||'未知錯誤'),message=label+'失敗：'+detail;console.error('[v58] '+message,error);if(typeof salesSetAdminStatus==='function')salesSetAdminStatus(message,'error');else if(typeof window.alert==='function')window.alert(message)}
 window.printCurrentSalesReport=function(){try{var view=v54CurrentView();if(view==='personDetail'){window.printSalesComparisonCurrent();return}var spec=v54PageSpec(view,false);v54OpenPrint('星紅織品｜'+spec.title,v54SummaryHtml()+v54PrintTable(spec.title,spec.rows,spec.note,'current-view-table',spec.high),{})}catch(error){v55ActionError('友善列印',error)}};
 window.printSalesComparisonCurrent=function(){try{var spec=v54PageSpec('personDetail',false);if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}v54OpenPrint('星紅織品｜'+spec.title,v54SummaryHtml()+v54PrintTable(spec.title,spec.rows,spec.note,comparisonView==='average'?'average-table':'comparison-table',spec.high),{})}catch(error){v55ActionError('友善列印',error)}};
 window.printSalesPersonDetail=window.printSalesComparisonCurrent;
@@ -16084,7 +16093,7 @@ window.printSalesAveragePerformance=function(){var previous=comparisonView;try{c
 window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';try{var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true);exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；統計摘要與目前分頁完整資料已放在同一張工作表。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
 window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;try{if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false}};
 window.printSalesStatDetail=function(){try{var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden){salesSetAdminStatus('請先點選一間門市或一位人員，再使用友善列印。','error');return}var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()}catch(error){v55ActionError('友善列印',error)}};
-window.STARRED_UI_BUILD='20260902-hours-minutes-display-v57';
+window.STARRED_UI_BUILD='20260902-expense-hours-scope-fix-v58';
 })();
 </script>
 </body>
