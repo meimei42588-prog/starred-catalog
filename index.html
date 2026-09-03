@@ -15217,7 +15217,29 @@ function selectVisible(checked){selectRows(filteredRows().filter(function(item){
 function selectStore(id,checked){selectRows(filteredRows().filter(function(item){return String(item.recognizedStoreId)===String(id)}),checked)}
 function openStore(id){state.activeStoreId=String(id);state.lastSelectedId='';render()}
 async function manualStore(id,storeId){var item=state.messages.find(function(row){return String(row.id)===String(id)});if(!item)return;setStatus('正在保存店點…','working');try{await starredApi('line_group_message_update',{messageId:id,orderKind:String(item.orderKind||'unclassified'),storeId:String(storeId||''),processingStatus:String(item.processingStatus||'unprocessed')});var store=state.stores.find(function(row){return String(row.id)===String(storeId)});item.recognizedStoreId=String(storeId||'');item.recognizedStoreName=store?store.name:'';item.classificationSource='manual';item.classificationNote='人工僅確認店點';item.isOther=false;render();setStatus('店點已保存。','success')}catch(error){setStatus('保存失敗：'+String(error&&error.message||error),'error');render()}}
-async function softDelete(ids){ids=[...new Set((ids||[]).map(String))].filter(function(id){var item=state.messages.find(function(row){return String(row.id)===id});return item&&selectable(item)});if(!ids.length){alert('請先勾選要刪除的回傳內容。');return}if(!confirm('確定刪除已選的 '+ids.length+' 筆回傳內容？\n\n刪除後會移到「其他（14 天）」並保留刪除者與時間，滿 14 天後才自動清除。'))return;setStatus('正在刪除 '+ids.length+' 筆回傳內容…','working');try{var result=await starredApi('line_group_messages_soft_delete',{messageIds:ids}),deletedAt=String(result.deletedAt||new Date().toISOString()),deletedByName=String(result.deletedByName||'目前登入者'),deletedByLineUserId=String(result.deletedByLineUserId||'');state.messages.forEach(function(item){if(!ids.includes(String(item.id)))return;item.classificationSource='manual';item.classificationNote='v38_other|deleted|';item.classifiedAt=deletedAt;item.isOther=true;item.isDeleted=true;item.deletedAt=deletedAt;item.deletedByName=deletedByName;item.deletedByLineUserId=deletedByLineUserId;state.selected.delete(String(item.id))});state.lastSelectedId='';render();setStatus('已刪除 '+String(result.deletedCount||ids.length)+' 筆，並移到「其他（14 天）」保留刪除軌跡。','success');if(typeof window.loadAdminAttentionSummaryV35==='function')window.loadAdminAttentionSummaryV35()}catch(error){setStatus('刪除失敗：'+String(error&&error.message||error),'error')}}
+async function softDelete(ids){
+  ids=[...new Set((ids||[]).map(String))].filter(function(id){var item=state.messages.find(function(row){return String(row.id)===id});return item&&selectable(item)});
+  if(!ids.length){alert('請先勾選要刪除的回傳內容。');return}
+  if(!confirm('確定刪除已選的 '+ids.length+' 筆回傳內容？\n\n刪除後會移到「其他（14 天）」並保留刪除者與時間，滿 14 天後才自動清除。'))return;
+  setStatus('正在刪除 '+ids.length+' 筆回傳內容…','working');
+  try{
+    var succeeded=[],failed=[],resultById={};
+    for(var offset=0;offset<ids.length;offset+=6){
+      var batch=ids.slice(offset,offset+6);
+      var outcomes=await Promise.all(batch.map(async function(id){try{return{id:id,result:await starredApi('line_group_message_mark_other',{messageId:id})}}catch(error){return{id:id,error:error}}}));
+      outcomes.forEach(function(outcome){if(outcome.error)failed.push(outcome);else{succeeded.push(outcome.id);resultById[outcome.id]=outcome.result||{}}});
+    }
+    if(!succeeded.length)throw(failed[0]&&failed[0].error||new Error('沒有資料完成刪除'));
+    state.messages.forEach(function(item){
+      var id=String(item.id);if(!succeeded.includes(id))return;
+      var result=resultById[id]||{},message=result.message||{},deletedAt=String(result.deletedAt||message.classified_at||new Date().toISOString());
+      item.classificationSource='manual';item.classificationNote=String(message.classification_note||'v38_other|deleted|');item.classifiedAt=deletedAt;item.isOther=true;item.isDeleted=true;item.deletedAt=deletedAt;item.deletedByName=String(result.deletedByName||'目前登入者');item.deletedByLineUserId=String(result.deletedByLineUserId||'');state.selected.delete(id);
+    });
+    state.lastSelectedId='';render();
+    setStatus('已刪除 '+succeeded.length+' 筆並移到「其他（14 天）」'+(failed.length?'；另有 '+failed.length+' 筆未成功，請重新整理後再試。':'，刪除軌跡會保留 14 天。'),failed.length?'error':'success');
+    if(typeof window.loadAdminAttentionSummaryV35==='function')window.loadAdminAttentionSummaryV35();
+  }catch(error){setStatus('刪除失敗：'+String(error&&error.message||error),'error')}
+}
 function markOther(id){return softDelete([String(id)])}
 function deleteSelected(){return softDelete([...state.selected])}
 function dragStart(event,id){state.dragId=String(id);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',state.dragId);event.currentTarget.classList.add('dragging')}
@@ -15560,6 +15582,7 @@ document.addEventListener('DOMContentLoaded',function(){build();enhanceWorkflowU
 <!-- v64：新增「擦手巾」第六類；標題承接與商品同行關鍵字皆可辨識。 -->
 <!-- v65：新增「乾髮帽」第七類；支援種類後接連字號／冒號，並在下一個種類標題自動切換分類。 -->
 <!-- v66：未處理跨日保留；列印後才轉已印單；支援 Shift 同店連選與 14 天可稽核軟刪除。 -->
+<!-- v67：刪除改用既有單筆操作分批執行，相容尚未更新完成的舊版 line-api。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
