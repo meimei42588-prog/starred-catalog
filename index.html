@@ -15226,8 +15226,76 @@ function pickingHasQuantity(value){var text=String(value||'');return /[×xX＊*]
 function pickingQuantity(value){var text=String(value||'').trim(),slash=Math.max(text.lastIndexOf('/'),text.lastIndexOf('／'));if(slash>=0){var suffix=text.slice(slash+1).trim();if(suffix&&pickingHasQuantity(suffix))return suffix.slice(0,300)}var match=text.match(/([^，,；;\n]{0,48}(?:[×xX＊*]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)|各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)|每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各[^，,；;\n]{0,10}))\s*$/u);return match?String(match[1]||'').trim().slice(0,300):''}
 function pickingKeywordCategory(value){var text=String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,'');if(/(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|kidstowel|childrentowel)/i.test(text))return'kids_towel';if(/(?:浴巾|bathtowel)/i.test(text))return'bath_towel';if(/(?:方巾|小方巾|手帕巾|washcloth|facetowel)/i.test(text))return'face_towel';if(/(?:毛巾|towel)/i.test(text))return'towel';return'other'}
 function pickingHeader(text,index){if(!text||pickingHasQuantity(text)||pickingKeywordCategory(text)!=='other')return false;var compact=String(text).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),order=/(補貨|追加|追單|追貨|加單|加訂|補單)/i.test(text),date=/(?:^|\D)\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?(?:\D|$)/u.test(text);if(index===0&&(order||date)&&compact.length<=80)return true;if(/^(?:補貨|追加|補貨追加|追加補貨|追單|加單|補單)+$/u.test(compact))return true;if(/^(?:已|己)?(?:完成)?上傳(?:完成|成功|好了)?$/u.test(compact))return true;return false}
-function pickingLocalItems(row){var items=[];String(row.contentText||'').split(/\n/).forEach(function(raw,index){var text=pickingCleanLine(raw);if(!text||pickingHeader(text,index))return;items.push({lineIndex:index,text:text,quantityText:pickingQuantity(text),category:pickingKeywordCategory(text),source:'rules'})});return items}
-function mergePickingResult(rows,remote,errorText){var remoteMap=new Map();(remote&&Array.isArray(remote.messages)?remote.messages:[]).forEach(function(message){var lineMap=new Map();(Array.isArray(message.items)?message.items:[]).forEach(function(item){if(pickingCategoryOrder.includes(String(item.category)))lineMap.set(Number(item.lineIndex),{category:String(item.category),source:String(item.source||'ai')})});remoteMap.set(String(message.id||''),lineMap)});var messages=rows.map(function(row){var lineMap=remoteMap.get(String(row.id))||new Map(),items=pickingLocalItems(row).map(function(item){var classified=lineMap.get(Number(item.lineIndex));if(classified){item.category=classified.category;item.source=classified.source}return item});return{id:String(row.id),items:items}}),allItems=messages.reduce(function(list,message){return list.concat(message.items)},[]);return{messages:messages,totalItemCount:allItems.length,aiAvailable:!!(remote&&remote.aiAvailable),aiClassifiedCount:allItems.filter(function(item){return item.source==='ai'}).length,fallbackCount:allItems.filter(function(item){return item.source!=='ai'}).length,truncatedForAI:!!(remote&&remote.truncatedForAI),errorText:String(errorText||''),apiBuild:String(remote&&remote.apiBuild||'')}}
+function pickingSectionCategory(value){
+  var original=String(value||'').normalize('NFKC').trim();
+  if(!original||pickingHasQuantity(original))return'';
+  var text=original.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
+  if(/^(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|兒童毛巾童巾|兒童毛巾或童巾)(?:類|系列)?$/u.test(text))return'kids_towel';
+  if(/^(?:浴巾|大浴巾)(?:類|系列)?$/u.test(text))return'bath_towel';
+  if(/^(?:方巾|小方巾|手帕巾)(?:類|系列)?$/u.test(text))return'face_towel';
+  if(/^(?:毛巾|面巾|洗臉巾)(?:類|系列)?$/u.test(text))return'towel';
+  if(/^(?:擦手巾|擦手毛巾|手巾|浴袍|浴衣|睡衣|包包|袋子|床包|床罩|涼被|棉被|被子|毯子|枕頭|枕套|抱枕|地墊|洗衣袋|衛生紙|提袋|購物袋|雜貨|其他|其它|雜項)(?:類|系列)?$/u.test(text))return'other';
+  return'';
+}
+function pickingLocalItems(row){
+  var items=[];
+  var activeCategory='';
+  String(row.contentText||'').split(/\n/).forEach(function(raw,index){
+    var text=pickingCleanLine(raw);
+    if(!text)return;
+    var sectionCategory=pickingSectionCategory(text);
+    if(sectionCategory){
+      activeCategory=sectionCategory;
+      return;
+    }
+    if(pickingHeader(text,index))return;
+    var directCategory=pickingKeywordCategory(text);
+    var inherited=directCategory==='other'&&Boolean(activeCategory);
+    items.push({
+      lineIndex:index,
+      text:text,
+      quantityText:pickingQuantity(text),
+      category:inherited?activeCategory:directCategory,
+      source:inherited?'section_heading':'rules'
+    });
+  });
+  return items;
+}
+function mergePickingResult(rows,remote,errorText){
+  var remoteMap=new Map();
+  (remote&&Array.isArray(remote.messages)?remote.messages:[]).forEach(function(message){
+    var lineMap=new Map();
+    (Array.isArray(message.items)?message.items:[]).forEach(function(item){
+      if(pickingCategoryOrder.includes(String(item.category))){
+        lineMap.set(Number(item.lineIndex),{category:String(item.category),source:String(item.source||'ai')});
+      }
+    });
+    remoteMap.set(String(message.id||''),lineMap);
+  });
+  var messages=rows.map(function(row){
+    var lineMap=remoteMap.get(String(row.id))||new Map();
+    var items=pickingLocalItems(row).map(function(item){
+      var classified=lineMap.get(Number(item.lineIndex));
+      if(classified&&item.source!=='section_heading'){
+        item.category=classified.category;
+        item.source=classified.source;
+      }
+      return item;
+    });
+    return{id:String(row.id),items:items};
+  });
+  var allItems=messages.reduce(function(list,message){return list.concat(message.items)},[]);
+  return{
+    messages:messages,
+    totalItemCount:allItems.length,
+    aiAvailable:!!(remote&&remote.aiAvailable),
+    aiClassifiedCount:allItems.filter(function(item){return item.source==='ai'}).length,
+    fallbackCount:allItems.filter(function(item){return item.source!=='ai'}).length,
+    truncatedForAI:!!(remote&&remote.truncatedForAI),
+    errorText:String(errorText||''),
+    apiBuild:String(remote&&remote.apiBuild||'')
+  };
+}
 function printHtml(rows,ids,result){
   var group=selectedGroup();
   var messageMap=new Map((result.messages||[]).map(function(message){return[String(message.id),message.items||[]]}));
@@ -15476,6 +15544,7 @@ document.addEventListener('DOMContentLoaded',build);
 </script>
 <!-- v61：修正 AI 揀貨單預覽頁的程式結束標記，讓 Chrome「開始列印」可正常啟動。 -->
 <!-- v62：AI 揀貨單依 A4 實際高度自動分頁、續頁保留店點日期並顯示「下一頁」，同時壓縮上下間距。 -->
+<!-- v63：同時辨識「種類標題＋下方商品」及「商品同一行含種類關鍵字」兩種補貨格式。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
