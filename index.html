@@ -15219,12 +15219,12 @@ function dragOver(event,node){event.preventDefault();event.dataTransfer.dropEffe
 function dragLeave(event,node){if(!node.contains(event.relatedTarget))node.classList.remove('drag-over')}
 function dropStore(event,storeId){event.preventDefault();event.currentTarget.classList.remove('drag-over');var id=event.dataTransfer.getData('text/plain')||state.dragId;if(id)manualStore(id,storeId)}
 async function aiClassify(){var candidates=filteredRows().filter(function(item){return !isOther(item)&&item.messageType==='text'&&!item.recognizedStoreId}),candidateIds=new Set(candidates.map(function(item){return String(item.id)})),ids=[...state.selected].filter(function(id){return candidateIds.has(String(id))});if(!ids.length)ids=candidates.slice(0,20).map(function(item){return String(item.id)});if(!ids.length){alert('目前沒有待辨識訊息。');return}if(ids.length>20){alert('一次最多重新辨識 20 筆，請縮小勾選範圍。');return}setStatus('正在用後台門市關鍵字與 AI 重新辨識 '+ids.length+' 筆訊息…','working');try{var result=await starredApi('line_group_messages_ai_classify',{messageIds:ids});await load();setStatus('已重新辨識 '+String(result.classifiedCount||0)+' 筆'+(result.failedCount?'；'+String(result.failedCount)+' 筆保留待確認。':'。'),'success')}catch(error){setStatus('重新辨識失敗：'+String(error&&error.message||error),'error')}}
-var pickingCategoryOrder=['bath_towel','towel','face_towel','kids_towel','other'];
-function pickingCategoryLabel(value){return value==='bath_towel'?'浴巾':value==='towel'?'毛巾':value==='face_towel'?'方巾':value==='kids_towel'?'兒童毛巾／童巾':'其他'}
+var pickingCategoryOrder=['bath_towel','towel','face_towel','kids_towel','hand_towel','other'];
+function pickingCategoryLabel(value){return value==='bath_towel'?'浴巾':value==='towel'?'毛巾':value==='face_towel'?'方巾':value==='kids_towel'?'兒童毛巾／童巾':value==='hand_towel'?'擦手巾':'其他'}
 function pickingCleanLine(value){return String(value||'').replace(/\r/g,'').trim().replace(/^(?:(?:✅|☑️?|✔️?|✓|⬜|◻️?|🔲|▪️?|▫️?|●|○|•|[-–—])\s*)+/u,'').trim()}
 function pickingHasQuantity(value){var text=String(value||'');return /[×xX＊*]\s*\d+(?:\.\d+)?/u.test(text)||/\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)/u.test(text)||/各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u.test(text)||/每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各/u.test(text)||/(?:一|二|兩|三|四|五|六|七|八|九|十)\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)/u.test(text)}
 function pickingQuantity(value){var text=String(value||'').trim(),slash=Math.max(text.lastIndexOf('/'),text.lastIndexOf('／'));if(slash>=0){var suffix=text.slice(slash+1).trim();if(suffix&&pickingHasQuantity(suffix))return suffix.slice(0,300)}var match=text.match(/([^，,；;\n]{0,48}(?:[×xX＊*]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)|各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)|每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各[^，,；;\n]{0,10}))\s*$/u);return match?String(match[1]||'').trim().slice(0,300):''}
-function pickingKeywordCategory(value){var text=String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,'');if(/(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|kidstowel|childrentowel)/i.test(text))return'kids_towel';if(/(?:浴巾|bathtowel)/i.test(text))return'bath_towel';if(/(?:方巾|小方巾|手帕巾|washcloth|facetowel)/i.test(text))return'face_towel';if(/(?:毛巾|towel)/i.test(text))return'towel';return'other'}
+function pickingKeywordCategory(value){var text=String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,'');if(/(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|kidstowel|childrentowel)/i.test(text))return'kids_towel';if(/(?:浴巾|bathtowel)/i.test(text))return'bath_towel';if(/(?:方巾|小方巾|手帕巾|washcloth|facetowel)/i.test(text))return'face_towel';if(/(?:擦手巾|擦手毛巾|handtowel)/i.test(text))return'hand_towel';if(/(?:毛巾|towel)/i.test(text))return'towel';return'other'}
 function pickingHeader(text,index){if(!text||pickingHasQuantity(text)||pickingKeywordCategory(text)!=='other')return false;var compact=String(text).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),order=/(補貨|追加|追單|追貨|加單|加訂|補單)/i.test(text),date=/(?:^|\D)\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?(?:\D|$)/u.test(text);if(index===0&&(order||date)&&compact.length<=80)return true;if(/^(?:補貨|追加|補貨追加|追加補貨|追單|加單|補單)+$/u.test(compact))return true;if(/^(?:已|己)?(?:完成)?上傳(?:完成|成功|好了)?$/u.test(compact))return true;return false}
 function pickingSectionCategory(value){
   var original=String(value||'').normalize('NFKC').trim();
@@ -15234,7 +15234,8 @@ function pickingSectionCategory(value){
   if(/^(?:浴巾|大浴巾)(?:類|系列)?$/u.test(text))return'bath_towel';
   if(/^(?:方巾|小方巾|手帕巾)(?:類|系列)?$/u.test(text))return'face_towel';
   if(/^(?:毛巾|面巾|洗臉巾)(?:類|系列)?$/u.test(text))return'towel';
-  if(/^(?:擦手巾|擦手毛巾|手巾|浴袍|浴衣|睡衣|包包|袋子|床包|床罩|涼被|棉被|被子|毯子|枕頭|枕套|抱枕|地墊|洗衣袋|衛生紙|提袋|購物袋|雜貨|其他|其它|雜項)(?:類|系列)?$/u.test(text))return'other';
+  if(/^(?:擦手巾|擦手毛巾|手巾)(?:類|系列)?$/u.test(text))return'hand_towel';
+  if(/^(?:浴袍|浴衣|睡衣|包包|袋子|床包|床罩|涼被|棉被|被子|毯子|枕頭|枕套|抱枕|地墊|洗衣袋|衛生紙|提袋|購物袋|雜貨|其他|其它|雜項)(?:類|系列)?$/u.test(text))return'other';
   return'';
 }
 function pickingLocalItems(row){
@@ -15256,7 +15257,7 @@ function pickingLocalItems(row){
       text:text,
       quantityText:pickingQuantity(text),
       category:inherited?activeCategory:directCategory,
-      source:inherited?'section_heading':'rules'
+      source:inherited?'section_heading':directCategory==='hand_towel'?'direct_hand_towel':'rules'
     });
   });
   return items;
@@ -15276,7 +15277,7 @@ function mergePickingResult(rows,remote,errorText){
     var lineMap=remoteMap.get(String(row.id))||new Map();
     var items=pickingLocalItems(row).map(function(item){
       var classified=lineMap.get(Number(item.lineIndex));
-      if(classified&&item.source!=='section_heading'){
+      if(classified&&item.source!=='section_heading'&&item.source!=='direct_hand_towel'){
         item.category=classified.category;
         item.source=classified.source;
       }
@@ -15328,7 +15329,7 @@ function printHtml(rows,ids,result){
   });
   var aiText=result.aiAvailable?(result.fallbackCount?'AI 分類＋規則補判':'AI 分類完成'):'規則備援（AI 未完成）';
   var body=sheets.map(function(sheet,sheetIndex){
-    var counts={bath_towel:0,towel:0,face_towel:0,kids_towel:0,other:0};
+    var counts={bath_towel:0,towel:0,face_towel:0,kids_towel:0,hand_towel:0,other:0};
     sheet.items.forEach(function(item){counts[item.category]=(counts[item.category]||0)+1});
     var summary=pickingCategoryOrder.map(function(category){
       return'<span>'+esc(pickingCategoryLabel(category))+' '+String(counts[category]||0)+'</span>';
@@ -15372,7 +15373,7 @@ function printHtml(rows,ids,result){
     '.sheet-meta span:last-child{border-right:0}.category-summary span{padding:2px 6px;border-radius:999px;background:#edf3f5;color:#426170;font-size:10px}'+
     '.page-flow{width:100%}.category{margin-top:6px}.category h2{display:flex;align-items:center;justify-content:space-between;margin:0;padding:4px 7px;border-left:5px solid var(--cat);background:var(--cat-bg);color:#294858;font-size:15px;font-weight:650;line-height:1.2;break-after:avoid}'+
     '.category h2 small{font-size:10px;font-weight:500}.category.bath_towel{--cat:#4b83a6;--cat-bg:#eaf3f8}.category.towel{--cat:#4f8468;--cat-bg:#edf6f0}'+
-    '.category.face_towel{--cat:#c08338;--cat-bg:#fbf3e8}.category.kids_towel{--cat:#826aa0;--cat-bg:#f2edf7}.category.other{--cat:#7b858b;--cat-bg:#f1f3f4}'+
+    '.category.face_towel{--cat:#c08338;--cat-bg:#fbf3e8}.category.kids_towel{--cat:#826aa0;--cat-bg:#f2edf7}.category.hand_towel{--cat:#b66f63;--cat-bg:#faefec}.category.other{--cat:#7b858b;--cat-bg:#f1f3f4}'+
     'table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #cbd7dc;padding:3.5px 6px;vertical-align:middle}'+
     'th{background:#f7f9fa;color:#657a84;font-size:10px;font-weight:500;text-align:left;line-height:1.15}td{font-size:var(--item-font);line-height:1.25}'+
     '.c-tick{width:13mm}.c-no{width:8mm}.c-qty{width:39mm}.c-source{width:28mm}.tick,.no{text-align:center}.tick i{display:inline-block;width:15px;height:15px;border:1.5px solid #607986;border-radius:3px}'+
@@ -15545,6 +15546,7 @@ document.addEventListener('DOMContentLoaded',build);
 <!-- v61：修正 AI 揀貨單預覽頁的程式結束標記，讓 Chrome「開始列印」可正常啟動。 -->
 <!-- v62：AI 揀貨單依 A4 實際高度自動分頁、續頁保留店點日期並顯示「下一頁」，同時壓縮上下間距。 -->
 <!-- v63：同時辨識「種類標題＋下方商品」及「商品同一行含種類關鍵字」兩種補貨格式。 -->
+<!-- v64：新增「擦手巾」第六類；標題承接與商品同行關鍵字皆可辨識。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
