@@ -15228,7 +15228,240 @@ function pickingKeywordCategory(value){var text=String(value||'').normalize('NFK
 function pickingHeader(text,index){if(!text||pickingHasQuantity(text)||pickingKeywordCategory(text)!=='other')return false;var compact=String(text).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),order=/(補貨|追加|追單|追貨|加單|加訂|補單)/i.test(text),date=/(?:^|\D)\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?(?:\D|$)/u.test(text);if(index===0&&(order||date)&&compact.length<=80)return true;if(/^(?:補貨|追加|補貨追加|追加補貨|追單|加單|補單)+$/u.test(compact))return true;if(/^(?:已|己)?(?:完成)?上傳(?:完成|成功|好了)?$/u.test(compact))return true;return false}
 function pickingLocalItems(row){var items=[];String(row.contentText||'').split(/\n/).forEach(function(raw,index){var text=pickingCleanLine(raw);if(!text||pickingHeader(text,index))return;items.push({lineIndex:index,text:text,quantityText:pickingQuantity(text),category:pickingKeywordCategory(text),source:'rules'})});return items}
 function mergePickingResult(rows,remote,errorText){var remoteMap=new Map();(remote&&Array.isArray(remote.messages)?remote.messages:[]).forEach(function(message){var lineMap=new Map();(Array.isArray(message.items)?message.items:[]).forEach(function(item){if(pickingCategoryOrder.includes(String(item.category)))lineMap.set(Number(item.lineIndex),{category:String(item.category),source:String(item.source||'ai')})});remoteMap.set(String(message.id||''),lineMap)});var messages=rows.map(function(row){var lineMap=remoteMap.get(String(row.id))||new Map(),items=pickingLocalItems(row).map(function(item){var classified=lineMap.get(Number(item.lineIndex));if(classified){item.category=classified.category;item.source=classified.source}return item});return{id:String(row.id),items:items}}),allItems=messages.reduce(function(list,message){return list.concat(message.items)},[]);return{messages:messages,totalItemCount:allItems.length,aiAvailable:!!(remote&&remote.aiAvailable),aiClassifiedCount:allItems.filter(function(item){return item.source==='ai'}).length,fallbackCount:allItems.filter(function(item){return item.source!=='ai'}).length,truncatedForAI:!!(remote&&remote.truncatedForAI),errorText:String(errorText||''),apiBuild:String(remote&&remote.apiBuild||'')}}
-function printHtml(rows,ids,result){var group=selectedGroup(),messageMap=new Map((result.messages||[]).map(function(message){return[String(message.id),message.items||[]]})),sheetMap={};rows.slice().sort(function(a,b){return String(a.recognizedStoreName||'').localeCompare(String(b.recognizedStoreName||''),'zh-Hant')||String(a.messageDate||'').localeCompare(String(b.messageDate||''))||String(a.messageTimestamp||'').localeCompare(String(b.messageTimestamp||''))}).forEach(function(row){var store=String(row.recognizedStoreName||'待辨識店點'),date=String(row.messageDate||'未知日期'),key=store+'|'+date;if(!sheetMap[key])sheetMap[key]={store:store,date:date,messages:0,items:[]};sheetMap[key].messages+=1;(messageMap.get(String(row.id))||[]).forEach(function(item){sheetMap[key].items.push({lineIndex:item.lineIndex,text:item.text,quantityText:item.quantityText,category:item.category,source:item.source,senderName:row.senderName||'LINE 使用者',messageTimestamp:row.messageTimestamp,orderKind:row.orderKind})})});var sheets=Object.keys(sheetMap).map(function(key){return sheetMap[key]}).sort(function(a,b){return a.store.localeCompare(b.store,'zh-Hant')||a.date.localeCompare(b.date)}),aiText=result.aiAvailable?(result.fallbackCount?'AI 分類＋規則補判':'AI 分類完成'):'規則備援（AI 未完成）';var body=sheets.map(function(sheet,sheetIndex){var counts={bath_towel:0,towel:0,face_towel:0,kids_towel:0,other:0};sheet.items.forEach(function(item){counts[item.category]=(counts[item.category]||0)+1});var summary=pickingCategoryOrder.map(function(category){return'<span>'+esc(pickingCategoryLabel(category))+' '+String(counts[category]||0)+'</span>'}).join('');var categories=pickingCategoryOrder.map(function(category){var items=sheet.items.filter(function(item){return item.category===category});if(!items.length)return'';var rowsHtml=items.map(function(item,index){return'<tr><td class="tick"><i></i></td><td class="no">'+String(index+1)+'</td><td class="item">'+esc(item.text)+'</td><td class="qty">'+(item.quantityText?esc(item.quantityText):'<span>—</span>')+'</td><td class="source">'+esc(item.senderName)+'<small>'+esc(kindLabel(item.orderKind))+'・'+esc(timeLabel(item.messageTimestamp))+'</small></td></tr>'}).join('');return'<section class="category '+category+'"><h2><span>'+esc(pickingCategoryLabel(category))+'</span><small>'+String(items.length)+' 筆</small></h2><table><colgroup><col class="c-tick"><col class="c-no"><col><col class="c-qty"><col class="c-source"></colgroup><thead><tr><th>完成</th><th>#</th><th>品項內容（原文完整保留）</th><th>數量／規格</th><th>回傳人員</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></section>'}).join('');if(!categories)categories='<div class="empty">這一筆沒有可整理的品項文字，請回原訊息確認。</div>';return'<main class="pick-sheet" data-sheet="'+String(sheetIndex+1)+'"><header class="sheet-head"><div><p>補貨／追加 AI 揀貨單</p><h1>'+esc(sheet.store)+'</h1></div><div class="date">'+esc(dateLabel(sheet.date))+'</div></header><div class="sheet-meta"><span>'+esc(group&&group.groupName||'LINE 群組')+'</span><span>'+String(sheet.messages)+' 筆訊息</span><span>'+String(sheet.items.length)+' 筆品項</span><span>'+esc(aiText)+'</span></div><div class="category-summary">'+summary+'</div>'+categories+'<footer>第 '+String(sheetIndex+1)+'／'+String(sheets.length)+' 張・列印時間 <span class="printed-at"></span></footer></main>'}).join('');var warning=result.errorText?'<div class="warning">AI 連線暫時未完成，本張已使用關鍵字備援分類；所有原始品項與數量仍完整保留。<small>'+esc(result.errorText)+'</small></div>':result.truncatedForAI?'<div class="warning">本次品項較多，超過 AI 批次上限的部分已用關鍵字補判；原始品項與數量完整保留。</div>':'';return'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>補貨追加 AI 揀貨單</title><style>@page{size:A4;margin:9mm}*{box-sizing:border-box}html{--item-font:15px}body{margin:0;background:#edf2f4;color:#173442;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif}.preview{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 18px;background:#294f63;color:#fff}.preview strong{margin-right:auto;font-size:15px}.preview label{font-size:13px}.preview select,.preview button{height:36px;border:0;border-radius:8px}.preview select{margin-left:5px;padding:0 7px}.preview button{padding:0 15px;background:#fff;color:#294f63;font-weight:700;cursor:pointer}.warning{max-width:192mm;margin:10px auto 0;padding:9px 12px;border:1px solid #dfc37f;border-radius:8px;background:#fff8df;color:#715c2c;font-size:12px}.warning small{display:block;margin-top:3px;color:#8d794d}.pick-sheet{width:210mm;min-height:297mm;margin:10px auto;padding:10mm;background:#fff;box-shadow:0 3px 18px rgba(25,55,68,.12)}.sheet-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding-bottom:8px;border-bottom:2px solid #294f63}.sheet-head p{margin:0 0 4px;color:#6d838e;font-size:11px;letter-spacing:.12em}.sheet-head h1{margin:0;font-size:25px;font-weight:650}.sheet-head .date{font-size:18px;color:#294f63}.sheet-meta,.category-summary{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}.sheet-meta span{padding-right:8px;border-right:1px solid #cdd9de;color:#6a7f89;font-size:11px}.sheet-meta span:last-child{border-right:0}.category-summary span{padding:4px 8px;border-radius:999px;background:#edf3f5;color:#426170;font-size:11px}.category{margin-top:10px}.category h2{display:flex;align-items:center;justify-content:space-between;margin:0;padding:6px 9px;border-left:5px solid var(--cat);background:var(--cat-bg);color:#294858;font-size:16px;font-weight:650;break-after:avoid}.category h2 small{font-size:11px;font-weight:500}.category.bath_towel{--cat:#4b83a6;--cat-bg:#eaf3f8}.category.towel{--cat:#4f8468;--cat-bg:#edf6f0}.category.face_towel{--cat:#c08338;--cat-bg:#fbf3e8}.category.kids_towel{--cat:#826aa0;--cat-bg:#f2edf7}.category.other{--cat:#7b858b;--cat-bg:#f1f3f4}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #cbd7dc;padding:6px 7px;vertical-align:middle}th{background:#f7f9fa;color:#657a84;font-size:10px;font-weight:500;text-align:left}td{font-size:var(--item-font)}.c-tick{width:13mm}.c-no{width:8mm}.c-qty{width:39mm}.c-source{width:28mm}.tick,.no{text-align:center}.tick i{display:inline-block;width:16px;height:16px;border:1.6px solid #607986;border-radius:3px}.no{color:#77909b;font-size:11px}.item{line-height:1.4;white-space:pre-wrap;word-break:break-word}.qty{color:#1f5268;font-weight:650;white-space:pre-wrap;word-break:break-word}.qty>span{color:#a2afb5;font-weight:400}.source{color:#496976;font-size:11px}.source small{display:block;margin-top:2px;color:#82959d;font-size:9px}.empty{margin-top:12px;padding:14px;border:1px dashed #bdcbd1;color:#758b95;text-align:center}footer{margin-top:10px;padding-top:5px;border-top:1px solid #dce5e8;color:#8a9ba3;font-size:9px;text-align:right}@media print{body{background:#fff}.preview,.warning{display:none}.pick-sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.pick-sheet+.pick-sheet{break-before:page}.category h2{print-color-adjust:exact;-webkit-print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid}footer{break-inside:avoid}}@media(max-width:800px){.preview{flex-wrap:wrap}.preview strong{width:100%}.pick-sheet{width:100%;min-height:0;margin:0;padding:14px}.c-qty{width:32mm}.c-source{width:24mm}}</style></head><body><div class="preview"><strong>AI 已依店點、日期及五大類整理</strong><label>品項字體<select onchange="document.documentElement.style.setProperty(\'--item-font\',this.value+\'px\')"><option value="14">14</option><option value="15" selected>15（預設）</option><option value="16">16</option><option value="18">18</option></select></label><button onclick="printAndMark()">開始列印</button></div>'+warning+body+'<script>var ids='+JSON.stringify(ids)+';document.querySelectorAll(".printed-at").forEach(function(node){node.textContent=new Date().toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false})});function printAndMark(){window.print();setTimeout(function(){if(window.opener&&window.opener.lgm38MarkPrinted)window.opener.lgm38MarkPrinted(ids)},500)}<\/script></body></html>'}
+function printHtml(rows,ids,result){
+  var group=selectedGroup();
+  var messageMap=new Map((result.messages||[]).map(function(message){return[String(message.id),message.items||[]]}));
+  var sheetMap={};
+  rows.slice().sort(function(a,b){
+    return String(a.recognizedStoreName||'').localeCompare(String(b.recognizedStoreName||''),'zh-Hant')||
+      String(a.messageDate||'').localeCompare(String(b.messageDate||''))||
+      String(a.messageTimestamp||'').localeCompare(String(b.messageTimestamp||''));
+  }).forEach(function(row){
+    var store=String(row.recognizedStoreName||'待辨識店點');
+    var date=String(row.messageDate||'未知日期');
+    var key=store+'|'+date;
+    if(!sheetMap[key])sheetMap[key]={store:store,date:date,messages:0,items:[]};
+    sheetMap[key].messages+=1;
+    (messageMap.get(String(row.id))||[]).forEach(function(item){
+      sheetMap[key].items.push({
+        lineIndex:item.lineIndex,
+        text:item.text,
+        quantityText:item.quantityText,
+        category:item.category,
+        source:item.source,
+        senderName:row.senderName||'LINE 使用者',
+        messageTimestamp:row.messageTimestamp,
+        orderKind:row.orderKind
+      });
+    });
+  });
+  var sheets=Object.keys(sheetMap).map(function(key){return sheetMap[key]}).sort(function(a,b){
+    return a.store.localeCompare(b.store,'zh-Hant')||a.date.localeCompare(b.date);
+  });
+  var aiText=result.aiAvailable?(result.fallbackCount?'AI 分類＋規則補判':'AI 分類完成'):'規則備援（AI 未完成）';
+  var body=sheets.map(function(sheet,sheetIndex){
+    var counts={bath_towel:0,towel:0,face_towel:0,kids_towel:0,other:0};
+    sheet.items.forEach(function(item){counts[item.category]=(counts[item.category]||0)+1});
+    var summary=pickingCategoryOrder.map(function(category){
+      return'<span>'+esc(pickingCategoryLabel(category))+' '+String(counts[category]||0)+'</span>';
+    }).join('');
+    var categories=pickingCategoryOrder.map(function(category){
+      var items=sheet.items.filter(function(item){return item.category===category});
+      if(!items.length)return'';
+      var rowsHtml=items.map(function(item,index){
+        return'<tr><td class="tick"><i></i></td><td class="no">'+String(index+1)+'</td><td class="item">'+esc(item.text)+'</td><td class="qty">'+
+          (item.quantityText?esc(item.quantityText):'<span>—</span>')+'</td><td class="source">'+esc(item.senderName)+
+          '<small>'+esc(kindLabel(item.orderKind))+'・'+esc(timeLabel(item.messageTimestamp))+'</small></td></tr>';
+      }).join('');
+      return'<section class="category '+category+'" data-category="'+esc(category)+'"><h2><span>'+esc(pickingCategoryLabel(category))+
+        '</span><small>'+String(items.length)+' 筆</small></h2><table><colgroup><col class="c-tick"><col class="c-no"><col><col class="c-qty"><col class="c-source"></colgroup>'+
+        '<thead><tr><th>完成</th><th>#</th><th>品項內容（原文完整保留）</th><th>數量／規格</th><th>回傳人員</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></section>';
+    }).join('');
+    if(!categories)categories='<div class="empty">這一筆沒有可整理的品項文字，請回原訊息確認。</div>';
+    return'<main class="pick-source-sheet" data-source-sheet="'+String(sheetIndex+1)+'">'+
+      '<header class="sheet-head"><div><p>補貨／追加 AI 揀貨單</p><h1>'+esc(sheet.store)+'</h1></div><div class="date">'+esc(dateLabel(sheet.date))+'</div></header>'+
+      '<div class="sheet-meta"><span>'+esc(group&&group.groupName||'LINE 群組')+'</span><span>'+String(sheet.messages)+' 筆訊息</span><span>'+
+      String(sheet.items.length)+' 筆品項</span><span>'+esc(aiText)+'</span></div><div class="category-summary">'+summary+'</div>'+categories+'</main>';
+  }).join('');
+  var warning=result.errorText?
+    '<div class="warning">AI 連線暫時未完成，本張已使用關鍵字備援分類；所有原始品項與數量仍完整保留。<small>'+esc(result.errorText)+'</small></div>':
+    result.truncatedForAI?'<div class="warning">本次品項較多，超過 AI 批次上限的部分已用關鍵字補判；原始品項與數量完整保留。</div>':'';
+  var css=
+    '@page{size:A4 portrait;margin:0}'+
+    '*{box-sizing:border-box}html{--item-font:15px}'+
+    'body{margin:0;background:#edf2f4;color:#173442;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif}'+
+    '.preview{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:9px 18px;background:#294f63;color:#fff}'+
+    '.preview strong{margin-right:auto;font-size:15px}.preview label{font-size:13px}.preview select,.preview button{height:36px;border:0;border-radius:8px}'+
+    '.preview select{margin-left:5px;padding:0 7px}.preview button{padding:0 15px;background:#fff;color:#294f63;font-weight:700;cursor:pointer}'+
+    '.warning{max-width:192mm;margin:8px auto 0;padding:8px 11px;border:1px solid #dfc37f;border-radius:8px;background:#fff8df;color:#715c2c;font-size:12px}'+
+    '.warning small{display:block;margin-top:3px;color:#8d794d}.source-sheets{display:none!important}.page-list{padding:0 0 22px}'+
+    '.pick-sheet{position:relative;width:210mm;height:297mm;min-height:297mm;margin:10px auto;padding:7mm 8mm 13mm;overflow:hidden;background:#fff;box-shadow:0 3px 18px rgba(25,55,68,.12)}'+
+    '.sheet-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:5px;border-bottom:2px solid #294f63}'+
+    '.sheet-head p{margin:0 0 2px;color:#6d838e;font-size:10px;letter-spacing:.1em}.sheet-head h1{margin:0;font-size:23px;font-weight:650;line-height:1.15}'+
+    '.sheet-head .date{font-size:17px;color:#294f63;white-space:nowrap}.sheet-head.continuation{align-items:center;padding-bottom:4px}'+
+    '.sheet-head.continuation p{letter-spacing:.06em}.sheet-head.continuation h1{font-size:20px}.sheet-head.continuation .date{font-size:15px}'+
+    '.sheet-meta,.category-summary{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.sheet-meta span{padding-right:7px;border-right:1px solid #cdd9de;color:#6a7f89;font-size:10px}'+
+    '.sheet-meta span:last-child{border-right:0}.category-summary span{padding:2px 6px;border-radius:999px;background:#edf3f5;color:#426170;font-size:10px}'+
+    '.page-flow{width:100%}.category{margin-top:6px}.category h2{display:flex;align-items:center;justify-content:space-between;margin:0;padding:4px 7px;border-left:5px solid var(--cat);background:var(--cat-bg);color:#294858;font-size:15px;font-weight:650;line-height:1.2;break-after:avoid}'+
+    '.category h2 small{font-size:10px;font-weight:500}.category.bath_towel{--cat:#4b83a6;--cat-bg:#eaf3f8}.category.towel{--cat:#4f8468;--cat-bg:#edf6f0}'+
+    '.category.face_towel{--cat:#c08338;--cat-bg:#fbf3e8}.category.kids_towel{--cat:#826aa0;--cat-bg:#f2edf7}.category.other{--cat:#7b858b;--cat-bg:#f1f3f4}'+
+    'table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #cbd7dc;padding:3.5px 6px;vertical-align:middle}'+
+    'th{background:#f7f9fa;color:#657a84;font-size:10px;font-weight:500;text-align:left;line-height:1.15}td{font-size:var(--item-font);line-height:1.25}'+
+    '.c-tick{width:13mm}.c-no{width:8mm}.c-qty{width:39mm}.c-source{width:28mm}.tick,.no{text-align:center}.tick i{display:inline-block;width:15px;height:15px;border:1.5px solid #607986;border-radius:3px}'+
+    '.no{color:#77909b;font-size:11px}.item{white-space:pre-wrap;word-break:break-word}.qty{color:#1f5268;font-weight:650;white-space:pre-wrap;word-break:break-word}'+
+    '.qty>span{color:#a2afb5;font-weight:400}.source{color:#496976;font-size:11px}.source small{display:block;margin-top:1px;color:#82959d;font-size:9px;line-height:1.15}'+
+    '.empty{margin-top:8px;padding:12px;border:1px dashed #bdcbd1;color:#758b95;text-align:center}.next-page-hint{position:absolute;left:0;right:0;bottom:4.5mm;color:#294f63;font-size:12px;font-weight:700;text-align:center;letter-spacing:.08em}'+
+    '.next-page-hint[hidden]{display:none}footer{position:absolute;right:8mm;bottom:4.7mm;color:#8a9ba3;font-size:9px;text-align:right}'+
+    '@media print{body{background:#fff}.preview,.warning,.source-sheets{display:none!important}.page-list{padding:0}.pick-sheet{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;break-after:page;page-break-after:always}'+
+    '.pick-sheet:last-child{break-after:auto;page-break-after:auto}.category h2,.category-summary span{print-color-adjust:exact;-webkit-print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}}'+
+    '@media(max-width:800px){.preview{flex-wrap:wrap}.preview strong{width:100%}.page-list{overflow-x:auto}.pick-sheet{margin:0 auto 10px}.c-qty{width:32mm}.c-source{width:24mm}}';
+  var safeIds=JSON.stringify(ids).replace(/</g,'\\u003c');
+  var previewScript='var ids='+safeIds+';'+String.raw`
+var pickingPaginationBusy=false;
+var pickingMarkedPrinted=false;
+function pickingFits(page){
+  return page.scrollHeight<=page.clientHeight+1;
+}
+function pickingCreatePage(source,isFirst,root){
+  var page=document.createElement('main');
+  page.className='pick-sheet';
+  var header=source.querySelector('.sheet-head').cloneNode(true);
+  if(!isFirst){
+    header.classList.add('continuation');
+    var label=header.querySelector('p');
+    if(label)label.textContent='補貨／追加 AI 揀貨單・續頁';
+  }
+  page.appendChild(header);
+  if(isFirst){
+    var meta=source.querySelector('.sheet-meta');
+    var summary=source.querySelector('.category-summary');
+    if(meta)page.appendChild(meta.cloneNode(true));
+    if(summary)page.appendChild(summary.cloneNode(true));
+  }
+  var flow=document.createElement('div');
+  flow.className='page-flow';
+  page.appendChild(flow);
+  var next=document.createElement('div');
+  next.className='next-page-hint';
+  next.hidden=true;
+  next.textContent='下一頁 ↓';
+  page.appendChild(next);
+  var footer=document.createElement('footer');
+  footer.innerHTML='第 <span class="page-number"></span>／<span class="page-total"></span> 張・列印時間 <span class="printed-at"></span>';
+  page.appendChild(footer);
+  root.appendChild(page);
+  return{page:page,flow:flow};
+}
+function pickingCategoryShell(category){
+  var section=document.createElement('section');
+  section.className=category.className;
+  var categoryName=category.getAttribute('data-category');
+  if(categoryName)section.setAttribute('data-category',categoryName);
+  var heading=category.querySelector('h2');
+  if(heading)section.appendChild(heading.cloneNode(true));
+  var sourceTable=category.querySelector('table');
+  var table=sourceTable.cloneNode(false);
+  var colgroup=sourceTable.querySelector('colgroup');
+  var thead=sourceTable.querySelector('thead');
+  if(colgroup)table.appendChild(colgroup.cloneNode(true));
+  if(thead)table.appendChild(thead.cloneNode(true));
+  var tbody=document.createElement('tbody');
+  table.appendChild(tbody);
+  section.appendChild(table);
+  return{section:section,tbody:tbody};
+}
+function pickingAppendCategory(category,current,source,root){
+  var shell=pickingCategoryShell(category);
+  current.flow.appendChild(shell.section);
+  if(!pickingFits(current.page)&&current.flow.children.length>1){
+    current.flow.removeChild(shell.section);
+    current=pickingCreatePage(source,false,root);
+    shell=pickingCategoryShell(category);
+    current.flow.appendChild(shell.section);
+  }
+  var rows=Array.prototype.slice.call(category.querySelectorAll('tbody>tr'));
+  rows.forEach(function(row){
+    var rowClone=row.cloneNode(true);
+    shell.tbody.appendChild(rowClone);
+    if(!pickingFits(current.page)){
+      shell.tbody.removeChild(rowClone);
+      if(!shell.tbody.children.length&&shell.section.parentNode){
+        shell.section.parentNode.removeChild(shell.section);
+      }
+      current=pickingCreatePage(source,false,root);
+      shell=pickingCategoryShell(category);
+      current.flow.appendChild(shell.section);
+      shell.tbody.appendChild(rowClone);
+    }
+  });
+  return current;
+}
+function pickingFinalizePages(root){
+  var pages=Array.prototype.slice.call(root.querySelectorAll('.pick-sheet'));
+  var stamp=new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+  pages.forEach(function(page,index){
+    var number=page.querySelector('.page-number');
+    var total=page.querySelector('.page-total');
+    var printed=page.querySelector('.printed-at');
+    var next=page.querySelector('.next-page-hint');
+    if(number)number.textContent=String(index+1);
+    if(total)total.textContent=String(pages.length);
+    if(printed)printed.textContent=stamp;
+    if(next)next.hidden=index===pages.length-1;
+  });
+}
+function pickingPaginate(){
+  if(pickingPaginationBusy)return;
+  pickingPaginationBusy=true;
+  try{
+    var root=document.getElementById('pickingPages');
+    var sources=Array.prototype.slice.call(document.querySelectorAll('#pickingSources>.pick-source-sheet'));
+    root.innerHTML='';
+    sources.forEach(function(source){
+      var current=pickingCreatePage(source,true,root);
+      var categories=Array.prototype.slice.call(source.querySelectorAll('.category'));
+      if(categories.length){
+        categories.forEach(function(category){
+          current=pickingAppendCategory(category,current,source,root);
+        });
+      }else{
+        var empty=source.querySelector('.empty');
+        if(empty)current.flow.appendChild(empty.cloneNode(true));
+      }
+    });
+    pickingFinalizePages(root);
+  }finally{
+    pickingPaginationBusy=false;
+  }
+}
+function pickingSetFont(value){
+  document.documentElement.style.setProperty('--item-font',String(value)+'px');
+  requestAnimationFrame(pickingPaginate);
+}
+function printAndMark(){
+  pickingPaginate();
+  window.focus();
+  window.print();
+  if(!pickingMarkedPrinted){
+    pickingMarkedPrinted=true;
+    setTimeout(function(){
+      if(window.opener&&window.opener.lgm38MarkPrinted)window.opener.lgm38MarkPrinted(ids);
+    },500);
+  }
+}
+pickingPaginate();
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(function(){pickingPaginate()});
+}
+window.addEventListener('beforeprint',pickingPaginate);
+`;
+  return'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>補貨追加 AI 揀貨單</title><style>'+css+'</style></head><body>'+
+    '<div class="preview"><strong>AI 已依店點、日期及五大類整理・A4 分頁預覽</strong><label>品項字體<select onchange="pickingSetFont(this.value)">'+
+    '<option value="14">14</option><option value="15" selected>15（預設）</option><option value="16">16</option><option value="18">18</option></select></label>'+
+    '<button type="button" onclick="printAndMark()">開始列印</button></div>'+warning+
+    '<div id="pickingSources" class="source-sheets" aria-hidden="true">'+body+'</div><div id="pickingPages" class="page-list"></div>'+
+    '<script>'+previewScript+'<\/script></body></html>';
+}
 async function printSelected(){var ids=[...state.selected],rows=state.messages.filter(function(item){return ids.includes(String(item.id))&&selectable(item)});if(!rows.length){alert('請先勾選要列印的訊息。');return}var popup=window.open('','_blank','width=1180,height=860');if(!popup){alert('請允許網站開啟彈出視窗。');return}popup.document.open();popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>AI 正在整理揀貨單</title><style>body{display:grid;place-items:center;min-height:90vh;margin:0;background:#f3f7f8;color:#294f63;font-family:"Microsoft JhengHei",sans-serif}.loading{text-align:center}.spinner{width:42px;height:42px;margin:0 auto 14px;border:4px solid #d9e5e9;border-top-color:#294f63;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}p{color:#708791}</style></head><body><div class="loading"><div class="spinner"></div><h2>AI 正在分辨產品</h2><p>品名與後面的數量會完整保留，請稍候。</p></div></body></html>');popup.document.close();var button=document.querySelector('.lg38-action.print');if(button)button.disabled=true;setStatus('AI 正在將品項整理成浴巾、毛巾、方巾、兒童毛巾／童巾、其他…','working');try{var remote=await starredApi('line_group_messages_product_classify',{messageIds:ids}),result=mergePickingResult(rows,remote,''),statusText=result.aiAvailable?'AI 揀貨單已整理完成；共 '+String(result.totalItemCount)+' 筆品項，原始數量皆保留。':'揀貨單已整理；目前 AI 未啟用，已使用關鍵字備援且保留全部數量。';if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus(statusText,result.aiAvailable?'success':'error')}catch(error){var result=mergePickingResult(rows,null,String(error&&error.message||error));if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus('AI 分類暫時失敗，已開啟備援揀貨單；原始品項與數量仍完整保留。','error')}finally{if(button)button.disabled=false}}
 async function markPrinted(ids){try{await starredApi('line_group_messages_mark_printed',{messageIds:ids});state.messages.forEach(function(item){if(ids.includes(String(item.id))&&item.processingStatus!=='konde_uploaded')item.processingStatus='printed'});state.selected.clear();render();setStatus('列印已完成，已自動移到「已印單」。','success');if(typeof window.loadAdminAttentionSummaryV35==='function')window.loadAdminAttentionSummaryV35()}catch(error){setStatus('列印完成，但狀態更新失敗：'+String(error&&error.message||error),'error')}}
 async function setActive(){var group=selectedGroup();if(!group||group.captureEnabled)return;if(!confirm('確定改為只保存「'+String(group.groupName||'LINE 群組')+'」的新訊息？'))return;try{await starredApi('line_group_set_active',{groupId:group.groupId});await load()}catch(error){setStatus('設定失敗：'+String(error&&error.message||error),'error')}}
@@ -15242,6 +15475,7 @@ document.addEventListener('DOMContentLoaded',build);
 })();
 </script>
 <!-- v61：修正 AI 揀貨單預覽頁的程式結束標記，讓 Chrome「開始列印」可正常啟動。 -->
+<!-- v62：AI 揀貨單依 A4 實際高度自動分頁、續頁保留店點日期並顯示「下一頁」，同時壓縮上下間距。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
