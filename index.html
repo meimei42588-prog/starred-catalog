@@ -16740,5 +16740,151 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.addEventListener('resize',applyMobileNavFinal);
 })();
 </script>
+
+
+<!-- FINAL MOBILE NAV COMPACT AUTO-WIDTH FIX 20260904 -->
+<style id="mobile-nav-auto-width-final-20260904">
+@media (max-width:760px){
+  .topbar .topbar-inner{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    padding:9px 10px 10px!important;
+  }
+  .topbar .topbar-right{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    gap:7px!important;
+    position:relative!important;
+  }
+  .topbar .nav{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:6px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    padding:0!important;
+    margin:0!important;
+    overflow:visible!important;
+  }
+  .topbar .nav > button:not(.hidden-by-role){
+    position:static!important;
+    flex:0 0 auto!important;
+    width:auto!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:7px 11px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:10px!important;
+    font-size:13px!important;
+    font-weight:700!important;
+    line-height:1!important;
+    letter-spacing:0!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  .topbar .nav > button.hidden-by-role{display:none!important}
+  .topbar .notification-wrap,
+  .topbar .topbar-session,
+  .topbar .topbar-session.show{
+    position:static!important;
+    width:auto!important;
+    min-width:0!important;
+    height:auto!important;
+    margin:0!important;
+    align-self:auto!important;
+  }
+  .topbar .topbar-right{
+    padding-bottom:0!important;
+  }
+  .topbar .notification-wrap{
+    position:absolute!important;
+    right:48px!important;
+    bottom:0!important;
+  }
+  .topbar .topbar-session,
+  .topbar .topbar-session.show{
+    position:absolute!important;
+    right:0!important;
+    bottom:0!important;
+  }
+  .topbar .notification-btn,
+  .topbar .logout-top-btn{
+    width:40px!important;
+    min-width:40px!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0!important;
+    border-radius:10px!important;
+  }
+  .topbar .logout-top-text{display:none!important}
+  /* 最後一排右側保留通知與登出的位置，避免壓住導覽文字 */
+  .topbar .nav{padding-right:96px!important}
+}
+@media (max-width:390px){
+  .topbar .nav{gap:5px!important;padding-right:90px!important}
+  .topbar .nav > button:not(.hidden-by-role){
+    height:36px!important;min-height:36px!important;
+    padding:6px 9px!important;font-size:12.5px!important;border-radius:9px!important
+  }
+  .topbar .notification-btn,.topbar .logout-top-btn{width:38px!important;min-width:38px!important;height:36px!important;min-height:36px!important}
+  .topbar .notification-wrap{right:44px!important}
+}
+</style>
+<script id="mobile-nav-auto-width-final-script-20260904">
+(function(){
+  function imp(el,p,v){if(el)el.style.setProperty(p,v,'important')}
+  function applyCompactMobileNav(){
+    if(!window.matchMedia||!window.matchMedia('(max-width:760px)').matches)return;
+    var inner=document.querySelector('.topbar .topbar-inner');
+    var right=document.querySelector('.topbar .topbar-right');
+    var nav=document.querySelector('.topbar .nav');
+    imp(inner,'display','block');imp(inner,'width','100%');imp(inner,'max-width','100%');
+    if(right){
+      imp(right,'display','flex');imp(right,'flex-direction','column');imp(right,'align-items','stretch');
+      imp(right,'width','100%');imp(right,'max-width','100%');imp(right,'gap','7px');imp(right,'position','relative');imp(right,'padding-bottom','0');
+    }
+    if(nav){
+      imp(nav,'display','flex');imp(nav,'flex-direction','row');imp(nav,'flex-wrap','wrap');
+      imp(nav,'align-items','center');imp(nav,'justify-content','flex-start');imp(nav,'gap','6px');
+      imp(nav,'width','100%');imp(nav,'max-width','100%');imp(nav,'padding','0 96px 0 0');imp(nav,'overflow','visible');
+      Array.prototype.forEach.call(nav.children,function(btn){
+        if(!btn||btn.tagName!=='BUTTON')return;
+        if(btn.classList.contains('hidden-by-role')){imp(btn,'display','none');return}
+        imp(btn,'position','static');imp(btn,'grid-column','auto');imp(btn,'grid-row','auto');
+        imp(btn,'flex','0 0 auto');imp(btn,'width','auto');imp(btn,'max-width','100%');imp(btn,'min-width','0');
+        imp(btn,'height','38px');imp(btn,'min-height','38px');imp(btn,'margin','0');imp(btn,'padding','7px 11px');
+        imp(btn,'display','inline-flex');imp(btn,'align-items','center');imp(btn,'justify-content','center');
+        imp(btn,'font-size','13px');imp(btn,'font-weight','700');imp(btn,'line-height','1');
+        imp(btn,'white-space','nowrap');imp(btn,'overflow','visible');imp(btn,'text-overflow','clip');
+      });
+    }
+    var notify=document.querySelector('.topbar .notification-wrap');
+    var session=document.querySelector('.topbar .topbar-session');
+    if(notify){imp(notify,'position','absolute');imp(notify,'right','48px');imp(notify,'bottom','0');imp(notify,'top','auto');}
+    if(session){imp(session,'position','absolute');imp(session,'right','0');imp(session,'bottom','0');imp(session,'top','auto');}
+  }
+  function schedule(){applyCompactMobileNav();[80,280,1050,2200].forEach(function(ms){setTimeout(applyCompactMobileNav,ms)})}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule);else schedule();
+  window.addEventListener('resize',applyCompactMobileNav);
+  window.addEventListener('pageshow',schedule);
+})();
+</script>
+
 </body>
 </html>
