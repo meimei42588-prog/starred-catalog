@@ -6810,7 +6810,192 @@ async function exportOrdersExcel(event){
   showOrderAction('瀏覽器阻擋報表','請允許 catalog.hshometw.com 的彈出式視窗後，再按一次「匯出 Excel」。');
   return;
  }
- reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p></body></html>');
+ reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p>
+
+<!-- FINAL MOBILE NAV FLOW-PACK FIX 20260904 -->
+<style id="mobile-nav-flow-pack-final-20260904">
+@media (max-width:760px){
+  .topbar .topbar-inner{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    padding:9px 10px 10px!important;
+  }
+  .topbar .topbar-right{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    position:relative!important;
+    padding:0!important;
+    margin:0!important;
+  }
+  .topbar .nav{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    align-content:flex-start!important;
+    justify-content:flex-start!important;
+    column-gap:6px!important;
+    row-gap:6px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    padding:0!important;
+    margin:0!important;
+    overflow:visible!important;
+  }
+  .topbar .nav > button:not(.hidden-by-role){
+    position:static!important;
+    flex:0 0 auto!important;
+    width:auto!important;
+    max-width:100%!important;
+    min-width:max-content!important;
+    height:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:7px 11px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:10px!important;
+    font-size:13px!important;
+    font-weight:700!important;
+    line-height:1!important;
+    letter-spacing:0!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    word-break:keep-all!important;
+  }
+  .topbar .nav > button.hidden-by-role{display:none!important}
+
+  /* 通知與登出也直接排進同一個流動列，避免右側永遠預留一大塊空白 */
+  .topbar .nav > .notification-wrap,
+  .topbar .nav > .topbar-session,
+  .topbar .nav > .topbar-session.show{
+    position:static!important;
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:0!important;
+    height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    align-self:auto!important;
+  }
+  .topbar .nav > .topbar-session:not(.show){display:none!important}
+  .topbar .notification-btn,
+  .topbar .logout-top-btn{
+    width:40px!important;
+    min-width:40px!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0!important;
+    margin:0!important;
+    border-radius:10px!important;
+  }
+  .topbar .logout-top-text{display:none!important}
+
+  /* 通知面板獨立浮在畫面上，不受按鈕流動位置影響 */
+  .topbar .notification-panel{
+    position:fixed!important;
+    top:74px!important;
+    left:10px!important;
+    right:10px!important;
+    width:auto!important;
+    max-width:none!important;
+    z-index:99999!important;
+  }
+  .topbar .session-tooltip{
+    position:fixed!important;
+    top:74px!important;
+    right:10px!important;
+    max-width:calc(100vw - 20px)!important;
+  }
+}
+@media (max-width:390px){
+  .topbar .nav{column-gap:5px!important;row-gap:5px!important}
+  .topbar .nav > button:not(.hidden-by-role){
+    height:36px!important;
+    min-height:36px!important;
+    padding:6px 9px!important;
+    font-size:12.5px!important;
+    border-radius:9px!important;
+  }
+  .topbar .nav > .notification-wrap,
+  .topbar .nav > .topbar-session,
+  .topbar .nav > .topbar-session.show{height:36px!important}
+  .topbar .notification-btn,
+  .topbar .logout-top-btn{
+    width:38px!important;
+    min-width:38px!important;
+    height:36px!important;
+    min-height:36px!important;
+  }
+}
+</style>
+<script id="mobile-nav-flow-pack-final-script-20260904">
+(function(){
+  function imp(el,p,v){ if(el) el.style.setProperty(p,v,'important'); }
+  function navParts(){
+    return {
+      right:document.querySelector('.topbar .topbar-right'),
+      nav:document.querySelector('.topbar .nav'),
+      notify:document.querySelector('.topbar .notification-wrap'),
+      session:document.querySelector('.topbar .topbar-session')
+    };
+  }
+  function applyFlowPack(){
+    var p=navParts();
+    if(!p.right||!p.nav)return;
+    var mobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
+    if(mobile){
+      /* 把工具按鈕放到導覽最後面，讓每一列都能把剩餘空間用掉 */
+      if(p.notify&&p.notify.parentNode!==p.nav)p.nav.appendChild(p.notify);
+      if(p.session&&p.session.parentNode!==p.nav)p.nav.appendChild(p.session);
+      /* 動態新增的休假／員工守則可能較晚出現；每次重排都確保工具永遠在最後 */
+      if(p.notify&&p.notify.parentNode===p.nav)p.nav.appendChild(p.notify);
+      if(p.session&&p.session.parentNode===p.nav)p.nav.appendChild(p.session);
+      imp(p.nav,'display','flex');
+      imp(p.nav,'flex-direction','row');
+      imp(p.nav,'flex-wrap','wrap');
+      imp(p.nav,'justify-content','flex-start');
+      imp(p.nav,'align-items','center');
+      imp(p.nav,'width','100%');
+      imp(p.nav,'max-width','100%');
+      imp(p.nav,'padding','0');
+      imp(p.nav,'overflow','visible');
+      Array.prototype.forEach.call(p.nav.children,function(item){
+        if(!item)return;
+        if(item.tagName==='BUTTON'){
+          if(item.classList.contains('hidden-by-role')){imp(item,'display','none');return;}
+          imp(item,'position','static');imp(item,'flex','0 0 auto');imp(item,'width','auto');imp(item,'min-width','max-content');
+          imp(item,'height','38px');imp(item,'min-height','38px');imp(item,'margin','0');imp(item,'padding','7px 11px');
+          imp(item,'display','inline-flex');imp(item,'align-items','center');imp(item,'justify-content','center');
+          imp(item,'white-space','nowrap');imp(item,'overflow','visible');
+        }
+      });
+      if(p.notify){imp(p.notify,'position','static');imp(p.notify,'height','38px');imp(p.notify,'margin','0');}
+      if(p.session){imp(p.session,'position','static');imp(p.session,'height','38px');imp(p.session,'margin','0');}
+    }else{
+      /* 回到電腦版時恢復原本 DOM 結構 */
+      if(p.notify&&p.notify.parentNode===p.nav)p.right.appendChild(p.notify);
+      if(p.session&&p.session.parentNode===p.nav)p.right.appendChild(p.session);
+    }
+  }
+  function schedule(){ applyFlowPack(); [60,220,700,1500,2800].forEach(function(ms){setTimeout(applyFlowPack,ms);}); }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule);else schedule();
+  window.addEventListener('pageshow',schedule);
+  window.addEventListener('resize',applyFlowPack);
+  /* 權限／登入狀態變化後也重新填滿 */
+  var observer=new MutationObserver(function(){ if(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)setTimeout(applyFlowPack,0); });
+  document.addEventListener('DOMContentLoaded',function(){ var n=document.querySelector('.topbar .nav'); if(n)observer.observe(n,{childList:true,subtree:false,attributes:true,attributeFilter:['class','style']}); });
+})();
+</script>
+
+</body></html>');
  reportWindow.document.close();
 
  const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
