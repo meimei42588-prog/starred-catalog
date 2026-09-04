@@ -15255,6 +15255,8 @@ function pickingCleanLine(value){return String(value||'').replace(/\r/g,'').trim
 function pickingHasQuantity(value){var text=String(value||'');return /[×xX＊*]\s*\d+(?:\.\d+)?/u.test(text)||/\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)/u.test(text)||/各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u.test(text)||/每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各/u.test(text)||/(?:一|二|兩|三|四|五|六|七|八|九|十)\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)/u.test(text)}
 function pickingQuantity(value){var text=String(value||'').trim(),slash=Math.max(text.lastIndexOf('/'),text.lastIndexOf('／'));if(slash>=0){var suffix=text.slice(slash+1).trim();if(suffix&&pickingHasQuantity(suffix))return suffix.slice(0,300)}var match=text.match(/([^，,；;\n]{0,48}(?:[×xX＊*]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)|各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)|每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各[^，,；;\n]{0,10}))\s*$/u);return match?String(match[1]||'').trim().slice(0,300):''}
 function pickingKeywordCategory(value){var text=String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,'');if(/(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|kidstowel|childrentowel)/i.test(text))return'kids_towel';if(/(?:浴巾|bathtowel)/i.test(text))return'bath_towel';if(/(?:方巾|小方巾|手帕巾|washcloth|facetowel)/i.test(text))return'face_towel';if(/(?:擦手巾|擦手毛巾|handtowel)/i.test(text))return'hand_towel';if(/(?:乾髮帽|干发帽|乾髮巾|干发巾|包髮帽|包发帽|吸水帽|haircap|hairturb(?:an)?)/i.test(text))return'hair_cap';if(/(?:毛巾|towel)/i.test(text))return'towel';return'other'}
+function pickingExplicitOtherCategory(value){return /(?:浴袍|浴衣|睡衣|床包|床罩|涼被|棉被|被子|毯子|枕頭|枕套|抱枕|地墊|洗衣袋|塑膠袋|提袋|購物袋|包包|米飛包|衛生紙|雜貨|雜項)/i.test(String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,''))}
+function pickingDirectCategory(value){var category=pickingKeywordCategory(value);return category!=='other'?category:pickingExplicitOtherCategory(value)?'other':''}
 function pickingHeader(text,index){if(!text||pickingHasQuantity(text)||pickingKeywordCategory(text)!=='other')return false;var compact=String(text).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),order=/(補貨|追加|追單|追貨|加單|加訂|補單)/i.test(text),date=/(?:^|\D)\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?(?:\D|$)/u.test(text);if(index===0&&(order||date)&&compact.length<=80)return true;if(/^(?:補貨|追加|補貨追加|追加補貨|追單|加單|補單)+$/u.test(compact))return true;if(/^(?:已|己)?(?:完成)?上傳(?:完成|成功|好了)?$/u.test(compact))return true;return false}
 function pickingSectionCategory(value){
   var original=String(value||'').normalize('NFKC').trim();
@@ -15271,28 +15273,24 @@ function pickingSectionCategory(value){
 }
 function pickingGenericSectionHeading(value){var original=String(value||'').normalize('NFKC').trim(),text=original.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');return Boolean(original&&!pickingHasQuantity(original)&&/[-–—:：]\s*$/u.test(original)&&text.length>=1&&text.length<=24)}
 function pickingLocalItems(row){
-  var items=[];
-  var activeCategory='';
-  String(row.contentText||'').split(/\n/).forEach(function(raw,index){
-    var text=pickingCleanLine(raw);
-    if(!text)return;
-    var sectionCategory=pickingSectionCategory(text);
-    if(sectionCategory){
-      activeCategory=sectionCategory;
-      return;
+  var items=[],activeCategory='',lines=String(row.contentText||'').split(/\n/).map(function(raw,index){return{text:pickingCleanLine(raw),lineIndex:index}}).filter(function(item){return Boolean(item.text)});
+  for(var cursor=0;cursor<lines.length;cursor++){
+    var current=lines[cursor],text=current.text,sectionCategory=pickingSectionCategory(text);
+    if(sectionCategory){activeCategory=sectionCategory;continue}
+    if(pickingHeader(text,current.lineIndex))continue;
+    var next=lines[cursor+1],mergeNext=Boolean(!pickingHasQuantity(text)&&next&&pickingHasQuantity(next.text)&&!pickingSectionCategory(next.text)&&!pickingHeader(next.text,next.lineIndex));
+    if(mergeNext){
+      var combined=text+'\n'+next.text,directCombined=pickingDirectCategory(combined),inheritedCombined=!directCombined&&Boolean(activeCategory);
+      if(directCombined)activeCategory=directCombined;
+      items.push({lineIndex:current.lineIndex,text:combined,quantityText:pickingQuantity(next.text),category:directCombined||activeCategory||'other',source:inheritedCombined?'section_heading':directCombined==='hand_towel'?'direct_hand_towel':directCombined==='hair_cap'?'direct_hair_cap':directCombined==='other'?'direct_other':'rules'});
+      cursor++;
+      continue;
     }
     if(pickingGenericSectionHeading(text))activeCategory='';
-    if(pickingHeader(text,index))return;
-    var directCategory=pickingKeywordCategory(text);
-    var inherited=directCategory==='other'&&Boolean(activeCategory);
-    items.push({
-      lineIndex:index,
-      text:text,
-      quantityText:pickingQuantity(text),
-      category:inherited?activeCategory:directCategory,
-      source:inherited?'section_heading':directCategory==='hand_towel'?'direct_hand_towel':directCategory==='hair_cap'?'direct_hair_cap':'rules'
-    });
-  });
+    var directCategory=pickingDirectCategory(text),inherited=!directCategory&&Boolean(activeCategory);
+    if(directCategory)activeCategory=directCategory;
+    items.push({lineIndex:current.lineIndex,text:text,quantityText:pickingQuantity(text),category:directCategory||activeCategory||'other',source:inherited?'section_heading':directCategory==='hand_towel'?'direct_hand_towel':directCategory==='hair_cap'?'direct_hair_cap':directCategory==='other'?'direct_other':'rules'});
+  }
   return items;
 }
 function mergePickingResult(rows,remote,errorText){
@@ -15310,7 +15308,7 @@ function mergePickingResult(rows,remote,errorText){
     var lineMap=remoteMap.get(String(row.id))||new Map();
     var items=pickingLocalItems(row).map(function(item){
       var classified=lineMap.get(Number(item.lineIndex));
-      if(classified&&item.source!=='section_heading'&&item.source!=='direct_hand_towel'&&item.source!=='direct_hair_cap'){
+      if(classified&&item.source!=='section_heading'&&item.source!=='direct_hand_towel'&&item.source!=='direct_hair_cap'&&item.source!=='direct_other'){
         item.category=classified.category;
         item.source=classified.source;
       }
@@ -15586,6 +15584,7 @@ document.addEventListener('DOMContentLoaded',function(){build();enhanceWorkflowU
 <!-- v67：刪除改用既有單筆操作分批執行，相容尚未更新完成的舊版 line-api。 -->
 <!-- v68：日期嚴格依訊息日顯示；待辨識可全選；9/3 前資料轉已印單；已印單／康德滿 6 天轉其他。 -->
 <!-- v69：未處理頁自動預設目前待辦的最早～最新日期，排除 9/2 以前已完成資料。 -->
+<!-- v70：支援「分類標題→品名：→下一行數量」寫法，合併品名與數量並承接分類。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
