@@ -16553,5 +16553,192 @@ function init(){lvEnsureUI();lvCanShowAdminButton();lvDecorateLineUsers();lvSetu
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(init,120)});else setTimeout(init,120);
 })();
 </script>
+
+<style id="mobile-topbar-alignment-fix-v2">
+/* 手機版前台導覽修正：避免舊版 8 欄 grid 與新版 nav grid 互相擠壓。 */
+@media(max-width:760px){
+  body .topbar .topbar-inner{
+    display:block!important;
+    width:100%!important;
+    padding:9px 10px 10px!important;
+  }
+  body .topbar .topbar-right{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 44px 44px!important;
+    grid-template-rows:auto auto!important;
+    gap:8px!important;
+    width:100%!important;
+    min-width:0!important;
+    align-items:center!important;
+  }
+  body .topbar .nav{
+    display:grid!important;
+    grid-column:1/-1!important;
+    grid-row:1!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:7px!important;
+    width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+  body .topbar .nav button,
+  body .topbar #adminNav,
+  body .topbar #homeNav,
+  body .topbar #orderNav,
+  body .topbar #salesNav,
+  body .topbar #expenseNav,
+  body .topbar #externalAccountNav,
+  body .topbar #leaveNav,
+  body .topbar #employeeRulesNav{
+    position:static!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    height:44px!important;
+    min-height:44px!important;
+    margin:0!important;
+    padding:7px 4px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:11px!important;
+    font-size:13px!important;
+    font-weight:600!important;
+    line-height:1.15!important;
+    letter-spacing:0!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body .topbar .notification-wrap{
+    position:relative!important;
+    top:auto!important;
+    right:auto!important;
+    grid-column:2!important;
+    grid-row:2!important;
+    width:44px!important;
+    height:42px!important;
+    justify-self:end!important;
+  }
+  body .topbar .notification-btn{
+    width:44px!important;
+    height:42px!important;
+    min-width:44px!important;
+    min-height:42px!important;
+    padding:0!important;
+    border-radius:11px!important;
+  }
+  body .topbar .topbar-session,
+  body .topbar .topbar-session.show{
+    position:relative!important;
+    grid-column:3!important;
+    grid-row:2!important;
+    width:44px!important;
+    min-width:44px!important;
+    height:42px!important;
+    justify-self:end!important;
+    align-self:center!important;
+  }
+  body .topbar .logout-top-btn{
+    width:44px!important;
+    min-width:44px!important;
+    height:42px!important;
+    min-height:42px!important;
+    padding:0!important;
+    border-radius:11px!important;
+  }
+  body .topbar .logout-top-text{display:none!important}
+}
+@media(max-width:390px){
+  body .topbar .nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  body .topbar .nav button{font-size:12.5px!important}
+}
+</style>
+
+
+<!-- FINAL MOBILE NAV FIX 20260904: force readable two-column navigation -->
+<style id="mobile-nav-readable-final-20260904">
+@media (max-width:760px){
+  html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+  .topbar{position:relative!important;width:100%!important;max-width:100%!important}
+  .topbar .topbar-inner{
+    display:block!important;width:100%!important;max-width:100%!important;
+    padding:10px 12px 12px!important;margin:0!important
+  }
+  .topbar .topbar-right{
+    display:flex!important;flex-direction:column!important;align-items:stretch!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;gap:9px!important;
+    position:relative!important
+  }
+  .topbar .nav{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-auto-flow:row!important;gap:8px!important;width:100%!important;max-width:100%!important;
+    min-width:0!important;padding:0!important;margin:0!important;overflow:visible!important;
+    flex-direction:initial!important
+  }
+  .topbar .nav > button,
+  .topbar #homeNav,.topbar #orderNav,.topbar #salesNav,.topbar #expenseNav,
+  .topbar #externalAccountNav,.topbar #leaveNav,.topbar #employeeRulesNav,.topbar #adminNav{
+    position:static!important;grid-column:auto!important;grid-row:auto!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    width:100%!important;max-width:none!important;min-width:0!important;
+    height:46px!important;min-height:46px!important;margin:0!important;padding:8px 10px!important;
+    border-radius:12px!important;font-size:14px!important;font-weight:700!important;
+    line-height:1.2!important;letter-spacing:0!important;text-align:center!important;
+    white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
+    word-break:keep-all!important
+  }
+  .topbar .notification-wrap,
+  .topbar .topbar-session{
+    position:static!important;grid-column:auto!important;grid-row:auto!important;
+    width:auto!important;height:auto!important;min-width:0!important;align-self:flex-end!important;
+    margin:0!important
+  }
+  .topbar .notification-wrap{position:absolute!important;right:54px!important;bottom:-1px!important}
+  .topbar .topbar-session{position:absolute!important;right:0!important;bottom:-1px!important}
+  .topbar .notification-btn,.topbar .logout-top-btn{
+    width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+    padding:0!important;border-radius:12px!important
+  }
+  .topbar .logout-top-text{display:none!important}
+  .topbar .nav{padding-bottom:54px!important}
+}
+@media (max-width:360px){
+  .topbar .nav > button{font-size:13px!important;padding-left:6px!important;padding-right:6px!important}
+}
+</style>
+<script id="mobile-nav-readable-final-script-20260904">
+(function(){
+  function setImp(el,p,v){if(el)el.style.setProperty(p,v,'important')}
+  function applyMobileNavFinal(){
+    if(!window.matchMedia || !window.matchMedia('(max-width:760px)').matches)return;
+    var inner=document.querySelector('.topbar .topbar-inner');
+    var right=document.querySelector('.topbar .topbar-right');
+    var nav=document.querySelector('.topbar .nav');
+    setImp(inner,'display','block');setImp(inner,'width','100%');setImp(inner,'max-width','100%');
+    if(right){setImp(right,'display','flex');setImp(right,'flex-direction','column');setImp(right,'width','100%');setImp(right,'max-width','100%');setImp(right,'gap','9px');setImp(right,'position','relative')}
+    if(nav){
+      setImp(nav,'display','grid');setImp(nav,'grid-template-columns','repeat(2,minmax(0,1fr))');setImp(nav,'grid-auto-flow','row');
+      setImp(nav,'gap','8px');setImp(nav,'width','100%');setImp(nav,'max-width','100%');setImp(nav,'padding','0 0 54px 0');setImp(nav,'overflow','visible');
+      Array.prototype.forEach.call(nav.children,function(btn){
+        if(!btn || btn.tagName!=='BUTTON')return;
+        setImp(btn,'position','static');setImp(btn,'grid-column','auto');setImp(btn,'grid-row','auto');setImp(btn,'width','100%');setImp(btn,'max-width','none');
+        setImp(btn,'min-width','0');setImp(btn,'height','46px');setImp(btn,'min-height','46px');setImp(btn,'margin','0');setImp(btn,'padding','8px 10px');
+        setImp(btn,'display','flex');setImp(btn,'align-items','center');setImp(btn,'justify-content','center');setImp(btn,'font-size','14px');setImp(btn,'font-weight','700');
+        setImp(btn,'line-height','1.2');setImp(btn,'white-space','nowrap');setImp(btn,'overflow','visible');setImp(btn,'text-overflow','clip');
+      });
+    }
+    var notify=document.querySelector('.topbar .notification-wrap');
+    var session=document.querySelector('.topbar .topbar-session');
+    if(notify){setImp(notify,'position','absolute');setImp(notify,'right','54px');setImp(notify,'bottom','-1px');setImp(notify,'top','auto');setImp(notify,'grid-column','auto');setImp(notify,'grid-row','auto')}
+    if(session){setImp(session,'position','absolute');setImp(session,'right','0');setImp(session,'bottom','-1px');setImp(session,'top','auto');setImp(session,'grid-column','auto');setImp(session,'grid-row','auto')}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){applyMobileNavFinal();setTimeout(applyMobileNavFinal,250);setTimeout(applyMobileNavFinal,1000)});
+  else {applyMobileNavFinal();setTimeout(applyMobileNavFinal,250);setTimeout(applyMobileNavFinal,1000)}
+  window.addEventListener('resize',applyMobileNavFinal);
+})();
+</script>
 </body>
 </html>
