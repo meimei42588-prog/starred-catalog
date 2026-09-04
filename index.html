@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
-<!-- STARRED UI BUILD: 20260904-backoffice-leave-v66; backend-compatible -->
+<!-- STARRED UI BUILD: 20260904-backoffice-leave-v67; backend-compatible -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
@@ -4602,7 +4602,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260904-backoffice-leave-v66";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260904-backoffice-leave-v67";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -16454,7 +16454,7 @@ window.printSalesAveragePerformance=function(){var previous=comparisonView;try{c
 window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';try{var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true);exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；統計摘要與目前分頁完整資料已放在同一張工作表。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
 window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;try{if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false}};
 window.printSalesStatDetail=function(){try{var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden){salesSetAdminStatus('請先點選一間門市或一位人員，再使用友善列印。','error');return}var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()}catch(error){v55ActionError('友善列印',error)}};
-window.STARRED_UI_BUILD='20260904-backoffice-leave-v66';
+window.STARRED_UI_BUILD='20260904-backoffice-leave-v67';
 })();
 </script>
 
@@ -16478,7 +16478,7 @@ window.STARRED_UI_BUILD='20260904-backoffice-leave-v66';
 
 
 
-<!-- STARRED EMPLOYEE & BACKOFFICE LEAVE V66 -->
+<!-- STARRED EMPLOYEE & BACKOFFICE LEAVE V67 -->
 <style id="employee-leave-backoffice-v66-style">
 /* ===== 員工資料／休假管理 v66：紙本申請、後台統一建檔 ===== */
 :root{
@@ -16697,7 +16697,7 @@ window.STARRED_UI_BUILD='20260904-backoffice-leave-v66';
 <script id="employee-leave-backoffice-v66-script">
 (function(){
 'use strict';
-var BUILD='20260904-backoffice-leave-v66';
+var BUILD='20260904-backoffice-leave-v67';
 var state={loaded:false,loading:false,profiles:[],requests:[],users:[],warnings:[],summary:{},asOf:'',view:'overview',selectedEmployeeId:'',canConfigurePermissions:false,dashboardLoadedAt:0};
 function e(id){return document.getElementById(id)}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]})}
@@ -16822,6 +16822,224 @@ var previousCheckLogin=window.checkLogin;if(typeof previousCheckLogin==='functio
 var previousApplyRole=window.applyAdminRoleUI;if(typeof previousApplyRole==='function')window.applyAdminRoleUI=function(){var r=previousApplyRole.apply(this,arguments);setTimeout(syncVisibility,0);return r};
 var previousRenderDashboard=window.renderDashboard;if(typeof previousRenderDashboard==='function')window.renderDashboard=function(){var r=previousRenderDashboard.apply(this,arguments);setTimeout(function(){ensureDashboardCard();loadDashboardSummary(false)},0);return r};
 var previousCloud=window.loadStarredCloudData;if(typeof previousCloud==='function')window.loadStarredCloudData=async function(){var r=await previousCloud.apply(this,arguments);ensureUI();syncVisibility();return r};
+
+
+/* ===== v67：權限新增式、員工側欄、公司欄位、週年制標示、彈窗堆疊 ===== */
+panelHtml=function(){return `
+<section class="panel leave66-panel leave67-panel">
+  <header class="leave66-heading">
+    <div class="leave66-heading-copy">
+      <span>EMPLOYEE &amp; LEAVE</span>
+      <h2>員工資料與休假管理</h2>
+      <p>員工交紙本請假單後，由行政／授權後台人員統一建檔；特休依每位員工到職日採週年制計算。</p>
+    </div>
+    <div class="leave66-heading-actions"><button type="button" class="secondary" onclick="leave66Load(true)">重新整理</button></div>
+  </header>
+  <div id="leave66Status" class="leave66-status"></div>
+  <nav class="leave66-subtabs" aria-label="員工資料與休假管理分頁">
+    <button id="leave66OverviewBtn" type="button" class="active" onclick="leave66ShowView('overview')">總覽與提醒</button>
+    <button id="leave66EmployeesBtn" type="button" onclick="leave66ShowView('employees')">員工資料</button>
+    <button id="leave66RecordsBtn" type="button" onclick="leave66ShowView('records')">請假建檔</button>
+    <button id="leave66PermissionsBtn" type="button" onclick="leave66ShowView('permissions')">頁面權限</button>
+  </nav>
+  <section id="leave66OverviewView" class="leave66-view active">
+    <div id="leave66SummaryGrid" class="leave66-summary-grid"></div>
+    <div class="leave66-overview-grid">
+      <section class="leave66-card"><div class="leave66-card-head"><h3>30 天內到期／異常提醒</h3><span id="leave66WarningCount">0 筆</span></div><div id="leave66WarningList" class="leave66-warning-list"></div></section>
+      <section class="leave66-card"><div class="leave66-card-head"><h3>最近請假建檔</h3><button type="button" class="secondary" onclick="leave66ShowView('records')">查看全部</button></div><div id="leave66RecentList" class="leave66-recent-list"></div></section>
+    </div>
+  </section>
+  <section id="leave66EmployeesView" class="leave66-view">
+    <div class="leave67-employee-layout">
+      <aside class="leave67-employee-sidebar">
+        <div class="leave67-sidebar-head"><div><h3>員工清單</h3><p>點選姓名，中間立即顯示個人資料。</p></div><button type="button" class="primary" onclick="leave66OpenEmployee()">＋ 新增</button></div>
+        <div class="leave67-employee-tools">
+          <label>搜尋<input id="leave66EmployeeSearch" type="search" placeholder="姓名、公司、電話、身分證" oninput="leave66RenderEmployees()"></label>
+          <label>顯示<select id="leave66EmployeeStatus" onchange="leave66RenderEmployees()"><option value="all">全部員工</option><option value="active">在職員工</option><option value="former">已離職</option></select></label>
+        </div>
+        <div id="leave66EmployeeList" class="leave67-employee-list"></div>
+      </aside>
+      <section id="leave66EmployeeWorkspace" class="leave67-employee-workspace"><div class="leave66-empty">載入後請從左側選擇員工。</div></section>
+    </div>
+  </section>
+  <section id="leave66RecordsView" class="leave66-view">
+    <div class="leave66-section-head"><div><h3>請假紀錄</h3><p>依紙本內容建檔；已建檔紀錄會直接扣除對應假別。</p></div></div>
+    <div class="leave66-record-toolbar">
+      <label>員工<select id="leave66RecordEmployeeFilter" onchange="leave66RenderRecords()"><option value="">全部員工</option></select></label>
+      <label>假別<select id="leave66RecordTypeFilter" onchange="leave66RenderRecords()"><option value="">全部假別</option><option value="annual">特別休假</option><option value="sick">普通病假</option><option value="personal">事假</option><option value="family">家庭照顧假</option><option value="other">其他</option></select></label>
+      <label>狀態<select id="leave66RecordStatusFilter" onchange="leave66RenderRecords()"><option value="">全部狀態</option><option value="approved">已建檔</option><option value="pending">舊版待審核</option><option value="rejected">已作廢／未通過</option></select></label>
+      <label>搜尋<input id="leave66RecordSearch" type="search" placeholder="姓名、事由、編號" oninput="leave66RenderRecords()"></label>
+      <button type="button" class="primary" onclick="leave66OpenRecord()">＋ 新增請假紀錄</button>
+    </div>
+    <div id="leave66RecordList" class="leave66-record-list"></div>
+  </section>
+  <section id="leave66PermissionsView" class="leave66-view">
+    <div class="leave66-section-head leave67-permission-head"><div><h3>頁面權限</h3><p>畫面只保留已授權人員，不再一次列出全部 LINE 使用者。</p></div><button id="leave67PermissionAddBtn" type="button" class="primary" onclick="leave67OpenPermissionPicker()">＋ 新增可查看人員</button></div>
+    <div id="leave66PermissionNote" class="leave66-permission-note"></div>
+    <div class="leave67-permission-summary"><span id="leave67PermissionCount">已授權 0 人</span></div>
+    <div id="leave66PermissionList" class="leave66-permission-list"></div>
+  </section>
+</section>`};
+
+modalHtml=function(){return `
+<div id="leave66EmployeeModal" class="leave66-modal" onclick="if(event.target===this)leave66CloseEmployee()">
+  <div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2 id="leave66EmployeeModalTitle">新增員工</h2><p>日期使用民國年；特休依到職日採週年制。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66CloseEmployee()">×</button></header>
+    <div class="leave66-dialog-body"><form id="leave66EmployeeForm" class="leave66-form-grid" onsubmit="event.preventDefault();leave66SaveEmployee()">
+      <input id="leave66EmployeeId" type="hidden"><div class="leave66-form-section">基本資料</div>
+      <label>姓名 *<input id="leave66EmployeeName" maxlength="80"></label>
+      <label>所在公司<input id="leave66Company" maxlength="160" placeholder="例如：猩紅實業有限公司"></label>
+      <label id="leave66LineUserWrap">連結 LINE 使用者<select id="leave66LinkedLineUser"><option value="">不連結 LINE（純員工檔案）</option></select></label>
+      <label>身分證字號<input id="leave66NationalId" maxlength="30" autocomplete="off"></label>
+      <label>電話<input id="leave66Phone" maxlength="40" inputmode="tel"></label>
+      <label class="span2">地址<input id="leave66Address" maxlength="500"></label>
+      <label class="full">家庭成員<textarea id="leave66FamilyMembers" rows="3" maxlength="3000" placeholder="可記錄姓名、關係、聯絡方式等"></textarea></label>
+      <div class="leave66-form-section">到職與休假設定</div>
+      <label>到職日期（民國） *<input id="leave66HireRoc" inputmode="numeric" placeholder="115/09/04"></label>
+      <label>離職日期（民國，可空白）<input id="leave66ExitRoc" inputmode="numeric" placeholder="115/12/31"></label>
+      <label>每日正常工時<input id="leave66DailyHours" type="number" min="1" max="24" step="0.5" value="8"></label>
+      <label>協議遞延特休<input id="leave66DeferredAnnual" type="number" min="0" max="365" step="0.5" value="0"></label>
+      <div class="leave67-anniversary-note full">特休週期固定依「到職月／日」計算，不使用 1 月 1 日至 12 月 31 日的曆年制。</div>
+      <div class="leave66-form-section">薪資轉帳帳戶</div>
+      <label>銀行名稱<input id="leave66BankName" maxlength="120"></label><label>銀行代碼<input id="leave66BankCode" maxlength="30" inputmode="numeric"></label>
+      <label>分行<input id="leave66BankBranch" maxlength="120"></label><label>戶名<input id="leave66BankAccountName" maxlength="120"></label>
+      <label class="span2">帳號<input id="leave66BankAccountNumber" maxlength="120" inputmode="numeric" autocomplete="off"></label>
+      <label class="full">備註<textarea id="leave66EmployeeNote" rows="3" maxlength="2000"></textarea></label>
+    </form></div>
+    <footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66CloseEmployee()">取消</button><button id="leave66EmployeeSaveBtn" type="button" class="primary" onclick="leave66SaveEmployee()">儲存員工資料</button></footer>
+  </div>
+</div>
+<div id="leave66RecordModal" class="leave66-modal" onclick="if(event.target===this)leave66CloseRecord()">
+  <div class="leave66-dialog"><header class="leave66-dialog-head"><div><h2 id="leave66RecordModalTitle">新增請假紀錄</h2><p>依紙本申請內容輸入；建檔後會立即計入剩餘假。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66CloseRecord()">×</button></header>
+    <div class="leave66-dialog-body"><form id="leave66RecordForm" class="leave66-form-grid" onsubmit="event.preventDefault();leave66SaveRecord()">
+      <input id="leave66RecordId" type="hidden"><label class="span2">員工 *<select id="leave66RecordEmployee"></select></label>
+      <label>假別 *<select id="leave66RecordType"><option value="annual">特別休假</option><option value="sick">普通病假</option><option value="personal">事假</option><option value="family">家庭照顧假</option><option value="other">其他</option></select></label>
+      <label>開始日期（民國） *<input id="leave66StartRoc" inputmode="numeric" placeholder="115/09/04"></label>
+      <label>結束日期（民國） *<input id="leave66EndRoc" inputmode="numeric" placeholder="115/09/04"></label>
+      <label>收到紙本日期（民國）<input id="leave66PaperRoc" inputmode="numeric" placeholder="115/09/04"></label>
+      <label>請假天數<input id="leave66Days" type="number" min="0" max="366" step="0.125" value="1"></label>
+      <label>另計小時<input id="leave66Hours" type="number" min="0" max="24" step="0.5" value="0"></label>
+      <label class="full">請假事由 *<textarea id="leave66Reason" rows="3" maxlength="1000"></textarea></label>
+      <label class="full">建檔備註<textarea id="leave66RecordNote" rows="3" maxlength="1000" placeholder="例如：紙本已收件、行政代登錄"></textarea></label>
+    </form></div>
+    <footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66CloseRecord()">取消</button><button id="leave66RecordSaveBtn" type="button" class="primary" onclick="leave66SaveRecord()">確認建檔</button></footer>
+  </div>
+</div>
+<div id="leave66PersonModal" class="leave66-modal" onclick="if(event.target===this)leave66ClosePerson()">
+  <div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2>員工個人資料</h2><p>包含剩餘假、個人資料與完整請假紀錄。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66ClosePerson()">×</button></header><div id="leave66PersonBody" class="leave66-dialog-body"></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66ClosePerson()">關閉</button></footer></div>
+</div>
+<div id="leave67PermissionModal" class="leave66-modal" onclick="if(event.target===this)leave67ClosePermissionPicker()">
+  <div class="leave66-dialog leave67-permission-dialog"><header class="leave66-dialog-head"><div><h2>新增可查看人員</h2><p>先輸入姓名搜尋；系統不會一次列出全部人員。</p></div><button type="button" class="leave66-dialog-close" onclick="leave67ClosePermissionPicker()">×</button></header>
+    <div class="leave66-dialog-body"><label class="leave67-permission-search">搜尋姓名或 LINE 名稱<input id="leave67PermissionSearch" type="search" autocomplete="off" placeholder="輸入至少 1 個字" oninput="leave67RenderPermissionCandidates()"></label><div id="leave67PermissionCandidates" class="leave67-permission-candidates"><div class="leave66-empty">請輸入姓名搜尋。</div></div></div>
+    <footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave67ClosePermissionPicker()">完成</button></footer>
+  </div>
+</div>`};
+
+var leave67ModalBase=2147483300;
+openModal=function(id){
+  var node=e(id);if(!node)return;
+  if(node.parentNode!==document.body)document.body.appendChild(node);
+  var others=Array.prototype.filter.call(document.querySelectorAll('.leave66-modal.show'),function(x){return x!==node});
+  node.style.setProperty('z-index',String(leave67ModalBase+(others.length+1)*40),'important');
+  node.classList.add('show');
+  document.body.classList.add('leave67-modal-open');
+};
+closeModal=function(id){var node=e(id);if(!node)return;node.classList.remove('show');node.style.removeProperty('z-index');if(!document.querySelector('.leave66-modal.show'))document.body.classList.remove('leave67-modal-open')};
+
+function leave67AnnualNote(annual){
+  annual=annual||{};
+  if(annual.periodStart&&annual.periodEnd)return '週年制：'+roc(annual.periodStart)+' ～ '+roc(annual.periodEnd);
+  return '依到職日週年制計算';
+}
+personField=function(label,value){return '<div class="leave66-person-field"><span>'+esc(label)+'</span><b>'+esc(value||'未填寫')+'</b></div>'};
+personBalance=function(label,obj,note,warning){obj=obj||{};return '<article class="leave66-balance-card '+balanceClass(obj.remaining,warning)+'"><span>'+esc(label)+'</span><b>'+esc(numberText(obj.remaining==null?0:obj.remaining))+' 日</b><small>已用 '+esc(numberText(obj.used||0))+'／可用 '+esc(numberText(obj.entitlement||0))+' 日'+(note?'<br>'+esc(note):'')+'</small></article>'};
+function leave67PersonContent(p){
+  if(!p)return '<div class="leave66-empty">找不到員工資料。</div>';
+  var b=p.balances||{},annual=b.annual||{},history=employeeRequests(p.lineUserId),alerts='';
+  if(annual.expiringSoon)alerts+='<div class="leave66-person-alert">特休剩 '+esc(numberText(annual.remaining))+' 日，距 '+esc(roc(annual.periodEnd))+' 到期只剩 '+esc(String(annual.daysUntilExpiry))+' 天，請儘快安排或核對處理。</div>';
+  if(n(annual.overused)>0)alerts+='<div class="leave66-person-alert danger">特休已超用 '+esc(numberText(annual.overused))+' 日，請核對紙本與建檔紀錄。</div>';
+  var bank=[p.bankName,p.bankCode&&'代碼 '+p.bankCode,p.bankBranch,p.bankAccountName,p.bankAccountNumber].filter(Boolean).join('／');
+  var company=p.company||'未填寫';
+  return '<section class="leave66-person-hero"><div class="leave66-person-name"><span class="leave66-avatar">'+esc(initial(p.employeeName))+'</span><div><h3>'+esc(p.employeeName||'未命名員工')+'</h3><p>'+esc(company)+'・'+(p.isActive===false?'已離職':'在職')+'・年資 '+esc(p.seniority&&p.seniority.label||'—')+'・每日 '+esc(numberText(p.dailyHours||8))+' 小時</p></div></div><div class="leave66-person-actions"><button type="button" class="secondary" onclick="leave66OpenEmployee(\''+js(p.lineUserId)+'\')">編輯個人資料</button><button type="button" class="primary" onclick="leave66OpenRecord(\''+js(p.lineUserId)+'\')">＋ 請假建檔</button></div></section>'+alerts+
+    '<section class="leave66-balance-grid">'+personBalance('特別休假',annual,leave67AnnualNote(annual),annual.expiringSoon)+personBalance('普通病假',b.sick,b.sick&&b.sick.periodEnd?'曆年制至 '+roc(b.sick.periodEnd):'')+personBalance('事假（含家庭照顧）',b.personal,b.personal&&b.personal.periodEnd?'曆年制至 '+roc(b.personal.periodEnd):'')+personBalance('家庭照顧假',b.family,b.family&&b.family.periodEnd?'曆年制至 '+roc(b.family.periodEnd):'')+'</section>'+
+    '<section class="leave66-person-grid">'+personField('所在公司',company)+personField('身分證字號',p.nationalId)+personField('電話',p.phone)+personField('地址',p.address)+personField('家庭成員',p.familyMembers)+personField('轉帳帳戶',bank)+personField('到職日期',roc(p.hireDate))+personField('離職日期',p.exitDate?roc(p.exitDate):'在職中')+personField('特休計算制度','依到職日週年制')+personField('本期特休區間',leave67AnnualNote(annual))+personField('遞延特休',numberText(p.deferredAnnualDays||0)+' 日')+personField('備註',p.note)+'</section>'+
+    '<section class="leave66-person-history"><h3>請假紀錄（共 '+String(history.length)+' 筆）</h3><div class="leave66-record-list">'+(history.length?history.map(recordRow).join(''):'<div class="leave66-empty">目前尚無請假紀錄。</div>')+'</div></section>';
+}
+
+function leave67FilteredProfiles(){
+  var q=String(e('leave66EmployeeSearch')&&e('leave66EmployeeSearch').value||'').trim().toLowerCase();
+  var filter=String(e('leave66EmployeeStatus')&&e('leave66EmployeeStatus').value||'all');
+  return state.profiles.filter(function(p){
+    var status=filter==='all'||(filter==='active'&&p.isActive!==false)||(filter==='former'&&p.isActive===false);
+    var text=[p.employeeName,p.company,p.nationalId,p.phone,p.address,p.familyMembers,p.bankName,p.bankCode,p.bankBranch,p.bankAccountName,p.bankAccountNumber].join(' ').toLowerCase();
+    return status&&(!q||text.indexOf(q)>=0);
+  }).sort(function(a,b){return (a.isActive===false)-(b.isActive===false)||String(a.employeeName).localeCompare(String(b.employeeName),'zh-Hant')});
+}
+function leave67RenderEmployeeWorkspace(){var box=e('leave66EmployeeWorkspace');if(!box)return;var p=profileById(state.selectedEmployeeId);box.innerHTML=p?leave67PersonContent(p):'<div class="leave66-empty">請從左側選擇員工。</div>'}
+renderEmployees=function(){
+  var box=e('leave66EmployeeList');if(!box)return;var rows=leave67FilteredProfiles();
+  if(!rows.length){box.innerHTML='<div class="leave66-empty">目前沒有符合條件的員工資料。</div>';state.selectedEmployeeId='';leave67RenderEmployeeWorkspace();return}
+  if(!rows.some(function(p){return String(p.lineUserId)===String(state.selectedEmployeeId)}))state.selectedEmployeeId=String(rows[0].lineUserId);
+  box.innerHTML=rows.map(function(p){var annual=p.balances&&p.balances.annual||{},active=String(p.lineUserId)===String(state.selectedEmployeeId);return '<button type="button" class="leave67-employee-nav '+(active?'active':'')+'" onclick="leave67SelectEmployee(\''+js(p.lineUserId)+'\')"><span class="leave66-avatar">'+esc(initial(p.employeeName))+'</span><span class="leave67-employee-nav-copy"><span class="leave67-employee-nav-name">'+esc(p.employeeName||'未命名員工')+'</span><span>'+esc(p.company||'未填公司')+'・'+(p.isActive===false?'已離職':'在職')+'</span></span><span class="leave67-employee-nav-balance '+balanceClass(annual.remaining,annual.expiringSoon)+'">特休 '+esc(numberText(annual.remaining==null?0:annual.remaining))+'</span></button>'}).join('');
+  leave67RenderEmployeeWorkspace();
+};
+window.leave66RenderEmployees=renderEmployees;
+window.leave67SelectEmployee=function(id){state.selectedEmployeeId=String(id||'');renderEmployees();var box=e('leave66EmployeeWorkspace');if(box&&window.matchMedia&&window.matchMedia('(max-width:900px)').matches)box.scrollIntoView({behavior:'smooth',block:'start'})};
+
+renderPerson=function(){var box=e('leave66PersonBody');if(box)box.innerHTML=leave67PersonContent(profileById(state.selectedEmployeeId))};
+
+openEmployee=function(id){
+  ensureUI();var p=id?profileById(id):null;
+  e('leave66EmployeeId').value=p?String(p.lineUserId):'';e('leave66EmployeeModalTitle').textContent=p?'修改員工資料':'新增員工';
+  e('leave66EmployeeName').value=p?p.employeeName||'':'';e('leave66Company').value=p?p.company||'':'';e('leave66NationalId').value=p?p.nationalId||'':'';e('leave66Phone').value=p?p.phone||'':'';e('leave66Address').value=p?p.address||'':'';e('leave66FamilyMembers').value=p?p.familyMembers||'':'';
+  e('leave66HireRoc').value=p?rocInput(p.hireDate):'';e('leave66ExitRoc').value=p?rocInput(p.exitDate):'';e('leave66DailyHours').value=p?numberText(p.dailyHours||8):'8';e('leave66DeferredAnnual').value=p?numberText(p.deferredAnnualDays||0):'0';
+  e('leave66BankName').value=p?p.bankName||'':'';e('leave66BankCode').value=p?p.bankCode||'':'';e('leave66BankBranch').value=p?p.bankBranch||'':'';e('leave66BankAccountName').value=p?p.bankAccountName||'':'';e('leave66BankAccountNumber').value=p?p.bankAccountNumber||'':'';e('leave66EmployeeNote').value=p?p.note||'':'';
+  var select=e('leave66LinkedLineUser'),wrap=e('leave66LineUserWrap');if(select){var used=new Set(state.profiles.map(function(x){return String(x.lineUserId)}));var options=state.users.filter(function(u){return !used.has(String(u.lineUserId))}).map(function(u){return '<option value="'+esc(u.lineUserId)+'">'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'｜'+esc(roleLabel(u.role))+'</option>'}).join('');select.innerHTML='<option value="">不連結 LINE（純員工檔案）</option>'+options;select.value='';select.disabled=!!p}if(wrap)wrap.style.opacity=p?'.65':'1';
+  openModal('leave66EmployeeModal');setTimeout(function(){e('leave66EmployeeName')&&e('leave66EmployeeName').focus()},70)
+};
+window.leave66OpenEmployee=openEmployee;
+
+saveEmployee=async function(){
+  var employeeId=String(e('leave66EmployeeId').value||''),name=String(e('leave66EmployeeName').value||'').trim(),hire=parseRoc(e('leave66HireRoc').value),exitRaw=String(e('leave66ExitRoc').value||'').trim(),exit=exitRaw?parseRoc(exitRaw):'';
+  if(!name){alert('請填寫姓名');e('leave66EmployeeName').focus();return}if(!hire){alert('到職日期格式錯誤，請輸入例如 115/09/04');e('leave66HireRoc').focus();return}if(exitRaw&&!exit){alert('離職日期格式錯誤');e('leave66ExitRoc').focus();return}if(exit&&exit<hire){alert('離職日期不能早於到職日期');return}
+  var btn=e('leave66EmployeeSaveBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='儲存中…';
+  try{
+    var result=await api('leave_employee_save_v2',{employeeId:employeeId,linkedLineUserId:employeeId?'':String(e('leave66LinkedLineUser').value||''),employeeName:name,company:String(e('leave66Company').value||'').trim(),nationalId:String(e('leave66NationalId').value||'').trim(),phone:String(e('leave66Phone').value||'').trim(),address:String(e('leave66Address').value||'').trim(),familyMembers:String(e('leave66FamilyMembers').value||'').trim(),hireDate:hire,exitDate:exit||null,dailyHours:n(e('leave66DailyHours').value)||8,deferredAnnualDays:n(e('leave66DeferredAnnual').value),bankName:String(e('leave66BankName').value||'').trim(),bankCode:String(e('leave66BankCode').value||'').trim(),bankBranch:String(e('leave66BankBranch').value||'').trim(),bankAccountName:String(e('leave66BankAccountName').value||'').trim(),bankAccountNumber:String(e('leave66BankAccountNumber').value||'').trim(),note:String(e('leave66EmployeeNote').value||'').trim()});
+    if(result&&result.profile&&result.profile.lineUserId)state.selectedEmployeeId=String(result.profile.lineUserId);else if(employeeId)state.selectedEmployeeId=employeeId;
+    closeModal('leave66EmployeeModal');state.loaded=false;await load(true);showView('employees');if(e('leave66PersonModal')&&e('leave66PersonModal').classList.contains('show'))renderPerson();
+  }catch(error){alert('員工資料儲存失敗：'+String(error&&error.message||error))}finally{btn.disabled=false;btn.textContent=old}
+};
+window.leave66SaveEmployee=saveEmployee;
+
+function leave67PermissionEditable(){return state.canConfigurePermissions&&isSystemAdmin()}
+function leave67SetLocalPermission(id,enabled){var u=state.users.find(function(x){return String(x.lineUserId)===String(id)});if(u)u.leaveAdminAccess=!!enabled;try{var lu=(typeof lineUsers!=='undefined'?lineUsers:[]).find(function(x){return String(x.id||x.lineUserId)===String(id)});if(lu)lu.leaveAdminAccess=!!enabled;if(typeof persistLineUsers==='function')persistLineUsers()}catch(_){}}
+async function leave67SetPermission(id,enabled,button){if(button)button.disabled=true;try{await api('leave_access_toggle',{lineUserId:String(id),enabled:!!enabled});leave67SetLocalPermission(id,enabled);renderPermissions();syncVisibility();window.leave67RenderPermissionCandidates()}catch(error){alert('權限更新失敗：'+String(error&&error.message||error))}finally{if(button)button.disabled=false}}
+renderPermissions=function(){
+  var note=e('leave66PermissionNote'),box=e('leave66PermissionList'),count=e('leave67PermissionCount'),add=e('leave67PermissionAddBtn');if(!note||!box)return;
+  var editable=leave67PermissionEditable();if(add)add.hidden=!editable;
+  note.textContent=editable?'請按「新增可查看人員」逐一加入；此處只顯示已授權者。被加入的人仍需使用後台帳密登入。':'目前為唯讀；只有系統管理員可以新增或移除本頁權限。';
+  var rows=state.users.filter(function(u){return role(u.role)==='admin'||u.leaveAdminAccess===true}).sort(function(a,b){var af=role(a.role)==='admin'?0:1,bf=role(b.role)==='admin'?0:1;return af-bf||String(a.name).localeCompare(String(b.name),'zh-Hant')});
+  var granted=rows.filter(function(u){return role(u.role)!=='admin'}).length;if(count)count.textContent='另行授權 '+String(granted)+' 人';
+  if(!rows.length){box.innerHTML='<div class="leave66-empty">目前尚未加入可查看人員。</div>';return}
+  box.innerHTML=rows.map(function(u){var fixed=role(u.role)==='admin';return '<article class="leave66-permission-row leave67-permission-row"><div><span class="leave67-permission-name">'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'</span><small>'+esc(u.lineDisplayName||'')+'</small></div><div><span>'+esc(roleLabel(u.role))+'</span><small>'+(u.isEnabled===false?'帳號已停用':'帳號啟用中')+'</small></div><div><span>最後登入</span><small>'+esc(dateTime(u.lastLoginAt))+'</small></div>'+(fixed?'<span class="leave67-fixed-badge">系統固定</span>':'<button type="button" class="danger" '+(editable?'':'disabled')+' onclick="leave67RemovePermission(\''+js(u.lineUserId)+'\',this)">移除</button>')+'</article>'}).join('');
+};
+window.leave67OpenPermissionPicker=function(){if(!leave67PermissionEditable()){alert('只有系統管理員可以新增權限。');return}var input=e('leave67PermissionSearch');if(input)input.value='';window.leave67RenderPermissionCandidates();openModal('leave67PermissionModal');setTimeout(function(){input&&input.focus()},80)};
+window.leave67ClosePermissionPicker=function(){closeModal('leave67PermissionModal')};
+window.leave67RenderPermissionCandidates=function(){
+  var box=e('leave67PermissionCandidates'),input=e('leave67PermissionSearch');if(!box)return;var q=String(input&&input.value||'').trim().toLowerCase();
+  if(!q){box.innerHTML='<div class="leave66-empty">請輸入姓名或 LINE 名稱搜尋，不會一次列出全部人員。</div>';return}
+  var rows=state.users.filter(function(u){var r=role(u.role),text=[u.name,u.lineDisplayName,roleLabel(u.role)].join(' ').toLowerCase();return (r==='manager'||r==='accounting')&&u.isEnabled!==false&&!u.leaveAdminAccess&&text.indexOf(q)>=0}).slice(0,20);
+  if(!rows.length){box.innerHTML='<div class="leave66-empty">找不到尚未授權的主管或會計。</div>';return}
+  box.innerHTML=rows.map(function(u){return '<article class="leave67-candidate-row"><div><span>'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'</span><small>'+esc(roleLabel(u.role))+(u.lineDisplayName?'・'+esc(u.lineDisplayName):'')+'</small></div><button type="button" class="primary" onclick="leave67AddPermission(\''+js(u.lineUserId)+'\',this)">新增</button></article>'}).join('');
+};
+window.leave67AddPermission=function(id,button){return leave67SetPermission(id,true,button)};
+window.leave67RemovePermission=function(id,button){var u=state.users.find(function(x){return String(x.lineUserId)===String(id)});if(!confirm('確定移除「'+String(u&&u.name||'此人員')+'」的查看權限？'))return;return leave67SetPermission(id,false,button)};
+
+var leave67ShowAdminBase=window.showAdminTab;
+window.showAdminTab=function(tab){var result=leave67ShowAdminBase&&leave67ShowAdminBase.apply(this,arguments);setTimeout(leave67SyncWideMode,0);return result};
+var leave67ShowPageBase=window.showPage;
+window.showPage=function(){var result=leave67ShowPageBase&&leave67ShowPageBase.apply(this,arguments);setTimeout(leave67SyncWideMode,0);return result};
+function leave67SyncWideMode(){var leave=e('leaveAdminTab'),admin=e('adminPage');var active=!!(leave&&leave.classList.contains('active')&&(!admin||admin.classList.contains('active')));document.body.classList.toggle('leave67-wide-active',active)}
+setTimeout(leave67SyncWideMode,0);
 
 function init(){ensureUI();removeFrontLeave();normalizeTopbarDom();syncVisibility();if(hasBackofficeLogin())loadDashboardSummary(false)}
 init();
@@ -17194,5 +17412,95 @@ window.STARRED_UI_BUILD=BUILD;
   }
 }
 </style>
+
+
+<!-- V67 FINAL LAYOUT & NAVIGATION OVERRIDES -->
+<style id="employee-leave-v67-final-style">
+/* 全寬工作區 */
+body.leave67-wide-active main.container{width:min(1920px,calc(100vw - 24px))!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important;padding-left:0!important;padding-right:0!important}
+body.leave67-wide-active #adminPage,body.leave67-wide-active #adminContent,body.leave67-wide-active #leaveAdminTab{width:100%!important;max-width:none!important}
+#leaveAdminTab .leave67-panel{width:100%!important;max-width:none!important}
+body.leave67-modal-open{overflow:hidden!important}
+
+/* 休假管理文字：內文最低 14px，避免大量粗體 */
+#leaveAdminTab{font-size:14px!important;font-weight:400!important}
+#leaveAdminTab :is(p,span,small,label,input,select,textarea,button,em,b,strong){font-size:14px!important}
+#leaveAdminTab :is(b,strong){font-weight:500!important}
+#leaveAdminTab :is(button,label){font-weight:500!important}
+#leaveAdminTab :is(h2,h3){font-weight:600!important}
+#leaveAdminTab .leave66-heading-copy>span{font-size:14px!important;font-weight:500!important;letter-spacing:.08em!important}
+#leaveAdminTab .leave66-heading h2{font-size:26px!important;font-weight:600!important}
+#leaveAdminTab .leave66-heading p{font-size:14px!important}
+#leaveAdminTab .leave66-section-head h3,#leaveAdminTab .leave67-sidebar-head h3{font-size:20px!important}
+#leaveAdminTab .leave66-summary-card b{font-size:25px!important;font-weight:600!important}
+#leaveAdminTab .leave66-balance-card b{font-size:22px!important;font-weight:600!important}
+#leaveAdminTab .leave66-avatar{font-size:17px!important;font-weight:600!important}
+#leaveAdminTab .leave66-status-pill,#leaveAdminTab .leave66-badge{font-size:14px!important;font-weight:500!important}
+#leaveAdminTab .leave66-badge{padding:5px 8px!important}
+
+/* 員工左側清單＋中間資料 */
+.leave67-employee-layout{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:16px;align-items:start}
+.leave67-employee-sidebar{position:sticky;top:14px;display:flex;flex-direction:column;min-width:0;max-height:calc(100vh - 190px);overflow:hidden;border:1px solid var(--lv66-line);border-radius:15px;background:#fff}
+.leave67-sidebar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px;border-bottom:1px solid var(--lv66-line);background:#f8fafb}
+.leave67-sidebar-head h3{margin:0;color:var(--lv66-navy)}.leave67-sidebar-head p{margin:4px 0 0;color:var(--lv66-muted);line-height:1.45}.leave67-sidebar-head button{flex:0 0 auto;min-width:84px}
+.leave67-employee-tools{display:grid;gap:9px;padding:12px;border-bottom:1px solid var(--lv66-line);background:#fff}
+.leave67-employee-tools label{display:grid;gap:5px;color:#5e7583}.leave67-employee-tools input,.leave67-employee-tools select{height:43px}
+.leave67-employee-list{display:grid;align-content:start;gap:6px;min-height:180px;overflow:auto;padding:9px}
+.leave67-employee-nav{display:grid!important;grid-template-columns:42px minmax(0,1fr) auto!important;gap:9px!important;align-items:center!important;width:100%!important;min-width:0!important;min-height:60px!important;padding:8px!important;border:1px solid transparent!important;border-radius:12px!important;background:#fff!important;color:var(--lv66-ink)!important;text-align:left!important;box-shadow:none!important;white-space:normal!important}
+.leave67-employee-nav:hover{background:#f4f8fa!important;border-color:#d6e1e7!important}.leave67-employee-nav.active{background:#eaf3f7!important;border-color:#9eb9c7!important;box-shadow:inset 3px 0 0 var(--lv66-teal)!important}
+.leave67-employee-nav-copy{display:block;min-width:0}.leave67-employee-nav-name{display:block;color:var(--lv66-navy);font-size:16px!important;font-weight:500!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.leave67-employee-nav-copy>span:last-child{display:block;margin-top:3px;color:var(--lv66-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leave67-employee-nav-balance{justify-self:end;padding:5px 7px;border-radius:8px;background:#f1f5f7;color:#526f7e;white-space:nowrap}.leave67-employee-nav-balance.warn{background:#fff1d7;color:#8d5d0d}.leave67-employee-nav-balance.danger{background:#fde9e7;color:#9d3d36}
+.leave67-employee-workspace{min-width:0;min-height:520px;padding:16px;border:1px solid var(--lv66-line);border-radius:15px;background:#f7fafb}
+.leave67-employee-workspace .leave66-person-history,.leave67-employee-workspace .leave66-person-grid,.leave67-employee-workspace .leave66-balance-card{background:#fff}
+.leave67-anniversary-note{padding:11px 13px;border:1px solid #cfe0e7;border-radius:11px;background:#eef6f8;color:#496a7a;line-height:1.55}
+
+/* 權限只顯示已加入者 */
+.leave67-permission-head{align-items:center!important}.leave67-permission-summary{display:flex;justify-content:flex-end;margin:0 0 9px;color:var(--lv66-muted)}
+.leave67-permission-row{grid-template-columns:minmax(200px,1.2fr) minmax(150px,.7fr) minmax(180px,.8fr) auto!important}
+.leave67-permission-name{display:block;color:var(--lv66-navy);font-size:16px!important;font-weight:500!important}.leave67-fixed-badge{display:inline-flex!important;align-items:center;justify-content:center;padding:7px 10px;border-radius:9px;background:#eaf1f4;color:#506b7a;white-space:nowrap}
+.leave67-permission-dialog{width:min(720px,100%)!important}.leave67-permission-search{display:grid;gap:7px;color:#5b7280}.leave67-permission-search input{height:46px}.leave67-permission-candidates{display:grid;gap:8px;margin-top:12px}.leave67-candidate-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--lv66-line);border-radius:12px;background:#fff}.leave67-candidate-row span,.leave67-candidate-row small{display:block}.leave67-candidate-row span{color:var(--lv66-navy);font-size:16px!important;font-weight:500!important}.leave67-candidate-row small{margin-top:3px;color:var(--lv66-muted)}
+
+/* 彈窗永遠在最上層；從個人資料開啟請假建檔時會疊在其上 */
+.leave66-modal{z-index:2147483300!important}#leave66RecordModal.show{isolation:isolate}
+.leave66-dialog{font-weight:400!important}.leave66-dialog :is(p,span,small,label,input,select,textarea,button,b,strong){font-size:14px!important}.leave66-dialog :is(b,strong){font-weight:500!important}.leave66-dialog :is(h2,h3){font-weight:600!important}
+
+/* 桌機前台導覽：保留呼吸感並完整顯示登出 */
+@media(min-width:901px){
+  .topbar .topbar-inner{width:min(1760px,calc(100% - 32px))!important;max-width:1760px!important;padding-left:0!important;padding-right:0!important}
+  .topbar .topbar-right{display:flex!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:nowrap!important;gap:12px!important;width:100%!important;min-width:0!important;overflow:visible!important}
+  .topbar .nav{display:flex!important;flex:1 1 auto!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:nowrap!important;gap:10px!important;min-width:0!important;overflow:visible!important}
+  .topbar .nav>button:not(.hidden-by-role){position:relative!important;flex:0 0 auto!important;width:max-content!important;min-width:max-content!important;max-width:none!important;height:44px!important;min-height:44px!important;margin:0!important;padding:9px 16px!important;font-size:15px!important;font-weight:500!important;line-height:1!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+  .topbar .notification-wrap{position:relative!important;flex:0 0 48px!important;width:48px!important;min-width:48px!important;height:44px!important;overflow:visible!important}
+  .topbar .notification-btn{width:48px!important;min-width:48px!important;height:44px!important;min-height:44px!important}
+  .topbar .topbar-session,.topbar .topbar-session.show{position:relative!important;flex:0 0 auto!important;width:auto!important;min-width:84px!important;height:44px!important;overflow:visible!important}
+  .topbar .logout-top-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:auto!important;min-width:84px!important;max-width:none!important;height:44px!important;min-height:44px!important;padding:0 14px!important;overflow:visible!important;white-space:nowrap!important}
+  .topbar .logout-top-text{display:inline!important;font-size:14px!important}
+}
+
+/* 手機／窄版前台導覽：固定 5 欄 × 2 行，平均分配且禁止左右滑 */
+@media(max-width:900px){
+  .topbar .topbar-inner{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;padding:7px 8px 8px!important}
+  .topbar .topbar-right{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-template-rows:repeat(2,42px)!important;grid-auto-flow:row!important;grid-auto-rows:42px!important;align-items:stretch!important;justify-content:stretch!important;gap:6px!important;width:100%!important;min-width:0!important;max-height:90px!important;margin:0!important;padding:0!important;overflow:hidden!important}
+  .topbar .nav{display:contents!important}
+  .topbar .nav>button:not(.hidden-by-role),.topbar #homeNav,.topbar #orderNav,.topbar #salesNav,.topbar #expenseNav,.topbar #externalAccountNav,.topbar #employeeRulesNav,.topbar #adminNav{position:relative!important;grid-column:auto!important;grid-row:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;max-width:none!important;height:42px!important;min-height:42px!important;margin:0!important;padding:4px 2px!important;border-radius:9px!important;font-size:14px!important;font-weight:500!important;line-height:1.05!important;letter-spacing:-.02em!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important}
+  .topbar .nav>button.hidden-by-role{display:none!important}
+  .topbar .notification-wrap,.topbar .topbar-session,.topbar .topbar-session.show{position:relative!important;grid-column:auto!important;grid-row:auto!important;align-self:stretch!important;justify-self:stretch!important;width:100%!important;min-width:0!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0!important;overflow:visible!important}
+  .topbar .topbar-session:not(.show){display:none!important}
+  .topbar .notification-btn,.topbar .logout-top-btn{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;max-width:none!important;height:42px!important;min-height:42px!important;margin:0!important;padding:2px!important;border-radius:9px!important;font-size:14px!important;overflow:visible!important}
+  .topbar .logout-top-text{display:inline!important;font-size:14px!important;white-space:nowrap!important}.topbar .logout-top-icon{display:none!important}
+  .topbar .notification-badge{top:-4px!important;right:-3px!important}
+  .topbar .notification-panel{position:fixed!important;top:96px!important;right:8px!important;left:8px!important;width:auto!important;max-width:none!important;z-index:2147483000!important}
+  .topbar .session-tooltip{position:fixed!important;top:96px!important;right:8px!important;max-width:calc(100vw - 16px)!important}
+
+  body.leave67-wide-active main.container{width:100%!important;max-width:100%!important;padding-left:8px!important;padding-right:8px!important}
+  .leave67-employee-layout{grid-template-columns:1fr}.leave67-employee-sidebar{position:static;max-height:none}.leave67-employee-list{max-height:380px}.leave67-employee-workspace{min-height:0;padding:12px}
+  .leave67-permission-head{align-items:flex-start!important;flex-direction:column}.leave67-permission-head button{width:100%}.leave67-permission-row{grid-template-columns:1fr auto!important}.leave67-permission-row>div:nth-child(2),.leave67-permission-row>div:nth-child(3){grid-column:1}.leave67-permission-row>button,.leave67-fixed-badge{grid-column:2;grid-row:1/4}
+}
+@media(max-width:430px){
+  .topbar .topbar-right{gap:5px!important}.topbar .nav>button:not(.hidden-by-role),.topbar #homeNav,.topbar #orderNav,.topbar #salesNav,.topbar #expenseNav,.topbar #externalAccountNav,.topbar #employeeRulesNav,.topbar #adminNav,.topbar .notification-btn,.topbar .logout-top-btn{font-size:14px!important;padding-left:0!important;padding-right:0!important}
+  #leaveAdminTab .leave66-heading h2{font-size:22px!important}.leave67-employee-nav{grid-template-columns:40px minmax(0,1fr)!important}.leave67-employee-nav-balance{grid-column:2;justify-self:start;margin-top:2px}.leave67-employee-workspace{padding:9px}
+}
+</style>
+
 </body>
 </html>
