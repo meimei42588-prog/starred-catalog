@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- STARRED UI BUILD: 20260902-line-picking-product-ai-v60; login API compatible: 20260902-operation-zero-record-v59 -->
+<!-- STARRED UI BUILD: 20260904-backoffice-leave-v66; backend-compatible -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
@@ -4601,7 +4601,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260902-operation-zero-record-v59";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260904-backoffice-leave-v66";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -16159,8 +16159,8 @@ function install(){var r=rates();if(el('expenseMoveOutRate'))el('expenseMoveOutR
 (function(){
 'use strict';
 var PAGE_KEY='starred_active_page_v49',ADMIN_KEY='starred_active_admin_tab_v49',SALES_KEY='starred_active_sales_view_v49';
-var allowedPages=['home','order','sales','expense','externalAccount','employeeRules','leave','admin'];
-var allowedAdminTabs=['dashboard','activity','store','capacity','account','lineUser','orderAdmin','expenseAdmin','externalAccountAdmin','salesReport','employeeRulesAdmin','lineGroupMessages'];
+var allowedPages=['home','order','sales','expense','externalAccount','employeeRules','admin'];
+var allowedAdminTabs=['dashboard','activity','store','capacity','account','lineUser','orderAdmin','expenseAdmin','externalAccountAdmin','salesReport','employeeRulesAdmin','lineGroupMessages','leaveAdmin'];
 var allowedSalesViews=['daily','proxy','store','person','personDetail','workdays','returns','requests'];
 function read(key){try{return String(sessionStorage.getItem(key)||'')}catch(_){return ''}}
 function write(key,value){try{sessionStorage.setItem(key,String(value||''))}catch(_){}}
@@ -16453,657 +16453,383 @@ window.printSalesAveragePerformance=function(){var previous=comparisonView;try{c
 window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';try{var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true);exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；統計摘要與目前分頁完整資料已放在同一張工作表。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
 window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;try{if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false}};
 window.printSalesStatDetail=function(){try{var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden){salesSetAdminStatus('請先點選一間門市或一位人員，再使用友善列印。','error');return}var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()}catch(error){v55ActionError('友善列印',error)}};
-window.STARRED_UI_BUILD='20260903-line-picking-dry-hair-cap-v65';
+window.STARRED_UI_BUILD='20260904-backoffice-leave-v66';
 })();
 </script>
 
-<style id="leave-management-v1-style">
-/* ===== 星紅員工休假管理 v1：LINE 登入、手寫簽名、主管審核 ===== */
-.leave-v1-page{display:none}.leave-v1-page.active{display:block}
-.leave-v1-hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin:28px 0 18px}
-.leave-v1-hero span{font-size:12px;letter-spacing:.18em;color:#718693;font-weight:800}.leave-v1-hero h1{margin:5px 0 4px;font-size:30px}.leave-v1-hero p{margin:0;color:#718693;line-height:1.65}
-.leave-v1-user{padding:10px 13px;border:1px solid #d8e1e7;border-radius:13px;background:#fff;color:#526b79;font-size:13px}
-.leave-v1-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
-.leave-v1-stat{padding:15px 16px;border:1px solid #dce5e9;border-radius:16px;background:#fff;box-shadow:0 5px 16px rgba(39,66,83,.05)}
-.leave-v1-stat span{display:block;font-size:12px;color:#718693}.leave-v1-stat b{display:block;margin-top:4px;font-size:25px;color:#274253}.leave-v1-stat small{display:block;margin-top:3px;color:#8797a0}
-.leave-v1-shell{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(0,1.2fr);gap:14px}.leave-v1-panel{padding:18px;border:1px solid #dce5e9;border-radius:18px;background:#fff;box-shadow:0 5px 18px rgba(39,66,83,.05)}
-.leave-v1-panel h2{margin:0 0 4px;font-size:20px}.leave-v1-panel>p{margin:0 0 14px;color:#738792;font-size:13px;line-height:1.6}
-.leave-v1-form{display:grid;grid-template-columns:1fr 1fr;gap:11px}.leave-v1-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#617784}.leave-v1-form .wide{grid-column:1/-1}.leave-v1-form input,.leave-v1-form select,.leave-v1-form textarea{min-height:44px;border-radius:12px}.leave-v1-roc-hint{font-size:11px;color:#8797a0;font-weight:500}
-.leave-v1-sign-wrap{grid-column:1/-1;border:1px solid #dce5e9;border-radius:14px;padding:11px;background:#f8fafb}.leave-v1-sign-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}.leave-v1-sign-head b{font-size:13px;color:#526b79}.leave-v1-sign-head button{border:1px solid #cfdbe1;background:#fff;color:#526b79;border-radius:9px;padding:6px 10px;font-size:12px;font-weight:800}.leave-v1-signature{display:block;width:100%;height:165px;background:#fff;border:1px dashed #b8c8d0;border-radius:11px;touch-action:none;cursor:crosshair}.leave-v1-sign-note{margin-top:8px;font-size:11px;color:#7d909b;line-height:1.6}
-.leave-v1-submit{grid-column:1/-1;width:100%;height:47px}.leave-v1-status{display:none;grid-column:1/-1;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700}.leave-v1-status.show{display:block}.leave-v1-status.error{background:#faecea;color:#963d35}.leave-v1-status.ok{background:#eaf5ee;color:#2d6847}.leave-v1-status.working{background:#eef4f7;color:#526b79}
-.leave-v1-list{display:grid;gap:9px}.leave-v1-row{border:1px solid #dce5e9;border-radius:13px;padding:12px 13px;background:#fff}.leave-v1-row-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.leave-v1-row-head b{font-size:15px}.leave-v1-row-head small{color:#738792}.leave-v1-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:7px;color:#677d89;font-size:12px}.leave-v1-reason{margin-top:8px;padding-top:8px;border-top:1px dashed #e0e7eb;color:#455f6e;font-size:13px;line-height:1.55}.leave-v1-badge{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900;white-space:nowrap}.leave-v1-badge.pending{background:#fff2d9;color:#96651c}.leave-v1-badge.approved{background:#e6f4ea;color:#2e704b}.leave-v1-badge.rejected{background:#fae8e5;color:#9a4338}
-.leave-v1-empty{padding:25px;text-align:center;border:1px dashed #cfdae0;border-radius:13px;color:#83949d;background:#fafcfd}.leave-v1-alert{margin-bottom:13px;padding:12px 14px;border-radius:12px;background:#fff2d9;color:#79571d;line-height:1.6;font-size:13px}
-/* 後台 */
-.leave-admin-v1-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:13px}.leave-admin-v1-tabs{display:flex;gap:7px;flex-wrap:wrap}.leave-admin-v1-tabs button{border:0;border-radius:999px;padding:9px 13px;background:#e7eef2;color:#274253;font-weight:800}.leave-admin-v1-tabs button.active{background:#274253;color:#fff}.leave-admin-v1-view{display:none}.leave-admin-v1-view.active{display:block}
-.leave-admin-v1-table-wrap{overflow:auto;border:1px solid #dce5e9;border-radius:14px}.leave-admin-v1-table{width:100%;border-collapse:collapse;min-width:900px;background:#fff}.leave-admin-v1-table th,.leave-admin-v1-table td{padding:11px 10px;border-bottom:1px solid #e5ecef;text-align:left;font-size:13px;vertical-align:top}.leave-admin-v1-table th{background:#f6f9fa;color:#617784;font-size:12px}.leave-admin-v1-actions{display:flex;gap:6px;flex-wrap:wrap}.leave-admin-v1-actions button{padding:7px 10px;border-radius:9px;border:0;font-weight:800}.leave-admin-v1-actions .approve{background:#e7f4eb;color:#2e704b}.leave-admin-v1-actions .reject{background:#fae9e6;color:#98463b}.leave-admin-v1-actions .edit{background:#e7eef2;color:#274253}
-.leave-admin-v1-editor{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px;padding:14px;border:1px solid #dce5e9;border-radius:14px;background:#f8fafb}.leave-admin-v1-editor label{font-size:12px;font-weight:800;color:#617784}.leave-admin-v1-editor input,.leave-admin-v1-editor select,.leave-admin-v1-editor textarea{margin-top:6px}.leave-admin-v1-editor .wide{grid-column:span 2}.leave-admin-v1-editor .full{grid-column:1/-1}.leave-admin-v1-editor-actions{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end}
-.leave-admin-v1-sign-preview{width:170px;height:72px;object-fit:contain;border:1px solid #dce5e9;border-radius:8px;background:#fff}.leave-access-v1{display:flex;align-items:center;gap:7px;padding:8px 9px;border:1px solid #dce5e9;border-radius:10px;background:#f8fafb;font-size:12px;font-weight:800;color:#526b79}.leave-access-v1 input{width:18px;height:18px;accent-color:#274253}.leave-access-v1.locked{opacity:.75}.leave-admin-v1-audit{font-size:11px;color:#758994;line-height:1.55;max-width:220px;word-break:break-word}
-@media(max-width:900px){.leave-v1-grid{grid-template-columns:1fr 1fr}.leave-v1-shell{grid-template-columns:1fr}.leave-admin-v1-editor{grid-template-columns:1fr 1fr}}
-@media(max-width:620px){.leave-v1-hero{align-items:flex-start;flex-direction:column}.leave-v1-grid{grid-template-columns:1fr 1fr}.leave-v1-shell{grid-template-columns:1fr}.leave-v1-form{grid-template-columns:1fr}.leave-v1-form .wide,.leave-v1-sign-wrap,.leave-v1-submit,.leave-v1-status{grid-column:auto}.leave-admin-v1-editor{grid-template-columns:1fr}.leave-admin-v1-editor .wide,.leave-admin-v1-editor .full{grid-column:auto}.leave-v1-signature{height:190px}}
-/* ===== 休假頁面：沿用單機版視覺語彙 ===== */
-#leavePage{max-width:none!important;margin-left:calc((min(1380px,calc(100vw - 48px)) - 100vw)/2);margin-right:calc((min(1380px,calc(100vw - 48px)) - 100vw)/2);background:#f3f7fa;min-height:calc(100vh - 74px)}
-.leave-v1-appbar{height:70px;display:flex;align-items:center;gap:12px;padding:0 22px;background:#173f67;color:#fff;box-shadow:0 5px 18px rgba(20,52,82,.12)}
-.leave-v1-brandmark{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:#fff;color:#173f67;font-size:18px;font-weight:900}
-.leave-v1-brandtext{display:flex;flex-direction:column;line-height:1.2}.leave-v1-brandtext b{font-size:18px;font-weight:800}.leave-v1-brandtext small{margin-top:3px;color:#c9d8e5;font-size:11px}.leave-v1-appbar-spacer{flex:1}
-.leave-v1-user{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff}
-.leave-v1-workspace{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 144px)}
-.leave-v1-sidebar{padding:18px 12px;background:#fff;border-right:1px solid #dde6ec}
-.leave-v1-sidebar button{width:100%;display:flex;align-items:center;gap:10px;min-height:44px;margin:3px 0;padding:10px 12px;border:0;border-radius:11px;background:transparent;color:#516b7a;text-align:left;font-weight:700}
-.leave-v1-sidebar button:hover,.leave-v1-sidebar button.active{background:#e8f2f8;color:#173f67}.leave-v1-sidebar button span{width:22px;text-align:center}.leave-v1-side-divider{height:1px;margin:14px 4px;background:#e3eaee}
-.leave-v1-main{padding:24px 28px 42px;min-width:0}.leave-v1-hero{margin:0 0 18px;align-items:center}.leave-v1-hero span{color:#6f8797}.leave-v1-hero h1{color:#173f67;font-size:30px}.leave-v1-quick{min-width:132px}
-.leave-v1-grid{gap:14px}.leave-v1-stat{border-radius:13px;border:1px solid #d9e4ea;box-shadow:none}.leave-v1-stat b{color:#173f67}.leave-v1-shell{grid-template-columns:minmax(360px,.95fr) minmax(0,1.05fr);gap:16px}.leave-v1-panel{border-radius:14px;border:1px solid #d9e4ea;box-shadow:none;padding:20px}.leave-v1-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.leave-v1-panel-head span{display:block;margin-bottom:3px;color:#7590a0;font-size:11px;font-weight:800;letter-spacing:.14em}.leave-v1-panel-head h2{margin:0;color:#173f67}.leave-v1-sign-wrap{background:#f5f8fa}.leave-v1-submit{background:#2d7f7b!important}.leave-v1-guide{margin-top:16px;padding:20px;border:1px solid #d9e4ea;border-radius:14px;background:#fff}.leave-v1-guide-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.leave-v1-guide-grid article{padding:13px 14px;border:1px solid #e0e8ed;border-radius:12px;background:#f8fafb}.leave-v1-guide-grid b{color:#173f67}.leave-v1-guide-grid p{margin:6px 0 0;color:#6f8390;font-size:13px;line-height:1.6}
-@media(max-width:900px){#leavePage{margin-left:0;margin-right:0}.leave-v1-workspace{grid-template-columns:1fr}.leave-v1-sidebar{display:flex;gap:7px;overflow-x:auto;border-right:0;border-bottom:1px solid #dde6ec;padding:10px 12px;scrollbar-width:none}.leave-v1-sidebar::-webkit-scrollbar{display:none}.leave-v1-sidebar button{flex:0 0 auto;width:auto;min-height:40px;white-space:nowrap;margin:0}.leave-v1-side-divider{display:none}.leave-v1-main{padding:18px 14px 32px}.leave-v1-guide-grid{grid-template-columns:1fr 1fr}.leave-v1-shell{grid-template-columns:1fr}}
-@media(max-width:620px){.leave-v1-appbar{height:auto;min-height:60px;padding:10px 12px}.leave-v1-brandtext b{font-size:16px}.leave-v1-brandtext small{font-size:10px}.leave-v1-user{max-width:42vw;padding:8px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.leave-v1-main{padding:14px 10px 28px}.leave-v1-hero{flex-direction:row;align-items:center}.leave-v1-hero h1{font-size:25px}.leave-v1-hero p{font-size:13px}.leave-v1-quick{min-width:112px;padding:9px 10px!important}.leave-v1-grid{grid-template-columns:1fr 1fr!important;gap:8px}.leave-v1-stat{padding:12px}.leave-v1-stat b{font-size:21px}.leave-v1-panel,.leave-v1-guide{padding:14px;border-radius:13px}.leave-v1-guide-grid{grid-template-columns:1fr}.leave-v1-sidebar button{font-size:14px}.leave-v1-sidebar button span{width:auto}}
 
-/* ===== 手機前台主選單：休假／活動等按鈕統一尺寸與對齊 ===== */
-@media(max-width:760px){.topbar-inner{align-items:center!important}.topbar-right{grid-template-columns:minmax(0,1fr) auto!important;align-items:start!important}.topbar .nav{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;align-items:stretch!important}.topbar .nav button{width:100%!important;min-width:0!important;min-height:42px!important;height:42px!important;padding:6px 5px!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;line-height:1.15!important;border-radius:11px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:14px!important}.topbar-session{height:42px!important}.logout-top-btn{height:42px!important;min-height:42px!important}}
-@media(max-width:430px){.topbar .nav{grid-template-columns:repeat(2,minmax(0,1fr))!important}.topbar .nav button{font-size:13.5px!important}}
 
-</style>
-<script id="leave-management-v1-script">
-(function(){
-'use strict';
-var leaveState={own:null,requests:[],adminProfiles:[],adminRequests:[],adminUsers:[],adminView:'requests',editingLineUserId:'',signatureDirty:false,loaded:false};
-function lvEl(id){return document.getElementById(id)}
-function lvEsc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]})}
-function lvRoc(date){var s=String(date||'').slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?'民國'+String(Number(m[1])-1911)+'/'+m[2]+'/'+m[3]:(s||'—')}
-function lvRocInput(date){var s=String(date||'').slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?String(Number(m[1])-1911)+'/'+m[2]+'/'+m[3]:''}
-function lvParseRoc(value){var s=String(value||'').trim().replace(/^民國/,'').replace(/年/g,'/').replace(/月/g,'/').replace(/日/g,'').replace(/-/g,'/');var m=s.match(/^(\d{2,3,4})\/(\d{1,2})\/(\d{1,2})$/);if(!m)return '';var y=Number(m[1]);if(y<1911)y+=1911;var mo=Number(m[2]),d=Number(m[3]);var dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return '';return String(y).padStart(4,'0')+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
-function lvDateTime(v){if(!v)return '—';try{return new Date(v).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(v)}}
-function lvType(v){return {annual:'特別休假',sick:'普通病假',personal:'事假',family:'家庭照顧假',other:'其他'}[String(v)]||String(v||'—')}
-function lvStatus(v){return {pending:'待審核',approved:'已核准',rejected:'未通過'}[String(v)]||String(v||'—')}
-function lvRole(v){var r=String(v||'').toLowerCase();if(['system_admin','admin','administrator','系統管理員'].includes(r))return 'admin';if(['accounting','accountant','會計'].includes(r))return 'accounting';if(['manager','主管'].includes(r))return 'manager';return 'staff'}
-function lvLineIdentity(){var p=(typeof getCurrentLineUser==='function'?getCurrentLineUser():null)||window.starredVerifiedLineUser||{};return {id:String(p.id||p.lineUserId||''),name:String(p.name||p.employeeName||p.lineDisplayName||'LINE 使用者'),role:String(p.role||'staff')}}
-function lvCurrentUserCanAdmin(){var identity=lvLineIdentity(),u=(typeof lineUsers!=='undefined'?lineUsers:[]).find(function(x){return String(x.id)===identity.id});return lvRole(identity.role)==='admin'||lvRole(u&&u.role)==='admin'||!!(u&&u.leaveAdminAccess)}
-function lvSetStatus(id,text,type){var el=lvEl(id);if(!el)return;el.textContent=text||'';el.className='leave-v1-status'+(text?' show '+(type||'working'):'')}
-function lvEntitlementCard(label,obj,note){obj=obj||{};return '<div class="leave-v1-stat"><span>'+lvEsc(label)+'</span><b>'+lvEsc(String(obj.remaining==null?'—':obj.remaining))+' 日</b><small>'+lvEsc(note||'')+'</small></div>'}
-function lvEnsureUI(){
- var nav=document.querySelector('.topbar .nav');if(nav&&!lvEl('leaveNav')){var btn=document.createElement('button');btn.id='leaveNav';btn.type='button';btn.textContent='休假';btn.setAttribute('onclick',"showPage('leave')");nav.insertBefore(btn,document.getElementById('adminNav')||null)}
- var main=document.querySelector('main.container');if(main&&!lvEl('leavePage')){var page=document.createElement('div');page.id='leavePage';page.className='page leave-v1-page';page.innerHTML='<div class="leave-v1-appbar"><div class="leave-v1-brandmark">休</div><div class="leave-v1-brandtext"><b>星紅員工休假管理</b><small>LINE 雲端整合版</small></div><div class="leave-v1-appbar-spacer"></div><div id="leaveCurrentUser" class="leave-v1-user">LINE 身分確認中…</div></div><div class="leave-v1-workspace"><aside class="leave-v1-sidebar"><button type="button" class="active" onclick="document.getElementById(\'leaveOverviewSection\')?.scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span>⌂</span> 我的休假總覽</button><button type="button" onclick="document.getElementById(\'leaveApplySection\')?.scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span>＋</span> 新增請假</button><button type="button" onclick="document.getElementById(\'leaveHistorySection\')?.scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span>▤</span> 我的申請紀錄</button><div class="leave-v1-side-divider"></div><button type="button" onclick="document.getElementById(\'leaveGuideSection\')?.scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span>?</span> 假別白話說明</button></aside><div class="leave-v1-main"><section id="leaveOverviewSection"><div class="leave-v1-hero"><div><span>MY LEAVE</span><h1>我的休假</h1><p>查看目前可用假期、提出請假並追蹤主管審核進度。</p></div><button type="button" class="primary leave-v1-quick" onclick="document.getElementById(\'leaveApplySection\')?.scrollIntoView({behavior:\'smooth\',block:\'start\'})">＋ 新增請假</button></div><div id="leaveProfileAlert"></div><div id="leaveBalanceGrid" class="leave-v1-grid"></div></section><div class="leave-v1-shell"><section id="leaveApplySection" class="leave-v1-panel"><div class="leave-v1-panel-head"><div><span>申請</span><h2>新增請假申請</h2></div></div><p>日期請輸入民國格式，例如 115/09/04。送出前需本人手寫簽名，並保存登入身分、時間、IP 與裝置資訊。</p><div class="leave-v1-form"><label>假別<select id="leaveType"><option value="annual">特別休假</option><option value="sick">普通病假</option><option value="personal">事假</option><option value="family">家庭照顧假</option><option value="other">其他</option></select></label><label>請假方式<select id="leaveUnit" onchange="leaveV1ToggleUnit()"><option value="days">天數</option><option value="hours">小時</option></select></label><label>開始日期 <span class="leave-v1-roc-hint">民國年/月/日</span><input id="leaveStartRoc" inputmode="numeric" placeholder="115/09/04"></label><label>結束日期 <span class="leave-v1-roc-hint">單日請假可填同一天</span><input id="leaveEndRoc" inputmode="numeric" placeholder="115/09/04"></label><label id="leaveDaysWrap">天數<input id="leaveDays" type="number" min="0.125" max="30" step="0.125" value="1"></label><label id="leaveHoursWrap" style="display:none">小時<input id="leaveHours" type="number" min="0.5" max="24" step="0.5" value="1"></label><label class="wide">請假事由<textarea id="leaveReason" rows="3" maxlength="500" placeholder="請填寫請假事由"></textarea></label><div class="leave-v1-sign-wrap"><div class="leave-v1-sign-head"><b>本人手寫簽名 *</b><button type="button" onclick="leaveV1ClearSignature()">清除重簽</button></div><canvas id="leaveSignatureCanvas" class="leave-v1-signature"></canvas><div class="leave-v1-sign-note">本人確認以上請假資料由本人提出並親自簽署。系統會保存 LINE 身分、簽名、送出時間、IP 位址及裝置／瀏覽器資訊，作為申請紀錄。</div></div><div id="leaveSubmitStatus" class="leave-v1-status"></div><button id="leaveSubmitBtn" type="button" class="primary leave-v1-submit" onclick="leaveV1Submit()">簽名確認並送出</button></div></section><section id="leaveHistorySection" class="leave-v1-panel"><div class="leave-v1-panel-head"><div><span>紀錄</span><h2>我的申請紀錄</h2></div></div><p>送出後原始內容不直接覆寫；若資料錯誤，請聯絡主管退回後重新申請並重新簽名。</p><div id="leaveOwnList" class="leave-v1-list"><div class="leave-v1-empty">開啟此頁後會載入紀錄。</div></div></section></div><section id="leaveGuideSection" class="leave-v1-guide"><div class="leave-v1-panel-head"><div><span>GUIDE</span><h2>假別白話說明</h2></div></div><div class="leave-v1-guide-grid"><article><b>特別休假</b><p>依到職年資計算。系統會顯示目前剩餘天數與本期截止日。</p></article><article><b>普通病假</b><p>因疾病或身體不適需要休養時使用，實際給薪與證明依公司規定及法令辦理。</p></article><article><b>事假</b><p>因個人事故必須親自處理時使用，送出時請填寫事由。</p></article><article><b>家庭照顧假</b><p>家庭成員需要預防接種、重大疾病或其他照顧需求時使用。</p></article></div></section></div></div>';main.appendChild(page)}
- var tabs=document.querySelector('#adminContent>.admin-tabs');if(tabs&&!lvEl('leaveAdminTabBtn')){var ab=document.createElement('button');ab.id='leaveAdminTabBtn';ab.type='button';ab.textContent='休假管理';ab.setAttribute('onclick',"showAdminTab('leaveAdmin')");var lineBtn=lvEl('lineUserTabBtn');tabs.insertBefore(ab,lineBtn||null)}
- var admin=document.getElementById('adminContent');if(admin&&!lvEl('leaveAdminTab')){var panel=document.createElement('div');panel.id='leaveAdminTab';panel.className='admin-tab-panel';panel.innerHTML='<section class="panel"><div class="leave-admin-v1-toolbar"><div><h2 style="margin:0">員工休假管理</h2><div class="manage-list-description">主管審核、員工資料、特休餘額與簽署紀錄。系統管理員固定可查看；其他人由「LINE 使用者」勾選授權。</div></div><div class="leave-admin-v1-tabs"><button id="leaveAdminRequestsBtn" class="active" onclick="leaveV1AdminView(\'requests\')">待審核／紀錄</button><button id="leaveAdminEmployeesBtn" onclick="leaveV1AdminView(\'employees\')">員工資料</button><button class="secondary" onclick="leaveV1LoadAdmin()">重新整理</button></div></div><div id="leaveAdminStatus" class="leave-v1-status"></div><div id="leaveAdminRequestsView" class="leave-admin-v1-view active"><div id="leaveAdminRequestList"><div class="leave-v1-empty">正在載入…</div></div></div><div id="leaveAdminEmployeesView" class="leave-admin-v1-view"><div id="leaveEmployeeEditor"></div><div id="leaveAdminEmployeeList"></div></div></section>';admin.appendChild(panel)}
-}
-function lvSetupSignature(){var canvas=lvEl('leaveSignatureCanvas');if(!canvas||canvas.dataset.bound)return;canvas.dataset.bound='1';var ctx=canvas.getContext('2d'),drawing=false,last=null;function resize(){var rect=canvas.getBoundingClientRect(),ratio=Math.max(1,Math.min(2,window.devicePixelRatio||1));var image=leaveState.signatureDirty?canvas.toDataURL('image/png'):'';canvas.width=Math.floor(rect.width*ratio);canvas.height=Math.floor(rect.height*ratio);ctx=canvas.getContext('2d');ctx.scale(ratio,ratio);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#203d4e';if(image){var im=new Image();im.onload=function(){ctx.drawImage(im,0,0,rect.width,rect.height)};im.src=image}}
- function point(e){var r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
- canvas.addEventListener('pointerdown',function(e){drawing=true;last=point(e);canvas.setPointerCapture(e.pointerId);e.preventDefault()});canvas.addEventListener('pointermove',function(e){if(!drawing)return;var p=point(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;leaveState.signatureDirty=true;e.preventDefault()});function end(){drawing=false;last=null}canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);window.addEventListener('resize',function(){setTimeout(resize,120)});setTimeout(resize,50)}
-window.leaveV1ClearSignature=function(){var c=lvEl('leaveSignatureCanvas');if(!c)return;var ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);leaveState.signatureDirty=false};
-window.leaveV1ToggleUnit=function(){var u=lvEl('leaveUnit')?.value||'days';if(lvEl('leaveDaysWrap'))lvEl('leaveDaysWrap').style.display=u==='days'?'flex':'none';if(lvEl('leaveHoursWrap'))lvEl('leaveHoursWrap').style.display=u==='hours'?'flex':'none'};
-async function lvLoadOwn(){lvSetStatus('leaveSubmitStatus','');var identity=lvLineIdentity();if(lvEl('leaveCurrentUser'))lvEl('leaveCurrentUser').textContent='目前登入：'+identity.name;try{var r=await starredApi('leave_bootstrap',{});leaveState.own=r.profile||null;leaveState.requests=Array.isArray(r.requests)?r.requests:[];lvRenderOwn(r)}catch(error){lvEl('leaveBalanceGrid').innerHTML='';lvEl('leaveOwnList').innerHTML='<div class="leave-v1-empty">休假資料載入失敗：'+lvEsc(error&&error.message||error)+'</div>'}}
-function lvRenderOwn(r){var p=r.profile,b=r.balances||{};var alert=lvEl('leaveProfileAlert');if(!p){alert.innerHTML='<div class="leave-v1-alert">目前 LINE 身分尚未建立員工資料。請聯絡主管／系統管理員在「休假管理 → 員工資料」填寫到職日後，即可開始計算特休並送出請假。</div>';lvEl('leaveBalanceGrid').innerHTML='';lvEl('leaveSubmitBtn').disabled=true}else{alert.innerHTML='';lvEl('leaveSubmitBtn').disabled=false;lvEl('leaveBalanceGrid').innerHTML=lvEntitlementCard('特別休假',b.annual,b.annual&&b.annual.periodEnd?'本期至 '+lvRoc(b.annual.periodEnd):'')+lvEntitlementCard('普通病假',b.sick,'民國'+String(new Date().getFullYear()-1911)+'年度')+lvEntitlementCard('事假',b.personal,'含家庭照顧假合計上限')+lvEntitlementCard('家庭照顧假',b.family,'民國'+String(new Date().getFullYear()-1911)+'年度')}
- var list=lvEl('leaveOwnList');if(!leaveState.requests.length){list.innerHTML='<div class="leave-v1-empty">目前還沒有請假申請。</div>';return}list.innerHTML=leaveState.requests.map(function(x){return '<article class="leave-v1-row"><div class="leave-v1-row-head"><div><b>'+lvEsc(lvType(x.leaveType))+'・'+lvEsc(lvRoc(x.startDate))+(x.endDate&&x.endDate!==x.startDate?' ～ '+lvEsc(lvRoc(x.endDate)):'')+'</b><small>申請編號 '+lvEsc(x.requestNo||'—')+'</small></div><span class="leave-v1-badge '+lvEsc(x.status)+'">'+lvEsc(lvStatus(x.status))+'</span></div><div class="leave-v1-meta"><span>折算 '+lvEsc(String(x.equivalentDays||0))+' 日</span><span>送出 '+lvEsc(lvDateTime(x.signedAt||x.createdAt))+'</span>'+(x.reviewerName?'<span>審核 '+lvEsc(x.reviewerName)+'</span>':'')+'</div><div class="leave-v1-reason">'+lvEsc(x.reason||'—')+(x.reviewNote?'<br><small>主管備註：'+lvEsc(x.reviewNote)+'</small>':'')+'</div></article>'}).join('')}
-window.leaveV1Submit=async function(){if(!leaveState.own){alert('尚未建立員工資料');return}var start=lvParseRoc(lvEl('leaveStartRoc').value),end=lvParseRoc(lvEl('leaveEndRoc').value);if(!start||!end){lvSetStatus('leaveSubmitStatus','日期格式錯誤，請輸入例如 115/09/04。','error');return}if(end<start){lvSetStatus('leaveSubmitStatus','結束日期不能早於開始日期。','error');return}var reason=String(lvEl('leaveReason').value||'').trim();if(!reason){lvSetStatus('leaveSubmitStatus','請填寫請假事由。','error');return}if(!leaveState.signatureDirty){lvSetStatus('leaveSubmitStatus','請先在簽名板完成本人手寫簽名。','error');return}var unit=lvEl('leaveUnit').value,days=unit==='days'?Number(lvEl('leaveDays').value||0):0,hours=unit==='hours'?Number(lvEl('leaveHours').value||0):0;if((unit==='days'&&days<=0)||(unit==='hours'&&hours<=0)){lvSetStatus('leaveSubmitStatus','請填寫請假天數或小時。','error');return}var canvas=lvEl('leaveSignatureCanvas'),signatureData=canvas.toDataURL('image/png');var btn=lvEl('leaveSubmitBtn');btn.disabled=true;lvSetStatus('leaveSubmitStatus','正在保存簽名與請假申請…','working');try{await starredApi('leave_submit',{leaveType:lvEl('leaveType').value,startDate:start,endDate:end,days:days,hours:hours,reason:reason,signatureData:signatureData,signatureStatement:'本人確認以上請假資料由本人提出並親自簽署。'});lvSetStatus('leaveSubmitStatus','請假申請已送出，等待主管審核。','ok');lvEl('leaveReason').value='';leaveV1ClearSignature();await lvLoadOwn()}catch(error){lvSetStatus('leaveSubmitStatus','送出失敗：'+String(error&&error.message||error),'error')}finally{btn.disabled=!leaveState.own}};
-function lvCanShowAdminButton(){var adminBtn=lvEl('leaveAdminTabBtn');if(!adminBtn)return;var show=lvCurrentUserCanAdmin();adminBtn.classList.toggle('hidden-by-role',!show)}
-window.leaveV1AdminView=function(view){leaveState.adminView=view;lvEl('leaveAdminRequestsBtn')?.classList.toggle('active',view==='requests');lvEl('leaveAdminEmployeesBtn')?.classList.toggle('active',view==='employees');lvEl('leaveAdminRequestsView')?.classList.toggle('active',view==='requests');lvEl('leaveAdminEmployeesView')?.classList.toggle('active',view==='employees');if(view==='employees')lvRenderEmployeeAdmin()};
-window.leaveV1LoadAdmin=async function(){if(!lvCurrentUserCanAdmin()){lvSetStatus('leaveAdminStatus','目前 LINE 身分沒有休假管理權限。','error');return}lvSetStatus('leaveAdminStatus','正在載入休假資料…','working');try{var r=await starredApi('leave_admin_bootstrap',{});leaveState.adminProfiles=Array.isArray(r.profiles)?r.profiles:[];leaveState.adminRequests=Array.isArray(r.requests)?r.requests:[];leaveState.adminUsers=Array.isArray(r.users)?r.users:[];lvSetStatus('leaveAdminStatus','');lvRenderAdminRequests();lvRenderEmployeeAdmin()}catch(error){lvSetStatus('leaveAdminStatus','載入失敗：'+String(error&&error.message||error),'error')}};
-function lvRenderAdminRequests(){var host=lvEl('leaveAdminRequestList');if(!host)return;var rows=leaveState.adminRequests.slice().sort(function(a,b){return (a.status==='pending'?0:1)-(b.status==='pending'?0:1)||String(b.createdAt).localeCompare(String(a.createdAt))});if(!rows.length){host.innerHTML='<div class="leave-v1-empty">目前沒有請假申請。</div>';return}host.innerHTML='<div class="leave-admin-v1-table-wrap"><table class="leave-admin-v1-table"><thead><tr><th>員工／申請</th><th>假別／日期</th><th>天數</th><th>事由</th><th>本人簽名</th><th>簽署紀錄</th><th>狀態／審核</th></tr></thead><tbody>'+rows.map(function(x){var can=x.status==='pending';return '<tr><td><b>'+lvEsc(x.requesterName||'—')+'</b><br><small>'+lvEsc(x.requestNo||'—')+'<br>'+lvEsc(lvDateTime(x.createdAt))+'</small></td><td><b>'+lvEsc(lvType(x.leaveType))+'</b><br>'+lvEsc(lvRoc(x.startDate))+(x.endDate!==x.startDate?'<br>至 '+lvEsc(lvRoc(x.endDate)):'')+'</td><td>'+lvEsc(String(x.equivalentDays||0))+' 日'+(x.hours?'<br><small>'+lvEsc(String(x.hours))+' 小時</small>':'')+'</td><td>'+lvEsc(x.reason||'—')+'</td><td>'+(x.signatureData?'<img class="leave-admin-v1-sign-preview" src="'+lvEsc(x.signatureData)+'" alt="簽名">':'—')+'</td><td><div class="leave-admin-v1-audit">時間：'+lvEsc(lvDateTime(x.signedAt))+'<br>IP：'+lvEsc(x.signedIp||'—')+'<br>裝置：'+lvEsc(x.signedUserAgent||'—')+'<br>雜湊：'+lvEsc((x.contentHash||'').slice(0,18))+(x.contentHash?'…':'')+'</div></td><td><span class="leave-v1-badge '+lvEsc(x.status)+'">'+lvEsc(lvStatus(x.status))+'</span>'+(x.reviewerName?'<div class="leave-admin-v1-audit" style="margin-top:7px">'+lvEsc(x.reviewerName)+'<br>'+lvEsc(lvDateTime(x.reviewedAt))+(x.reviewNote?'<br>'+lvEsc(x.reviewNote):'')+'</div>':'')+(can?'<div class="leave-admin-v1-actions" style="margin-top:8px"><button class="approve" onclick="leaveV1Review(\''+lvEsc(x.id)+'\',\'approved\')">核准</button><button class="reject" onclick="leaveV1Review(\''+lvEsc(x.id)+'\',\'rejected\')">退回</button></div>':'')+'</td></tr>'}).join('')+'</tbody></table></div>'}
-window.leaveV1Review=async function(id,status){var row=leaveState.adminRequests.find(function(x){return String(x.id)===String(id)});if(!row)return;var note=prompt(status==='approved'?'核准備註（可留空）':'請填寫退回原因',status==='approved'?'':'資料需重新確認');if(note===null)return;if(status==='rejected'&&!String(note).trim()){alert('退回時請填寫原因');return}try{await starredApi('leave_review',{requestId:id,status:status,reviewNote:String(note||'').trim()});await leaveV1LoadAdmin()}catch(error){alert('審核失敗：'+String(error&&error.message||error))}};
-function lvProfileFor(id){return leaveState.adminProfiles.find(function(x){return String(x.lineUserId)===String(id)})||null}
-function lvRenderEmployeeAdmin(){var editor=lvEl('leaveEmployeeEditor'),host=lvEl('leaveAdminEmployeeList');if(!editor||!host)return;var users=leaveState.adminUsers.length?leaveState.adminUsers:(typeof lineUsers!=='undefined'?lineUsers.map(function(u){return {lineUserId:u.id,name:u.employeeName||u.name||u.displayName,role:u.role,isEnabled:u.enabled!==false}}):[]);var selected=leaveState.editingLineUserId||String(users[0]&&users[0].lineUserId||'');leaveState.editingLineUserId=selected;var p=lvProfileFor(selected)||{};editor.innerHTML='<div class="leave-admin-v1-editor"><label>選擇員工<select id="leaveEmployeeSelect" onchange="leaveV1SelectEmployee(this.value)">'+users.map(function(u){return '<option value="'+lvEsc(u.lineUserId)+'" '+(String(u.lineUserId)===selected?'selected':'')+'>'+lvEsc(u.name||u.lineDisplayName||'LINE 使用者')+'</option>'}).join('')+'</select></label><label>到職日（民國）<input id="leaveEmployeeHireRoc" inputmode="numeric" placeholder="114/03/01" value="'+lvEsc(lvRocInput(p.hireDate))+'"></label><label>離職日（民國，可空白）<input id="leaveEmployeeExitRoc" inputmode="numeric" placeholder="115/12/31" value="'+lvEsc(lvRocInput(p.exitDate))+'"></label><label>每日正常工時<input id="leaveEmployeeHours" type="number" min="1" max="12" step="0.5" value="'+lvEsc(String(p.dailyHours||8))+'"></label><label>身分證（選填）<input id="leaveEmployeeNationalId" maxlength="20" value="'+lvEsc(p.nationalId||'')+'"></label><label>電話（選填）<input id="leaveEmployeePhone" maxlength="30" value="'+lvEsc(p.phone||'')+'"></label><label>前期協議遞延特休<input id="leaveEmployeeDeferred" type="number" min="0" max="60" step="0.5" value="'+lvEsc(String(p.deferredAnnualDays||0))+'"></label><label class="wide">備註<textarea id="leaveEmployeeNote" rows="2" maxlength="500">'+lvEsc(p.note||'')+'</textarea></label><div class="leave-admin-v1-editor-actions"><button type="button" class="primary" onclick="leaveV1SaveEmployee()">儲存員工資料</button></div></div>';host.innerHTML='<div class="leave-admin-v1-table-wrap"><table class="leave-admin-v1-table"><thead><tr><th>姓名</th><th>到職／離職</th><th>特休</th><th>病假</th><th>事假／家庭照顧</th><th>操作</th></tr></thead><tbody>'+users.map(function(u){var pr=lvProfileFor(u.lineUserId),b=pr&&pr.balances||{};return '<tr><td><b>'+lvEsc(u.name||u.lineDisplayName||'LINE 使用者')+'</b><br><small>'+lvEsc(lvRole(u.role)==='admin'?'系統管理員':lvRole(u.role)==='accounting'?'會計':lvRole(u.role)==='manager'?'主管':'員工')+'</small></td><td>'+(pr?lvEsc(lvRoc(pr.hireDate))+(pr.exitDate?'<br>離職 '+lvEsc(lvRoc(pr.exitDate)):''):'<span style="color:#a07834">尚未建立</span>')+'</td><td>'+(b.annual?lvEsc(String(b.annual.remaining))+' / '+lvEsc(String(b.annual.entitlement))+' 日':'—')+'</td><td>'+(b.sick?lvEsc(String(b.sick.remaining))+' 日':'—')+'</td><td>'+(b.personal?lvEsc(String(b.personal.remaining))+' 日':'—')+' / '+(b.family?lvEsc(String(b.family.remaining))+' 日':'—')+'</td><td><button type="button" class="secondary" onclick="leaveV1SelectEmployee(\''+lvEsc(u.lineUserId)+'\')">編輯</button></td></tr>'}).join('')+'</tbody></table></div>'}
-window.leaveV1SelectEmployee=function(id){leaveState.editingLineUserId=String(id||'');lvRenderEmployeeAdmin();setTimeout(function(){lvEl('leaveEmployeeEditor')?.scrollIntoView({behavior:'smooth',block:'start'})},50)};
-window.leaveV1SaveEmployee=async function(){var id=leaveState.editingLineUserId;if(!id){alert('請先選擇員工');return}var hire=lvParseRoc(lvEl('leaveEmployeeHireRoc').value),exitRaw=String(lvEl('leaveEmployeeExitRoc').value||'').trim(),exit=exitRaw?lvParseRoc(exitRaw):'';if(!hire){alert('到職日格式錯誤，請輸入例如 114/03/01');return}if(exitRaw&&!exit){alert('離職日格式錯誤');return}try{await starredApi('leave_employee_save',{lineUserId:id,hireDate:hire,exitDate:exit||null,dailyHours:Number(lvEl('leaveEmployeeHours').value||8),nationalId:String(lvEl('leaveEmployeeNationalId').value||'').trim(),phone:String(lvEl('leaveEmployeePhone').value||'').trim(),deferredAnnualDays:Number(lvEl('leaveEmployeeDeferred').value||0),note:String(lvEl('leaveEmployeeNote').value||'').trim()});alert('員工休假資料已儲存');await leaveV1LoadAdmin()}catch(error){alert('儲存失敗：'+String(error&&error.message||error))}};
-async function lvToggleAccess(id,checked,input){if(input)input.disabled=true;try{await starredApi('leave_access_toggle',{lineUserId:String(id),enabled:!!checked});var u=(typeof lineUsers!=='undefined'?lineUsers:[]).find(function(x){return String(x.id)===String(id)});if(u)u.leaveAdminAccess=!!checked;if(typeof persistLineUsers==='function')persistLineUsers();lvCanShowAdminButton()}catch(error){if(input)input.checked=!checked;alert('休假管理權限更新失敗：'+String(error&&error.message||error))}finally{if(input)input.disabled=false}}
-window.leaveV1ToggleAccess=function(input,id){lvToggleAccess(id,input.checked,input)};
-function lvDecorateLineUsers(){if(typeof lineUsers==='undefined')return;document.querySelectorAll('#lineUserList .line-user-item').forEach(function(row){var id=String(row.dataset.lineUserId||''),u=lineUsers.find(function(x){return String(x.id)===id});if(!u||row.querySelector('.leave-access-v1'))return;var actions=row.querySelector('.line-user-actions');if(!actions)return;var sys=lvRole(u.role)==='admin',label=document.createElement('label');label.className='leave-access-v1'+(sys?' locked':'');label.innerHTML='<input type="checkbox" '+((sys||u.leaveAdminAccess)?'checked':'')+' '+(sys?'disabled':'')+' onchange="leaveV1ToggleAccess(this,\''+lvEsc(id)+'\')"><span>'+(sys?'休假管理：系統管理員固定可看':'可看休假管理頁')+'</span>';actions.parentNode.insertBefore(label,actions)})}
-var previousRenderLineUsers=window.renderLineUsers;if(typeof previousRenderLineUsers==='function')window.renderLineUsers=function(){var r=previousRenderLineUsers.apply(this,arguments);setTimeout(function(){lvDecorateLineUsers();lvCanShowAdminButton()},0);return r};
-var previousApplyCloud=window.applyStarredCloudData;if(typeof previousApplyCloud==='function')window.applyStarredCloudData=function(data){var r=previousApplyCloud.apply(this,arguments);setTimeout(function(){lvDecorateLineUsers();lvCanShowAdminButton()},0);return r};
-var previousShowPage=window.showPage;window.showPage=function(page){if(page==='leave'){if(typeof enforceLineUserAccess==='function'&&!enforceLineUserAccess())return;if(typeof previousShowPage==='function')previousShowPage('home');document.querySelectorAll('main.container>.page').forEach(function(n){n.classList.remove('active')});document.querySelectorAll('.topbar .nav button').forEach(function(n){n.classList.remove('active')});lvEl('leavePage')?.classList.add('active');lvEl('leaveNav')?.classList.add('active');lvSetupSignature();lvLoadOwn();window.scrollTo({top:0,behavior:'smooth'});return}if(typeof previousShowPage==='function')previousShowPage.apply(this,arguments);lvEl('leavePage')?.classList.remove('active');lvEl('leaveNav')?.classList.remove('active')};
-var previousShowAdmin=window.showAdminTab;window.showAdminTab=function(tab){if(tab==='leaveAdmin'){if(!lvCurrentUserCanAdmin()){alert('目前 LINE 身分沒有休假管理權限。');return}if(typeof previousShowAdmin==='function')previousShowAdmin('dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(n){n.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs button').forEach(function(n){n.classList.remove('active')});lvEl('leaveAdminTab')?.classList.add('active');lvEl('leaveAdminTabBtn')?.classList.add('active');leaveV1LoadAdmin();return}if(typeof previousShowAdmin==='function')previousShowAdmin.apply(this,arguments);lvEl('leaveAdminTab')?.classList.remove('active');lvEl('leaveAdminTabBtn')?.classList.remove('active')};
-var previousCheckLogin=window.checkLogin;if(typeof previousCheckLogin==='function')window.checkLogin=function(){var r=previousCheckLogin.apply(this,arguments);setTimeout(lvCanShowAdminButton,0);return r};
-function init(){lvEnsureUI();lvCanShowAdminButton();lvDecorateLineUsers();lvSetupSignature()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(init,120)});else setTimeout(init,120);
-})();
-</script>
 
-<style id="mobile-topbar-alignment-fix-v2">
-/* 手機版前台導覽修正：避免舊版 8 欄 grid 與新版 nav grid 互相擠壓。 */
-@media(max-width:760px){
-  body .topbar .topbar-inner{
-    display:block!important;
-    width:100%!important;
-    padding:9px 10px 10px!important;
-  }
-  body .topbar .topbar-right{
-    display:grid!important;
-    grid-template-columns:minmax(0,1fr) 44px 44px!important;
-    grid-template-rows:auto auto!important;
-    gap:8px!important;
-    width:100%!important;
-    min-width:0!important;
-    align-items:center!important;
-  }
-  body .topbar .nav{
-    display:grid!important;
-    grid-column:1/-1!important;
-    grid-row:1!important;
-    grid-template-columns:repeat(4,minmax(0,1fr))!important;
-    gap:7px!important;
-    width:100%!important;
-    min-width:0!important;
-    overflow:visible!important;
-  }
-  body .topbar .nav button,
-  body .topbar #adminNav,
-  body .topbar #homeNav,
-  body .topbar #orderNav,
-  body .topbar #salesNav,
-  body .topbar #expenseNav,
-  body .topbar #externalAccountNav,
-  body .topbar #leaveNav,
-  body .topbar #employeeRulesNav{
-    position:static!important;
-    grid-column:auto!important;
-    grid-row:auto!important;
-    width:100%!important;
-    min-width:0!important;
-    height:44px!important;
-    min-height:44px!important;
-    margin:0!important;
-    padding:7px 4px!important;
-    display:flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-    border-radius:11px!important;
-    font-size:13px!important;
-    font-weight:600!important;
-    line-height:1.15!important;
-    letter-spacing:0!important;
-    text-align:center!important;
-    white-space:nowrap!important;
-    overflow:hidden!important;
-    text-overflow:ellipsis!important;
-  }
-  body .topbar .notification-wrap{
-    position:relative!important;
-    top:auto!important;
-    right:auto!important;
-    grid-column:2!important;
-    grid-row:2!important;
-    width:44px!important;
-    height:42px!important;
-    justify-self:end!important;
-  }
-  body .topbar .notification-btn{
-    width:44px!important;
-    height:42px!important;
-    min-width:44px!important;
-    min-height:42px!important;
-    padding:0!important;
-    border-radius:11px!important;
-  }
-  body .topbar .topbar-session,
-  body .topbar .topbar-session.show{
-    position:relative!important;
-    grid-column:3!important;
-    grid-row:2!important;
-    width:44px!important;
-    min-width:44px!important;
-    height:42px!important;
-    justify-self:end!important;
-    align-self:center!important;
-  }
-  body .topbar .logout-top-btn{
-    width:44px!important;
-    min-width:44px!important;
-    height:42px!important;
-    min-height:42px!important;
-    padding:0!important;
-    border-radius:11px!important;
-  }
-  body .topbar .logout-top-text{display:none!important}
-}
-@media(max-width:390px){
-  body .topbar .nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  body .topbar .nav button{font-size:12.5px!important}
-}
-</style>
+
 
 
 <!-- FINAL MOBILE NAV FIX 20260904: force readable two-column navigation -->
-<style id="mobile-nav-readable-final-20260904">
-@media (max-width:760px){
-  html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
-  .topbar{position:relative!important;width:100%!important;max-width:100%!important}
-  .topbar .topbar-inner{
-    display:block!important;width:100%!important;max-width:100%!important;
-    padding:10px 12px 12px!important;margin:0!important
-  }
-  .topbar .topbar-right{
-    display:flex!important;flex-direction:column!important;align-items:stretch!important;
-    width:100%!important;max-width:100%!important;min-width:0!important;gap:9px!important;
-    position:relative!important
-  }
-  .topbar .nav{
-    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    grid-auto-flow:row!important;gap:8px!important;width:100%!important;max-width:100%!important;
-    min-width:0!important;padding:0!important;margin:0!important;overflow:visible!important;
-    flex-direction:initial!important
-  }
-  .topbar .nav > button,
-  .topbar #homeNav,.topbar #orderNav,.topbar #salesNav,.topbar #expenseNav,
-  .topbar #externalAccountNav,.topbar #leaveNav,.topbar #employeeRulesNav,.topbar #adminNav{
-    position:static!important;grid-column:auto!important;grid-row:auto!important;
-    display:flex!important;align-items:center!important;justify-content:center!important;
-    width:100%!important;max-width:none!important;min-width:0!important;
-    height:46px!important;min-height:46px!important;margin:0!important;padding:8px 10px!important;
-    border-radius:12px!important;font-size:14px!important;font-weight:700!important;
-    line-height:1.2!important;letter-spacing:0!important;text-align:center!important;
-    white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
-    word-break:keep-all!important
-  }
-  .topbar .notification-wrap,
-  .topbar .topbar-session{
-    position:static!important;grid-column:auto!important;grid-row:auto!important;
-    width:auto!important;height:auto!important;min-width:0!important;align-self:flex-end!important;
-    margin:0!important
-  }
-  .topbar .notification-wrap{position:absolute!important;right:54px!important;bottom:-1px!important}
-  .topbar .topbar-session{position:absolute!important;right:0!important;bottom:-1px!important}
-  .topbar .notification-btn,.topbar .logout-top-btn{
-    width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
-    padding:0!important;border-radius:12px!important
-  }
-  .topbar .logout-top-text{display:none!important}
-  .topbar .nav{padding-bottom:54px!important}
-}
-@media (max-width:360px){
-  .topbar .nav > button{font-size:13px!important;padding-left:6px!important;padding-right:6px!important}
-}
-</style>
-<script id="mobile-nav-readable-final-script-20260904">
-(function(){
-  function setImp(el,p,v){if(el)el.style.setProperty(p,v,'important')}
-  function applyMobileNavFinal(){
-    if(!window.matchMedia || !window.matchMedia('(max-width:760px)').matches)return;
-    var inner=document.querySelector('.topbar .topbar-inner');
-    var right=document.querySelector('.topbar .topbar-right');
-    var nav=document.querySelector('.topbar .nav');
-    setImp(inner,'display','block');setImp(inner,'width','100%');setImp(inner,'max-width','100%');
-    if(right){setImp(right,'display','flex');setImp(right,'flex-direction','column');setImp(right,'width','100%');setImp(right,'max-width','100%');setImp(right,'gap','9px');setImp(right,'position','relative')}
-    if(nav){
-      setImp(nav,'display','grid');setImp(nav,'grid-template-columns','repeat(2,minmax(0,1fr))');setImp(nav,'grid-auto-flow','row');
-      setImp(nav,'gap','8px');setImp(nav,'width','100%');setImp(nav,'max-width','100%');setImp(nav,'padding','0 0 54px 0');setImp(nav,'overflow','visible');
-      Array.prototype.forEach.call(nav.children,function(btn){
-        if(!btn || btn.tagName!=='BUTTON')return;
-        setImp(btn,'position','static');setImp(btn,'grid-column','auto');setImp(btn,'grid-row','auto');setImp(btn,'width','100%');setImp(btn,'max-width','none');
-        setImp(btn,'min-width','0');setImp(btn,'height','46px');setImp(btn,'min-height','46px');setImp(btn,'margin','0');setImp(btn,'padding','8px 10px');
-        setImp(btn,'display','flex');setImp(btn,'align-items','center');setImp(btn,'justify-content','center');setImp(btn,'font-size','14px');setImp(btn,'font-weight','700');
-        setImp(btn,'line-height','1.2');setImp(btn,'white-space','nowrap');setImp(btn,'overflow','visible');setImp(btn,'text-overflow','clip');
-      });
-    }
-    var notify=document.querySelector('.topbar .notification-wrap');
-    var session=document.querySelector('.topbar .topbar-session');
-    if(notify){setImp(notify,'position','absolute');setImp(notify,'right','54px');setImp(notify,'bottom','-1px');setImp(notify,'top','auto');setImp(notify,'grid-column','auto');setImp(notify,'grid-row','auto')}
-    if(session){setImp(session,'position','absolute');setImp(session,'right','0');setImp(session,'bottom','-1px');setImp(session,'top','auto');setImp(session,'grid-column','auto');setImp(session,'grid-row','auto')}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){applyMobileNavFinal();setTimeout(applyMobileNavFinal,250);setTimeout(applyMobileNavFinal,1000)});
-  else {applyMobileNavFinal();setTimeout(applyMobileNavFinal,250);setTimeout(applyMobileNavFinal,1000)}
-  window.addEventListener('resize',applyMobileNavFinal);
-})();
-</script>
+
+
 
 
 <!-- FINAL MOBILE NAV COMPACT AUTO-WIDTH FIX 20260904 -->
-<style id="mobile-nav-auto-width-final-20260904">
-@media (max-width:760px){
-  .topbar .topbar-inner{
-    display:block!important;
-    width:100%!important;
-    max-width:100%!important;
-    padding:9px 10px 10px!important;
-  }
-  .topbar .topbar-right{
-    display:flex!important;
-    flex-direction:column!important;
-    align-items:stretch!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    gap:7px!important;
-    position:relative!important;
-  }
-  .topbar .nav{
-    display:flex!important;
-    flex-direction:row!important;
-    flex-wrap:wrap!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-    gap:6px!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    padding:0!important;
-    margin:0!important;
-    overflow:visible!important;
-  }
-  .topbar .nav > button:not(.hidden-by-role){
-    position:static!important;
-    flex:0 0 auto!important;
-    width:auto!important;
-    max-width:100%!important;
-    min-width:0!important;
-    height:38px!important;
-    min-height:38px!important;
-    margin:0!important;
-    padding:7px 11px!important;
-    display:inline-flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-    border-radius:10px!important;
-    font-size:13px!important;
-    font-weight:700!important;
-    line-height:1!important;
-    letter-spacing:0!important;
-    text-align:center!important;
-    white-space:nowrap!important;
-    overflow:visible!important;
-    text-overflow:clip!important;
-  }
-  .topbar .nav > button.hidden-by-role{display:none!important}
-  .topbar .notification-wrap,
-  .topbar .topbar-session,
-  .topbar .topbar-session.show{
-    position:static!important;
-    width:auto!important;
-    min-width:0!important;
-    height:auto!important;
-    margin:0!important;
-    align-self:auto!important;
-  }
-  .topbar .topbar-right{
-    padding-bottom:0!important;
-  }
-  .topbar .notification-wrap{
-    position:absolute!important;
-    right:48px!important;
-    bottom:0!important;
-  }
-  .topbar .topbar-session,
-  .topbar .topbar-session.show{
-    position:absolute!important;
-    right:0!important;
-    bottom:0!important;
-  }
-  .topbar .notification-btn,
-  .topbar .logout-top-btn{
-    width:40px!important;
-    min-width:40px!important;
-    height:38px!important;
-    min-height:38px!important;
-    padding:0!important;
-    border-radius:10px!important;
-  }
-  .topbar .logout-top-text{display:none!important}
-  /* 最後一排右側保留通知與登出的位置，避免壓住導覽文字 */
-  .topbar .nav{padding-right:96px!important}
-}
-@media (max-width:390px){
-  .topbar .nav{gap:5px!important;padding-right:90px!important}
-  .topbar .nav > button:not(.hidden-by-role){
-    height:36px!important;min-height:36px!important;
-    padding:6px 9px!important;font-size:12.5px!important;border-radius:9px!important
-  }
-  .topbar .notification-btn,.topbar .logout-top-btn{width:38px!important;min-width:38px!important;height:36px!important;min-height:36px!important}
-  .topbar .notification-wrap{right:44px!important}
-}
-</style>
-<script id="mobile-nav-auto-width-final-script-20260904">
-(function(){
-  function imp(el,p,v){if(el)el.style.setProperty(p,v,'important')}
-  function applyCompactMobileNav(){
-    if(!window.matchMedia||!window.matchMedia('(max-width:760px)').matches)return;
-    var inner=document.querySelector('.topbar .topbar-inner');
-    var right=document.querySelector('.topbar .topbar-right');
-    var nav=document.querySelector('.topbar .nav');
-    imp(inner,'display','block');imp(inner,'width','100%');imp(inner,'max-width','100%');
-    if(right){
-      imp(right,'display','flex');imp(right,'flex-direction','column');imp(right,'align-items','stretch');
-      imp(right,'width','100%');imp(right,'max-width','100%');imp(right,'gap','7px');imp(right,'position','relative');imp(right,'padding-bottom','0');
-    }
-    if(nav){
-      imp(nav,'display','flex');imp(nav,'flex-direction','row');imp(nav,'flex-wrap','wrap');
-      imp(nav,'align-items','center');imp(nav,'justify-content','flex-start');imp(nav,'gap','6px');
-      imp(nav,'width','100%');imp(nav,'max-width','100%');imp(nav,'padding','0 96px 0 0');imp(nav,'overflow','visible');
-      Array.prototype.forEach.call(nav.children,function(btn){
-        if(!btn||btn.tagName!=='BUTTON')return;
-        if(btn.classList.contains('hidden-by-role')){imp(btn,'display','none');return}
-        imp(btn,'position','static');imp(btn,'grid-column','auto');imp(btn,'grid-row','auto');
-        imp(btn,'flex','0 0 auto');imp(btn,'width','auto');imp(btn,'max-width','100%');imp(btn,'min-width','0');
-        imp(btn,'height','38px');imp(btn,'min-height','38px');imp(btn,'margin','0');imp(btn,'padding','7px 11px');
-        imp(btn,'display','inline-flex');imp(btn,'align-items','center');imp(btn,'justify-content','center');
-        imp(btn,'font-size','13px');imp(btn,'font-weight','700');imp(btn,'line-height','1');
-        imp(btn,'white-space','nowrap');imp(btn,'overflow','visible');imp(btn,'text-overflow','clip');
-      });
-    }
-    var notify=document.querySelector('.topbar .notification-wrap');
-    var session=document.querySelector('.topbar .topbar-session');
-    if(notify){imp(notify,'position','absolute');imp(notify,'right','48px');imp(notify,'bottom','0');imp(notify,'top','auto');}
-    if(session){imp(session,'position','absolute');imp(session,'right','0');imp(session,'bottom','0');imp(session,'top','auto');}
-  }
-  function schedule(){applyCompactMobileNav();[80,280,1050,2200].forEach(function(ms){setTimeout(applyCompactMobileNav,ms)})}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule);else schedule();
-  window.addEventListener('resize',applyCompactMobileNav);
-  window.addEventListener('pageshow',schedule);
-})();
-</script>
+
+
 
 
 <!-- FINAL MOBILE NAV FLOW-PACK FIX 20260904 -->
-<style id="mobile-nav-flow-pack-final-20260904">
-@media (max-width:760px){
-  .topbar .topbar-inner{
-    display:block!important;
-    width:100%!important;
-    max-width:100%!important;
-    padding:9px 10px 10px!important;
-  }
-  .topbar .topbar-right{
-    display:block!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    position:relative!important;
-    padding:0!important;
-    margin:0!important;
-  }
-  .topbar .nav{
-    display:flex!important;
-    flex-direction:row!important;
-    flex-wrap:wrap!important;
-    align-items:center!important;
-    align-content:flex-start!important;
-    justify-content:flex-start!important;
-    column-gap:6px!important;
-    row-gap:6px!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    padding:0!important;
-    margin:0!important;
-    overflow:visible!important;
-  }
-  .topbar .nav > button:not(.hidden-by-role){
-    position:static!important;
-    flex:0 0 auto!important;
-    width:auto!important;
-    max-width:100%!important;
-    min-width:max-content!important;
-    height:38px!important;
-    min-height:38px!important;
-    margin:0!important;
-    padding:7px 11px!important;
-    display:inline-flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-    border-radius:10px!important;
-    font-size:13px!important;
-    font-weight:700!important;
-    line-height:1!important;
-    letter-spacing:0!important;
-    text-align:center!important;
-    white-space:nowrap!important;
-    overflow:visible!important;
-    text-overflow:clip!important;
-    word-break:keep-all!important;
-  }
-  .topbar .nav > button.hidden-by-role{display:none!important}
 
-  /* 通知與登出也直接排進同一個流動列，避免右側永遠預留一大塊空白 */
-  .topbar .nav > .notification-wrap,
-  .topbar .nav > .topbar-session,
-  .topbar .nav > .topbar-session.show{
-    position:static!important;
-    flex:0 0 auto!important;
-    width:auto!important;
-    min-width:0!important;
-    height:38px!important;
-    margin:0!important;
-    padding:0!important;
-    align-self:auto!important;
-  }
-  .topbar .nav > .topbar-session:not(.show){display:none!important}
-  .topbar .notification-btn,
-  .topbar .logout-top-btn{
-    width:40px!important;
-    min-width:40px!important;
-    height:38px!important;
-    min-height:38px!important;
-    padding:0!important;
-    margin:0!important;
-    border-radius:10px!important;
-  }
-  .topbar .logout-top-text{display:none!important}
 
-  /* 通知面板獨立浮在畫面上，不受按鈕流動位置影響 */
-  .topbar .notification-panel{
-    position:fixed!important;
-    top:74px!important;
-    left:10px!important;
-    right:10px!important;
-    width:auto!important;
-    max-width:none!important;
-    z-index:99999!important;
-  }
-  .topbar .session-tooltip{
-    position:fixed!important;
-    top:74px!important;
-    right:10px!important;
-    max-width:calc(100vw - 20px)!important;
-  }
+
+<!-- STARRED EMPLOYEE & BACKOFFICE LEAVE V66 -->
+<style id="employee-leave-backoffice-v66-style">
+/* ===== 員工資料／休假管理 v66：紙本申請、後台統一建檔 ===== */
+:root{
+  --lv66-navy:#173f67;
+  --lv66-teal:#2b7f7b;
+  --lv66-ink:#213f52;
+  --lv66-muted:#6f8492;
+  --lv66-line:#d8e3e9;
+  --lv66-soft:#f4f8fa;
+  --lv66-warn:#a96a08;
+  --lv66-danger:#b43b34;
+  --lv66-good:#2b7650;
 }
-@media (max-width:390px){
-  .topbar .nav{column-gap:5px!important;row-gap:5px!important}
-  .topbar .nav > button:not(.hidden-by-role){
-    height:36px!important;
-    min-height:36px!important;
-    padding:6px 9px!important;
-    font-size:12.5px!important;
-    border-radius:9px!important;
+
+/* 前台導覽：固定同高同寬，通知紅點永遠以通知按鈕為基準。 */
+.topbar .topbar-inner{width:min(1420px,calc(100% - 36px))!important;max-width:1420px!important}
+.topbar .topbar-right{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:9px!important;width:100%!important;min-width:0!important}
+.topbar .nav{display:flex!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:wrap!important;gap:7px!important;min-width:0!important;margin:0!important;padding:0!important;overflow:visible!important}
+.topbar .nav>button:not(.hidden-by-role){position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;min-width:102px!important;height:42px!important;min-height:42px!important;margin:0!important;padding:8px 13px!important;border-radius:11px!important;line-height:1.15!important;white-space:nowrap!important;overflow:visible!important}
+.topbar .notification-wrap,.topbar .topbar-session{position:relative!important;flex:0 0 auto!important;width:42px!important;height:42px!important;margin:0!important;padding:0!important;align-self:center!important}
+.topbar .notification-btn,.topbar .logout-top-btn{position:relative!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0!important;border-radius:11px!important}
+.topbar .notification-badge{position:absolute!important;top:-6px!important;right:-6px!important;left:auto!important;bottom:auto!important;z-index:20!important;transform:none!important}
+
+/* 後台上方頁籤：依可用寬度平均分配，提醒數字固定在右上角。 */
+#adminContent>.admin-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important;
+  align-items:stretch!important;
+  gap:7px!important;
+  width:100%!important;
+  margin:0 0 14px!important;
+  padding:7px!important;
+  overflow:visible!important;
+}
+#adminContent>.admin-tabs>button{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:44px!important;
+  margin:0!important;
+  padding:8px 27px 8px 9px!important;
+  border-radius:10px!important;
+  line-height:1.25!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
+#adminContent>.admin-tabs>button:not(.has-attention):not(.leave66-has-alert){padding-right:9px!important}
+#adminContent>.admin-tabs>button.hidden-by-role{display:none!important}
+#adminContent>.admin-tabs .admin-attention-badge,
+#adminContent>.admin-tabs .leave66-tab-badge{
+  position:absolute!important;
+  top:4px!important;
+  right:4px!important;
+  left:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  z-index:4!important;
+}
+.leave66-tab-badge{display:none;place-items:center;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:999px;background:#df3f39;color:#fff;font-size:10px;font-weight:900;line-height:15px}
+.leave66-tab-badge.show{display:grid}
+#leaveAdminTabBtn{padding-left:7px!important;padding-right:24px!important}
+#leaveAdminTabBtn .leave66-tab-label{display:block;min-width:0;font-size:13px;line-height:1.2;white-space:nowrap}
+
+/* 後台首頁按鈕固定等高、等距。 */
+#dashboardPage .dashboard-stats{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr))!important;
+  gap:10px!important;
+  overflow:visible!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+#dashboardPage .dashboard-stat,
+#dashboardPage .dashboard-stat.attention{
+  display:grid!important;
+  grid-template-columns:36px auto minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:9px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:96px!important;
+  padding:15px!important;
+  border:1px solid rgba(60,60,67,.10)!important;
+  border-radius:17px!important;
+  background:#fff!important;
+  box-shadow:0 5px 18px rgba(39,66,83,.055)!important;
+}
+#dashboardPage .dashboard-stat+.dashboard-stat{border-left:1px solid rgba(60,60,67,.10)!important}
+#dashboardPage .dashboard-stat:nth-child(n){border-top:1px solid rgba(60,60,67,.10)!important}
+#dashboardPage .dashboard-stat .dashboard-stat-icon{grid-column:1;grid-row:1;width:34px;height:34px;margin:0!important}
+#dashboardPage .dashboard-stat b{grid-column:2;grid-row:1;margin:0!important;font-size:26px!important;line-height:1!important;white-space:nowrap}
+#dashboardPage .dashboard-stat span:last-child{grid-column:3;grid-row:1;min-width:0;text-align:left;line-height:1.35}
+#dashboardPage .dashboard-stat.leave66-dashboard-alert{border-color:#edc0bc!important;background:#fffafa!important}
+#dashboardPage .dashboard-stat.leave66-dashboard-alert b{color:var(--lv66-danger)!important}
+#dashboardPage .dashboard-stat.leave66-dashboard-alert .dashboard-stat-icon{background:#fde9e7!important;color:var(--lv66-danger)!important}
+
+/* 主頁 */
+#leaveAdminTab{color:var(--lv66-ink)}
+.leave66-panel{padding:0!important;overflow:hidden!important;border-radius:18px!important;background:#fff!important}
+.leave66-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:22px 24px 18px;border-bottom:1px solid var(--lv66-line);background:linear-gradient(180deg,#fff,#f8fafb)}
+.leave66-heading-copy>span{display:block;margin-bottom:4px;color:#728a99;font-size:11px;font-weight:800;letter-spacing:.16em}
+.leave66-heading h2{margin:0;color:var(--lv66-navy);font-size:25px;line-height:1.25}
+.leave66-heading p{margin:6px 0 0;color:var(--lv66-muted);font-size:13px;line-height:1.6}
+.leave66-heading-actions{display:flex;gap:8px;flex:0 0 auto}
+.leave66-heading-actions button{min-width:104px}
+.leave66-status{display:none;margin:14px 20px 0;padding:11px 13px;border-radius:11px;font-size:13px;line-height:1.55}
+.leave66-status.show{display:block}.leave66-status.working{background:#edf4f7;color:#45677a}.leave66-status.ok{background:#eaf5ee;color:#286849}.leave66-status.error{background:#faecea;color:#963d35}
+.leave66-subtabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:14px 20px 0}
+.leave66-subtabs button{min-width:0;min-height:43px;border:0;border-radius:10px;background:#eaf1f4;color:#496575;font-weight:700}
+.leave66-subtabs button.active{background:var(--lv66-navy);color:#fff}
+.leave66-subtabs button[hidden]{display:none!important}
+.leave66-view{display:none;padding:18px 20px 22px}.leave66-view.active{display:block}
+.leave66-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.leave66-section-head h3{margin:0;color:var(--lv66-navy);font-size:20px}.leave66-section-head p{margin:4px 0 0;color:var(--lv66-muted);font-size:13px}
+.leave66-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:15px}
+.leave66-summary-card{padding:15px 16px;border:1px solid var(--lv66-line);border-radius:14px;background:var(--lv66-soft)}
+.leave66-summary-card span{display:block;color:var(--lv66-muted);font-size:12px}.leave66-summary-card b{display:block;margin-top:5px;color:var(--lv66-navy);font-size:26px}.leave66-summary-card.warn b{color:var(--lv66-warn)}.leave66-summary-card.danger b{color:var(--lv66-danger)}
+.leave66-overview-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:14px}
+.leave66-card{min-width:0;padding:16px;border:1px solid var(--lv66-line);border-radius:15px;background:#fff}
+.leave66-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.leave66-card-head h3{margin:0;font-size:17px;color:var(--lv66-navy)}.leave66-card-head span{color:var(--lv66-muted);font-size:12px}
+.leave66-empty{padding:27px 14px;border:1px dashed #cddae1;border-radius:12px;background:#fafcfd;color:#80939e;text-align:center;font-size:13px;line-height:1.6}
+.leave66-warning-list,.leave66-recent-list{display:grid;gap:7px}
+.leave66-warning{width:100%;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:9px;align-items:center;padding:10px 11px;border:0;border-radius:11px;background:#fff7e8;color:var(--lv66-ink);text-align:left}
+.leave66-warning.danger{background:#fff0ef}.leave66-warning-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#fff;color:var(--lv66-warn);font-weight:900}.leave66-warning.danger .leave66-warning-icon{color:var(--lv66-danger)}
+.leave66-warning-copy{min-width:0}.leave66-warning-copy b,.leave66-warning-copy span{display:block}.leave66-warning-copy b{font-size:13px}.leave66-warning-copy span{margin-top:2px;color:#7b705e;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.leave66-warning em{font-style:normal;color:#8a6b34;font-size:11px;font-weight:800;white-space:nowrap}
+.leave66-recent-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(130px,.7fr) 90px 92px;gap:9px;align-items:center;padding:10px 8px;border-bottom:1px solid #e8eef1;font-size:12px}.leave66-recent-row:last-child{border-bottom:0}.leave66-recent-row b{font-size:13px}.leave66-recent-row span{color:var(--lv66-muted)}
+
+/* 員工清單 */
+.leave66-toolbar{display:grid;grid-template-columns:minmax(230px,1.4fr) minmax(150px,.55fr) auto;gap:9px;align-items:end;margin-bottom:12px;padding:12px;border:1px solid var(--lv66-line);border-radius:13px;background:var(--lv66-soft)}
+.leave66-toolbar label{display:grid;gap:5px;color:#607786;font-size:12px;font-weight:700}.leave66-toolbar input,.leave66-toolbar select{height:43px}
+.leave66-toolbar button{min-width:126px}
+.leave66-employee-list{display:grid;gap:8px}
+.leave66-employee-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid var(--lv66-line);border-radius:13px;background:#fff;transition:.16s ease}
+.leave66-employee-row:hover{border-color:#aebfc9;box-shadow:0 5px 15px rgba(39,66,83,.07)}
+.leave66-employee-open{display:grid!important;grid-template-columns:44px minmax(160px,1.1fr) minmax(170px,.85fr) minmax(260px,1fr)!important;gap:11px!important;align-items:center!important;width:100%!important;min-width:0!important;min-height:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:inherit!important;text-align:left!important;box-shadow:none!important;white-space:normal!important}
+.leave66-avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e8f1f6;color:var(--lv66-navy);font-size:17px;font-weight:800}
+.leave66-employee-main,.leave66-employee-period,.leave66-balance-mini{min-width:0}
+.leave66-employee-main b{display:block;font-size:16px;color:var(--lv66-navy)}.leave66-employee-main span,.leave66-employee-period span{display:block;margin-top:3px;color:var(--lv66-muted);font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leave66-status-pill{display:inline-flex!important;width:auto!important;margin:0 0 2px!important;padding:3px 7px;border-radius:999px;background:#e8f4ec;color:var(--lv66-good)!important;font-size:10px!important;font-weight:800}.leave66-status-pill.former{background:#eef1f3;color:#7a878e!important}
+.leave66-balance-mini{display:flex;flex-wrap:wrap;gap:5px}.leave66-balance-mini span{display:inline-flex;padding:5px 7px;border-radius:8px;background:#f1f5f7;color:#536f7e;font-size:11px;font-weight:700}.leave66-balance-mini span.warn{background:#fff1d7;color:#9a6510}.leave66-balance-mini span.danger{background:#fde9e7;color:#a83a34}
+.leave66-row-actions{display:flex;gap:6px;align-items:center}.leave66-row-actions button{min-width:68px;min-height:38px;padding:7px 10px}
+
+/* 全部請假紀錄 */
+.leave66-record-toolbar{display:grid;grid-template-columns:minmax(180px,.9fr) repeat(2,minmax(135px,.55fr)) minmax(210px,1fr) auto;gap:8px;align-items:end;margin-bottom:12px;padding:12px;border:1px solid var(--lv66-line);border-radius:13px;background:var(--lv66-soft)}
+.leave66-record-toolbar label{display:grid;gap:5px;color:#607786;font-size:12px;font-weight:700}.leave66-record-toolbar input,.leave66-record-toolbar select{height:43px}
+.leave66-record-list{display:grid;gap:8px}
+.leave66-record-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(170px,1fr) 100px minmax(180px,1.1fr) auto;gap:10px;align-items:center;padding:12px 13px;border:1px solid var(--lv66-line);border-radius:12px;background:#fff}
+.leave66-record-row>div{min-width:0}.leave66-record-row b,.leave66-record-row span,.leave66-record-row small{display:block}.leave66-record-row b{font-size:14px}.leave66-record-row span{margin-top:2px;color:var(--lv66-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.leave66-record-row small{color:#7b8e99;font-size:11px;line-height:1.4}.leave66-record-actions{display:flex;gap:6px;justify-content:flex-end}.leave66-record-actions button{min-width:62px;min-height:36px;padding:6px 9px}
+.leave66-badge{display:inline-flex!important;width:max-content!important;margin:0!important;padding:4px 7px;border-radius:999px;font-size:10px!important;font-weight:800}.leave66-badge.approved{background:#e8f4ec;color:var(--lv66-good)!important}.leave66-badge.pending{background:#fff2d9;color:#96651c!important}.leave66-badge.rejected{background:#fae8e5;color:#9a4338!important}.leave66-badge.paper{background:#e8f1f6;color:#356783!important}
+
+/* 權限 */
+.leave66-permission-note{margin-bottom:12px;padding:12px 13px;border-radius:11px;background:#eef4f7;color:#506d7d;font-size:13px;line-height:1.6}
+.leave66-permission-list{display:grid;gap:8px}
+.leave66-permission-row{display:grid;grid-template-columns:minmax(190px,1fr) minmax(130px,.45fr) minmax(170px,.7fr) auto;gap:11px;align-items:center;padding:12px 13px;border:1px solid var(--lv66-line);border-radius:12px;background:#fff}
+.leave66-permission-row b,.leave66-permission-row span,.leave66-permission-row small{display:block}.leave66-permission-row span,.leave66-permission-row small{margin-top:2px;color:var(--lv66-muted);font-size:11px}.leave66-switch{display:inline-flex;align-items:center;gap:8px;color:#506a79;font-size:12px;font-weight:700;white-space:nowrap}.leave66-switch input{width:20px;height:20px;accent-color:var(--lv66-teal)}
+
+/* 彈窗 */
+.leave66-modal{position:fixed;inset:0;z-index:2147483200;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(22,43,57,.56);backdrop-filter:blur(6px)}
+.leave66-modal.show{display:flex}.leave66-dialog{display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:min(980px,100%);max-height:calc(100dvh - 40px);overflow:hidden;border:1px solid #cfdae0;border-radius:20px;background:#fff;box-shadow:0 28px 80px rgba(20,41,54,.30)}
+.leave66-dialog.wide{width:min(1140px,100%)}.leave66-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--lv66-line);background:#fff}.leave66-dialog-head h2{margin:0;color:var(--lv66-navy);font-size:22px}.leave66-dialog-head p{margin:5px 0 0;color:var(--lv66-muted);font-size:12px}.leave66-dialog-close{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;padding:0!important;border:1px solid #d2dde3!important;border-radius:50%!important;background:#f5f8fa!important;color:var(--lv66-navy)!important;font-size:23px!important}
+.leave66-dialog-body{min-height:0;overflow:auto;padding:17px 20px;background:#f7fafb}.leave66-dialog-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 15px;border-top:1px solid var(--lv66-line);background:#fff}.leave66-dialog-foot button{min-width:118px}
+.leave66-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.leave66-form-grid label{display:flex;flex-direction:column;gap:6px;min-width:0;color:#5b7382;font-size:12px;font-weight:700}.leave66-form-grid .span2{grid-column:span 2}.leave66-form-grid .full{grid-column:1/-1}.leave66-form-grid input,.leave66-form-grid select{height:44px}.leave66-form-grid textarea{min-height:90px}.leave66-form-section{grid-column:1/-1;margin:5px 0 -2px;padding-top:10px;border-top:1px solid #dfe7eb;color:var(--lv66-navy);font-size:14px;font-weight:800}
+.leave66-person-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:12px;padding:16px;border:1px solid var(--lv66-line);border-radius:14px;background:#fff}.leave66-person-name{display:flex;align-items:center;gap:11px}.leave66-person-name .leave66-avatar{width:48px;height:48px}.leave66-person-name h3{margin:0;color:var(--lv66-navy);font-size:21px}.leave66-person-name p{margin:4px 0 0;color:var(--lv66-muted);font-size:12px}.leave66-person-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.leave66-person-alert{margin-bottom:12px;padding:11px 13px;border-radius:11px;background:#fff1d7;color:#83570d;font-size:13px;line-height:1.55}.leave66-person-alert.danger{background:#fde9e7;color:#943b34}
+.leave66-balance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}.leave66-balance-card{padding:13px;border:1px solid var(--lv66-line);border-radius:12px;background:#fff}.leave66-balance-card span{display:block;color:var(--lv66-muted);font-size:11px}.leave66-balance-card b{display:block;margin:4px 0 2px;color:var(--lv66-navy);font-size:21px}.leave66-balance-card small{display:block;color:#82939c;font-size:10px;line-height:1.45}.leave66-balance-card.warn{border-color:#efd39f;background:#fffaf0}.leave66-balance-card.danger{border-color:#efc5c1;background:#fff8f7}
+.leave66-person-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-bottom:12px;overflow:hidden;border:1px solid var(--lv66-line);border-radius:13px;background:#fff}.leave66-person-field{min-width:0;padding:11px 12px;border-right:1px solid #e4ebee;border-bottom:1px solid #e4ebee}.leave66-person-field:nth-child(3n){border-right:0}.leave66-person-field span,.leave66-person-field b{display:block}.leave66-person-field span{color:var(--lv66-muted);font-size:11px}.leave66-person-field b{margin-top:4px;color:#304f61;font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.leave66-person-history{padding:14px;border:1px solid var(--lv66-line);border-radius:13px;background:#fff}.leave66-person-history h3{margin:0 0 9px;color:var(--lv66-navy);font-size:17px}
+
+@media(max-width:1050px){
+  .leave66-overview-grid{grid-template-columns:1fr}
+  .leave66-employee-open{grid-template-columns:42px minmax(150px,1fr) minmax(150px,.8fr)!important}.leave66-balance-mini{grid-column:2/-1}
+  .leave66-record-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.leave66-record-toolbar button{grid-column:1/-1}
+  .leave66-record-row{grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) 90px auto}.leave66-record-row>div:nth-child(4){grid-column:1/4}.leave66-record-actions{grid-column:4;grid-row:1/3}
+}
+@media(max-width:760px){
+  .topbar .topbar-inner{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;padding:9px 10px 10px!important}
+  .topbar .topbar-right{display:grid!important;grid-template-columns:minmax(0,1fr) 42px 42px!important;grid-template-rows:auto auto!important;align-items:center!important;gap:7px!important;width:100%!important}
+  .topbar .nav{grid-column:1/-1!important;grid-row:1!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;width:100%!important;padding:0!important}
+  .topbar .nav>button:not(.hidden-by-role),
+  .topbar #homeNav,.topbar #orderNav,.topbar #salesNav,.topbar #expenseNav,.topbar #externalAccountNav,.topbar #employeeRulesNav,.topbar #adminNav{
+    position:relative!important;grid-column:auto!important;grid-row:auto!important;width:100%!important;min-width:0!important;max-width:none!important;height:44px!important;min-height:44px!important;margin:0!important;padding:7px 6px!important;font-size:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
   }
-  .topbar .nav > .notification-wrap,
-  .topbar .nav > .topbar-session,
-  .topbar .nav > .topbar-session.show{height:36px!important}
-  .topbar .notification-btn,
-  .topbar .logout-top-btn{
-    width:38px!important;
-    min-width:38px!important;
-    height:36px!important;
-    min-height:36px!important;
-  }
+  .topbar .notification-wrap{grid-column:2!important;grid-row:2!important;justify-self:end!important;width:42px!important;height:42px!important}
+  .topbar .topbar-session,.topbar .topbar-session.show{grid-column:3!important;grid-row:2!important;justify-self:end!important;width:42px!important;height:42px!important}
+  .topbar .notification-btn,.topbar .logout-top-btn{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
+  .topbar .notification-panel{position:fixed!important;top:72px!important;right:8px!important;left:8px!important;width:auto!important;max-width:none!important}
+
+  #adminContent>.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;padding:6px!important}
+  #adminContent>.admin-tabs>button{min-height:45px!important;padding:7px 25px 7px 6px!important;font-size:13px!important}
+  #adminContent>.admin-tabs>button:not(.has-attention):not(.leave66-has-alert){padding-right:6px!important}
+  #dashboardPage .dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  #dashboardPage .dashboard-stat,#dashboardPage .dashboard-stat.attention{grid-template-columns:32px auto!important;grid-template-rows:auto auto!important;gap:6px 8px!important;min-height:92px!important;padding:12px!important}
+  #dashboardPage .dashboard-stat .dashboard-stat-icon{grid-column:1;grid-row:1;width:31px;height:31px}
+  #dashboardPage .dashboard-stat b{grid-column:2;grid-row:1;font-size:23px!important}
+  #dashboardPage .dashboard-stat span:last-child{grid-column:1/-1;grid-row:2;text-align:left;font-size:11px!important}
+
+  .leave66-heading{align-items:flex-start;flex-direction:column;padding:17px 15px 14px}.leave66-heading h2{font-size:21px}.leave66-heading-actions{width:100%}.leave66-heading-actions button{width:100%}
+  .leave66-status{margin:11px 12px 0}.leave66-subtabs{grid-template-columns:repeat(2,minmax(0,1fr));padding:11px 12px 0}.leave66-view{padding:14px 12px 18px}
+  .leave66-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.leave66-summary-card{padding:12px}.leave66-summary-card b{font-size:22px}
+  .leave66-toolbar,.leave66-record-toolbar{grid-template-columns:1fr}.leave66-toolbar button,.leave66-record-toolbar button{grid-column:auto;width:100%}
+  .leave66-employee-row{grid-template-columns:1fr;padding:11px}.leave66-employee-open{grid-template-columns:40px minmax(0,1fr)!important}.leave66-employee-period{grid-column:2}.leave66-balance-mini{grid-column:1/-1}.leave66-row-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}.leave66-row-actions button{width:100%;min-width:0}
+  .leave66-recent-row{grid-template-columns:1fr auto}.leave66-recent-row>span:nth-child(2),.leave66-recent-row>span:nth-child(3){grid-column:1}.leave66-recent-row>span:last-child{grid-column:2;grid-row:1/4}
+  .leave66-record-row{grid-template-columns:1fr auto;padding:11px}.leave66-record-row>div:nth-child(n){grid-column:1}.leave66-record-row>div:nth-child(3){grid-column:2;grid-row:1}.leave66-record-actions{grid-column:1/-1!important;grid-row:auto!important;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.leave66-record-actions button{width:100%}
+  .leave66-permission-row{grid-template-columns:1fr auto}.leave66-permission-row>div:nth-child(2),.leave66-permission-row>div:nth-child(3){grid-column:1}.leave66-permission-row>.leave66-switch{grid-column:2;grid-row:1/4}
+  .leave66-modal{align-items:flex-end;padding:0}.leave66-dialog,.leave66-dialog.wide{width:100%;max-height:95dvh;border-radius:19px 19px 0 0}.leave66-dialog-head{padding:15px 14px 12px}.leave66-dialog-body{padding:12px}.leave66-dialog-foot{display:grid;grid-template-columns:1fr 1fr;padding:10px 12px calc(11px + env(safe-area-inset-bottom))}.leave66-dialog-foot button{width:100%;min-width:0}.leave66-form-grid{grid-template-columns:1fr}.leave66-form-grid .span2,.leave66-form-grid .full,.leave66-form-section{grid-column:auto}.leave66-person-hero{flex-direction:column}.leave66-person-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.leave66-person-actions button{width:100%}.leave66-balance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.leave66-person-grid{grid-template-columns:1fr 1fr}.leave66-person-field:nth-child(3n){border-right:1px solid #e4ebee}.leave66-person-field:nth-child(2n){border-right:0}
+}
+@media(max-width:390px){
+  .topbar .nav>button:not(.hidden-by-role){font-size:12.5px!important}
+  .leave66-row-actions{grid-template-columns:1fr}.leave66-person-actions{grid-template-columns:1fr}.leave66-dialog-foot{grid-template-columns:1fr}.leave66-person-grid{grid-template-columns:1fr}.leave66-person-field,.leave66-person-field:nth-child(3n),.leave66-person-field:nth-child(2n){border-right:0}.leave66-balance-grid{grid-template-columns:1fr 1fr}
 }
 </style>
-<script id="mobile-nav-flow-pack-final-script-20260904">
+
+<script id="employee-leave-backoffice-v66-script">
 (function(){
-  function imp(el,p,v){ if(el) el.style.setProperty(p,v,'important'); }
-  function parts(){
-    return {
-      right:document.querySelector('.topbar .topbar-right'),
-      nav:document.querySelector('.topbar .nav'),
-      notify:document.querySelector('.topbar .notification-wrap'),
-      session:document.querySelector('.topbar .topbar-session')
-    };
-  }
-  function toolsAtEnd(p){
-    if(!p.nav)return;
-    /* 只有順序真的不對時才移動，避免 MutationObserver 無限觸發。 */
-    if(p.session && p.session.parentNode!==p.nav) p.nav.appendChild(p.session);
-    if(p.notify && p.notify.parentNode!==p.nav){
-      if(p.session && p.session.parentNode===p.nav) p.nav.insertBefore(p.notify,p.session);
-      else p.nav.appendChild(p.notify);
-    }
-    if(p.session && p.session.parentNode===p.nav && p.nav.lastElementChild!==p.session){
-      p.nav.appendChild(p.session);
-    }
-    if(p.notify && p.notify.parentNode===p.nav){
-      if(p.session && p.session.parentNode===p.nav){
-        if(p.notify.nextElementSibling!==p.session) p.nav.insertBefore(p.notify,p.session);
-      }else if(p.nav.lastElementChild!==p.notify){
-        p.nav.appendChild(p.notify);
-      }
-    }
-  }
-  function applyFlowPack(){
-    var p=parts();
-    if(!p.right||!p.nav)return;
-    var mobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
-    if(mobile){
-      toolsAtEnd(p);
-      imp(p.nav,'display','flex');
-      imp(p.nav,'flex-direction','row');
-      imp(p.nav,'flex-wrap','wrap');
-      imp(p.nav,'justify-content','flex-start');
-      imp(p.nav,'align-items','center');
-      imp(p.nav,'align-content','flex-start');
-      imp(p.nav,'width','100%');
-      imp(p.nav,'max-width','100%');
-      imp(p.nav,'padding','0');
-      imp(p.nav,'margin','0');
-      imp(p.nav,'overflow','visible');
-      Array.prototype.forEach.call(p.nav.children,function(item){
-        if(!item)return;
-        if(item.tagName==='BUTTON'){
-          if(item.classList.contains('hidden-by-role')){imp(item,'display','none');return;}
-          imp(item,'position','static');
-          imp(item,'flex','0 0 auto');
-          imp(item,'width','auto');
-          imp(item,'min-width','max-content');
-          imp(item,'max-width','100%');
-          imp(item,'height','38px');
-          imp(item,'min-height','38px');
-          imp(item,'margin','0');
-          imp(item,'padding','7px 11px');
-          imp(item,'display','inline-flex');
-          imp(item,'align-items','center');
-          imp(item,'justify-content','center');
-          imp(item,'white-space','nowrap');
-          imp(item,'overflow','visible');
-          imp(item,'text-overflow','clip');
-        }
-      });
-      if(p.notify){imp(p.notify,'position','static');imp(p.notify,'flex','0 0 auto');imp(p.notify,'width','auto');imp(p.notify,'height','38px');imp(p.notify,'margin','0');imp(p.notify,'padding','0');}
-      if(p.session){imp(p.session,'position','static');imp(p.session,'flex','0 0 auto');imp(p.session,'width','auto');imp(p.session,'height','38px');imp(p.session,'margin','0');imp(p.session,'padding','0');}
-    }else{
-      /* 回到電腦版時恢復原本 DOM 結構。 */
-      if(p.notify&&p.notify.parentNode===p.nav)p.right.appendChild(p.notify);
-      if(p.session&&p.session.parentNode===p.nav)p.right.appendChild(p.session);
-    }
-  }
-  var queued=false;
-  function queueApply(){
-    if(queued)return;
-    queued=true;
-    setTimeout(function(){queued=false;applyFlowPack();},0);
-  }
-  function schedule(){applyFlowPack();[80,260,800,1600,3000].forEach(function(ms){setTimeout(applyFlowPack,ms);});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule);else schedule();
-  window.addEventListener('pageshow',schedule);
-  window.addEventListener('resize',queueApply);
-  document.addEventListener('DOMContentLoaded',function(){
-    var n=document.querySelector('.topbar .nav');
-    if(!n)return;
-    var observer=new MutationObserver(queueApply);
-    observer.observe(n,{childList:true,subtree:false,attributes:true,attributeFilter:['class']});
-  });
+'use strict';
+var BUILD='20260904-backoffice-leave-v66';
+var state={loaded:false,loading:false,profiles:[],requests:[],users:[],warnings:[],summary:{},asOf:'',view:'overview',selectedEmployeeId:'',canConfigurePermissions:false,dashboardLoadedAt:0};
+function e(id){return document.getElementById(id)}
+function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]})}
+function js(value){return String(value==null?'':value).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ')}
+function n(value){var x=Number(value);return Number.isFinite(x)?x:0}
+function numberText(value){var x=n(value);return Number.isInteger(x)?String(x):String(Math.round(x*1000)/1000)}
+function role(value){var r=String(value||'').trim().toLowerCase();if(['admin','system_admin','administrator','系統管理員'].includes(r))return 'admin';if(['accounting','accountant','會計'].includes(r))return 'accounting';if(['manager','主管'].includes(r))return 'manager';return 'staff'}
+function roleLabel(value){var r=role(value);return r==='admin'?'系統管理員':r==='accounting'?'會計':r==='manager'?'主管':'員工'}
+function current(){try{return typeof currentUser!=='undefined'?currentUser:null}catch(_){return null}}
+function lineIdentity(){try{var p=(typeof getCurrentLineUser==='function'?getCurrentLineUser():null)||window.starredVerifiedLineUser||{};return {id:String(p.id||p.lineUserId||''),name:String(p.name||p.employeeName||p.lineDisplayName||'')}}catch(_){return {id:'',name:''}}}
+function localLineUser(){var id=lineIdentity().id;try{return (typeof lineUsers!=='undefined'&&Array.isArray(lineUsers)?lineUsers:[]).find(function(x){return String(x.id||x.lineUserId||'')===id})||null}catch(_){return null}}
+function hasBackofficeLogin(){var u=current();return !!(u&&u.adminSessionToken)}
+function isSystemAdmin(){return role(current()&&current().role)==='admin'}
+function canAccessLocal(){if(!hasBackofficeLogin())return false;if(isSystemAdmin())return true;var u=localLineUser();return !!(u&&u.leaveAdminAccess)}
+function today(){try{return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'})}catch(_){return new Date().toISOString().slice(0,10)}}
+function roc(value){var s=String(value||'').slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?'民國'+String(Number(m[1])-1911)+'/'+m[2]+'/'+m[3]:(s||'—')}
+function rocInput(value){var s=String(value||'').slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?String(Number(m[1])-1911)+'/'+m[2]+'/'+m[3]:''}
+function parseRoc(value){var s=String(value||'').trim().replace(/^民國/,'').replace(/年/g,'/').replace(/月/g,'/').replace(/日/g,'').replace(/[-.]/g,'/');var m=s.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})$/);if(!m)return '';var y=Number(m[1]);if(y<1911)y+=1911;var mo=Number(m[2]),d=Number(m[3]),dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return '';return String(y).padStart(4,'0')+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
+function dateTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}catch(_){return String(value)}}
+function leaveType(value){return {annual:'特別休假',sick:'普通病假',personal:'事假',family:'家庭照顧假',other:'其他'}[String(value)]||String(value||'—')}
+function requestStatus(value){return {approved:'已建檔',pending:'舊版待審核',rejected:'已作廢／未通過'}[String(value)]||String(value||'—')}
+function sourceLabel(row){return String(row&&row.source)==='admin_paper'?'紙本後台建檔':'舊版線上申請'}
+function setStatus(text,type){var box=e('leave66Status');if(!box)return;box.textContent=text||'';box.className='leave66-status'+(text?' show '+(type||'working'):'')}
+function api(action,payload){if(typeof window.starredApi!=='function')return Promise.reject(new Error('雲端程式尚未載入'));return window.starredApi(action,payload||{})}
+function profileById(id){return state.profiles.find(function(x){return String(x.lineUserId)===String(id)})||null}
+function employeeRequests(id){return state.requests.filter(function(x){return String(x.requesterLineUserId)===String(id)}).sort(function(a,b){return String(b.startDate||b.createdAt).localeCompare(String(a.startDate||a.createdAt))})}
+function initial(name){return String(name||'員').trim().slice(0,1)||'員'}
+function balanceClass(value,warning){if(n(value)<0)return 'danger';if(warning)return 'warn';return ''}
+function balanceMini(label,obj,warning){obj=obj||{};return '<span class="'+balanceClass(obj.remaining,warning)+'">'+esc(label)+' '+esc(numberText(obj.remaining==null?0:obj.remaining))+' 日</span>'}
+function closeModal(id){e(id)?.classList.remove('show')}
+function openModal(id){e(id)?.classList.add('show')}
+
+function removeFrontLeave(){
+  var nav=e('leaveNav'),page=e('leavePage');if(nav)nav.remove();if(page)page.remove();
+  try{if(sessionStorage.getItem('starred_active_page_v49')==='leave')sessionStorage.setItem('starred_active_page_v49','home')}catch(_){}
+}
+function normalizeTopbarDom(){
+  var right=document.querySelector('.topbar .topbar-right'),nav=document.querySelector('.topbar .nav'),notify=document.querySelector('.topbar .notification-wrap'),session=document.querySelector('.topbar .topbar-session');
+  if(!right||!nav)return;
+  if(notify&&notify.parentNode!==right)right.appendChild(notify);
+  if(session&&session.parentNode!==right)right.appendChild(session);
+}
+function panelHtml(){return ''+
+'<section class="panel leave66-panel">'+
+' <header class="leave66-heading"><div class="leave66-heading-copy"><span>EMPLOYEE &amp; LEAVE</span><h2>員工資料與休假管理</h2><p>員工交紙本請假單後，由行政／授權後台人員統一建檔；前台不提供請假功能。</p></div><div class="leave66-heading-actions"><button type="button" class="secondary" onclick="leave66Load(true)">重新整理</button></div></header>'+
+' <div id="leave66Status" class="leave66-status"></div>'+
+' <nav class="leave66-subtabs" aria-label="員工資料與休假管理分頁"><button id="leave66OverviewBtn" type="button" class="active" onclick="leave66ShowView(\'overview\')">總覽與提醒</button><button id="leave66EmployeesBtn" type="button" onclick="leave66ShowView(\'employees\')">員工資料</button><button id="leave66RecordsBtn" type="button" onclick="leave66ShowView(\'records\')">請假建檔</button><button id="leave66PermissionsBtn" type="button" onclick="leave66ShowView(\'permissions\')">頁面權限</button></nav>'+
+' <section id="leave66OverviewView" class="leave66-view active"><div id="leave66SummaryGrid" class="leave66-summary-grid"></div><div class="leave66-overview-grid"><section class="leave66-card"><div class="leave66-card-head"><h3>30 天內到期／異常提醒</h3><span id="leave66WarningCount">0 筆</span></div><div id="leave66WarningList" class="leave66-warning-list"></div></section><section class="leave66-card"><div class="leave66-card-head"><h3>最近請假建檔</h3><button type="button" class="secondary" onclick="leave66ShowView(\'records\')">查看全部</button></div><div id="leave66RecentList" class="leave66-recent-list"></div></section></div></section>'+
+' <section id="leave66EmployeesView" class="leave66-view"><div class="leave66-section-head"><div><h3>員工資料</h3><p>點選「個人」可查看剩餘假、完整資料與請假紀錄。</p></div></div><div class="leave66-toolbar"><label>搜尋<input id="leave66EmployeeSearch" type="search" placeholder="姓名、電話、身分證、地址、帳戶" oninput="leave66RenderEmployees()"></label><label>在職狀態<select id="leave66EmployeeStatus" onchange="leave66RenderEmployees()"><option value="active">在職員工</option><option value="all">全部</option><option value="former">已離職</option></select></label><button type="button" class="primary" onclick="leave66OpenEmployee()">＋ 新增員工</button></div><div id="leave66EmployeeList" class="leave66-employee-list"></div></section>'+
+' <section id="leave66RecordsView" class="leave66-view"><div class="leave66-section-head"><div><h3>請假紀錄</h3><p>依紙本內容建檔；已建檔紀錄會直接扣除對應假別。</p></div></div><div class="leave66-record-toolbar"><label>員工<select id="leave66RecordEmployeeFilter" onchange="leave66RenderRecords()"><option value="">全部員工</option></select></label><label>假別<select id="leave66RecordTypeFilter" onchange="leave66RenderRecords()"><option value="">全部假別</option><option value="annual">特別休假</option><option value="sick">普通病假</option><option value="personal">事假</option><option value="family">家庭照顧假</option><option value="other">其他</option></select></label><label>狀態<select id="leave66RecordStatusFilter" onchange="leave66RenderRecords()"><option value="">全部狀態</option><option value="approved">已建檔</option><option value="pending">舊版待審核</option><option value="rejected">已作廢／未通過</option></select></label><label>搜尋<input id="leave66RecordSearch" type="search" placeholder="姓名、事由、編號" oninput="leave66RenderRecords()"></label><button type="button" class="primary" onclick="leave66OpenRecord()">＋ 新增請假紀錄</button></div><div id="leave66RecordList" class="leave66-record-list"></div></section>'+
+' <section id="leave66PermissionsView" class="leave66-view"><div class="leave66-section-head"><div><h3>頁面權限</h3><p>系統管理員固定可查看；可個別開放主管或會計。</p></div></div><div id="leave66PermissionNote" class="leave66-permission-note"></div><div id="leave66PermissionList" class="leave66-permission-list"></div></section>'+
+'</section>'}
+function modalHtml(){return ''+
+'<div id="leave66EmployeeModal" class="leave66-modal" onclick="if(event.target===this)leave66CloseEmployee()"><div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2 id="leave66EmployeeModalTitle">新增員工</h2><p>所有日期皆輸入民國年，例如 115/09/04。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66CloseEmployee()">×</button></header><div class="leave66-dialog-body"><form id="leave66EmployeeForm" class="leave66-form-grid" onsubmit="event.preventDefault();leave66SaveEmployee()"><input id="leave66EmployeeId" type="hidden"><div class="leave66-form-section">基本資料</div><label>姓名 *<input id="leave66EmployeeName" maxlength="80"></label><label id="leave66LineUserWrap">連結 LINE 使用者<select id="leave66LinkedLineUser"><option value="">不連結 LINE（純員工檔案）</option></select></label><label>身分證字號<input id="leave66NationalId" maxlength="30" autocomplete="off"></label><label>電話<input id="leave66Phone" maxlength="40" inputmode="tel"></label><label class="span2">地址<input id="leave66Address" maxlength="500"></label><label class="full">家庭成員<textarea id="leave66FamilyMembers" rows="3" maxlength="3000" placeholder="可記錄姓名、關係、聯絡方式等"></textarea></label><div class="leave66-form-section">到職與休假設定</div><label>到職日期（民國） *<input id="leave66HireRoc" inputmode="numeric" placeholder="115/09/04"></label><label>離職日期（民國，可空白）<input id="leave66ExitRoc" inputmode="numeric" placeholder="115/12/31"></label><label>每日正常工時<input id="leave66DailyHours" type="number" min="1" max="24" step="0.5" value="8"></label><label>協議遞延特休<input id="leave66DeferredAnnual" type="number" min="0" max="365" step="0.5" value="0"></label><div class="leave66-form-section">薪資轉帳帳戶</div><label>銀行名稱<input id="leave66BankName" maxlength="120"></label><label>銀行代碼<input id="leave66BankCode" maxlength="30" inputmode="numeric"></label><label>分行<input id="leave66BankBranch" maxlength="120"></label><label>戶名<input id="leave66BankAccountName" maxlength="120"></label><label class="span2">帳號<input id="leave66BankAccountNumber" maxlength="120" inputmode="numeric" autocomplete="off"></label><label class="full">備註<textarea id="leave66EmployeeNote" rows="3" maxlength="2000"></textarea></label></form></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66CloseEmployee()">取消</button><button id="leave66EmployeeSaveBtn" type="button" class="primary" onclick="leave66SaveEmployee()">儲存員工資料</button></footer></div></div>'+
+'<div id="leave66RecordModal" class="leave66-modal" onclick="if(event.target===this)leave66CloseRecord()"><div class="leave66-dialog"><header class="leave66-dialog-head"><div><h2 id="leave66RecordModalTitle">新增請假紀錄</h2><p>依紙本申請內容輸入；建檔後會立即計入剩餘假。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66CloseRecord()">×</button></header><div class="leave66-dialog-body"><form id="leave66RecordForm" class="leave66-form-grid" onsubmit="event.preventDefault();leave66SaveRecord()"><input id="leave66RecordId" type="hidden"><label class="span2">員工 *<select id="leave66RecordEmployee"></select></label><label>假別 *<select id="leave66RecordType"><option value="annual">特別休假</option><option value="sick">普通病假</option><option value="personal">事假</option><option value="family">家庭照顧假</option><option value="other">其他</option></select></label><label>開始日期（民國） *<input id="leave66StartRoc" inputmode="numeric" placeholder="115/09/04"></label><label>結束日期（民國） *<input id="leave66EndRoc" inputmode="numeric" placeholder="115/09/04"></label><label>收到紙本日期（民國）<input id="leave66PaperRoc" inputmode="numeric" placeholder="115/09/04"></label><label>請假天數<input id="leave66Days" type="number" min="0" max="366" step="0.125" value="1"></label><label>另計小時<input id="leave66Hours" type="number" min="0" max="24" step="0.5" value="0"></label><label class="full">請假事由 *<textarea id="leave66Reason" rows="3" maxlength="1000"></textarea></label><label class="full">建檔備註<textarea id="leave66RecordNote" rows="3" maxlength="1000" placeholder="例如：紙本已收件、行政代登錄"></textarea></label></form></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66CloseRecord()">取消</button><button id="leave66RecordSaveBtn" type="button" class="primary" onclick="leave66SaveRecord()">確認建檔</button></footer></div></div>'+
+'<div id="leave66PersonModal" class="leave66-modal" onclick="if(event.target===this)leave66ClosePerson()"><div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2>員工個人資料</h2><p>包含剩餘假、個人資料與完整請假紀錄。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66ClosePerson()">×</button></header><div id="leave66PersonBody" class="leave66-dialog-body"></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66ClosePerson()">關閉</button></footer></div></div>'}
+function ensureUI(){
+  removeFrontLeave();normalizeTopbarDom();
+  var tabs=document.querySelector('#adminContent>.admin-tabs');
+  if(tabs&&!e('leaveAdminTabBtn')){var btn=document.createElement('button');btn.id='leaveAdminTabBtn';btn.type='button';btn.textContent='員工資料／休假';btn.setAttribute('onclick',"showAdminTab('leaveAdmin')");var anchor=e('accountTabBtn')||e('lineUserTabBtn');tabs.insertBefore(btn,anchor||null)}
+  var btn=e('leaveAdminTabBtn');if(btn&&!btn.dataset.leave66Ready){btn.textContent='';var label=document.createElement('span');label.className='leave66-tab-label';label.textContent='員工資料／休假';var badge=document.createElement('span');badge.className='leave66-tab-badge';badge.textContent='0';btn.appendChild(label);btn.appendChild(badge);btn.dataset.leave66Ready='1'}
+  var admin=e('adminContent');
+  if(admin&&!e('leaveAdminTab')){var panel=document.createElement('div');panel.id='leaveAdminTab';panel.className='admin-tab-panel';panel.innerHTML=panelHtml();admin.appendChild(panel)}
+  if(!e('leave66EmployeeModal')){var holder=document.createElement('div');holder.id='leave66ModalHolder';holder.innerHTML=modalHtml();document.body.appendChild(holder)}
+  ensureDashboardCard();syncVisibility();
+}
+function ensureDashboardCard(){var stats=document.querySelector('#dashboardPage .dashboard-stats');if(!stats)return;var card=e('leave66DashboardCard');if(!card){card=document.createElement('button');card.id='leave66DashboardCard';card.type='button';card.className='dashboard-stat';card.setAttribute('onclick',"showAdminTab('leaveAdmin')");card.innerHTML='<span class="dashboard-stat-icon">休</span><b id="leave66DashboardCount">0</b><span>休假到期提醒</span>';stats.appendChild(card)}card.hidden=!canAccessLocal()}
+function syncVisibility(){ensureDashboardCard();var allowed=canAccessLocal(),btn=e('leaveAdminTabBtn'),card=e('leave66DashboardCard');if(btn)btn.classList.toggle('hidden-by-role',!allowed);if(card)card.hidden=!allowed;var pbtn=e('leave66PermissionsBtn');if(pbtn)pbtn.hidden=!isSystemAdmin();if(state.view==='permissions'&&!isSystemAdmin())showView('overview');if(!allowed&&e('leaveAdminTab')?.classList.contains('active')){try{window.showAdminTab('dashboard')}catch(_){}}}
+
+function showView(view){view=String(view||'overview');if(view==='permissions'&&!isSystemAdmin())view='overview';state.view=view;['overview','employees','records','permissions'].forEach(function(name){e('leave66'+name.charAt(0).toUpperCase()+name.slice(1)+'Btn')?.classList.toggle('active',name===view);e('leave66'+name.charAt(0).toUpperCase()+name.slice(1)+'View')?.classList.toggle('active',name===view)});if(view==='employees')renderEmployees();if(view==='records')renderRecords();if(view==='permissions')renderPermissions()}
+window.leave66ShowView=showView;
+
+async function load(force){
+  ensureUI();if(!canAccessLocal()){setStatus('目前帳號沒有員工資料／休假管理權限。','error');return}if(state.loading)return;if(state.loaded&&!force){renderAll();return}
+  state.loading=true;setStatus('正在載入員工資料與請假紀錄…','working');
+  try{var r=await api('leave_admin_bootstrap_v2',{});state.profiles=Array.isArray(r.profiles)?r.profiles:[];state.requests=Array.isArray(r.requests)?r.requests:[];state.users=Array.isArray(r.users)?r.users:[];state.warnings=Array.isArray(r.warnings)?r.warnings:[];state.summary=r.summary||{};state.asOf=String(r.asOf||today());state.canConfigurePermissions=!!r.canConfigurePermissions;state.loaded=true;if(state.selectedEmployeeId&&!profileById(state.selectedEmployeeId))state.selectedEmployeeId='';renderAll();setStatus('','');updateDashboardFromData()}catch(error){setStatus('載入失敗：'+String(error&&error.message||error),'error')}finally{state.loading=false}
+}
+window.leave66Load=load;
+function renderAll(){renderOverview();fillEmployeeSelects();renderEmployees();renderRecords();renderPermissions();if(state.selectedEmployeeId&&e('leave66PersonModal')?.classList.contains('show'))renderPerson()}
+function updateDashboardFromData(){var count=n(state.summary.expiringSoon)+n(state.summary.overused),card=e('leave66DashboardCard'),box=e('leave66DashboardCount'),tab=e('leaveAdminTabBtn'),badge=tab&&tab.querySelector('.leave66-tab-badge');if(box)box.textContent=String(count);if(card)card.classList.toggle('leave66-dashboard-alert',count>0);if(tab)tab.classList.toggle('leave66-has-alert',count>0);if(badge){badge.textContent=String(count);badge.classList.toggle('show',count>0)}}
+function renderOverview(){
+  var s=state.summary||{};if(e('leave66SummaryGrid'))e('leave66SummaryGrid').innerHTML='<article class="leave66-summary-card"><span>在職員工</span><b>'+esc(String(n(s.activeEmployees)))+'</b></article><article class="leave66-summary-card"><span>已離職／留存資料</span><b>'+esc(String(n(s.formerEmployees)))+'</b></article><article class="leave66-summary-card warn"><span>30 天內特休到期</span><b>'+esc(String(n(s.expiringSoon)))+'</b></article><article class="leave66-summary-card danger"><span>假期超用待核對</span><b>'+esc(String(n(s.overused)))+'</b></article>';
+  if(e('leave66WarningCount'))e('leave66WarningCount').textContent=String(state.warnings.length)+' 筆';var warningBox=e('leave66WarningList');if(warningBox)warningBox.innerHTML=state.warnings.length?state.warnings.map(function(w){return '<button type="button" class="leave66-warning '+(w.type==='overused'?'danger':'')+'" onclick="leave66OpenPerson(\''+js(w.employeeId)+'\')"><span class="leave66-warning-icon">'+(w.type==='overused'?'!':'⌛')+'</span><span class="leave66-warning-copy"><b>'+esc(w.employeeName||'未命名員工')+'</b><span>'+esc(w.message||'請查看個人休假資料')+'</span></span><em>'+esc(w.expiryDate?roc(w.expiryDate):'待核對')+'</em></button>'}).join(''):'<div class="leave66-empty">目前沒有 30 天內到期或超用提醒。</div>';
+  var recent=state.requests.slice().sort(function(a,b){return String(b.updatedAt||b.createdAt).localeCompare(String(a.updatedAt||a.createdAt))}).slice(0,8),box=e('leave66RecentList');if(box)box.innerHTML=recent.length?recent.map(function(x){return '<div class="leave66-recent-row"><div><b>'+esc(x.requesterName||'未命名員工')+'</b><span>'+esc(leaveType(x.leaveType))+'・'+esc(numberText(x.equivalentDays))+' 日</span></div><span>'+esc(roc(x.startDate))+(x.endDate&&x.endDate!==x.startDate?' ～ '+esc(roc(x.endDate)):'')+'</span><span class="leave66-badge '+esc(x.status)+'">'+esc(requestStatus(x.status))+'</span><span>'+esc(sourceLabel(x))+'</span></div>'}).join(''):'<div class="leave66-empty">目前還沒有請假建檔紀錄。</div>'
+}
+function fillEmployeeSelects(){var options=state.profiles.slice().sort(function(a,b){return String(a.employeeName).localeCompare(String(b.employeeName),'zh-Hant')}).map(function(p){return '<option value="'+esc(p.lineUserId)+'">'+esc(p.employeeName||'未命名員工')+(p.isActive===false?'（已離職）':'')+'</option>'}).join('');var filter=e('leave66RecordEmployeeFilter'),currentFilter=filter&&filter.value;if(filter){filter.innerHTML='<option value="">全部員工</option>'+options;if(state.profiles.some(function(p){return String(p.lineUserId)===String(currentFilter)}))filter.value=currentFilter}var select=e('leave66RecordEmployee'),current=select&&select.value;if(select){select.innerHTML='<option value="">請選擇員工</option>'+options;if(state.profiles.some(function(p){return String(p.lineUserId)===String(current)}))select.value=current}}
+function renderEmployees(){var box=e('leave66EmployeeList');if(!box)return;var q=String(e('leave66EmployeeSearch')?.value||'').trim().toLowerCase(),filter=String(e('leave66EmployeeStatus')?.value||'active');var rows=state.profiles.filter(function(p){var status=filter==='all'||(filter==='active'&&p.isActive!==false)||(filter==='former'&&p.isActive===false);var text=[p.employeeName,p.nationalId,p.phone,p.address,p.familyMembers,p.bankName,p.bankCode,p.bankBranch,p.bankAccountName,p.bankAccountNumber].join(' ').toLowerCase();return status&&(!q||text.includes(q))}).sort(function(a,b){return (a.isActive===false)-(b.isActive===false)||String(a.employeeName).localeCompare(String(b.employeeName),'zh-Hant')});if(!rows.length){box.innerHTML='<div class="leave66-empty">目前沒有符合條件的員工資料。</div>';return}box.innerHTML=rows.map(function(p){var b=p.balances||{},annual=b.annual||{},warn=!!annual.expiringSoon;return '<article class="leave66-employee-row"><button type="button" class="leave66-employee-open" onclick="leave66OpenPerson(\''+js(p.lineUserId)+'\')"><span class="leave66-avatar">'+esc(initial(p.employeeName))+'</span><span class="leave66-employee-main"><span class="leave66-status-pill '+(p.isActive===false?'former':'')+'">'+(p.isActive===false?'已離職':'在職')+'</span><b>'+esc(p.employeeName||'未命名員工')+'</b><span>'+esc(p.phone||'未填電話')+'・'+esc(p.nationalId||'未填身分證')+'</span></span><span class="leave66-employee-period"><b>'+esc(p.seniority&&p.seniority.label||'—')+'</b><span>到職 '+esc(roc(p.hireDate))+(p.exitDate?'・離職 '+esc(roc(p.exitDate)):'')+'</span></span><span class="leave66-balance-mini">'+balanceMini('特休',annual,warn)+balanceMini('病假',b.sick)+balanceMini('事假',b.personal)+balanceMini('家庭照顧',b.family)+'</span></button><div class="leave66-row-actions"><button type="button" class="secondary" onclick="leave66OpenPerson(\''+js(p.lineUserId)+'\')">個人</button><button type="button" class="secondary" onclick="leave66OpenEmployee(\''+js(p.lineUserId)+'\')">編輯</button><button type="button" class="primary" onclick="leave66OpenRecord(\''+js(p.lineUserId)+'\')">建檔</button></div></article>'}).join('')}
+window.leave66RenderEmployees=renderEmployees;
+function renderRecords(){var box=e('leave66RecordList');if(!box)return;var employee=String(e('leave66RecordEmployeeFilter')?.value||''),type=String(e('leave66RecordTypeFilter')?.value||''),status=String(e('leave66RecordStatusFilter')?.value||''),q=String(e('leave66RecordSearch')?.value||'').trim().toLowerCase();var rows=state.requests.filter(function(x){var text=[x.requesterName,x.reason,x.requestNo,x.reviewNote,x.recordNote].join(' ').toLowerCase();return(!employee||String(x.requesterLineUserId)===employee)&&(!type||x.leaveType===type)&&(!status||x.status===status)&&(!q||text.includes(q))}).sort(function(a,b){return String(b.startDate||b.createdAt).localeCompare(String(a.startDate||a.createdAt))});if(!rows.length){box.innerHTML='<div class="leave66-empty">目前沒有符合條件的請假紀錄。</div>';return}box.innerHTML=rows.map(recordRow).join('')}
+window.leave66RenderRecords=renderRecords;
+function recordRow(x){var paper=String(x.source)==='admin_paper',actions='';if(x.status==='pending'){actions='<button type="button" class="secondary" onclick="leave66ReviewLegacy(\''+js(x.id)+'\',\'approved\')">核准</button><button type="button" class="danger" onclick="leave66ReviewLegacy(\''+js(x.id)+'\',\'rejected\')">退回</button>'}else if(paper&&x.status==='approved'){actions='<button type="button" class="secondary" onclick="leave66OpenRecord(\''+js(x.requesterLineUserId)+'\',\''+js(x.id)+'\')">修改</button><button type="button" class="danger" onclick="leave66VoidRecord(\''+js(x.id)+'\')">作廢</button>'}return '<article class="leave66-record-row"><div><b>'+esc(x.requesterName||'未命名員工')+'</b><span>'+esc(x.requestNo||'—')+'・'+esc(sourceLabel(x))+'</span></div><div><b>'+esc(leaveType(x.leaveType))+' '+esc(numberText(x.equivalentDays))+' 日</b><span>'+esc(roc(x.startDate))+(x.endDate&&x.endDate!==x.startDate?' ～ '+esc(roc(x.endDate)):'')+'</span></div><div><span class="leave66-badge '+esc(x.status)+'">'+esc(requestStatus(x.status))+'</span>'+(paper?'<span class="leave66-badge paper">紙本</span>':'')+'</div><div><b>'+esc(x.reason||'—')+'</b><small>'+esc(x.recordNote||x.reviewNote||'')+'</small></div><div class="leave66-record-actions">'+actions+'</div></article>'}
+function renderPermissions(){var note=e('leave66PermissionNote'),box=e('leave66PermissionList');if(!note||!box)return;var editable=state.canConfigurePermissions&&isSystemAdmin();note.textContent=editable?'只有系統管理員可以調整。勾選後，該 LINE 身分仍需使用後台帳密登入，才可查看完整員工與帳戶資料。':'目前為唯讀；只有系統管理員可以調整本頁權限。';var rows=state.users.slice().sort(function(a,b){return (role(a.role)==='admin'?-1:0)-(role(b.role)==='admin'?-1:0)||String(a.name).localeCompare(String(b.name),'zh-Hant')});if(!rows.length){box.innerHTML='<div class="leave66-empty">目前沒有 LINE 使用者資料。</div>';return}box.innerHTML=rows.map(function(u){var fixed=role(u.role)==='admin',checked=fixed||u.leaveAdminAccess;return '<article class="leave66-permission-row"><div><b>'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'</b><span>'+esc(u.lineDisplayName||'')+'</span></div><div><b>'+esc(roleLabel(u.role))+'</b><small>'+(u.isEnabled===false?'帳號已停用':'帳號啟用中')+'</small></div><div><span>最後登入</span><b>'+esc(dateTime(u.lastLoginAt))+'</b></div><label class="leave66-switch"><input type="checkbox" '+(checked?'checked':'')+' '+((!editable||fixed)?'disabled':'')+' onchange="leave66ToggleAccess(this,\''+js(u.lineUserId)+'\')"><span>'+(fixed?'固定可看':'允許查看')+'</span></label></article>'}).join('')}
+
+function openEmployee(id){ensureUI();var p=id?profileById(id):null;e('leave66EmployeeId').value=p?String(p.lineUserId):'';e('leave66EmployeeModalTitle').textContent=p?'修改員工資料':'新增員工';e('leave66EmployeeName').value=p?p.employeeName||'':'';e('leave66NationalId').value=p?p.nationalId||'':'';e('leave66Phone').value=p?p.phone||'':'';e('leave66Address').value=p?p.address||'':'';e('leave66FamilyMembers').value=p?p.familyMembers||'':'';e('leave66HireRoc').value=p?rocInput(p.hireDate):'';e('leave66ExitRoc').value=p?rocInput(p.exitDate):'';e('leave66DailyHours').value=p?numberText(p.dailyHours||8):'8';e('leave66DeferredAnnual').value=p?numberText(p.deferredAnnualDays||0):'0';e('leave66BankName').value=p?p.bankName||'':'';e('leave66BankCode').value=p?p.bankCode||'':'';e('leave66BankBranch').value=p?p.bankBranch||'':'';e('leave66BankAccountName').value=p?p.bankAccountName||'':'';e('leave66BankAccountNumber').value=p?p.bankAccountNumber||'':'';e('leave66EmployeeNote').value=p?p.note||'':'';var select=e('leave66LinkedLineUser'),wrap=e('leave66LineUserWrap');if(select){var used=new Set(state.profiles.map(function(x){return String(x.lineUserId)}));var options=state.users.filter(function(u){return !used.has(String(u.lineUserId))}).map(function(u){return '<option value="'+esc(u.lineUserId)+'">'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'｜'+esc(roleLabel(u.role))+'</option>'}).join('');select.innerHTML='<option value="">不連結 LINE（純員工檔案）</option>'+options;select.value='';select.disabled=!!p}if(wrap)wrap.style.opacity=p?'.65':'1';openModal('leave66EmployeeModal');setTimeout(function(){e('leave66EmployeeName')?.focus()},70)}
+window.leave66OpenEmployee=openEmployee;window.leave66CloseEmployee=function(){closeModal('leave66EmployeeModal')};
+async function saveEmployee(){var employeeId=String(e('leave66EmployeeId').value||''),name=String(e('leave66EmployeeName').value||'').trim(),hire=parseRoc(e('leave66HireRoc').value),exitRaw=String(e('leave66ExitRoc').value||'').trim(),exit=exitRaw?parseRoc(exitRaw):'';if(!name){alert('請填寫姓名');e('leave66EmployeeName').focus();return}if(!hire){alert('到職日期格式錯誤，請輸入例如 115/09/04');e('leave66HireRoc').focus();return}if(exitRaw&&!exit){alert('離職日期格式錯誤');e('leave66ExitRoc').focus();return}if(exit&&exit<hire){alert('離職日期不能早於到職日期');return}var btn=e('leave66EmployeeSaveBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='儲存中…';try{await api('leave_employee_save_v2',{employeeId:employeeId,linkedLineUserId:employeeId?'':String(e('leave66LinkedLineUser').value||''),employeeName:name,nationalId:String(e('leave66NationalId').value||'').trim(),phone:String(e('leave66Phone').value||'').trim(),address:String(e('leave66Address').value||'').trim(),familyMembers:String(e('leave66FamilyMembers').value||'').trim(),hireDate:hire,exitDate:exit||null,dailyHours:n(e('leave66DailyHours').value)||8,deferredAnnualDays:n(e('leave66DeferredAnnual').value),bankName:String(e('leave66BankName').value||'').trim(),bankCode:String(e('leave66BankCode').value||'').trim(),bankBranch:String(e('leave66BankBranch').value||'').trim(),bankAccountName:String(e('leave66BankAccountName').value||'').trim(),bankAccountNumber:String(e('leave66BankAccountNumber').value||'').trim(),note:String(e('leave66EmployeeNote').value||'').trim()});closeModal('leave66EmployeeModal');state.loaded=false;await load(true);showView('employees')}catch(error){alert('員工資料儲存失敗：'+String(error&&error.message||error))}finally{btn.disabled=false;btn.textContent=old}}
+window.leave66SaveEmployee=saveEmployee;
+
+function openRecord(employeeId,requestId){ensureUI();if(!state.profiles.length){alert('請先到「員工資料」建立至少一位員工，才能新增請假紀錄。');showView('employees');return}fillEmployeeSelects();var row=requestId?state.requests.find(function(x){return String(x.id)===String(requestId)}):null;if(row&&String(row.source)!=='admin_paper'){alert('舊版線上申請請使用核准／退回，不直接覆蓋原始簽署內容。');return}e('leave66RecordId').value=row?String(row.id):'';e('leave66RecordModalTitle').textContent=row?'修改請假紀錄':'新增請假紀錄';e('leave66RecordEmployee').value=String(employeeId||row&&row.requesterLineUserId||'');e('leave66RecordType').value=row?row.leaveType:'annual';e('leave66StartRoc').value=row?rocInput(row.startDate):rocInput(today());e('leave66EndRoc').value=row?rocInput(row.endDate):rocInput(today());e('leave66PaperRoc').value=row?rocInput(row.paperReceivedDate||row.startDate):rocInput(today());e('leave66Days').value=row?numberText(row.days||0):'1';e('leave66Hours').value=row?numberText(row.hours||0):'0';e('leave66Reason').value=row?row.reason||'':'';e('leave66RecordNote').value=row?row.recordNote||row.reviewNote||'':'';openModal('leave66RecordModal');setTimeout(function(){e('leave66RecordEmployee')?.focus()},70)}
+window.leave66OpenRecord=openRecord;window.leave66CloseRecord=function(){closeModal('leave66RecordModal')};
+async function saveRecord(){var id=String(e('leave66RecordId').value||''),employeeId=String(e('leave66RecordEmployee').value||''),start=parseRoc(e('leave66StartRoc').value),end=parseRoc(e('leave66EndRoc').value),paperRaw=String(e('leave66PaperRoc').value||'').trim(),paper=paperRaw?parseRoc(paperRaw):today(),days=n(e('leave66Days').value),hours=n(e('leave66Hours').value),reason=String(e('leave66Reason').value||'').trim();if(!employeeId){alert('請選擇員工');return}if(!start||!end){alert('請假日期格式錯誤，請輸入民國年/月/日');return}if(end<start){alert('結束日期不能早於開始日期');return}if(paperRaw&&!paper){alert('收到紙本日期格式錯誤');return}if(days<=0&&hours<=0){alert('請至少填寫請假天數或小時');return}if(!reason){alert('請填寫請假事由');return}var btn=e('leave66RecordSaveBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='建檔中…';var payload={employeeId:employeeId,leaveType:e('leave66RecordType').value,startDate:start,endDate:end,paperReceivedDate:paper,days:days,hours:hours,reason:reason,recordNote:String(e('leave66RecordNote').value||'').trim()};if(id)payload.requestId=id;try{await api(id?'leave_admin_record_update':'leave_admin_record_create',payload);closeModal('leave66RecordModal');state.loaded=false;await load(true);showView('records');if(state.selectedEmployeeId===employeeId&&e('leave66PersonModal')?.classList.contains('show'))renderPerson()}catch(error){alert('請假紀錄建檔失敗：'+String(error&&error.message||error))}finally{btn.disabled=false;btn.textContent=old}}
+window.leave66SaveRecord=saveRecord;
+async function voidRecord(id){var reason=prompt('請輸入作廢原因（作廢後會回補剩餘假）','紙本內容更正');if(reason===null)return;if(!String(reason).trim()){alert('請填寫作廢原因');return}if(!confirm('確定作廢這筆請假紀錄？'))return;try{await api('leave_admin_record_void',{requestId:id,reason:String(reason).trim()});state.loaded=false;await load(true)}catch(error){alert('作廢失敗：'+String(error&&error.message||error))}}
+window.leave66VoidRecord=voidRecord;
+async function reviewLegacy(id,status){var note=prompt(status==='approved'?'核准備註（可留空）':'請填寫退回原因',status==='approved'?'紙本已核對':'請重新確認');if(note===null)return;if(status==='rejected'&&!String(note).trim()){alert('退回時請填寫原因');return}try{await api('leave_review',{requestId:id,status:status,reviewNote:String(note||'').trim()});state.loaded=false;await load(true)}catch(error){alert('處理失敗：'+String(error&&error.message||error))}}
+window.leave66ReviewLegacy=reviewLegacy;
+
+function personField(label,value){return '<div class="leave66-person-field"><span>'+esc(label)+'</span><b>'+esc(value||'未填寫')+'</b></div>'}
+function personBalance(label,obj,note,warning){obj=obj||{};return '<article class="leave66-balance-card '+balanceClass(obj.remaining,warning)+'"><span>'+esc(label)+'</span><b>'+esc(numberText(obj.remaining==null?0:obj.remaining))+' 日</b><small>已用 '+esc(numberText(obj.used||0))+'／可用 '+esc(numberText(obj.entitlement||0))+' 日'+(note?'<br>'+esc(note):'')+'</small></article>'}
+function openPerson(id){state.selectedEmployeeId=String(id||'');renderPerson();openModal('leave66PersonModal')}
+window.leave66OpenPerson=openPerson;window.leave66ClosePerson=function(){closeModal('leave66PersonModal')};
+function renderPerson(){var box=e('leave66PersonBody'),p=profileById(state.selectedEmployeeId);if(!box)return;if(!p){box.innerHTML='<div class="leave66-empty">找不到員工資料。</div>';return}var b=p.balances||{},annual=b.annual||{},history=employeeRequests(p.lineUserId),alert='';if(annual.expiringSoon)alert='<div class="leave66-person-alert">特休剩 '+esc(numberText(annual.remaining))+' 日，距 '+esc(roc(annual.periodEnd))+' 到期只剩 '+esc(String(annual.daysUntilExpiry))+' 天，請儘快安排或核對處理。</div>';if(n(annual.overused)>0)alert='<div class="leave66-person-alert danger">特休已超用 '+esc(numberText(annual.overused))+' 日，請核對紙本與建檔紀錄。</div>';var bank=[p.bankName,p.bankCode&&'代碼 '+p.bankCode,p.bankBranch,p.bankAccountName,p.bankAccountNumber].filter(Boolean).join('／');box.innerHTML='<section class="leave66-person-hero"><div class="leave66-person-name"><span class="leave66-avatar">'+esc(initial(p.employeeName))+'</span><div><h3>'+esc(p.employeeName||'未命名員工')+'</h3><p>'+(p.isActive===false?'已離職':'在職')+'・年資 '+esc(p.seniority&&p.seniority.label||'—')+'・每日 '+esc(numberText(p.dailyHours||8))+' 小時</p></div></div><div class="leave66-person-actions"><button type="button" class="secondary" onclick="leave66OpenEmployee(\''+js(p.lineUserId)+'\')">編輯個人資料</button><button type="button" class="primary" onclick="leave66OpenRecord(\''+js(p.lineUserId)+'\')">＋ 請假建檔</button></div></section>'+alert+'<section class="leave66-balance-grid">'+personBalance('特別休假',annual,annual.periodEnd?'有效至 '+roc(annual.periodEnd):'尚未取得',annual.expiringSoon)+personBalance('普通病假',b.sick,b.sick&&b.sick.periodEnd?'年度至 '+roc(b.sick.periodEnd):'')+personBalance('事假（含家庭照顧）',b.personal,b.personal&&b.personal.periodEnd?'年度至 '+roc(b.personal.periodEnd):'')+personBalance('家庭照顧假',b.family,b.family&&b.family.periodEnd?'年度至 '+roc(b.family.periodEnd):'')+'</section><section class="leave66-person-grid">'+personField('身分證字號',p.nationalId)+personField('電話',p.phone)+personField('地址',p.address)+personField('家庭成員',p.familyMembers)+personField('轉帳帳戶',bank)+personField('到職日期',roc(p.hireDate))+personField('離職日期',p.exitDate?roc(p.exitDate):'在職中')+personField('遞延特休',numberText(p.deferredAnnualDays||0)+' 日')+personField('備註',p.note)+'</section><section class="leave66-person-history"><h3>請假紀錄（共 '+String(history.length)+' 筆）</h3><div class="leave66-record-list">'+(history.length?history.map(recordRow).join(''):'<div class="leave66-empty">目前尚無請假紀錄。</div>')+'</div></section>'}
+
+async function toggleAccess(input,id){input.disabled=true;try{await api('leave_access_toggle',{lineUserId:String(id),enabled:!!input.checked});var u=state.users.find(function(x){return String(x.lineUserId)===String(id)});if(u)u.leaveAdminAccess=!!input.checked;try{var lu=(typeof lineUsers!=='undefined'?lineUsers:[]).find(function(x){return String(x.id)===String(id)});if(lu)lu.leaveAdminAccess=!!input.checked;if(typeof persistLineUsers==='function')persistLineUsers()}catch(_){}renderPermissions();syncVisibility()}catch(error){input.checked=!input.checked;alert('權限更新失敗：'+String(error&&error.message||error))}finally{input.disabled=false}}
+window.leave66ToggleAccess=toggleAccess;
+
+async function loadDashboardSummary(force){ensureUI();if(!canAccessLocal())return;var now=Date.now();if(!force&&state.dashboardLoadedAt&&now-state.dashboardLoadedAt<60000){updateDashboardFromData();return}state.dashboardLoadedAt=now;try{var r=await api('leave_admin_summary',{});state.summary=Object.assign({},state.summary,{activeEmployees:r.activeEmployees,expiringSoon:r.expiringSoon,overused:r.overused});state.warnings=Array.isArray(r.warnings)?r.warnings:state.warnings;updateDashboardFromData()}catch(error){console.warn('休假提醒載入失敗',error)}}
+
+var previousShowPage=window.showPage;window.showPage=function(page){if(String(page)==='leave')page='home';var result=typeof previousShowPage==='function'?previousShowPage.call(this,page):undefined;removeFrontLeave();normalizeTopbarDom();return result};
+var previousShowAdmin=window.showAdminTab;window.showAdminTab=function(tab){tab=String(tab||'');if(tab==='leaveAdmin'){ensureUI();if(!canAccessLocal()){alert('目前帳號沒有員工資料／休假管理權限。請由系統管理員在本頁的「頁面權限」開放。');return}if(typeof previousShowAdmin==='function')previousShowAdmin.call(this,'dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(node){node.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs>button').forEach(function(node){node.classList.remove('active')});e('leaveAdminTab')?.classList.add('active');e('leaveAdminTabBtn')?.classList.add('active');try{sessionStorage.setItem('starred_active_admin_tab_v49','leaveAdmin')}catch(_){}load(false);window.scrollTo({top:0,behavior:'smooth'});return}var result=typeof previousShowAdmin==='function'?previousShowAdmin.apply(this,arguments):undefined;e('leaveAdminTab')?.classList.remove('active');e('leaveAdminTabBtn')?.classList.remove('active');return result};
+var previousCheckLogin=window.checkLogin;if(typeof previousCheckLogin==='function')window.checkLogin=function(){var r=previousCheckLogin.apply(this,arguments);setTimeout(function(){ensureUI();syncVisibility();loadDashboardSummary(false)},20);return r};
+var previousApplyRole=window.applyAdminRoleUI;if(typeof previousApplyRole==='function')window.applyAdminRoleUI=function(){var r=previousApplyRole.apply(this,arguments);setTimeout(syncVisibility,0);return r};
+var previousRenderDashboard=window.renderDashboard;if(typeof previousRenderDashboard==='function')window.renderDashboard=function(){var r=previousRenderDashboard.apply(this,arguments);setTimeout(function(){ensureDashboardCard();loadDashboardSummary(false)},0);return r};
+var previousCloud=window.loadStarredCloudData;if(typeof previousCloud==='function')window.loadStarredCloudData=async function(){var r=await previousCloud.apply(this,arguments);ensureUI();syncVisibility();return r};
+
+function init(){ensureUI();removeFrontLeave();normalizeTopbarDom();syncVisibility();if(hasBackofficeLogin())loadDashboardSummary(false)}
+init();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){init();[180,650,1500,3300].forEach(function(ms){setTimeout(init,ms)})});else [180,650,1500,3300].forEach(function(ms){setTimeout(init,ms)});
+window.addEventListener('pageshow',function(){setTimeout(init,30)});window.addEventListener('resize',function(){setTimeout(normalizeTopbarDom,20)});
+var observerQueued=false;var observer=new MutationObserver(function(){if(observerQueued)return;observerQueued=true;setTimeout(function(){observerQueued=false;removeFrontLeave();normalizeTopbarDom();ensureUI()},0)});observer.observe(document.body,{childList:true,subtree:true});
+window.STARRED_UI_BUILD=BUILD;
 })();
 </script>
+
 </body>
 </html>
