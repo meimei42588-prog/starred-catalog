@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- UI PATCH: 20260904-v68.1-company-permission-search -->
+<!-- UI PATCH: 20260904-v68.2-sync-error-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
 <!-- STARRED UI BUILD: 20260904-backoffice-leave-v68; backend-compatible -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
@@ -6812,26 +6812,7 @@ async function exportOrdersExcel(event){
   showOrderAction('瀏覽器阻擋報表','請允許 catalog.hshometw.com 的彈出式視窗後，再按一次「匯出 Excel」。');
   return;
  }
- reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p>
-
-<!-- V68.1 FINAL: company wording and permission search status -->
-<style id="employee-leave-v68-permission-search-fix-style">
-.leave67-candidate-row.is-unavailable{background:#f7f9fa!important;color:#718693!important}
-.leave67-candidate-state{
-  display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:38px;
-  padding:7px 10px;border:1px solid #d5e0e6;border-radius:10px;background:#eef3f6;
-  color:#5f7480;font-size:14px!important;font-weight:400!important;white-space:nowrap
-}
-.leave67-candidate-state.granted{border-color:#c8dfd1;background:#eaf5ee;color:#2e704b}
-.leave67-candidate-state.fixed{border-color:#cbd9e0;background:#eaf1f4;color:#36596b}
-.leave67-candidate-state.disabled{border-color:#e3d2cf;background:#f8ecea;color:#8d4a42}
-@media(max-width:520px){
-  .leave67-candidate-row{grid-template-columns:minmax(0,1fr)!important}
-  .leave67-candidate-row>button,.leave67-candidate-state{width:100%!important;min-width:0!important}
-}
-</style>
-
-</body></html>');
+ reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p></body></html>');
  reportWindow.document.close();
 
  const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
@@ -17953,6 +17934,23 @@ body.leave67-wide-active main.container{
     margin-right:0!important;
     transform:none!important;
   }
+}
+</style>
+
+<!-- V68.2 FIX: permission result states; placed at real document end -->
+<style id="employee-leave-v68-permission-search-fix-style">
+.leave67-candidate-row.is-unavailable{background:#f7f9fa!important;color:#718693!important}
+.leave67-candidate-state{
+  display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:38px;
+  padding:7px 10px;border:1px solid #d5e0e6;border-radius:10px;background:#eef3f6;
+  color:#5f7480;font-size:14px!important;font-weight:400!important;white-space:nowrap
+}
+.leave67-candidate-state.granted{border-color:#c8dfd1;background:#eaf5ee;color:#2e704b}
+.leave67-candidate-state.fixed{border-color:#cbd9e0;background:#eaf1f4;color:#36596b}
+.leave67-candidate-state.disabled{border-color:#e3d2cf;background:#f8ecea;color:#8d4a42}
+@media(max-width:520px){
+  .leave67-candidate-row{grid-template-columns:minmax(0,1fr)!important}
+  .leave67-candidate-row>button,.leave67-candidate-state{width:100%!important;min-width:0!important}
 }
 </style>
 </body>
