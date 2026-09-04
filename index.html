@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
 <!-- STARRED UI BUILD: 20260904-backoffice-leave-v66; backend-compatible -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
@@ -16831,5 +16832,367 @@ window.STARRED_UI_BUILD=BUILD;
 })();
 </script>
 
+
+
+<!-- UI PATCH: 20260904 compact auto-width two-row navigation -->
+<style id="compact-auto-width-two-row-navigation-v66">
+/*
+  前台與後台導覽省空間版：
+  - 桌機依文字寬度決定按鈕寬度，不再平均撐滿。
+  - 手機固定最多兩排；內容較多時可左右滑，不會排成三、四排。
+  - 提醒數字固定在按鈕右上角，不再因換行偏移。
+*/
+
+/* ===== 桌機／平板共用：文字多寬，按鈕就多寬 ===== */
+.topbar .topbar-inner{
+  width:min(1480px,calc(100% - 28px))!important;
+  max-width:1480px!important;
+}
+.topbar .topbar-right{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:nowrap!important;
+  gap:6px!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:visible!important;
+}
+.topbar .nav{
+  display:flex!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+.topbar .nav>button:not(.hidden-by-role){
+  position:relative!important;
+  flex:0 0 auto!important;
+  width:max-content!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:40px!important;
+  min-height:40px!important;
+  margin:0!important;
+  padding:7px 12px!important;
+  border-radius:10px!important;
+  font-size:14px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+.topbar .notification-wrap,
+.topbar .topbar-session,
+.topbar .topbar-session.show{
+  position:relative!important;
+  flex:0 0 40px!important;
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  margin:0!important;
+  padding:0!important;
+  align-self:center!important;
+}
+.topbar .notification-btn,
+.topbar .logout-top-btn{
+  position:relative!important;
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  margin:0!important;
+  padding:0!important;
+  border-radius:10px!important;
+}
+.topbar .notification-badge{
+  position:absolute!important;
+  top:-5px!important;
+  right:-5px!important;
+  left:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  z-index:20!important;
+}
+
+/* 後台分頁改為自動寬度，不再一格一樣大。 */
+#adminContent>.admin-tabs{
+  display:flex!important;
+  align-items:center!important;
+  align-content:flex-start!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  width:100%!important;
+  margin:0 0 12px!important;
+  padding:7px!important;
+  overflow:visible!important;
+}
+#adminContent>.admin-tabs>button:not(.hidden-by-role){
+  position:relative!important;
+  flex:0 0 auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:max-content!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:40px!important;
+  min-height:40px!important;
+  margin:0!important;
+  padding:7px 9px!important;
+  border-radius:9px!important;
+  font-size:13px!important;
+  line-height:1!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+#adminContent>.admin-tabs>button.has-attention,
+#adminContent>.admin-tabs>button.leave66-has-alert{
+  padding-right:28px!important;
+}
+#adminContent>.admin-tabs>button.hidden-by-role{display:none!important}
+#adminContent>.admin-tabs .admin-attention-badge,
+#adminContent>.admin-tabs .leave66-tab-badge{
+  position:absolute!important;
+  top:2px!important;
+  right:3px!important;
+  left:auto!important;
+  bottom:auto!important;
+  margin:0!important;
+  transform:none!important;
+  z-index:5!important;
+}
+#leaveAdminTabBtn{
+  width:max-content!important;
+  min-width:0!important;
+  padding-left:9px!important;
+}
+#leaveAdminTabBtn:not(.leave66-has-alert){padding-right:9px!important}
+#leaveAdminTabBtn .leave66-tab-label{
+  display:block!important;
+  width:max-content!important;
+  min-width:0!important;
+  font-size:13px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+
+/* ===== 手機：最多兩排，超出的內容左右滑動 ===== */
+@media(max-width:760px){
+  .topbar .topbar-inner{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:7px 8px!important;
+  }
+  .topbar .topbar-right{
+    display:grid!important;
+    grid-template-columns:repeat(5,max-content)!important;
+    grid-template-rows:repeat(2,38px)!important;
+    grid-auto-flow:row!important;
+    grid-auto-columns:max-content!important;
+    align-items:center!important;
+    justify-content:start!important;
+    align-content:start!important;
+    gap:5px 6px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-height:81px!important;
+    margin:0!important;
+    padding:2px 3px 3px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .topbar .topbar-right::-webkit-scrollbar{display:none!important}
+
+  /* display:contents 讓前台按鈕與通知／登出一起依序排進兩排。 */
+  .topbar .nav{
+    display:contents!important;
+  }
+  .topbar .nav>button:not(.hidden-by-role),
+  .topbar #homeNav,
+  .topbar #orderNav,
+  .topbar #salesNav,
+  .topbar #expenseNav,
+  .topbar #externalAccountNav,
+  .topbar #employeeRulesNav,
+  .topbar #adminNav{
+    position:relative!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    flex:none!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:max-content!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:6px 10px!important;
+    border-radius:9px!important;
+    font-size:13px!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  .topbar .nav>button.hidden-by-role{display:none!important}
+  .topbar .notification-wrap,
+  .topbar .topbar-session,
+  .topbar .topbar-session.show{
+    position:relative!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    justify-self:start!important;
+    align-self:center!important;
+    flex:none!important;
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .topbar .topbar-session:not(.show){display:none!important}
+  .topbar .notification-btn,
+  .topbar .logout-top-btn{
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0!important;
+    border-radius:9px!important;
+  }
+  .topbar .notification-badge{
+    top:1px!important;
+    right:1px!important;
+  }
+  .topbar .notification-panel{
+    position:fixed!important;
+    top:90px!important;
+    right:8px!important;
+    left:8px!important;
+    width:auto!important;
+    max-width:none!important;
+    z-index:99999!important;
+  }
+  .topbar .session-tooltip{
+    position:fixed!important;
+    top:90px!important;
+    right:8px!important;
+    max-width:calc(100vw - 16px)!important;
+  }
+
+  /* 後台頁籤固定兩排，文字多寬按鈕就多寬；左右滑即可看完。 */
+  #adminContent>.admin-tabs{
+    display:grid!important;
+    grid-template-columns:repeat(7,max-content)!important;
+    grid-template-rows:repeat(2,38px)!important;
+    grid-auto-flow:row!important;
+    grid-auto-columns:max-content!important;
+    align-items:center!important;
+    justify-content:start!important;
+    align-content:start!important;
+    gap:5px 6px!important;
+    width:100%!important;
+    max-height:84px!important;
+    margin:0 0 10px!important;
+    padding:4px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  #adminContent>.admin-tabs::-webkit-scrollbar{display:none!important}
+  #adminContent>.admin-tabs>button:not(.hidden-by-role){
+    position:relative!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    flex:none!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:max-content!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:6px 10px!important;
+    border-radius:9px!important;
+    font-size:13px!important;
+    line-height:1!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  #adminContent>.admin-tabs>button.has-attention,
+  #adminContent>.admin-tabs>button.leave66-has-alert{
+    padding-right:29px!important;
+  }
+  #adminContent>.admin-tabs .admin-attention-badge,
+  #adminContent>.admin-tabs .leave66-tab-badge{
+    top:1px!important;
+    right:2px!important;
+  }
+  #leaveAdminTabBtn{
+    width:max-content!important;
+    min-width:0!important;
+    padding-left:10px!important;
+  }
+  #leaveAdminTabBtn:not(.leave66-has-alert){padding-right:10px!important}
+  #leaveAdminTabBtn .leave66-tab-label{
+    width:max-content!important;
+    font-size:13px!important;
+    white-space:nowrap!important;
+  }
+}
+
+@media(max-width:390px){
+  .topbar .topbar-right,
+  #adminContent>.admin-tabs{
+    gap:4px!important;
+  }
+  .topbar .nav>button:not(.hidden-by-role),
+  .topbar #homeNav,
+  .topbar #orderNav,
+  .topbar #salesNav,
+  .topbar #expenseNav,
+  .topbar #externalAccountNav,
+  .topbar #employeeRulesNav,
+  .topbar #adminNav{
+    padding-left:5px!important;
+    padding-right:5px!important;
+    font-size:12.5px!important;
+  }
+  #adminContent>.admin-tabs>button:not(.hidden-by-role){
+    padding-left:8px!important;
+    padding-right:8px!important;
+    font-size:12.5px!important;
+  }
+  #adminContent>.admin-tabs>button.has-attention,
+  #adminContent>.admin-tabs>button.leave66-has-alert{
+    padding-right:27px!important;
+  }
+}
+</style>
 </body>
 </html>
