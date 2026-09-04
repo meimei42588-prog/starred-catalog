@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: 20260904-v68.1-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
 <!-- STARRED UI BUILD: 20260904-backoffice-leave-v68; backend-compatible -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
@@ -6811,7 +6812,26 @@ async function exportOrdersExcel(event){
   showOrderAction('瀏覽器阻擋報表','請允許 catalog.hshometw.com 的彈出式視窗後，再按一次「匯出 Excel」。');
   return;
  }
- reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p></body></html>');
+ reportWindow.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>訂單報表產生中</title></head><body style="font-family:Microsoft JhengHei,sans-serif;padding:28px;color:#274253"><h2>訂單報表產生中…</h2><p>請稍候，不要關閉此頁。</p>
+
+<!-- V68.1 FINAL: company wording and permission search status -->
+<style id="employee-leave-v68-permission-search-fix-style">
+.leave67-candidate-row.is-unavailable{background:#f7f9fa!important;color:#718693!important}
+.leave67-candidate-state{
+  display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:38px;
+  padding:7px 10px;border:1px solid #d5e0e6;border-radius:10px;background:#eef3f6;
+  color:#5f7480;font-size:14px!important;font-weight:400!important;white-space:nowrap
+}
+.leave67-candidate-state.granted{border-color:#c8dfd1;background:#eaf5ee;color:#2e704b}
+.leave67-candidate-state.fixed{border-color:#cbd9e0;background:#eaf1f4;color:#36596b}
+.leave67-candidate-state.disabled{border-color:#e3d2cf;background:#f8ecea;color:#8d4a42}
+@media(max-width:520px){
+  .leave67-candidate-row{grid-template-columns:minmax(0,1fr)!important}
+  .leave67-candidate-row>button,.leave67-candidate-state{width:100%!important;min-width:0!important}
+}
+</style>
+
+</body></html>');
  reportWindow.document.close();
 
  const pendingIds=list.filter(o=>(o.status||'pending')==='pending').map(o=>String(o.id));
@@ -16887,7 +16907,7 @@ modalHtml=function(){return `
     <div class="leave66-dialog-body"><form id="leave66EmployeeForm" class="leave66-form-grid" onsubmit="event.preventDefault();leave66SaveEmployee()">
       <input id="leave66EmployeeId" type="hidden"><div class="leave66-form-section">基本資料</div>
       <label>姓名 *<input id="leave66EmployeeName" maxlength="80"></label>
-      <label>所在公司<input id="leave66Company" maxlength="160" placeholder="例如：猩紅實業有限公司"></label>
+      <label>所在公司<input id="leave66Company" maxlength="160" placeholder="例如：星紅"></label>
       <label id="leave66LineUserWrap">連結 LINE 使用者<select id="leave66LinkedLineUser"><option value="">不連結 LINE（純員工檔案）</option></select></label>
       <label>身分證字號<input id="leave66NationalId" maxlength="30" autocomplete="off"></label>
       <label>電話<input id="leave66Phone" maxlength="40" inputmode="tel"></label>
@@ -16928,8 +16948,8 @@ modalHtml=function(){return `
   <div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2>員工個人資料</h2><p>包含剩餘假、個人資料與完整請假紀錄。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66ClosePerson()">×</button></header><div id="leave66PersonBody" class="leave66-dialog-body"></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66ClosePerson()">關閉</button></footer></div>
 </div>
 <div id="leave67PermissionModal" class="leave66-modal" onclick="if(event.target===this)leave67ClosePermissionPicker()">
-  <div class="leave66-dialog leave67-permission-dialog"><header class="leave66-dialog-head"><div><h2>新增可查看人員</h2><p>先輸入姓名搜尋；系統不會一次列出全部人員。</p></div><button type="button" class="leave66-dialog-close" onclick="leave67ClosePermissionPicker()">×</button></header>
-    <div class="leave66-dialog-body"><label class="leave67-permission-search">搜尋姓名或 LINE 名稱<input id="leave67PermissionSearch" type="search" autocomplete="off" placeholder="輸入至少 1 個字" oninput="leave67RenderPermissionCandidates()"></label><div id="leave67PermissionCandidates" class="leave67-permission-candidates"><div class="leave66-empty">請輸入姓名搜尋。</div></div></div>
+  <div class="leave66-dialog leave67-permission-dialog"><header class="leave66-dialog-head"><div><h2>新增可查看人員</h2><p>可搜尋員工本名或 LINE 名稱；加入後仍需使用主管／會計後台帳密登入。</p></div><button type="button" class="leave66-dialog-close" onclick="leave67ClosePermissionPicker()">×</button></header>
+    <div class="leave66-dialog-body"><label class="leave67-permission-search">搜尋員工本名或 LINE 名稱<input id="leave67PermissionSearch" type="search" autocomplete="off" placeholder="輸入至少 1 個字" oninput="leave67RenderPermissionCandidates()"></label><div id="leave67PermissionCandidates" class="leave67-permission-candidates"><div class="leave66-empty">請輸入姓名搜尋。</div></div></div>
     <footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave67ClosePermissionPicker()">完成</button></footer>
   </div>
 </div>`};
@@ -16990,7 +17010,7 @@ renderPerson=function(){var box=e('leave66PersonBody');if(box)box.innerHTML=leav
 openEmployee=function(id){
   ensureUI();var p=id?profileById(id):null;
   e('leave66EmployeeId').value=p?String(p.lineUserId):'';e('leave66EmployeeModalTitle').textContent=p?'修改員工資料':'新增員工';
-  e('leave66EmployeeName').value=p?p.employeeName||'':'';e('leave66Company').value=p?p.company||'':'';e('leave66NationalId').value=p?p.nationalId||'':'';e('leave66Phone').value=p?p.phone||'':'';e('leave66Address').value=p?p.address||'':'';e('leave66FamilyMembers').value=p?p.familyMembers||'':'';
+  e('leave66EmployeeName').value=p?p.employeeName||'':'';e('leave66Company').value=p?p.company||'':'星紅';e('leave66NationalId').value=p?p.nationalId||'':'';e('leave66Phone').value=p?p.phone||'':'';e('leave66Address').value=p?p.address||'':'';e('leave66FamilyMembers').value=p?p.familyMembers||'':'';
   e('leave66HireRoc').value=p?rocInput(p.hireDate):'';e('leave66ExitRoc').value=p?rocInput(p.exitDate):'';e('leave66DailyHours').value=p?numberText(p.dailyHours||8):'8';e('leave66DeferredAnnual').value=p?numberText(p.deferredAnnualDays||0):'0';
   e('leave66BankName').value=p?p.bankName||'':'';e('leave66BankCode').value=p?p.bankCode||'':'';e('leave66BankBranch').value=p?p.bankBranch||'':'';e('leave66BankAccountName').value=p?p.bankAccountName||'':'';e('leave66BankAccountNumber').value=p?p.bankAccountNumber||'':'';e('leave66EmployeeNote').value=p?p.note||'':'';
   var select=e('leave66LinkedLineUser'),wrap=e('leave66LineUserWrap');if(select){var used=new Set(state.profiles.map(function(x){return String(x.lineUserId)}));var options=state.users.filter(function(u){return !used.has(String(u.lineUserId))}).map(function(u){return '<option value="'+esc(u.lineUserId)+'">'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'｜'+esc(roleLabel(u.role))+'</option>'}).join('');select.innerHTML='<option value="">不連結 LINE（純員工檔案）</option>'+options;select.value='';select.disabled=!!p}if(wrap)wrap.style.opacity=p?'.65':'1';
@@ -17025,11 +17045,82 @@ renderPermissions=function(){
 window.leave67OpenPermissionPicker=function(){if(!leave67PermissionEditable()){alert('只有系統管理員可以新增權限。');return}var input=e('leave67PermissionSearch');if(input)input.value='';window.leave67RenderPermissionCandidates();openModal('leave67PermissionModal');setTimeout(function(){input&&input.focus()},80)};
 window.leave67ClosePermissionPicker=function(){closeModal('leave67PermissionModal')};
 window.leave67RenderPermissionCandidates=function(){
-  var box=e('leave67PermissionCandidates'),input=e('leave67PermissionSearch');if(!box)return;var q=String(input&&input.value||'').trim().toLowerCase();
-  if(!q){box.innerHTML='<div class="leave66-empty">請輸入姓名或 LINE 名稱搜尋，不會一次列出全部人員。</div>';return}
-  var rows=state.users.filter(function(u){var r=role(u.role),text=[u.name,u.lineDisplayName,roleLabel(u.role)].join(' ').toLowerCase();return (r==='manager'||r==='accounting')&&u.isEnabled!==false&&!u.leaveAdminAccess&&text.indexOf(q)>=0}).slice(0,20);
-  if(!rows.length){box.innerHTML='<div class="leave66-empty">找不到尚未授權的主管或會計。</div>';return}
-  box.innerHTML=rows.map(function(u){return '<article class="leave67-candidate-row"><div><span>'+esc(u.name||u.lineDisplayName||'LINE 使用者')+'</span><small>'+esc(roleLabel(u.role))+(u.lineDisplayName?'・'+esc(u.lineDisplayName):'')+'</small></div><button type="button" class="primary" onclick="leave67AddPermission(\''+js(u.lineUserId)+'\',this)">新增</button></article>'}).join('');
+  var box=e('leave67PermissionCandidates'),input=e('leave67PermissionSearch');
+  if(!box)return;
+  var q=String(input&&input.value||'').trim().toLocaleLowerCase('zh-Hant');
+  var needle=q.replace(/\s+/g,'');
+  if(!needle){
+    box.innerHTML='<div class="leave66-empty">請輸入員工本名或 LINE 名稱搜尋；系統不會一次列出全部人員。</div>';
+    return;
+  }
+
+  /*
+   * 權限實際綁定 LINE 身分，但不再限定 LINE 使用者資料中的角色必須先是主管／會計。
+   * 對方仍必須用主管或會計的後台帳密登入，後端才會允許開啟本頁。
+   * 同時合併目前頁面的 LINE 清單與休假模組回傳清單，避免姓名更新後搜尋不到。
+   */
+  var userMap=new Map();
+  function mergeUser(raw){
+    if(!raw)return;
+    var id=String(raw.lineUserId||raw.id||'').trim();
+    if(!id)return;
+    var old=userMap.get(id)||{};
+    var enabledValue=Object.prototype.hasOwnProperty.call(raw,'isEnabled')?raw.isEnabled:raw.enabled;
+    userMap.set(id,{
+      lineUserId:id,
+      name:String(raw.name||raw.employeeName||old.name||raw.lineDisplayName||raw.displayName||old.lineDisplayName||'LINE 使用者'),
+      employeeName:String(raw.employeeName||old.employeeName||''),
+      lineDisplayName:String(raw.lineDisplayName||raw.displayName||old.lineDisplayName||''),
+      role:String(raw.role||old.role||'staff'),
+      isEnabled:enabledValue===undefined?(old.isEnabled!==false):enabledValue!==false,
+      leaveAdminAccess:Object.prototype.hasOwnProperty.call(raw,'leaveAdminAccess')?raw.leaveAdminAccess===true:old.leaveAdminAccess===true,
+      lastLoginAt:String(raw.lastLoginAt||raw.lastLogin||old.lastLoginAt||'')
+    });
+  }
+  try{if(typeof lineUsers!=='undefined'&&Array.isArray(lineUsers))lineUsers.forEach(mergeUser)}catch(_){}
+  state.users.forEach(mergeUser);
+
+  var matches=[];
+  userMap.forEach(function(u){
+    var p=profileById(u.lineUserId);
+    var text=[u.name,u.employeeName,u.lineDisplayName,p&&p.employeeName,p&&p.company,p&&p.phone,roleLabel(u.role)].join(' ').toLocaleLowerCase('zh-Hant').replace(/\s+/g,'');
+    if(text.indexOf(needle)>=0)matches.push({kind:'line',user:u,profile:p||null});
+  });
+
+  /* 純員工檔案也顯示搜尋結果，清楚說明為何目前不能直接加入權限。 */
+  state.profiles.forEach(function(p){
+    var id=String(p.lineUserId||'');
+    if(userMap.has(id))return;
+    var text=[p.employeeName,p.company,p.phone,p.nationalId].join(' ').toLocaleLowerCase('zh-Hant').replace(/\s+/g,'');
+    if(text.indexOf(needle)>=0)matches.push({kind:'profile',profile:p});
+  });
+
+  matches.sort(function(a,b){
+    var an=String((a.user&&a.user.name)||(a.profile&&a.profile.employeeName)||'');
+    var bn=String((b.user&&b.user.name)||(b.profile&&b.profile.employeeName)||'');
+    return an.localeCompare(bn,'zh-Hant');
+  });
+  matches=matches.slice(0,30);
+
+  if(!matches.length){
+    box.innerHTML='<div class="leave66-empty">找不到符合的人員。請確認對方至少曾使用 LINE 登入本系統一次；若只有員工檔案、尚未連結 LINE，系統也會在搜尋結果中提示。</div>';
+    return;
+  }
+
+  box.innerHTML=matches.map(function(item){
+    if(item.kind==='profile'){
+      var p=item.profile||{};
+      return '<article class="leave67-candidate-row is-unavailable"><div><span>'+esc(p.employeeName||'未命名員工')+'</span><small>'+esc(p.company||'純員工檔案')+'・尚未連結 LINE，無法設定登入權限</small></div><span class="leave67-candidate-state">未連結 LINE</span></article>';
+    }
+    var u=item.user||{},p=item.profile||{},r=role(u.role),name=p.employeeName||u.employeeName||u.name||u.lineDisplayName||'LINE 使用者';
+    var detail=[roleLabel(u.role),u.lineDisplayName&&u.lineDisplayName!==name?u.lineDisplayName:'',p.company||''].filter(Boolean).join('・');
+    var action='';
+    if(r==='admin')action='<span class="leave67-candidate-state fixed">系統固定</span>';
+    else if(u.leaveAdminAccess===true)action='<span class="leave67-candidate-state granted">已加入</span>';
+    else if(u.isEnabled===false)action='<span class="leave67-candidate-state disabled">LINE 已停用</span>';
+    else action='<button type="button" class="primary" onclick="leave67AddPermission(\''+js(u.lineUserId)+'\',this)">新增</button>';
+    return '<article class="leave67-candidate-row"><div><span>'+esc(name)+'</span><small>'+esc(detail||'LINE 使用者')+'</small></div>'+action+'</article>';
+  }).join('');
 };
 window.leave67AddPermission=function(id,button){return leave67SetPermission(id,true,button)};
 window.leave67RemovePermission=function(id,button){var u=state.users.find(function(x){return String(x.lineUserId)===String(id)});if(!confirm('確定移除「'+String(u&&u.name||'此人員')+'」的查看權限？'))return;return leave67SetPermission(id,false,button)};
@@ -17107,7 +17198,7 @@ modalHtml=function(){return `
   <div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2 id="leave66EmployeeModalTitle">新增員工</h2><p>日期使用民國年；已離職人員重新任職時請使用「重新到職」。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66CloseEmployee()">×</button></header>
     <div class="leave66-dialog-body"><form id="leave66EmployeeForm" class="leave66-form-grid" onsubmit="event.preventDefault();leave66SaveEmployee()">
       <input id="leave66EmployeeId" type="hidden"><div class="leave66-form-section">基本資料</div>
-      <label>姓名 *<input id="leave66EmployeeName" maxlength="80"></label><label>所在公司<input id="leave66Company" maxlength="160" placeholder="例如：猩紅實業有限公司"></label>
+      <label>姓名 *<input id="leave66EmployeeName" maxlength="80"></label><label>所在公司<input id="leave66Company" maxlength="160" placeholder="例如：星紅"></label>
       <label id="leave66LineUserWrap">連結 LINE 使用者<select id="leave66LinkedLineUser"><option value="">不連結 LINE（純員工檔案）</option></select></label>
       <label>身分證字號<input id="leave66NationalId" maxlength="30" autocomplete="off"></label><label>電話<input id="leave66Phone" maxlength="40" inputmode="tel"></label>
       <label class="span2">地址<input id="leave66Address" maxlength="500"></label><label class="full">家庭成員<textarea id="leave66FamilyMembers" rows="3" maxlength="3000" placeholder="可記錄姓名、關係、聯絡方式等"></textarea></label>
@@ -17133,7 +17224,7 @@ modalHtml=function(){return `
   </div>
 </div>
 <div id="leave66PersonModal" class="leave66-modal" onclick="if(event.target===this)leave66ClosePerson()"><div class="leave66-dialog wide"><header class="leave66-dialog-head"><div><h2>員工個人資料</h2><p>包含剩餘假、個人資料、歷次任職與完整請假紀錄。</p></div><button type="button" class="leave66-dialog-close" onclick="leave66ClosePerson()">×</button></header><div id="leave66PersonBody" class="leave66-dialog-body"></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave66ClosePerson()">關閉</button></footer></div></div>
-<div id="leave67PermissionModal" class="leave66-modal" onclick="if(event.target===this)leave67ClosePermissionPicker()"><div class="leave66-dialog leave67-permission-dialog"><header class="leave66-dialog-head"><div><h2>新增可查看人員</h2><p>先輸入姓名搜尋；系統不會一次列出全部人員。</p></div><button type="button" class="leave66-dialog-close" onclick="leave67ClosePermissionPicker()">×</button></header><div class="leave66-dialog-body"><label class="leave67-permission-search">搜尋姓名或 LINE 名稱<input id="leave67PermissionSearch" type="search" autocomplete="off" placeholder="輸入至少 1 個字" oninput="leave67RenderPermissionCandidates()"></label><div id="leave67PermissionCandidates" class="leave67-permission-candidates"><div class="leave66-empty">請輸入姓名搜尋。</div></div></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave67ClosePermissionPicker()">完成</button></footer></div></div>
+<div id="leave67PermissionModal" class="leave66-modal" onclick="if(event.target===this)leave67ClosePermissionPicker()"><div class="leave66-dialog leave67-permission-dialog"><header class="leave66-dialog-head"><div><h2>新增可查看人員</h2><p>可搜尋員工本名或 LINE 名稱；加入後仍需使用主管／會計後台帳密登入。</p></div><button type="button" class="leave66-dialog-close" onclick="leave67ClosePermissionPicker()">×</button></header><div class="leave66-dialog-body"><label class="leave67-permission-search">搜尋員工本名或 LINE 名稱<input id="leave67PermissionSearch" type="search" autocomplete="off" placeholder="輸入至少 1 個字" oninput="leave67RenderPermissionCandidates()"></label><div id="leave67PermissionCandidates" class="leave67-permission-candidates"><div class="leave66-empty">請輸入姓名搜尋。</div></div></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave67ClosePermissionPicker()">完成</button></footer></div></div>
 <div id="leave68RehireModal" class="leave66-modal" onclick="if(event.target===this)leave68CloseRehire()"><div class="leave66-dialog"><header class="leave66-dialog-head"><div><h2>重新到職</h2><p>上一段任職與請假資料會完整保留；年資及特休自新的到職日重新計算。</p></div><button type="button" class="leave66-dialog-close" onclick="leave68CloseRehire()">×</button></header><div class="leave66-dialog-body"><form class="leave66-form-grid" onsubmit="event.preventDefault();leave68SaveRehire()"><input id="leave68RehireEmployeeId" type="hidden"><div class="leave66-form-section">重新到職資料</div><label class="span2">員工<input id="leave68RehireName" readonly></label><label>新到職日期（民國） *<input id="leave68RehireDate" inputmode="numeric" placeholder="115/09/04"></label><label>所在公司<input id="leave68RehireCompany" maxlength="160"></label><label>每日正常工時<input id="leave68RehireHours" type="number" min="1" max="24" step="0.5" value="8"></label><div class="leave67-anniversary-note full">確認後，上一段到職／離職資料會移入歷次任職紀錄；舊請假紀錄不會刪除。</div></form></div><footer class="leave66-dialog-foot"><button type="button" class="secondary" onclick="leave68CloseRehire()">取消</button><button id="leave68RehireSaveBtn" type="button" class="primary" onclick="leave68SaveRehire()">確認重新到職</button></footer></div></div>`};
 
 function leave68ViewIds(name){if(name==='former')return {button:'leave68FormerBtn',view:'leave68FormerView'};var cap=name.charAt(0).toUpperCase()+name.slice(1);return {button:'leave66'+cap+'Btn',view:'leave66'+cap+'View'}}
