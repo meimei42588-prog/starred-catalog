@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- UI PATCH: 20260904-v68.2-sync-error-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
-<!-- STARRED UI BUILD: 20260907-workday-multi-daily-wage-v69; backend-compatible -->
+<!-- STARRED UI BUILD: 20260907-line-store-firstline-v71; backend-compatible -->
+<!-- v71：修正店點通用字誤判；揀貨單以紅色 18px 顯示每則訊息第一行供再次核對。 -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
@@ -4603,7 +4604,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260907-workday-multi-daily-wage-v69";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260907-line-store-firstline-v71";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -15342,6 +15343,14 @@ function mergePickingResult(rows,remote,errorText){
     apiBuild:String(remote&&remote.apiBuild||'')
   };
 }
+function pickingMessageFirstLine(value){
+  var lines=String(value||'').replace(/\r/g,'').split('\n');
+  for(var index=0;index<lines.length;index++){
+    var line=String(lines[index]||'').trim();
+    if(line)return line;
+  }
+  return'（此訊息第一行空白）';
+}
 function printHtml(rows,ids,result){
   var group=selectedGroup();
   var messageMap=new Map((result.messages||[]).map(function(message){return[String(message.id),message.items||[]]}));
@@ -15354,8 +15363,9 @@ function printHtml(rows,ids,result){
     var store=String(row.recognizedStoreName||'待辨識店點');
     var date=String(row.messageDate||'未知日期');
     var key=store+'|'+date;
-    if(!sheetMap[key])sheetMap[key]={store:store,date:date,messages:0,items:[]};
+    if(!sheetMap[key])sheetMap[key]={store:store,date:date,messages:0,firstLines:[],items:[]};
     sheetMap[key].messages+=1;
+    sheetMap[key].firstLines.push(pickingMessageFirstLine(row.contentText));
     (messageMap.get(String(row.id))||[]).forEach(function(item){
       sheetMap[key].items.push({
         lineIndex:item.lineIndex,
@@ -15392,10 +15402,12 @@ function printHtml(rows,ids,result){
         '<thead><tr><th>完成</th><th>#</th><th>品項內容（原文完整保留）</th><th>數量／規格</th><th>回傳人員</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></section>';
     }).join('');
     if(!categories)categories='<div class="empty">這一筆沒有可整理的品項文字，請回原訊息確認。</div>';
+    var firstLines='<div class="message-first-lines" aria-label="原始訊息第一行">'+sheet.firstLines.map(function(line,index){
+      return'<p><span>訊息 '+String(index+1)+'</span>'+esc(line)+'</p>';
+    }).join('')+'</div>';
     return'<main class="pick-source-sheet" data-source-sheet="'+String(sheetIndex+1)+'">'+
       '<header class="sheet-head"><div><p>補貨／追加 AI 揀貨單</p><h1>'+esc(sheet.store)+'</h1></div><div class="date">'+esc(dateLabel(sheet.date))+'</div></header>'+
-      '<div class="sheet-meta"><span>'+esc(group&&group.groupName||'LINE 群組')+'</span><span>'+String(sheet.messages)+' 筆訊息</span><span>'+
-      String(sheet.items.length)+' 筆品項</span><span>'+esc(aiText)+'</span></div><div class="category-summary">'+summary+'</div>'+categories+'</main>';
+      firstLines+'<div class="category-summary">'+summary+'</div>'+categories+'</main>';
   }).join('');
   var warning=result.errorText?
     '<div class="warning">AI 連線暫時未完成，本張已使用關鍵字備援分類；所有原始品項與數量仍完整保留。<small>'+esc(result.errorText)+'</small></div>':
@@ -15414,8 +15426,10 @@ function printHtml(rows,ids,result){
     '.sheet-head p{margin:0 0 2px;color:#6d838e;font-size:10px;letter-spacing:.1em}.sheet-head h1{margin:0;font-size:23px;font-weight:650;line-height:1.15}'+
     '.sheet-head .date{font-size:17px;color:#294f63;white-space:nowrap}.sheet-head.continuation{align-items:center;padding-bottom:4px}'+
     '.sheet-head.continuation p{letter-spacing:.06em}.sheet-head.continuation h1{font-size:20px}.sheet-head.continuation .date{font-size:15px}'+
-    '.sheet-meta,.category-summary{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.sheet-meta span{padding-right:7px;border-right:1px solid #cdd9de;color:#6a7f89;font-size:10px}'+
-    '.sheet-meta span:last-child{border-right:0}.category-summary span{padding:2px 6px;border-radius:999px;background:#edf3f5;color:#426170;font-size:10px}'+
+    '.message-first-lines{margin-top:5px;padding:5px 8px;border:1px solid #e7aaaa;border-radius:6px;background:#fff7f7;color:#c62828;font-size:18px;font-weight:700;line-height:1.35;print-color-adjust:exact;-webkit-print-color-adjust:exact}'+
+    '.message-first-lines p{display:flex;gap:7px;align-items:flex-start;margin:0;padding:2px 0;white-space:normal;word-break:break-word}.message-first-lines p+p{border-top:1px dashed #efc2c2}'+
+    '.message-first-lines span{flex:0 0 auto;color:#b71c1c;font-size:12px;line-height:24px;white-space:nowrap}.category-summary{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}'+
+    '.category-summary span{padding:2px 6px;border-radius:999px;background:#edf3f5;color:#426170;font-size:10px}'+
     '.page-flow{width:100%}.category{margin-top:6px}.category h2{display:flex;align-items:center;justify-content:space-between;margin:0;padding:4px 7px;border-left:5px solid var(--cat);background:var(--cat-bg);color:#294858;font-size:15px;font-weight:650;line-height:1.2;break-after:avoid}'+
     '.category h2 small{font-size:10px;font-weight:500}.category.bath_towel{--cat:#4b83a6;--cat-bg:#eaf3f8}.category.towel{--cat:#4f8468;--cat-bg:#edf6f0}'+
     '.category.face_towel{--cat:#c08338;--cat-bg:#fbf3e8}.category.kids_towel{--cat:#826aa0;--cat-bg:#f2edf7}.category.hand_towel{--cat:#b66f63;--cat-bg:#faefec}.category.hair_cap{--cat:#568b94;--cat-bg:#eaf5f5}.category.other{--cat:#7b858b;--cat-bg:#f1f3f4}'+
@@ -15447,9 +15461,9 @@ function pickingCreatePage(source,isFirst,root){
   }
   page.appendChild(header);
   if(isFirst){
-    var meta=source.querySelector('.sheet-meta');
+    var firstLines=source.querySelector('.message-first-lines');
     var summary=source.querySelector('.category-summary');
-    if(meta)page.appendChild(meta.cloneNode(true));
+    if(firstLines)page.appendChild(firstLines.cloneNode(true));
     if(summary)page.appendChild(summary.cloneNode(true));
   }
   var flow=document.createElement('div');
@@ -15570,13 +15584,13 @@ if(document.fonts&&document.fonts.ready){
 window.addEventListener('beforeprint',pickingPaginate);
 `;
   return'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>補貨追加 AI 揀貨單</title><style>'+css+'</style></head><body>'+
-    '<div class="preview"><strong>AI 已依店點、日期及五大類整理・A4 分頁預覽</strong><label>品項字體<select onchange="pickingSetFont(this.value)">'+
+    '<div class="preview"><strong>紅字為每則原始訊息第一行，請再次確認店點與日期・A4 分頁預覽</strong><label>品項字體<select onchange="pickingSetFont(this.value)">'+
     '<option value="14">14</option><option value="15" selected>15（預設）</option><option value="16">16</option><option value="18">18</option></select></label>'+
     '<button type="button" onclick="printAndMark()">開始列印</button></div>'+warning+
     '<div id="pickingSources" class="source-sheets" aria-hidden="true">'+body+'</div><div id="pickingPages" class="page-list"></div>'+
     '<script>'+previewScript+'<\/script></body></html>';
 }
-async function printSelected(){var ids=[...state.selected],rows=state.messages.filter(function(item){return ids.includes(String(item.id))&&selectable(item)});if(!rows.length){alert('請先勾選要列印的訊息。');return}var popup=window.open('','_blank','width=1180,height=860');if(!popup){alert('請允許網站開啟彈出視窗。');return}popup.document.open();popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>AI 正在整理揀貨單</title><style>body{display:grid;place-items:center;min-height:90vh;margin:0;background:#f3f7f8;color:#294f63;font-family:"Microsoft JhengHei",sans-serif}.loading{text-align:center}.spinner{width:42px;height:42px;margin:0 auto 14px;border:4px solid #d9e5e9;border-top-color:#294f63;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}p{color:#708791}</style></head><body><div class="loading"><div class="spinner"></div><h2>AI 正在分辨產品</h2><p>品名與後面的數量會完整保留，請稍候。</p></div></body></html>');popup.document.close();var button=document.querySelector('.lg38-action.print');if(button)button.disabled=true;setStatus('AI 正在將品項整理成浴巾、毛巾、方巾、兒童毛巾／童巾、其他…','working');try{var remote=await starredApi('line_group_messages_product_classify',{messageIds:ids}),result=mergePickingResult(rows,remote,''),statusText=result.aiAvailable?'AI 揀貨單已整理完成；共 '+String(result.totalItemCount)+' 筆品項，原始數量皆保留。':'揀貨單已整理；目前 AI 未啟用，已使用關鍵字備援且保留全部數量。';if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus(statusText,result.aiAvailable?'success':'error')}catch(error){var result=mergePickingResult(rows,null,String(error&&error.message||error));if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus('AI 分類暫時失敗，已開啟備援揀貨單；原始品項與數量仍完整保留。','error')}finally{if(button)button.disabled=false}}
+async function printSelected(){var ids=[...state.selected],rows=state.messages.filter(function(item){return ids.includes(String(item.id))&&selectable(item)});if(!rows.length){alert('請先勾選要列印的訊息。');return}var popup=window.open('','_blank','width=1180,height=860');if(!popup){alert('請允許網站開啟彈出視窗。');return}popup.document.open();popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>AI 正在整理揀貨單</title><style>body{display:grid;place-items:center;min-height:90vh;margin:0;background:#f3f7f8;color:#294f63;font-family:"Microsoft JhengHei",sans-serif}.loading{text-align:center}.spinner{width:42px;height:42px;margin:0 auto 14px;border:4px solid #d9e5e9;border-top-color:#294f63;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}p{color:#708791}</style></head><body><div class="loading"><div class="spinner"></div><h2>AI 正在分辨產品</h2><p>品名與後面的數量會完整保留，請稍候。</p></div></body></html>');popup.document.close();var button=document.querySelector('.lg38-action.print');if(button)button.disabled=true;setStatus('AI 正在整理品項；預覽將以紅字顯示每則訊息第一行供核對…','working');try{var remote=await starredApi('line_group_messages_product_classify',{messageIds:ids}),result=mergePickingResult(rows,remote,''),statusText=result.aiAvailable?'AI 揀貨單已整理完成；共 '+String(result.totalItemCount)+' 筆品項，原始數量皆保留。':'揀貨單已整理；目前 AI 未啟用，已使用關鍵字備援且保留全部數量。';if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus(statusText,result.aiAvailable?'success':'error')}catch(error){var result=mergePickingResult(rows,null,String(error&&error.message||error));if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus('AI 分類暫時失敗，已開啟備援揀貨單；原始品項與數量仍完整保留。','error')}finally{if(button)button.disabled=false}}
 async function markPrinted(ids){try{await starredApi('line_group_messages_mark_printed',{messageIds:ids});state.messages.forEach(function(item){if(ids.includes(String(item.id))&&item.processingStatus!=='konde_uploaded')item.processingStatus='printed'});state.selected.clear();state.lastSelectedId='';render();setStatus('列印已完成，已自動移到「已印單」；未列印的資料仍保留在「未處理」。','success');if(typeof window.loadAdminAttentionSummaryV35==='function')window.loadAdminAttentionSummaryV35()}catch(error){setStatus('列印完成，但狀態更新失敗：'+String(error&&error.message||error),'error')}}
 async function setActive(){var group=selectedGroup();if(!group||group.captureEnabled)return;if(!confirm('確定改為只保存「'+String(group.groupName||'LINE 群組')+'」的新訊息？'))return;try{await starredApi('line_group_set_active',{groupId:group.groupId});await load()}catch(error){setStatus('設定失敗：'+String(error&&error.message||error),'error')}}
 function exportExcel(){var rows=filteredRows();if(!rows.length||!window.XLSX)return;var data=rows.map(function(item){return{'回傳日期':item.messageDate||'','時間':timeLabel(item.messageTimestamp),'傳訊人':item.senderName||'','偵測關鍵字':kindLabel(item.orderKind),'店點':item.recognizedStoreName||'待辨識','狀態':item.isDeleted?'其他（已刪除）':item.isAutoArchived?'其他（滿 6 天自動移入）':isOther(item)?'其他':workflowStatusLabel(item.processingStatus),'回傳內容':item.contentText||'','刪除者':item.deletedByName||'','刪除時間':item.deletedAt?dateLabel(String(item.deletedAt).slice(0,10))+' '+timeLabel(item.deletedAt):'','自動移入時間':item.archivedAt?dateLabel(String(item.archivedAt).slice(0,10))+' '+timeLabel(item.archivedAt):'','自動移入前狀態':item.archivedFromStatus?workflowStatusLabel(item.archivedFromStatus):''}}),sheet=XLSX.utils.json_to_sheet(data),book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,sheet,'補貨追加');XLSX.writeFile(book,'星紅織品_補貨追加_'+String((el('lineGroupDateFrom')||{}).value||'')+'.xlsx')}
@@ -16467,7 +16481,7 @@ window.printSalesAveragePerformance=function(){var previous=comparisonView;try{c
 window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';try{var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true);exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；統計摘要與目前分頁完整資料已放在同一張工作表。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
 window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;try{if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false}};
 window.printSalesStatDetail=function(){try{var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden){salesSetAdminStatus('請先點選一間門市或一位人員，再使用友善列印。','error');return}var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()}catch(error){v55ActionError('友善列印',error)}};
-window.STARRED_UI_BUILD='20260907-workday-multi-daily-wage-v69';
+window.STARRED_UI_BUILD='20260907-line-store-firstline-v71';
 })();
 </script>
 
@@ -16710,7 +16724,7 @@ window.STARRED_UI_BUILD='20260907-workday-multi-daily-wage-v69';
 <script id="employee-leave-backoffice-v66-script">
 (function(){
 'use strict';
-var BUILD='20260907-workday-multi-daily-wage-v69';
+var BUILD='20260907-line-store-firstline-v71';
 var state={loaded:false,loading:false,profiles:[],requests:[],users:[],warnings:[],summary:{},asOf:'',view:'overview',selectedEmployeeId:'',canConfigurePermissions:false,dashboardLoadedAt:0};
 function e(id){return document.getElementById(id)}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]})}
