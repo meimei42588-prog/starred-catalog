@@ -15272,21 +15272,45 @@ function pickingMaskDimensions(value){
     .replace(/\d{2,3}(?:\.\d+)?\s*[×xX＊*]\s*\d{2,3}(?:\.\d+)?(?:\s*[×xX＊*]\s*\d{1,3}(?:\.\d+)?)?(?:\s*(?:cm|公分))?/giu,' ')
     .replace(/\d{1,3}(?:\.\d+)?\s*(?:cm|公分)/giu,' ');
 }
+function pickingVariantQuantity(value){
+  var original=String(value||'').normalize('NFKC').trim().replace(/[、，,／/；;\s]+$/gu,'');
+  if(!original)return'';
+  var productPattern=/(?:兒童毛巾|儿童毛巾|擦手毛巾|擦手巾|乾髮帽|干发帽|乾髮巾|干发巾|兒童巾|儿童巾|童毛巾|童巾|大浴巾|浴巾|小方巾|手帕巾|方巾|洗臉巾|面巾|毛巾|涼感被|羽絨被|四季被|豆豆被|涼被|棉被|被子|毛毯|毯子|床包|床罩|床蓋|床單|被套|豆豆枕|枕頭|枕套|枕巾|抱枕|靠枕|浴袍|浴衣|睡衣|乾髮帽|包髮帽)/gu;
+  var found,lastEnd=0,candidates=[];
+  while((found=productPattern.exec(original)))lastEnd=productPattern.lastIndex;
+  if(lastEnd&&lastEnd<original.length)candidates.push(original.slice(lastEnd));
+  var variantStart=original.match(/(?:粉紅|桃紅|玫紅|酒紅|淺藍|深藍|寶藍|水藍|藏青|淺綠|深綠|墨綠|湖水綠|淺紫|深紫|銀灰|淺灰|深灰|米白|米色|杏色|咖啡|卡其|奶茶|豆沙|藕粉|黑白|藍白|粉白|灰白|各(?:色|款|種|尺寸|花色)?|不挑(?:款|色)?|隨機(?:款|色)?|混色|花色|款式|顏色|粉|紅|橘|橙|黃|綠|藍|紫|黑|白|灰|米|杏|咖|棕|金|銀)(?=\s*\d)/u);
+  if(variantStart&&typeof variantStart.index==='number')candidates.push(original.slice(variantStart.index));
+  var unit='(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)?';
+  var partPattern=new RegExp('^[^\\d\\s、，,／/；;]{1,14}\\s*\\d{1,3}(?:\\.\\d+)?\\s*'+unit+'$','u');
+  for(var candidateIndex=0;candidateIndex<candidates.length;candidateIndex++){
+    var suffix=String(candidates[candidateIndex]||'').replace(/^\s*[-–—:：]\s*/u,'').replace(/[、，,／/；;\s]+$/gu,'');
+    if(!suffix)continue;
+    var parts=suffix.split(/[、，,／/；;]+/u).map(function(part){return part.trim()}).filter(Boolean);
+    if(!parts.length||!parts.every(function(part){return partPattern.test(part)}))continue;
+    if(parts.length===1&&!/^(?:各|不挑|隨機|混色|花色|款式|顏色|粉紅|桃紅|玫紅|酒紅|紅|橘|橙|黃|綠|藍|紫|黑|白|灰|米|杏|卡其|咖|棕|金|銀)/u.test(parts[0]))continue;
+    return parts.map(function(part){return part.replace(/\s+/g,'')}).join('／').slice(0,300);
+  }
+  return'';
+}
 function pickingHasQuantity(value){
   var original=String(value||'').normalize('NFKC').trim();
   if(!original)return false;
   if(/^\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?$/u.test(original))return false;
+  if(pickingVariantQuantity(original))return true;
   var text=pickingMaskDimensions(original);
   return /[×xX＊*]\s*\d+(?:\.\d+)?(?:\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶))?/u.test(text)
     || /\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)/u.test(text)
     || /各(?:色|款|種|尺寸|花色)?\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u.test(text)
     || /每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各/u.test(text)
     || /(?:^|[\s，,／/、:：\-])(?:一|二|兩|三|四|五|六|七|八|九|十)\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)/u.test(text)
-    || /(?:[\p{Script=Han}\)）\]】」』》])\s*\d{1,3}\s*$/u.test(text);
+    || /(?:[\p{Script=Han}\)）\]】」』》])\s*\d{1,3}\s*(?:[、，,／/；;]\s*)*$/u.test(text);
 }
 function pickingQuantity(value){
   var original=String(value||'').normalize('NFKC').trim();
   if(!original)return'';
+  var variants=pickingVariantQuantity(original);
+  if(variants)return variants;
   var parts=original.split(/[\/／、，,]/u).map(function(part){return part.trim()}).filter(Boolean);
   var counted=parts.filter(function(part){return pickingHasQuantity(part)});
   if(counted.length>=2)return counted.join('／').slice(0,300);
@@ -15297,7 +15321,7 @@ function pickingQuantity(value){
   if(unit.length)return String(unit[unit.length-1][0]||'').trim().slice(0,300);
   var each=text.match(/各(?:色|款|種|尺寸|花色)?\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u);
   if(each)return String(each[0]||'').trim().slice(0,300);
-  var bare=text.match(/(?:[\p{Script=Han}\)）\]】」』》])\s*(\d{1,3})\s*$/u);
+  var bare=text.match(/(?:[\p{Script=Han}\)）\]】」』》])\s*(\d{1,3})\s*(?:[、，,／/；;]\s*)*$/u);
   return bare?String(bare[1]||'').trim():'';
 }
 function pickingKeywordCategory(value){var text=String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,'');if(/(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|kidstowel|childrentowel)/i.test(text))return'kids_towel';if(/(?:浴巾|bathtowel)/i.test(text))return'bath_towel';if(/(?:方巾|小方巾|手帕巾|washcloth|facetowel)/i.test(text))return'face_towel';if(/(?:擦手巾|擦手毛巾|handtowel)/i.test(text))return'hand_towel';if(/(?:乾髮帽|干发帽|乾髮巾|干发巾|包髮帽|包发帽|吸水帽|haircap|hairturb(?:an)?)/i.test(text))return'hair_cap';if(/(?:毛巾|towel)/i.test(text))return'towel';return'other'}
@@ -15478,7 +15502,7 @@ function printHtml(rows,ids,result){
     '.preview select{margin-left:5px;padding:0 7px}.preview button{padding:0 15px;background:#fff;color:#294f63;font-weight:700;cursor:pointer}'+
     '.warning{max-width:192mm;margin:8px auto 0;padding:8px 11px;border:1px solid #dfc37f;border-radius:8px;background:#fff8df;color:#715c2c;font-size:12px}'+
     '.warning small{display:block;margin-top:3px;color:#8d794d}.source-sheets{display:none!important}.page-list{padding:0 0 22px}'+
-    '.pick-sheet{position:relative;width:210mm;height:297mm;min-height:297mm;margin:10px auto;padding:7mm 8mm 13mm;overflow:hidden;background:#fff;box-shadow:0 3px 18px rgba(25,55,68,.12)}'+
+    '.pick-sheet{position:relative;width:210mm;height:296mm;min-height:296mm;max-height:296mm;margin:10px auto;padding:7mm 8mm 13mm;overflow:hidden;background:#fff;box-shadow:0 3px 18px rgba(25,55,68,.12)}'+
     '.sheet-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:5px;border-bottom:2px solid #294f63}'+
     '.sheet-head p{margin:0 0 2px;color:#6d838e;font-size:10px;letter-spacing:.1em}.sheet-head h1{margin:0;font-size:23px;font-weight:650;line-height:1.15}'+
     '.sheet-head .date{font-size:17px;color:#294f63;white-space:nowrap}.sheet-head.continuation{align-items:center;padding-bottom:4px}'+
@@ -15497,8 +15521,8 @@ function printHtml(rows,ids,result){
     '.qty>span{color:#a2afb5;font-weight:400}.source{color:#496976;font-size:11px}.source small{display:block;margin-top:1px;color:#82959d;font-size:9px;line-height:1.15}'+
     '.empty{margin-top:8px;padding:12px;border:1px dashed #bdcbd1;color:#758b95;text-align:center}.next-page-hint{position:absolute;left:0;right:0;bottom:4.5mm;color:#294f63;font-size:12px;font-weight:700;text-align:center;letter-spacing:.08em}'+
     '.next-page-hint[hidden]{display:none}footer{position:absolute;right:8mm;bottom:4.7mm;color:#8a9ba3;font-size:9px;text-align:right}'+
-    '@media print{body{background:#fff}.preview,.warning,.source-sheets{display:none!important}.page-list{padding:0}.pick-sheet{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;break-after:page;page-break-after:always}'+
-    '.pick-sheet:last-child{break-after:auto;page-break-after:auto}.category h2,.category-summary span{print-color-adjust:exact;-webkit-print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}}'+
+    '@media print{html,body{width:210mm!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important}body{background:#fff}.preview,.warning,.source-sheets{display:none!important}.page-list{display:block!important;padding:0!important;margin:0!important}.pick-sheet{width:210mm;height:296mm;min-height:296mm;max-height:296mm;margin:0!important;box-shadow:none;break-after:auto;page-break-after:auto}'+
+    '.pick-sheet:not(:last-child){break-after:page!important;page-break-after:always!important}.pick-sheet:last-child{break-after:auto!important;page-break-after:auto!important}.category h2,.category-summary span,.message-first-lines{print-color-adjust:exact;-webkit-print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}}'+
     '@media(max-width:800px){.preview{flex-wrap:wrap}.preview strong{width:100%}.page-list{overflow-x:auto}.pick-sheet{margin:0 auto 10px}.c-qty{width:32mm}.c-source{width:24mm}}';
   var safeIds=JSON.stringify(ids).replace(/</g,'\\u003c');
   var previewScript='var ids='+safeIds+';'+String.raw`
@@ -15581,7 +15605,17 @@ function pickingAppendCategory(category,current,source,root){
   });
   return current;
 }
+function pickingPageHasContent(page){
+  var flow=page&&page.querySelector('.page-flow');
+  return !!(flow&&flow.querySelector('tbody>tr,.empty'));
+}
+function pickingPruneBlankPages(root){
+  var pages=Array.prototype.slice.call(root.querySelectorAll('.pick-sheet'));
+  if(pages.length<=1)return;
+  pages.forEach(function(page){if(!pickingPageHasContent(page)&&root.querySelectorAll('.pick-sheet').length>1)page.remove()});
+}
 function pickingFinalizePages(root){
+  pickingPruneBlankPages(root);
   var pages=Array.prototype.slice.call(root.querySelectorAll('.pick-sheet'));
   var stamp=new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
   pages.forEach(function(page,index){
@@ -15625,6 +15659,8 @@ function pickingSetFont(value){
 }
 function printAndMark(){
   pickingPaginate();
+  var root=document.getElementById('pickingPages');
+  if(root)pickingFinalizePages(root);
   window.focus();
   window.print();
   if(!pickingMarkedPrinted){
@@ -15638,7 +15674,7 @@ pickingPaginate();
 if(document.fonts&&document.fonts.ready){
   document.fonts.ready.then(function(){pickingPaginate()});
 }
-window.addEventListener('beforeprint',pickingPaginate);
+window.addEventListener('beforeprint',function(){var root=document.getElementById('pickingPages');if(root)pickingFinalizePages(root)});
 `;
   return'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>補貨追加 AI 揀貨單</title><style>'+css+'</style></head><body>'+
     '<div class="preview"><strong>紅字為每則原始訊息第一行，請再次確認店點與日期・A4 分頁預覽</strong><label>品項字體<select onchange="pickingSetFont(this.value)">'+
@@ -15671,6 +15707,7 @@ document.addEventListener('DOMContentLoaded',function(){build();enhanceWorkflowU
 <!-- v69：未處理頁自動預設目前待辦的最早～最新日期，排除 9/2 以前已完成資料。 -->
 <!-- v70：支援「分類標題→品名：→下一行數量」寫法，合併品名與數量並承接分類。 -->
 <!-- v72：短標題（無數字）＋下一行尺寸／花色／數量會合併成同一品項；150×200 等尺寸不當成數量。 -->
+<!-- v73 UI：同一訊息中各自帶數量的商品逐行分列；列印頁高保留 1mm 安全區並移除空白頁。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
