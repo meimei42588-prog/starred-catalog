@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!-- UI PATCH: 20260904-v68.2-sync-error-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
-<!-- STARRED UI BUILD: 20260907-line-store-firstline-v71; backend-compatible -->
-<!-- v71：修正店點通用字誤判；揀貨單以紅色 18px 顯示每則訊息第一行供再次核對。 -->
+<!-- STARRED UI BUILD: 20260907-line-picking-title-v72; backend-compatible -->
+<!-- v72：寢具與商品標題承接辨識；尺寸不再誤認為數量，保留 v71 店點與紅字首行核對。 -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
 <!-- UI PATCH: 20260827-same-day-sender-store-v42 -->
@@ -4604,7 +4604,7 @@ const CURRENT_LINE_USER_KEY="starred_current_line_user_v1";
 const ADMIN_LOGIN_EXPIRY_KEY="starred_admin_login_expiry_v1";
 const ORDER_DAILY_STORE_KEY="starred_order_daily_store_v1";
 const CURRENT_USER_KEY="starred_current_user_v2";
-const STARRED_REQUIRED_ADMIN_API_BUILD="20260907-line-store-firstline-v71";
+const STARRED_REQUIRED_ADMIN_API_BUILD="20260907-line-picking-title-v72";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
@@ -15267,12 +15267,43 @@ async function aiClassify(){var candidates=filteredRows().filter(function(item){
 var pickingCategoryOrder=['bath_towel','towel','face_towel','kids_towel','hand_towel','hair_cap','other'];
 function pickingCategoryLabel(value){return value==='bath_towel'?'浴巾':value==='towel'?'毛巾':value==='face_towel'?'方巾':value==='kids_towel'?'兒童毛巾／童巾':value==='hand_towel'?'擦手巾':value==='hair_cap'?'乾髮帽':'其他'}
 function pickingCleanLine(value){return String(value||'').replace(/\r/g,'').trim().replace(/^(?:(?:✅|☑️?|✔️?|✓|⬜|◻️?|🔲|▪️?|▫️?|●|○|•|[-–—])\s*)+/u,'').trim()}
-function pickingHasQuantity(value){var text=String(value||'');return /[×xX＊*]\s*\d+(?:\.\d+)?/u.test(text)||/\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)/u.test(text)||/各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u.test(text)||/每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各/u.test(text)||/(?:一|二|兩|三|四|五|六|七|八|九|十)\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)/u.test(text)}
-function pickingQuantity(value){var text=String(value||'').trim(),slash=Math.max(text.lastIndexOf('/'),text.lastIndexOf('／'));if(slash>=0){var suffix=text.slice(slash+1).trim();if(suffix&&pickingHasQuantity(suffix))return suffix.slice(0,300)}var match=text.match(/([^，,；;\n]{0,48}(?:[×xX＊*]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)|各\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)|每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各[^，,；;\n]{0,10}))\s*$/u);return match?String(match[1]||'').trim().slice(0,300):''}
+function pickingMaskDimensions(value){
+  return String(value||'').normalize('NFKC')
+    .replace(/\d{2,3}(?:\.\d+)?\s*[×xX＊*]\s*\d{2,3}(?:\.\d+)?(?:\s*[×xX＊*]\s*\d{1,3}(?:\.\d+)?)?(?:\s*(?:cm|公分))?/giu,' ')
+    .replace(/\d{1,3}(?:\.\d+)?\s*(?:cm|公分)/giu,' ');
+}
+function pickingHasQuantity(value){
+  var original=String(value||'').normalize('NFKC').trim();
+  if(!original)return false;
+  if(/^\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?$/u.test(original))return false;
+  var text=pickingMaskDimensions(original);
+  return /[×xX＊*]\s*\d+(?:\.\d+)?(?:\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶))?/u.test(text)
+    || /\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)/u.test(text)
+    || /各(?:色|款|種|尺寸|花色)?\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u.test(text)
+    || /每(?:一個|個|款|色|尺寸|種)[^，,；;\n]{0,24}各/u.test(text)
+    || /(?:^|[\s，,／/、:：\-])(?:一|二|兩|三|四|五|六|七|八|九|十)\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張)/u.test(text)
+    || /(?:[\p{Script=Han}\)）\]】」』》])\s*\d{1,3}\s*$/u.test(text);
+}
+function pickingQuantity(value){
+  var original=String(value||'').normalize('NFKC').trim();
+  if(!original)return'';
+  var parts=original.split(/[\/／、，,]/u).map(function(part){return part.trim()}).filter(Boolean);
+  var counted=parts.filter(function(part){return pickingHasQuantity(part)});
+  if(counted.length>=2)return counted.join('／').slice(0,300);
+  var text=pickingMaskDimensions(original);
+  var explicit=Array.from(text.matchAll(/[×xX＊*]\s*\d+(?:\.\d+)?(?:\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶))?/gu));
+  if(explicit.length)return String(explicit[explicit.length-1][0]||'').trim().slice(0,300);
+  var unit=Array.from(text.matchAll(/\d+(?:\.\d+)?\s*(?:個|件|條|組|包|入|打|色|款|尺寸|盒|袋|套|雙|張|顆|罐|瓶)/gu));
+  if(unit.length)return String(unit[unit.length-1][0]||'').trim().slice(0,300);
+  var each=text.match(/各(?:色|款|種|尺寸|花色)?\s*(?:\d+(?:\.\d+)?|[零〇一二兩三四五六七八九十百]+)/u);
+  if(each)return String(each[0]||'').trim().slice(0,300);
+  var bare=text.match(/(?:[\p{Script=Han}\)）\]】」』》])\s*(\d{1,3})\s*$/u);
+  return bare?String(bare[1]||'').trim():'';
+}
 function pickingKeywordCategory(value){var text=String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,'');if(/(?:兒童毛巾|儿童毛巾|兒童巾|儿童巾|童毛巾|童巾|小童巾|kidstowel|childrentowel)/i.test(text))return'kids_towel';if(/(?:浴巾|bathtowel)/i.test(text))return'bath_towel';if(/(?:方巾|小方巾|手帕巾|washcloth|facetowel)/i.test(text))return'face_towel';if(/(?:擦手巾|擦手毛巾|handtowel)/i.test(text))return'hand_towel';if(/(?:乾髮帽|干发帽|乾髮巾|干发巾|包髮帽|包发帽|吸水帽|haircap|hairturb(?:an)?)/i.test(text))return'hair_cap';if(/(?:毛巾|towel)/i.test(text))return'towel';return'other'}
-function pickingExplicitOtherCategory(value){return /(?:浴袍|浴衣|睡衣|床包|床罩|涼被|棉被|被子|毯子|枕頭|枕套|抱枕|地墊|洗衣袋|塑膠袋|提袋|購物袋|包包|米飛包|衛生紙|雜貨|雜項)/i.test(String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,''))}
+function pickingExplicitOtherCategory(value){return /(?:浴袍|浴衣|睡衣|寢具|床品|床包|床罩|床蓋|床單|被套|涼被|涼感被|棉被|羽絨被|四季被|豆豆被|被子|毯子|毛毯|豆豆枕|枕頭|枕套|枕巾|抱枕|靠枕|床墊|保潔墊|地墊|坐墊|洗衣袋|塑膠袋|提袋|購物袋|包包|米飛包|衛生紙|玩偶|娃娃|雜貨|雜項)/i.test(String(value||'').normalize('NFKC').toLowerCase().replace(/\s+/g,''))}
 function pickingDirectCategory(value){var category=pickingKeywordCategory(value);return category!=='other'?category:pickingExplicitOtherCategory(value)?'other':''}
-function pickingHeader(text,index){if(!text||pickingHasQuantity(text)||pickingKeywordCategory(text)!=='other')return false;var compact=String(text).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),order=/(補貨|追加|追單|追貨|加單|加訂|補單)/i.test(text),date=/(?:^|\D)\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?(?:\D|$)/u.test(text);if(index===0&&(order||date)&&compact.length<=80)return true;if(/^(?:補貨|追加|補貨追加|追加補貨|追單|加單|補單)+$/u.test(compact))return true;if(/^(?:已|己)?(?:完成)?上傳(?:完成|成功|好了)?$/u.test(compact))return true;return false}
+function pickingHeader(text,index){if(!text||pickingHasQuantity(text))return false;var compact=String(text).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),order=/(補貨|追加|追單|追貨|加單|加訂|補單)/i.test(text),date=/(?:^|\D)\d{1,2}\s*[\/.\-月]\s*\d{1,2}(?:\s*日)?(?:\D|$)/u.test(text);if(index===0&&(order||date)&&compact.length<=80)return true;if(pickingKeywordCategory(text)!=='other')return false;if(/^(?:補貨|追加|補貨追加|追加補貨|追單|加單|補單)+$/u.test(compact))return true;if(/^(?:已|己)?(?:完成)?上傳(?:完成|成功|好了)?$/u.test(compact))return true;return false}
 function pickingSectionCategory(value){
   var original=String(value||'').normalize('NFKC').trim();
   if(!original||pickingHasQuantity(original))return'';
@@ -15283,17 +15314,43 @@ function pickingSectionCategory(value){
   if(/^(?:毛巾|面巾|洗臉巾)(?:類|系列)?$/u.test(text))return'towel';
   if(/^(?:擦手巾|擦手毛巾|手巾)(?:類|系列)?$/u.test(text))return'hand_towel';
   if(/^(?:乾髮帽|干发帽|乾髮巾|干发巾|包髮帽|包发帽|吸水帽)(?:類|系列)?$/u.test(text))return'hair_cap';
-  if(/^(?:浴袍|浴衣|睡衣|包包|袋子|床包|床罩|涼被|棉被|被子|毯子|枕頭|枕套|抱枕|地墊|洗衣袋|衛生紙|提袋|購物袋|雜貨|其他|其它|雜項)(?:類|系列)?$/u.test(text))return'other';
+  if(/^(?:(?:寢具|床品)(?:類|系列)?|(?:被|枕|浴袍|浴衣|睡衣|袋|包包)(?:類|系列)|(?:雜貨|其他|其它|雜項)(?:類|系列)?)$/u.test(text))return'other';
   return'';
 }
 function pickingGenericSectionHeading(value){var original=String(value||'').normalize('NFKC').trim(),text=original.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');return Boolean(original&&!pickingHasQuantity(original)&&/[-–—:：]\s*$/u.test(original)&&text.length>=1&&text.length<=24)}
+function pickingHasLeadMarker(value){return /^\s*(?:(?:✅|☑️?|✔️?|✓|⬜|◻️?|🔲|▪️?|▫️?|●|○|•|[-–—])\s*)+/u.test(String(value||''))}
+function pickingLooksLikeDetailLine(value,index){
+  var text=String(value||'').normalize('NFKC').trim();
+  if(!text||pickingHeader(text,index)||pickingSectionCategory(text))return false;
+  return pickingHasQuantity(text)
+    || /^\d{2,3}(?:\.\d+)?\s*[×xX＊*]\s*\d{2,3}(?:\.\d+)?/u.test(text)
+    || /^(?:不挑|各色|各款|花色|款式|尺寸|顏色|單人|雙人|加大|特大|厚款|薄款|粉|藍|灰|黃|綠|咖|紫|紅|橘|黑|白|米色)/u.test(text);
+}
+function pickingProductTitleLine(current,next){
+  var text=String(current&&current.text||'').normalize('NFKC').trim();
+  if(!text||!next||pickingHasQuantity(text)||pickingSectionCategory(text)||pickingHeader(text,Number(current.lineIndex||0)))return false;
+  if(/\d/u.test(text)||/[。！？!?；;]/u.test(text))return false;
+  var compact=text.replace(/[^\p{L}\p{N}]+/gu,'');
+  if(!compact||compact.length>30||!pickingLooksLikeDetailLine(next.text,next.lineIndex))return false;
+  var productWord=/(?:被|毯|床|枕|墊|袍|浴衣|睡衣|巾|帽|袋|包|玩偶|娃娃|造型|系列|款式)/u.test(text);
+  var strongDetail=/^\d{2,3}(?:\.\d+)?\s*[×xX＊*]\s*\d{2,3}(?:\.\d+)?/u.test(String(next.text||''))||/^(?:不挑|各色|各款|花色|款式|尺寸|顏色|粉|藍|灰|黃|綠|咖|紫|紅|橘|黑|白|米色)/u.test(String(next.text||''));
+  return productWord||current.hadMarker===true||strongDetail;
+}
 function pickingLocalItems(row){
-  var items=[],activeCategory='',lines=String(row.contentText||'').split(/\n/).map(function(raw,index){return{text:pickingCleanLine(raw),lineIndex:index}}).filter(function(item){return Boolean(item.text)});
+  var items=[],activeCategory='',lines=String(row.contentText||'').split(/\n/).map(function(raw,index){var original=String(raw||'');return{text:pickingCleanLine(original),lineIndex:index,hadMarker:pickingHasLeadMarker(original)}}).filter(function(item){return Boolean(item.text)});
   for(var cursor=0;cursor<lines.length;cursor++){
     var current=lines[cursor],text=current.text,sectionCategory=pickingSectionCategory(text);
     if(sectionCategory){activeCategory=sectionCategory;continue}
     if(pickingHeader(text,current.lineIndex))continue;
-    var next=lines[cursor+1],mergeNext=Boolean(!pickingHasQuantity(text)&&next&&pickingHasQuantity(next.text)&&!pickingSectionCategory(next.text)&&!pickingHeader(next.text,next.lineIndex));
+    var next=lines[cursor+1];
+    if(pickingProductTitleLine(current,next)){
+      var titled=text+'\n'+next.text,directTitle=pickingDirectCategory(titled),inheritedTitle=!directTitle&&Boolean(activeCategory);
+      if(directTitle)activeCategory=directTitle;
+      items.push({lineIndex:current.lineIndex,text:titled,quantityText:pickingQuantity(next.text),category:directTitle||activeCategory||'other',source:'title_heading'});
+      cursor++;
+      continue;
+    }
+    var mergeNext=Boolean(!pickingHasQuantity(text)&&next&&pickingHasQuantity(next.text)&&!pickingSectionCategory(next.text)&&!pickingHeader(next.text,next.lineIndex));
     if(mergeNext){
       var combined=text+'\n'+next.text,directCombined=pickingDirectCategory(combined),inheritedCombined=!directCombined&&Boolean(activeCategory);
       if(directCombined)activeCategory=directCombined;
@@ -15323,7 +15380,7 @@ function mergePickingResult(rows,remote,errorText){
     var lineMap=remoteMap.get(String(row.id))||new Map();
     var items=pickingLocalItems(row).map(function(item){
       var classified=lineMap.get(Number(item.lineIndex));
-      if(classified&&item.source!=='section_heading'&&item.source!=='direct_hand_towel'&&item.source!=='direct_hair_cap'&&item.source!=='direct_other'){
+      if(classified&&item.source!=='section_heading'&&item.source!=='title_heading'&&item.source!=='direct_hand_towel'&&item.source!=='direct_hair_cap'&&item.source!=='direct_other'){
         item.category=classified.category;
         item.source=classified.source;
       }
@@ -15590,7 +15647,7 @@ window.addEventListener('beforeprint',pickingPaginate);
     '<div id="pickingSources" class="source-sheets" aria-hidden="true">'+body+'</div><div id="pickingPages" class="page-list"></div>'+
     '<script>'+previewScript+'<\/script></body></html>';
 }
-async function printSelected(){var ids=[...state.selected],rows=state.messages.filter(function(item){return ids.includes(String(item.id))&&selectable(item)});if(!rows.length){alert('請先勾選要列印的訊息。');return}var popup=window.open('','_blank','width=1180,height=860');if(!popup){alert('請允許網站開啟彈出視窗。');return}popup.document.open();popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>AI 正在整理揀貨單</title><style>body{display:grid;place-items:center;min-height:90vh;margin:0;background:#f3f7f8;color:#294f63;font-family:"Microsoft JhengHei",sans-serif}.loading{text-align:center}.spinner{width:42px;height:42px;margin:0 auto 14px;border:4px solid #d9e5e9;border-top-color:#294f63;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}p{color:#708791}</style></head><body><div class="loading"><div class="spinner"></div><h2>AI 正在分辨產品</h2><p>品名與後面的數量會完整保留，請稍候。</p></div></body></html>');popup.document.close();var button=document.querySelector('.lg38-action.print');if(button)button.disabled=true;setStatus('AI 正在整理品項；預覽將以紅字顯示每則訊息第一行供核對…','working');try{var remote=await starredApi('line_group_messages_product_classify',{messageIds:ids}),result=mergePickingResult(rows,remote,''),statusText=result.aiAvailable?'AI 揀貨單已整理完成；共 '+String(result.totalItemCount)+' 筆品項，原始數量皆保留。':'揀貨單已整理；目前 AI 未啟用，已使用關鍵字備援且保留全部數量。';if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus(statusText,result.aiAvailable?'success':'error')}catch(error){var result=mergePickingResult(rows,null,String(error&&error.message||error));if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus('AI 分類暫時失敗，已開啟備援揀貨單；原始品項與數量仍完整保留。','error')}finally{if(button)button.disabled=false}}
+async function printSelected(){var ids=[...state.selected],rows=state.messages.filter(function(item){return ids.includes(String(item.id))&&selectable(item)});if(!rows.length){alert('請先勾選要列印的訊息。');return}var popup=window.open('','_blank','width=1180,height=860');if(!popup){alert('請允許網站開啟彈出視窗。');return}popup.document.open();popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>AI 正在整理揀貨單</title><style>body{display:grid;place-items:center;min-height:90vh;margin:0;background:#f3f7f8;color:#294f63;font-family:"Microsoft JhengHei",sans-serif}.loading{text-align:center}.spinner{width:42px;height:42px;margin:0 auto 14px;border:4px solid #d9e5e9;border-top-color:#294f63;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}p{color:#708791}</style></head><body><div class="loading"><div class="spinner"></div><h2>AI 正在分辨產品</h2><p>無數字的短標題會與下一行尺寸／花色／數量合併，原始內容完整保留，請稍候。</p></div></body></html>');popup.document.close();var button=document.querySelector('.lg38-action.print');if(button)button.disabled=true;setStatus('AI 正在整理品項；寢具標題會承接下一行，預覽仍以紅字顯示每則訊息第一行供核對…','working');try{var remote=await starredApi('line_group_messages_product_classify',{messageIds:ids}),result=mergePickingResult(rows,remote,''),statusText=result.aiAvailable?'AI 揀貨單已整理完成；共 '+String(result.totalItemCount)+' 筆品項，原始數量皆保留。':'揀貨單已整理；目前 AI 未啟用，已使用關鍵字備援且保留全部數量。';if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus(statusText,result.aiAvailable?'success':'error')}catch(error){var result=mergePickingResult(rows,null,String(error&&error.message||error));if(!popup.closed){popup.document.open();popup.document.write(printHtml(rows,ids,result));popup.document.close()}setStatus('AI 分類暫時失敗，已開啟備援揀貨單；原始品項與數量仍完整保留。','error')}finally{if(button)button.disabled=false}}
 async function markPrinted(ids){try{await starredApi('line_group_messages_mark_printed',{messageIds:ids});state.messages.forEach(function(item){if(ids.includes(String(item.id))&&item.processingStatus!=='konde_uploaded')item.processingStatus='printed'});state.selected.clear();state.lastSelectedId='';render();setStatus('列印已完成，已自動移到「已印單」；未列印的資料仍保留在「未處理」。','success');if(typeof window.loadAdminAttentionSummaryV35==='function')window.loadAdminAttentionSummaryV35()}catch(error){setStatus('列印完成，但狀態更新失敗：'+String(error&&error.message||error),'error')}}
 async function setActive(){var group=selectedGroup();if(!group||group.captureEnabled)return;if(!confirm('確定改為只保存「'+String(group.groupName||'LINE 群組')+'」的新訊息？'))return;try{await starredApi('line_group_set_active',{groupId:group.groupId});await load()}catch(error){setStatus('設定失敗：'+String(error&&error.message||error),'error')}}
 function exportExcel(){var rows=filteredRows();if(!rows.length||!window.XLSX)return;var data=rows.map(function(item){return{'回傳日期':item.messageDate||'','時間':timeLabel(item.messageTimestamp),'傳訊人':item.senderName||'','偵測關鍵字':kindLabel(item.orderKind),'店點':item.recognizedStoreName||'待辨識','狀態':item.isDeleted?'其他（已刪除）':item.isAutoArchived?'其他（滿 6 天自動移入）':isOther(item)?'其他':workflowStatusLabel(item.processingStatus),'回傳內容':item.contentText||'','刪除者':item.deletedByName||'','刪除時間':item.deletedAt?dateLabel(String(item.deletedAt).slice(0,10))+' '+timeLabel(item.deletedAt):'','自動移入時間':item.archivedAt?dateLabel(String(item.archivedAt).slice(0,10))+' '+timeLabel(item.archivedAt):'','自動移入前狀態':item.archivedFromStatus?workflowStatusLabel(item.archivedFromStatus):''}}),sheet=XLSX.utils.json_to_sheet(data),book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,sheet,'補貨追加');XLSX.writeFile(book,'星紅織品_補貨追加_'+String((el('lineGroupDateFrom')||{}).value||'')+'.xlsx')}
@@ -15613,6 +15670,7 @@ document.addEventListener('DOMContentLoaded',function(){build();enhanceWorkflowU
 <!-- v68：日期嚴格依訊息日顯示；待辨識可全選；9/3 前資料轉已印單；已印單／康德滿 6 天轉其他。 -->
 <!-- v69：未處理頁自動預設目前待辦的最早～最新日期，排除 9/2 以前已完成資料。 -->
 <!-- v70：支援「分類標題→品名：→下一行數量」寫法，合併品名與數量並承接分類。 -->
+<!-- v72：短標題（無數字）＋下一行尺寸／花色／數量會合併成同一品項；150×200 等尺寸不當成數量。 -->
 <style id="expense-compact-actions-v39-style">
 /* v39：費用明細比照公司帳管理字級；桌面按鈕固定一排，手機最多兩排。 */
 #expenseAdminList .expense-v37-table{min-width:1280px!important;table-layout:fixed!important}
@@ -16481,7 +16539,7 @@ window.printSalesAveragePerformance=function(){var previous=comparisonView;try{c
 window.exportCurrentSalesReportExcel=async function(){if(exportBusy)return;var button=v54El('salesExportBtn'),old=button?button.textContent:'匯出 Excel';try{var view=v54CurrentView();if(view==='personDetail'&&comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec(view,true);exportBusy=true;if(button){button.disabled=true;button.textContent='正在建立…'}salesSetAdminStatus('正在匯出「'+spec.title+'」目前顯示的資料…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出；統計摘要與目前分頁完整資料已放在同一張工作表。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false;if(button){button.disabled=false;button.textContent=old}}};
 window.exportSalesComparisonCurrentExcel=async function(){if(exportBusy)return;try{if(comparisonView==='detail'&&!salesPersonDetailModel().people.length){salesSetAdminStatus('請至少勾選一位人員。','error');return}var spec=v54PageSpec('personDetail',true);exportBusy=true;salesSetAdminStatus('正在匯出「'+spec.title+'」…','working');await v54ExportWorkbook(spec);salesSetAdminStatus('「'+spec.title+'」已匯出。','success')}catch(error){v55ActionError('Excel 匯出',error)}finally{exportBusy=false}};
 window.printSalesStatDetail=function(){try{var modal=v54El('salesStatDetailModal');if(!modal||modal.hidden){salesSetAdminStatus('請先點選一間門市或一位人員，再使用友善列印。','error');return}var state=salesStatDetailState||{};if(state.kind==='store')v54StoreDetailPrint();else v54PersonDetailPrint()}catch(error){v55ActionError('友善列印',error)}};
-window.STARRED_UI_BUILD='20260907-line-store-firstline-v71';
+window.STARRED_UI_BUILD='20260907-line-picking-title-v72';
 })();
 </script>
 
@@ -16724,7 +16782,7 @@ window.STARRED_UI_BUILD='20260907-line-store-firstline-v71';
 <script id="employee-leave-backoffice-v66-script">
 (function(){
 'use strict';
-var BUILD='20260907-line-store-firstline-v71';
+var BUILD='20260907-line-picking-title-v72';
 var state={loaded:false,loading:false,profiles:[],requests:[],users:[],warnings:[],summary:{},asOf:'',view:'overview',selectedEmployeeId:'',canConfigurePermissions:false,dashboardLoadedAt:0};
 function e(id){return document.getElementById(id)}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]})}
