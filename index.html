@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- UI PATCH: 20260904-v68.2-sync-error-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
-<!-- STARRED UI BUILD: 20260908-leave-settlement-contract-v76; backend-compatible: 20260908-leave-settlement-contract-v76 -->
+<!-- STARRED UI BUILD: 20260908-leave-subtab-click-fix-v76.1; backend-compatible: 20260908-leave-settlement-contract-v76 -->
 <!-- v72：寢具與商品標題承接辨識；尺寸不再誤認為數量，保留 v71 店點與紅字首行核對。 -->
 <!-- TEST BUILD: 20260830-employee-rules-ui-v43.3-api-build-match; base: index(20260828-101015).html -->
 <!-- STARRED BUILD: 20260827-same-day-sender-store-v42 -->
@@ -17675,7 +17675,16 @@ function leave76ViewParts(name){
 function leave76AllViews(){return['overview','employees','records','personnel','settlements','contracts','former','permissions']}
 function leave76ReorderTabs(){
   var nav=document.querySelector('#leaveAdminTab .leave68-subtabs');if(!nav)return;
-  leave76AllViews().forEach(function(name){var ids=leave76ViewParts(name),button=e(ids[0]);if(button)nav.appendChild(button)});
+  /*
+    只有順序不正確時才移動按鈕。
+    舊寫法每次 ensureUI 都無條件 appendChild，會觸發全頁 MutationObserver，
+    MutationObserver 又再次呼叫 ensureUI，形成不停重排的迴圈，造成按鈕看得到但點擊無反應。
+  */
+  var desired=leave76AllViews().map(function(name){var ids=leave76ViewParts(name);return e(ids[0])}).filter(Boolean);
+  desired.forEach(function(button,index){
+    var current=nav.children[index]||null;
+    if(current!==button)nav.insertBefore(button,current);
+  });
 }
 function leave76Badge(buttonId,count,title){
   var button=e(buttonId);if(!button)return;var badge=button.querySelector('.leave76-subtab-badge');
@@ -19074,5 +19083,6 @@ body.leave67-wide-active main.container{
 </style>
 
 <script id="employee-leave-v76-build-marker">window.STARRED_UI_PATCH='20260908-leave-settlement-contract-v76';</script>
+<script id="employee-leave-v761-click-fix-marker">window.STARRED_UI_PATCH='20260908-leave-subtab-click-fix-v76.1';</script>
 </body>
 </html>
