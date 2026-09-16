@@ -3885,7 +3885,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     </div>
     <div class="sales-hero-user">
       <span>目前回傳人員</span>
-      <b id="salesCurrentUser">LINE 登入後自動帶入</b>
+      <div class="my783-identity-line"><b id="salesCurrentUser">LINE 登入後自動帶入</b><button id="mySalesDetailButton783" type="button" onclick="openMySalesDetail783()" aria-haspopup="dialog">我的業績明細</button></div>
     </div>
   </section>
 
@@ -19734,5 +19734,143 @@ window.STARRED_PERSON_DEDUCTION_UI_BUILD='20260916-person-deduction-detail-v78.1
 }
 </style>
 <script id="person-daily-returns-v782-marker">window.STARRED_PERSON_RETURNS_UI_BUILD='20260916-person-daily-net-returns-v78.2';</script>
+<!-- v78.3: front-side private monthly report; does not reuse or modify admin report state. -->
+<style id="my-sales-detail-v783-style">
+#salesPage .sales-hero-user{min-width:0!important;max-width:100%}
+#salesPage .my783-identity-line{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:6px;min-width:0}
+#salesPage .my783-identity-line #salesCurrentUser{margin:0!important;min-width:0;overflow-wrap:anywhere}
+#salesPage #mySalesDetailButton783{flex:0 0 auto;min-height:42px!important;padding:9px 14px!important;font-size:14px!important;font-weight:400!important;white-space:nowrap!important;border:1px solid #b9cdd8;background:#fff;color:#274253;border-radius:10px;box-shadow:none}
+#salesPage #mySalesDetailButton783:hover{background:#edf4f7}
+body.my783-open{overflow:hidden!important}
+#mySalesDetailModal783{position:fixed;inset:0;z-index:1300000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(25,44,55,.55);backdrop-filter:blur(5px)}
+#mySalesDetailModal783[hidden]{display:none!important}
+#mySalesDetailModal783 *{box-sizing:border-box}
+#mySalesDetailModal783 .my783-dialog{display:flex;flex-direction:column;width:min(1400px,100%);height:calc(100dvh - 32px);max-height:980px;min-width:0;overflow:hidden;border:1px solid #d5e0e6;border-radius:18px;background:#fff;color:#274253;box-shadow:0 20px 70px rgba(15,38,49,.25)}
+#mySalesDetailModal783 .my783-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px 10px;border-bottom:1px solid #dce5ea;flex:none}
+#mySalesDetailModal783 h2{margin:0;font-size:21px;font-weight:400;line-height:1.35}
+#mySalesDetailModal783 .my783-heading p{margin:4px 0 0;font-size:13px;color:#6a818d}
+#mySalesDetailModal783 .my783-close{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;border:0;border-radius:50%;background:#edf3f6;color:#466575;font-size:26px!important;font-weight:400!important}
+#mySalesDetailModal783 .my783-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 18px;background:#f5f8fa;border-bottom:1px solid #dce5ea;flex:none}
+#mySalesDetailModal783 .my783-toolbar label{display:flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap;font-weight:400}
+#mySalesDetailModal783 .my783-toolbar input{width:165px;min-width:0;height:42px!important;min-height:42px!important;font-size:16px!important;padding:7px 9px}
+#mySalesDetailModal783 .my783-toolbar button{min-height:42px!important;height:42px!important;padding:8px 13px!important;font-size:14px!important;font-weight:400!important;white-space:nowrap!important}
+#mySalesDetailModal783 .my783-toolbar .my783-print{margin-left:auto}
+#mySalesDetailModal783 .my783-status{font-size:14px;line-height:1.6;margin:0;padding:12px 18px;background:#f1f6fa;color:#526e7c;flex:none;white-space:pre-wrap}
+#mySalesDetailModal783 .my783-status.error{background:#fff1ef;color:#a13932}
+#mySalesDetailModal783 iframe{display:block;flex:1 1 0;min-height:0;width:100%;border:0;background:#fff}
+#mySalesDetailModal783 .my783-footnote{padding:8px 18px;border-top:1px solid #dce5ea;background:#f8fafb;color:#708491;font-size:12px;line-height:1.5;flex:none}
+@media(min-width:901px){#salesPage .sales-hero-user:has(.my783-identity-line){min-width:335px!important}}
+@media(max-width:620px){
+ #salesPage .my783-identity-line{gap:10px}
+ #salesPage #mySalesDetailButton783{font-size:14px!important;padding:8px 10px!important;min-width:0!important}
+ #mySalesDetailModal783{padding:5px}
+ #mySalesDetailModal783 .my783-dialog{height:calc(100dvh - 10px);max-height:none;border-radius:14px}
+ #mySalesDetailModal783 .my783-heading{padding:11px 12px 9px}
+ #mySalesDetailModal783 h2{font-size:19px}
+ #mySalesDetailModal783 .my783-toolbar{padding:9px 12px;gap:8px;display:grid;grid-template-columns:minmax(0,1fr) auto}
+ #mySalesDetailModal783 .my783-toolbar label{grid-column:1;min-width:0;gap:6px}
+ #mySalesDetailModal783 .my783-toolbar input{width:100%;min-width:0}
+ #mySalesDetailModal783 .my783-toolbar .my783-print{grid-column:1/-1;width:100%;margin:0}
+ #mySalesDetailModal783 .my783-footnote{padding:7px 12px}
+}
+</style>
+<script id="my-sales-detail-v783-module">
+(function(){
+'use strict';
+var BUILD='20260916-own-sales-detail-v78.3',bridge=window.STARRED_SALES_REPORT_BRIDGE_V55;
+var active=null,sequence=0,lastFocus=null;
+function el(id){return document.getElementById(id)}
+function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function identity(){var p=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(window.starredVerifiedLineUser?.lineUserId||p?.id||'')}
+function today(){var p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),o={};p.forEach(function(v){o[v.type]=v.value});return o.year+'-'+o.month+'-'+o.day}
+function money(n){n=Number(n);return(n<0?'−':'')+'$'+Math.abs(n).toLocaleString('zh-TW')}
+function stamp(value){if(!value)return '—';var d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
+function current(t){return active===t&&t.seq===sequence&&t.identity===identity()&&!el('mySalesDetailModal783').hidden&&el('mySalesMonth783').value===t.month}
+function status(message,error){var b=el('mySalesStatus783');b.textContent=message||'';b.hidden=!message;b.classList.toggle('error',!!error)}
+function resetPreview(){el('mySalesPrint783').disabled=true;el('mySalesReportFrame783').hidden=true;el('mySalesReportFrame783').srcdoc='<!doctype html><html lang="zh-Hant"><title>載入中</title><body></body></html>'}
+function mount(){
+ if(el('mySalesDetailModal783'))return;
+ document.body.insertAdjacentHTML('beforeend','<div id="mySalesDetailModal783" hidden><section class="my783-dialog" role="dialog" aria-modal="true" aria-labelledby="mySalesTitle783"><header class="my783-heading"><div><h2 id="mySalesTitle783">我的業績明細</h2><p>僅顯示目前 LINE 登入者本人；直接查看列印版明細。</p></div><button type="button" class="my783-close" data-my783="close" aria-label="關閉我的業績明細">×</button></header><div class="my783-toolbar"><label for="mySalesMonth783">月份<input id="mySalesMonth783" type="month" aria-label="我的業績明細月份"></label><button type="button" class="secondary" data-my783="refresh">重新整理</button><button type="button" id="mySalesPrint783" class="primary my783-print" data-my783="print" disabled>列印／另存 PDF</button></div><div id="mySalesStatus783" class="my783-status" role="status" aria-live="polite" hidden></div><iframe id="mySalesReportFrame783" title="我的個人業績明細列印版" sandbox="allow-same-origin allow-modals" referrerpolicy="no-referrer" tabindex="-1" hidden></iframe><div class="my783-footnote">資料僅供本人核對；退貨、費用與扣款沿用後台規則。手機 LINE 內無法列印時，請在手機瀏覽器開啟後使用。</div></section></div>');
+ el('mySalesDetailModal783').addEventListener('click',function(e){var b=e.target.closest('[data-my783]');if(e.target===el('mySalesDetailModal783')||b?.dataset.my783==='close')close();else if(b?.dataset.my783==='refresh')load();else if(b?.dataset.my783==='print')print()});
+ el('mySalesMonth783').addEventListener('change',load);
+ el('mySalesReportFrame783').addEventListener('load',function(){
+   var t=active,frame=el('mySalesReportFrame783');
+   try{var doc=frame.contentDocument;if(!t||!current(t)||!t.html||doc?.documentElement.dataset.my783Seq!==String(t.seq))return;
+     doc.addEventListener('keydown',keyDown);t.ready=true;frame.hidden=false;el('mySalesPrint783').disabled=false;status('');
+   }catch(error){if(t&&current(t))status('預覽載入失敗，請按重新整理。',true)}
+ });
+}
+function close(){sequence++;active=null;if(!el('mySalesDetailModal783'))return;resetPreview();status('');el('mySalesDetailModal783').hidden=true;el('mySalesTitle783').textContent='我的業績明細';document.body.classList.remove('my783-open');if(lastFocus?.isConnected)lastFocus.focus()}
+function keyDown(e){if(!el('mySalesDetailModal783')||el('mySalesDetailModal783').hidden)return;if(e.key==='Escape'){e.preventDefault();close();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();print();return}if(e.key==='Tab'){var list=Array.from(el('mySalesDetailModal783').querySelectorAll('button,input')).filter(function(n){return !n.disabled&&n.offsetParent!==null}),first=list[0],last=list[list.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}}
+function number(v){var n=Number(v);if(!Number.isFinite(n))throw new Error('明細金額格式不正確，請重新整理。');return n}
+function validate(data,t){
+ if(!data||!data.success||data.mySalesApiBuild!==BUILD)throw new Error('「我的業績明細」後端尚未更新，請先部署 v78.3 line-api。既有功能不受影響。');
+ if(data.person?.lineUserId!==t.identity||data.month!==t.month||data.dateFrom!==t.month+'-01'||String(data.dateTo).slice(0,7)!==t.month)throw new Error('登入者或月份不一致，已停止顯示，請重新開啟明細。');
+ ['records','performanceReturns','expenses','externalAccounts','deductions'].forEach(function(k){if(!Array.isArray(data[k]))throw new Error('明細未完整載入：'+k)});
+ if(data.records.some(function(r){return r.recordType==='return'||String(r.salespersonLineUserId||r.submitterLineUserId||'')!==t.identity||r.businessDate<data.dateFrom||r.businessDate>data.dateTo})||data.performanceReturns.some(function(r){return r.recordType!=='return'||r.assignedSalespersonLineUserId!==t.identity||String(r.returnPerformanceMonth).slice(0,7)!==t.month})||data.expenses.concat(data.externalAccounts).some(function(r){return r.submitterLineUserId!==t.identity||r.status!=='approved'})||data.deductions.some(function(r){return r.employeeLineUserId!==t.identity||r.month!==t.month||!['deduction','reversal'].includes(r.type)||r.type==='deduction'&&number(r.amount)<=0||r.type==='reversal'&&number(r.amount)>=0}))throw new Error('本人明細資料驗證失敗，已停止顯示。');
+ var s=data.summary||{};
+ ['gross','returns','base','expense','external','other','before','deduction','reversal','netDeduction','settlement'].forEach(function(k){number(s[k])});
+ var sum=function(list,k){return list.reduce(function(a,r){return a+number(r[k]||0)},0)},g=sum(data.records,'grossAmount'),r=sum(data.records.concat(data.performanceReturns),'returnAmount'),e=sum(data.expenses.filter(function(r){return r.requestType==='expense'}),'amount'),x=sum(data.externalAccounts,'customerAmount'),d=sum(data.deductions.filter(function(r){return number(r.amount)>0}),'amount'),v=-sum(data.deductions.filter(function(r){return number(r.amount)<0}),'amount');
+ var expected={gross:g,returns:r,base:g-r,expense:e,external:x,other:e+x,before:g-r+e+x,deduction:d,reversal:v,netDeduction:d-v,settlement:g-r+e+x-d+v};
+ Object.keys(expected).forEach(function(k){if(Math.abs(expected[k]-number(s[k]))>.001)throw new Error('明細與合計不一致，請重新整理後再列印。')});
+ if(!bridge||typeof bridge.personDailyModel782!=='function')throw new Error('業績明細元件未完整載入，請重新整理網站。');
+ return data;
+}
+async function load(){
+ mount();var month=el('mySalesMonth783').value,t={seq:++sequence,identity:identity(),month:month,ready:false,html:''};active=t;resetPreview();status('正在讀取本人的業績、退貨、核准費用、公司帳及扣款…');el('mySalesTitle783').textContent='我的業績明細';
+ try{
+   if(!t.identity)throw new Error('請先完成 LINE 登入，再查看自己的業績明細。');
+   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)||month>today().slice(0,7)||Number(month.slice(0,4))<2000)throw new Error('請選擇正確月份，不能查詢未來月份。');
+   var timer,result;
+   try{result=await Promise.race([window.starredApi('sales_my_detail',{month:month}),new Promise(function(_,reject){timer=setTimeout(function(){reject(new Error('讀取逾時，請確認網路後按重新整理。'))},45000)})])}finally{clearTimeout(timer)}
+   if(!current(t))return false;
+   if(!result?.mySalesApiBuild)throw new Error('「我的業績明細」後端尚未更新，請先部署 v78.3 line-api。');
+   var data=validate(result,t);t.data=data;t.html=reportHtml(data,t.seq);
+   el('mySalesTitle783').textContent=data.person.name+'｜我的業績明細';el('mySalesReportFrame783').srcdoc=t.html;
+   return true;
+ }catch(error){if(!current(t))return false;t.ready=false;t.html='';resetPreview();var text=String(error&&error.message||error);if(/不支援|未知操作|unknown action|unsupported action/i.test(text))text='「我的業績明細」後端尚未更新，請先部署 v78.3 line-api。';status(text,true);return false}
+}
+function open(){mount();lastFocus=document.activeElement;el('mySalesDetailModal783').hidden=false;document.body.classList.add('my783-open');var month=today().slice(0,7);el('mySalesMonth783').max=month;el('mySalesMonth783').value=month;el('mySalesMonth783').focus();return load()}
+function print(){var t=active;if(!t||!t.ready||!current(t)){status('明細尚未完整載入，請重新整理後再列印。',true);return}try{var frame=el('mySalesReportFrame783');frame.contentWindow.focus();frame.contentWindow.print()}catch(error){status('目前瀏覽器無法開啟列印，請在一般瀏覽器開啟本頁後再試。',true)}}
+function pay(item,rates){
+ var start=String(item.overtimeStart||''),end=String(item.overtimeEnd||''),minutes=function(v){return Number(v.slice(0,2))*60+Number(v.slice(3))},h=/^\d{2}:\d{2}$/.test(start)&&/^\d{2}:\d{2}$/.test(end)?(minutes(end)-minutes(start))/60:null;if(h!==null&&h<=0)h=null;
+ var rate=number(rates[item.requestType==='overtime'?'other':item.requestType]||0),raw=number(item.amount||0),record=item.recordOnly===true,expense=item.requestType==='expense',amount=record?0:expense||raw>0||item.isDeletionAdjustment?raw:h===null?null:Math.round(h*rate);
+ var hours=h===null?'—':bridge.workHoursNumberText(Math.round(h*100)/100)+' 小時';
+ var formula=record?'僅作紀錄・不計費':expense?'費用金額':h!==null&&rate>0&&amount!==null&&Math.round(h*rate)===Math.round(amount)?hours+' × 時薪 '+money(rate):hours+(amount!==null?'・人工金額':'');
+ return {hours:hours,rate:record?0:rate,amount:amount,formula:formula};
+}
+function cell(text,kind,value){return {text:text==null?'':String(text),kind:kind||'',value:value}}
+function table(title,headers,rows,note,cls){
+ return '<section class="'+esc(cls||'')+'"><h2>'+esc(title)+'</h2>'+(note?'<p class="section-note">'+esc(note)+'</p>':'')+(rows.length?'<table><thead><tr>'+headers.map(function(h){return '<th>'+esc(h)+'</th>'}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(c,i){return '<td data-label="'+esc(headers[i])+'" class="'+esc(c.kind)+(c.kind==='money'&&Number(c.value)>=10000?' high-value':'')+'">'+esc(c.text)+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table>':'<p class="empty">目前沒有資料。</p>')+'</section>';
+}
+function cards(items){return '<div class="print-summary">'+items.map(function(i){return '<div><span>'+esc(i[0])+'</span><b class="'+(i[2]?'high-value':'')+'">'+esc(money(i[1]))+'</b></div>'}).join('')+'</div>'}
+function reportHtml(data,seq){
+ var s=data.summary,groups=bridge.personDailyModel782(data.records.concat(data.performanceReturns),data.person.lineUserId),notes=data.workdayNotes||{},rates=data.operationRates||{};
+ var detail=groups.map(function(g){var work=g.sales.map(function(r){return notes[r.id]}).filter(Boolean).sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))})[0];return [cell(g.date),cell(g.sales.length?'業績':'僅退貨'),cell(bridge.storeText(g)+(g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':'')),cell(money(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'money',g.netAmount),cell(g.returnAmount!==0?money(g.returnAmount):'—'),cell(g.invoiceDates.join('、')||'—'),cell(work?.text||'—'),cell(stamp(g.lastUpdated))]});
+ var type=function(v){return {move_out:'撤櫃',move_in:'進櫃',other:'其他',overtime:'移櫃／加班',expense:'費用'}[v]||v};
+ var expenses=data.expenses.slice().sort(function(a,b){return String(b.requestDate).localeCompare(String(a.requestDate))}).map(function(i){var p=pay(i,rates),adjust=i.isDeletionAdjustment,description=adjust?i.deletionNote:i.requestType==='expense'?i.reason:[bridge.storeText(i),[i.overtimeStart,i.overtimeEnd].filter(Boolean).join('～')].filter(Boolean).join('・'),review=[adjust?'刪除人：'+(i.deletedByName||'—'):'核准人：'+(i.reviewerName||'—'),i.note?'申請：'+i.note:'',i.reviewNote?'後台：'+i.reviewNote:''].filter(Boolean).join('；');return [cell(i.requestDate),cell(adjust?'刪除沖減':type(i.requestType)),cell(description),cell(p.hours),cell(p.rate?money(p.rate):'—'),cell(p.amount===null?'—':money(p.amount)),cell(p.formula),cell(review)]});
+ var external=data.externalAccounts.slice().sort(function(a,b){return String(b.transactionDate).localeCompare(String(a.transactionDate))}).map(function(i){return [cell(i.transactionDate),cell(money(i.customerAmount)),cell([i.isDeletionAdjustment?i.deletionNote:'',i.note||''].filter(Boolean).join('；')||'—'),cell(i.isDeletionAdjustment?'刪除人：'+(i.deletedByName||'—'):i.reviewerName||'—'),cell(stamp(i.isDeletionAdjustment?i.deletedAt:i.reviewedAt))]});
+ var deductions=data.deductions.slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))}).map(function(i){return [cell(i.month+'\n'+stamp(i.createdAt)),cell(i.type==='reversal'?'沖回（加回）':'核准扣款'),cell(money(i.amount),i.amount<0?'reversal':'deduction'),cell([i.reason,i.note?'備註：'+i.note:'',i.reviewNote?'審核備註：'+i.reviewNote:''].filter(Boolean).join('\n')),cell(i.actorName||'—')]});
+ var html='<header class="report-head"><div><h1>'+esc(data.person.name)+'｜個人業績明細</h1><p>查詢區間：'+esc(data.dateFrom)+' ～ '+esc(data.dateTo)+'</p></div><time>資料讀取時間：'+esc(stamp(data.generatedAt))+'</time></header>';
+ html+=cards([['營業總額',s.gross,s.gross>=10000],['退貨',s.returns,false],['核准費用＋公司帳',s.other,false],['業績合計',s.before,s.before>=10000]]);
+ html+=table('業績明細',['日期','類型','店點','營業額','退貨','原發票日','上班備註','最後更新'],detail,'同一人、同日、同店的退貨已併入退貨欄；營業額為扣除退貨後金額，請勿再扣一次。紅字以扣後金額滿 10,000 元判斷；退貨歸屬及歸列月份不變。','sales-detail');
+ html+=table('核准撤櫃／進櫃／其他／費用',['日期','類型','店點／申請內容','工時','時薪','核准金額','計算方式','核准／備註'],expenses,'沿用後台核准內容；作業金額另外列示，核准費用與公司帳的合計方式維持不變。','support-detail');
+ html+=table('核准公司帳',['交易日期','公司帳金額','備註','核准／經辦人','核准／異動時間'],external,'核准後列入個人業績底部；跨月刪除沖減另列在異動當月。','external-detail');
+ html+='<section class="deduction-detail"><h2>扣款明細｜'+esc(data.month)+'</h2><p class="section-note">按入帳月份整月列示，不依原事件日期。未核准不扣款；正數扣款，負數沖回。</p>'+cards([['核准扣款',s.deduction,false],['沖回金額（加回）',s.reversal,false],['淨扣款',s.netDeduction,false],['扣款後結算',s.settlement,false]])+'</section>';
+ html+=table('已入帳扣款／沖回',['月份／入帳時間','類型','扣款／沖回','原因／備註','經辦人'],deductions,'','ledger-detail');
+ html+='<p class="calculation">原業績合計 '+esc(money(s.before))+' − 淨扣款 ('+esc(money(s.netDeduction))+') ＝ 扣款後結算 '+esc(money(s.settlement))+'。不改變業績、排行榜及其他費用；非薪資計算。</p>';
+ return '<!doctype html><html lang="zh-Hant" data-my783-seq="'+Number(seq)+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>　</title><style>'+reportCss()+'</style></head><body><main class="print-sheet">'+html+'</main></body></html>';
+}
+function reportCss(){return '@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;background:#fff;color:#284655;font:14px "Microsoft JhengHei","Noto Sans TC",sans-serif;line-height:1.45}body{overflow-wrap:anywhere}.print-sheet{padding:16px;max-width:1600px;margin:auto}.report-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;border-bottom:2px solid #34576b;padding-bottom:6px;margin-bottom:7px}.report-head h1{font-size:19px;font-weight:400;margin:0}.report-head p{margin:3px 0 0;color:#6f8593}.report-head time{font-size:12px;color:#6f8593}.print-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:0 0 9px}.print-summary>div{background:#f4f7f8;border:1px solid #cbd6dc;padding:7px;text-align:center;min-width:0}.print-summary span{display:block;color:#6f8593;font-size:12px}.print-summary b{display:block;color:#284655;font-size:16px;font-weight:400;font-variant-numeric:tabular-nums}.print-summary b.high-value,.high-value{color:#c62828!important}section{margin-bottom:12px}h2{font-size:16px;font-weight:400;margin:0 0 4px}p.section-note,.calculation{font-size:12px;color:#718896;margin:0 0 7px}table{width:100%;border-collapse:collapse;table-layout:auto}th,td{padding:5px 6px;border:1px solid #b8c6ce;vertical-align:top;text-align:left;font-size:14px;font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#dfe7eb}tbody tr:nth-child(even) td{background:#f0f3f5}.money{min-width:114px;font-variant-numeric:tabular-nums}.deduction{color:#a43c35}.reversal{color:#2a7353}.empty{padding:12px;border:1px dashed #bccbd4;font-size:13px;color:#7a909e;margin:7px 0 12px}tr{break-inside:avoid}.sales-detail th:first-child{width:100px}.sales-detail th:nth-child(3){width:24%}.sales-detail th:nth-child(4){width:16%}.sales-detail th:last-child{width:15%}.calculation{border-top:1px solid #d6e0e5;padding-top:8px}@media screen and (max-width:640px){.print-sheet{padding:12px}.report-head{display:block}.report-head h1{font-size:18px}.report-head time{display:block;margin-top:4px}.report-head p{font-size:13px}.print-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.print-summary>div{padding:9px 5px}.print-summary b{font-size:18px}.print-summary span{font-size:13px}h2{font-size:17px}p.section-note,.calculation{font-size:13px;line-height:1.6}table,tbody{display:block;width:100%;min-width:0}thead{display:none}tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid #c6d4dc;border-radius:9px;overflow:hidden;padding:5px;margin-bottom:8px;background:#fff}td{display:block;border:0!important;min-width:0;padding:6px;background:transparent!important;font-size:14px}td:before{content:attr(data-label);display:block;color:#758b98;font-size:12px;margin-bottom:3px}.sales-detail td:nth-child(3),.sales-detail td:nth-child(4),.sales-detail td:nth-child(7),.sales-detail td:nth-child(8),.support-detail td:nth-child(3),.support-detail td:nth-child(7),.support-detail td:nth-child(8),.external-detail td:nth-child(3),.ledger-detail td:nth-child(4){grid-column:1/-1}.sales-detail td:nth-child(4){background:#f2f6f8!important;border-radius:6px}.money{min-width:0}.sales-detail td:nth-child(4){font-size:16px}}@media print{html,body{font-size:12px;line-height:1.25}.print-sheet{padding:0;max-width:none;margin:0}.report-head h1{font-size:14px}.report-head p,.report-head time{font-size:12px}.print-summary{gap:4px;margin-bottom:6px}.print-summary>div{padding:4px}.print-summary b{font-size:13px}section{margin-bottom:8px}h2{font-size:14px}th,td{font-size:12px;padding:3px 4px}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}.report-head,h2,.print-summary{break-inside:avoid}h2{break-after:avoid}.empty{padding:8px}.money{min-width:0}.calculation{font-size:12px}}'}
+mount();document.addEventListener('keydown',keyDown);
+window.addEventListener('storage',function(e){if(/current_line_user/.test(String(e.key||''))&&active&&active.identity!==identity())close()});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&active&&active.identity!==identity())close()});
+var oldLogout=window.logout;window.logout=function(){close();return typeof oldLogout==='function'?oldLogout.apply(this,arguments):undefined};
+var oldPage=window.showPage;window.showPage=function(page){if(page!=='sales'&&active)close();return typeof oldPage==='function'?oldPage.apply(this,arguments):undefined};
+window.openMySalesDetail783=open;
+window.STARRED_MY_SALES_UI_BUILD=BUILD;
+})();
+</script>
+
 </body>
 </html>
