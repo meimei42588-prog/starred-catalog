@@ -9341,6 +9341,9 @@ var salesRankingPage = 1;
 var salesRequestModalRecordId = '';
 var salesAdminEditRecordId = '';
 var salesStatDetailState = {kind:'',key:'',rows:[],view:'list',summary:null};
+// v78.1: bind a loaded report to its query; ignore obsolete concurrent responses.
+var salesAdminLoadSequence781=0,salesAdminQuery781=null;
+function salesAdminQuerySnapshot781(){return {dateFrom:String((salesEl('salesAdminDateFrom')||{}).value||''),dateTo:String((salesEl('salesAdminDateTo')||{}).value||''),area:String((salesEl('salesAdminArea')||{}).value||''),storeId:String((salesEl('salesAdminStore')||{}).value||''),lineUserId:String((salesEl('salesAdminPerson')||{}).value||'')}}
 var salesPersonDetailSelection = new Set();
 var salesPersonDetailSelectionInitialized = false;
 var salesPersonDetailSearchText = '';
@@ -10894,6 +10897,8 @@ function salesApplyRealNames(){
 }
 async function loadSalesAdminReport(){
   if(!salesEl('salesReportTab'))return;
+  var query781=salesAdminQuerySnapshot781(),seq781=++salesAdminLoadSequence781;
+  if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportLoading();
   salesSetAdminStatus('正在整理業績報表…','working');
   try{
     var result;
@@ -10901,14 +10906,10 @@ async function loadSalesAdminReport(){
       salesEnsureTestData();
       result=salesFilteredTestAdminData();
     }else{
-      result=await starredApi('sales_admin_report',{
-        dateFrom:(salesEl('salesAdminDateFrom')||{}).value||'',
-        dateTo:(salesEl('salesAdminDateTo')||{}).value||'',
-        area:(salesEl('salesAdminArea')||{}).value||'',
-        storeId:(salesEl('salesAdminStore')||{}).value||'',
-        lineUserId:(salesEl('salesAdminPerson')||{}).value||''
-      });
+      result=await starredApi('sales_admin_report',query781);
     }
+    if(seq781!==salesAdminLoadSequence781||JSON.stringify(query781)!==JSON.stringify(salesAdminQuerySnapshot781()))return;
+    salesAdminQuery781=Object.assign({},query781);
     salesAdminData={
       records:Array.isArray(result.records)?result.records:[],
       performanceReturns:Array.isArray(result.performanceReturns)?result.performanceReturns:[],
@@ -10930,7 +10931,10 @@ async function loadSalesAdminReport(){
     rebuildSalesAdminPersonOptions(salesAdminData.records.concat(salesAdminData.performanceReturns),salesAdminData.salespeople);
     renderSalesAdminReport();
     salesSetAdminStatus('報表已更新，共 '+String(salesAdminData.records.length)+' 筆。','success');
+    if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportReady();
   }catch(error){
+    if(seq781!==salesAdminLoadSequence781)return;
+    if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportFailed();
     console.error('載入業績報表失敗',error);
     salesSetAdminStatus('報表載入失敗：'+String(error&&error.message||error),'error');
   }
@@ -11543,6 +11547,84 @@ function renderSalesPersonExpenseSection(lineUserId){
     var adjustment=item.isDeletionAdjustment===true,expense=item.requestType==='expense',label=item.requestType==='move_out'?'撤櫃':item.requestType==='move_in'?'進櫃':item.requestType==='overtime'?'移櫃／加班':item.requestType==='other'?'其他':'費用';var place=[item.storeName,item.storeFloor].filter(Boolean).join('｜');var detail=adjustment?String(item.deletionNote||('刪除 '+String(item.originalRequestDate||'原日期')+' 的費用')):(expense?String(item.reason||'未填寫緣由'):(place||'未指定店點')+'・'+[item.overtimeStart,item.overtimeEnd].filter(Boolean).join('～'));var pay=expense?{amountText:salesMoney(item.amount||0),formulaText:'費用金額'}:salesExpenseOperationPayModel(item);var reviewer=adjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准');var notes=[];if(item.note)notes.push('申請人備註：'+item.note);if(item.reviewNote)notes.push('後台備註：'+item.reviewNote);if(item.reviewedAt&&!adjustment)notes.push(salesDateTime(item.reviewedAt));return '<tr><td>'+salesEsc(item.requestDate||'—')+'</td><td>'+salesEsc(adjustment?'刪除沖減':label)+'</td><td>'+salesEsc(detail)+'</td><td class="num"><b>'+salesEsc(pay.amountText)+'</b><small>'+salesEsc(pay.formulaText)+'</small></td><td>'+salesEsc(reviewer)+(notes.length?'<small>'+salesEsc(notes.join('｜'))+'</small>':'')+'</td></tr>';
   }).join('')+'</tbody></table>');
 }
+/* v78.2 — presentation-only personal daily returns.
+ * Use the RETURN RECORD date (businessDate), not originalInvoiceDate.
+ * Preserve the backend's assigned salesperson/accounting month and all raw records.
+ * Never feed displayed net amounts back into salesAdminData or payroll/rankings.
+ */
+function salesPersonDailyModel782(records,personId){
+  var groups=new Map(),seen=new Set(),aliases=new Map(),source=Array.isArray(records)?records:[];
+  personId=String(personId||'');
+  function label(r){return [String(r.area||''),String(r.storeName||'').trim(),String(r.storeFloor||'').trim()].join('|')}
+  function owner(r){return salesRecordType(r)==='return'?String(r.assignedSalespersonLineUserId||''):salesCreditedLineUserId(r)}
+  function amount(value){var n=Number(value||0);return Number.isFinite(n)?n:0}
+  source.forEach(function(r){if(!r||personId&&owner(r)!==personId)return;var id=String(r.storeId||'');if(!id)return;var key=label(r),ids=aliases.get(key)||new Set();ids.add(id);aliases.set(key,ids)});
+  source.forEach(function(r,index){
+    if(!r||personId&&owner(r)!==personId)return;
+    var id=String(r.id||'');if(id&&seen.has(id))return;if(id)seen.add(id);
+    var isReturn=salesRecordType(r)==='return',date=String(r.businessDate||''),storeId=String(r.storeId||''),ids=aliases.get(label(r));
+    if(!storeId&&ids&&ids.size===1)storeId=Array.from(ids)[0];
+    var storeKey=storeId?'id:'+storeId:'label:'+label(r);
+    // A missing date is not guessed or combined with another undated record.
+    var key=JSON.stringify([owner(r),date||'undated:'+String(index),storeKey]);
+    var group=groups.get(key);
+    if(!group){group={key:key,date:date,storeId:storeId,area:String(r.area||''),storeName:String(r.storeName||''),storeFloor:String(r.storeFloor||''),personId:owner(r),grossAmount:0,returnAmount:0,netAmount:0,sales:[],returns:[],records:[],invoiceDates:[],performanceMonths:[],lastUpdated:''};groups.set(key,group)}
+    group.records.push(r);
+    if(!isReturn){group.grossAmount+=amount(r.grossAmount);group.sales.push(r)}
+    // Preserve embedded returns in legacy sales records, if present; do not add twice.
+    if(isReturn||amount(r.returnAmount)>0){group.returnAmount+=amount(r.returnAmount);group.returns.push(r);if(r.originalInvoiceDate&&!group.invoiceDates.includes(String(r.originalInvoiceDate)))group.invoiceDates.push(String(r.originalInvoiceDate));var m=String(r.returnPerformanceMonth||'').slice(0,7);if(m&&!group.performanceMonths.includes(m))group.performanceMonths.push(m)}
+    [r.updatedAt,isReturn?r.returnAssignedAt:'',r.createdAt].filter(Boolean).forEach(function(value){var text=String(value),stamp=Date.parse(text),previous=Date.parse(group.lastUpdated);if(!group.lastUpdated||Number.isFinite(stamp)&&(!Number.isFinite(previous)||stamp>previous))group.lastUpdated=text});
+    if(!group.storeName&&r.storeName)group.storeName=String(r.storeName);
+    if(!group.storeFloor&&r.storeFloor)group.storeFloor=String(r.storeFloor);
+  });
+  return Array.from(groups.values()).map(function(g){g.netAmount=g.grossAmount-g.returnAmount;g.invoiceDates.sort();g.performanceMonths.sort();return g}).sort(function(a,b){return b.date.localeCompare(a.date)||salesStoreText(a).localeCompare(salesStoreText(b),'zh-Hant')||a.key.localeCompare(b.key)});
+}
+function salesPersonDailyNote782(group){return salesWorkdayNoteForRecordIds(group.sales.map(function(r){return r.id}).filter(Boolean))}
+function salesPersonDailyDetails782(group){
+  var hasReturn=group.returns.length>0,hasAudit=group.records.some(function(r){return salesAmountAuditLogs(r,'').length>0});
+  if(!hasReturn&&group.sales.length<2&&!hasAudit)return '';
+  var title=hasReturn?'查看退貨／原始明細':group.sales.length>1?'查看原始 '+group.sales.length+' 筆':'查看修改紀錄';
+  return '<details class="return782-source"><summary>'+title+'</summary><div>'+group.records.map(function(r){var returned=salesRecordType(r)==='return',logs=salesAmountAuditLogs(r,'');var text=returned?'退貨 '+salesMoney(r.returnAmount||0):'原始業績 '+salesMoney(r.grossAmount||0);if(!returned&&Number(r.returnAmount||0)>0)text+='；退貨 '+salesMoney(r.returnAmount);var history=logs.length?'<button type="button" class="secondary return782-audit" onclick="openSalesAuditHistory(\''+salesEsc(r.id)+'\',\'\')">修改紀錄</button>':'';return '<div class="return782-source-row"><span>'+salesEsc(text)+'</span><small>'+salesEsc((returned?'處理人：':'回傳人：')+salesSubmitterName(r)+(r.isProxySale?'（代銷售）':'')+(r.originalInvoiceDate?'｜原發票：'+r.originalInvoiceDate:'')+(r.returnPerformanceMonth?'｜歸列月份：'+String(r.returnPerformanceMonth).slice(0,7):''))+'</small>'+history+'</div>'}).join('')+'</div></details>';
+}
+function salesRenderPersonDaily782(records,personId){
+  var groups=salesPersonDailyModel782(records,personId);
+  if(!groups.length)return '<tr><td colspan="7" class="sales-table-empty">此區間沒有業績或已歸列退貨；其他費用與扣款仍另列於下方。</td></tr>';
+  return groups.map(function(g){
+    var hasReturn=g.returnAmount!==0,workNote=salesPersonDailyNote782(g),netClass=g.netAmount>=SALES_HIGH_VALUE_THRESHOLD?' sales-high-value':'',amount;
+    if(!hasReturn&&g.sales.length===1)amount=salesAdminAmountHtml(g.sales[0],'gross');
+    else amount='<span class="return782-net-value'+netClass+'">'+salesEsc(salesMoney(g.netAmount))+'</span>'+(hasReturn?'<span class="return782-net-note">（已扣除退貨）</span>':'');
+    var count=g.sales.length>1?'<small class="return782-meta">合併 '+g.sales.length+' 筆業績</small>':'';
+    var target=salesEsc(salesStoreText(g))+(g.sales.some(function(r){return r.isProxySale})?'<small class="return782-meta">含代銷售</small>':'');
+    var months=g.performanceMonths.filter(function(m){return m!==g.date.slice(0,7)});
+    return '<tr class="return782-daily-row'+(!g.sales.length?' return782-only':'')+'" data-return782-date="'+salesEsc(g.date)+'" data-return782-store="'+salesEsc(g.storeId)+'"><td data-label="日期">'+salesEsc(g.date||'—')+'</td><td data-label="類型"><span class="sales-stat-type '+(g.sales.length?'gross':'return')+'">'+(g.sales.length?'業績':'僅退貨')+'</span>'+count+'</td><td data-label="店點">'+target+(workNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workNote)+'</small>':'')+salesPersonDailyDetails782(g)+'</td><td class="amount gross return782-net-cell" data-label="營業額" title="'+salesEsc('原始營業額 '+salesMoney(g.grossAmount)+' − 退貨 '+salesMoney(g.returnAmount)+' ＝ '+salesMoney(g.netAmount))+'">'+amount+'</td><td class="amount return" data-label="退貨">'+(hasReturn?salesEsc(salesMoney(g.returnAmount)):'—')+'</td><td data-label="原發票日期">'+salesEsc(g.invoiceDates.join('、')||'—')+(months.length?'<small class="return782-meta">歸列 '+salesEsc(months.join('、'))+'</small>':'')+'</td><td data-label="最後更新">'+salesEsc(salesDateTime(g.lastUpdated))+'</td></tr>';
+  }).join('');
+}
+function salesPersonDailyPrintRows782(records,personId){
+  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','最後更新':salesDateTime(g.lastUpdated)}});
+}
+function salesPersonDailyExportRows782(records,personId){
+  function unique(values){return Array.from(new Set(values.filter(function(v){return v!==''&&v!==null&&v!==undefined}))).join('；')}
+  return salesPersonDailyModel782(records,personId).map(function(g){
+    return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayMeta(salesWorkdayStatus(r),salesWorkHoursValue(r)).label})),'上班備註':salesPersonDailyNote782(g),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
+  });
+}
+// Format the numeric/formula net column without losing Excel arithmetic.
+function salesPersonalNetExcel782(sheet,rows,sheetJs){
+  if(!sheet||!rows.length)return;
+  var headers=Object.keys(rows[0]),gross=headers.indexOf('原始營業額'),refund=headers.indexOf('退貨'),net=headers.indexOf('營業額');
+  if(gross<0||refund<0||net<0)return;
+  function letter(index){var result='';for(var n=index+1;n>0;n=Math.floor((n-1)/26))result=String.fromCharCode(65+(n-1)%26)+result;return result}
+  rows.forEach(function(row,i){
+    if(typeof row['原始營業額']!=='number'||typeof row['營業額']!=='number'||typeof row['退貨']!=='number')return;
+    var number=i+2,value=row['營業額'],suffix=row['退貨']!==0?'"（已扣除退貨）"':'';
+    var format='[Red][>=10000]#,##0'+suffix+';[<0]-#,##0'+suffix+';#,##0'+suffix;
+    var formula=letter(gross)+number+'-'+letter(refund)+number;
+    if(sheetJs){var key=letter(net)+number,cell=sheet[key]||{};Object.assign(cell,{t:'n',v:value,f:formula,z:format});cell.s=Object.assign({},cell.s,{font:Object.assign({},cell.s?.font,{name:'Microsoft JhengHei',sz:12,bold:false,color:{rgb:value>=10000?'C62828':'405D6C'}}),alignment:{vertical:'center',wrapText:true}});sheet[key]=cell}
+    else{var cell=sheet.getCell(number,net+1);cell.value={formula:formula,result:value};cell.numFmt=format;cell.font=Object.assign({},cell.font,{size:12,bold:false,color:{argb:value>=10000?'FFC62828':'FF405D6C'}});sheet.getColumn(net+1).width=30;}
+  });
+  if(sheetJs&&sheet['!cols'])sheet['!cols'][net]={wch:30};
+}
+
 function openSalesStatDetail(kind,key){
   kind=kind==='person'?'person':'store';
   key=String(key||'');
@@ -11557,7 +11639,7 @@ function openSalesStatDetail(kind,key){
     var returnRows=salesAdminData.performanceReturns.filter(function(record){return String(record.assignedSalespersonLineUserId||'')===key}).slice().sort(function(a,b){return String(b.returnAssignedAt||'').localeCompare(String(a.returnAssignedAt||''))});
     rows=salesRows.concat(returnRows);
   }
-  salesStatDetailState={kind:kind,key:key,rows:rows,view:'list',summary:summary};
+  salesStatDetailState={kind:kind,key:key,rows:rows,view:'list',summary:summary,query781:Object.assign({},salesAdminQuery781||salesAdminQuerySnapshot781())};
   var modal=ensureSalesStatDetailModal();
   modal.classList.toggle('store-detail-mode',kind==='store');
   modal.classList.toggle('person-detail-mode',kind==='person');
@@ -11578,6 +11660,7 @@ function openSalesStatDetail(kind,key){
   var netSummaryEl=salesEl('salesStatDetailNet');if(netSummaryEl){netSummaryEl.textContent=salesMoney(netSummaryAmount);netSummaryEl.classList.toggle('sales-high-value',Math.abs(netSummaryAmount)>=SALES_HIGH_VALUE_THRESHOLD)}
   if(salesEl('salesStatDetailCount'))salesEl('salesStatDetailCount').textContent=String(rows.length)+' 筆';
   if(salesEl('salesStatDetailTargetHead'))salesEl('salesStatDetailTargetHead').textContent=kind==='store'?'銷售人員':'店點';
+  var grossLabel782=salesEl('salesStatDetailGross')?.previousElementSibling;if(grossLabel782)grossLabel782.textContent=kind==='person'?'原始營業總額':'營業總額';
   if(salesEl('salesStatDetailViewSwitcher'))salesEl('salesStatDetailViewSwitcher').hidden=kind!=='store';
   if(kind==='store'){
     renderSalesStoreMissingNotice(summary);
@@ -11587,7 +11670,7 @@ function openSalesStatDetail(kind,key){
     if(salesEl('salesStorePrintEnding'))salesEl('salesStorePrintEnding').hidden=true;
   }
   var body=salesEl('salesStatDetailBody');
-  if(body)body.innerHTML=rows.length?rows.map(function(record){
+  if(body)body.innerHTML=kind==='person'?salesRenderPersonDaily782(rows,key):rows.length?rows.map(function(record){
     var isReturn=salesRecordType(record)==='return';
     var target=kind==='store'?(isReturn?salesSubmitterName(record):salesCreditedName(record)+(record.isProxySale?'（代銷售）':'')):(salesStoreText(record)+(isReturn?' ・ 處理：'+salesSubmitterName(record):record.isProxySale?' ・ 代填：'+salesSubmitterName(record):''));
     var workdayNote=isReturn?'':salesWorkdayNoteForRecordIds([record.id]);return '<tr class="'+(isReturn&&kind==='person'?'sales-stat-return-deduction':'')+'"><td>'+salesEsc(record.businessDate||'—')+'</td><td><span class="sales-stat-type '+(isReturn?'return':'gross')+'">'+(isReturn&&kind==='person'?'退貨扣除':(isReturn?'退貨':'業績'))+'</span></td><td><span>'+salesEsc(target)+'</span>'+(workdayNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workdayNote)+'</small>':'')+'</td><td class="amount gross">'+(isReturn?'—':salesAdminAmountHtml(record,'gross'))+'</td><td class="amount return">'+(isReturn?salesAdminAmountHtml(record,'return'):'—')+'</td><td>'+salesEsc(record.originalInvoiceDate||'—')+'</td><td>'+salesEsc(salesDateTime(isReturn&&kind==='person'?record.returnAssignedAt:record.updatedAt))+'</td></tr>';
@@ -11599,7 +11682,7 @@ function openSalesStatDetail(kind,key){
   if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.open();
 }
 function closeSalesStatDetail(){
-  if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.clear();
+  if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.close();
   var modal=salesEl('salesStatDetailModal');
   if(modal)modal.hidden=true;
   document.body.classList.remove('sales-stat-modal-open','sales-stat-printing');
@@ -11653,7 +11736,7 @@ function ensureSalesAuditModal(){
   return modal;
 }
 function openSalesAuditHistory(id,kind){
-  var record=salesAdminData.records.find(function(item){return String(item.id)===String(id)});
+  var record=(salesAdminData.records||[]).concat(salesAdminData.performanceReturns||[]).find(function(item){return String(item.id)===String(id)});
   if(!record){salesSetAdminStatus('找不到這筆業績的修改軌跡，請重新整理報表。','error');return}
   kind=kind==='return'?'return':kind==='gross'?'gross':'';
   var logs=salesAmountAuditLogs(record,kind);
@@ -12150,7 +12233,8 @@ async function salesExportSingleSheetExcel(sheetName,rows,widths,fileName,highVa
 }
 async function exportSalesStatDetailExcel(){
   var state=salesStatDetailState||{};var rows=Array.isArray(state.rows)?state.rows:[];
-  if(state.kind==='person'&&window.StarredPersonDeduction781&&!window.StarredPersonDeduction781.requireReady(String(state.key||'')))return;
+  var deductionSnapshot781=null;
+  if(state.kind==='person'){try{if(!window.StarredPersonDeduction781)throw new Error('扣款明細元件尚未載入，請重新整理。');deductionSnapshot781=window.StarredPersonDeduction781.snapshot()}catch(error){salesSetAdminStatus(String(error&&error.message||error),'error');return}}
   if(!rows.length&&state.kind!=='person'){salesSetAdminStatus('此明細目前沒有可匯出的資料。','error');return}
   var title=String((salesEl('salesStatDetailTitle')||{}).textContent||'業績明細').replace(/[\\/:*?"<>|]/g,'_');
   if(state.kind==='store'&&state.view==='matrix'){
@@ -12158,12 +12242,12 @@ async function exportSalesStatDetailExcel(){
     var matrixHeaders=matrix.model.people.map(function(person){return person.name}).concat(['銷售總額']);var matrixWidths=[13].concat(matrix.model.people.map(function(){return 14})).concat([16]);
     try{salesSetAdminStatus('正在匯出門市人員月表…','working');await salesExportSingleSheetExcel('門市人員月表',matrix.rows,matrixWidths,title+'_人員月表_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',matrixHeaders);salesSetAdminStatus('門市人員月表已匯出。','success')}catch(error){salesSetAdminStatus('月表匯出失敗：'+String(error&&error.message||error),'error')}return;
   }
-  var exportRows=rows.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':isReturn?'退貨':'業績','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':salesStoreText(record),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'是否代銷售':record.isProxySale?'是':'否','上班時數':isReturn?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursNumberText(salesWorkHoursValue(record))),'薪資狀態':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'上班備註':isReturn?'':salesWorkdayNoteForRecordIds([record.id]),'營業額':Number(record.grossAmount||0),'退貨':Number(record.returnAmount||0),'核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':record.originalInvoiceDate||'','最後更新':salesDateTime(isReturn&&state.kind==='person'?record.returnAssignedAt:record.updatedAt)}});
+  var exportRows=state.kind==='person'?salesPersonDailyExportRows782(rows,state.key):rows.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':isReturn?'退貨':'業績','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':salesStoreText(record),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'是否代銷售':record.isProxySale?'是':'否','上班時數':isReturn?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursNumberText(salesWorkHoursValue(record))),'薪資狀態':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'上班備註':isReturn?'':salesWorkdayNoteForRecordIds([record.id]),'營業額':Number(record.grossAmount||0),'退貨':Number(record.returnAmount||0),'核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':record.originalInvoiceDate||'','最後更新':salesDateTime(isReturn&&state.kind==='person'?record.returnAssignedAt:record.updatedAt)}});
   if(state.kind==='person'){
     (salesAdminData.expenses||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(state.key||'')}).forEach(function(item){var isExpense=item.requestType==='expense',requestLabel=item.requestType==='move_out'?'撤櫃':item.requestType==='move_in'?'進櫃':item.requestType==='overtime'?'移櫃／加班':item.requestType==='other'?'其他':'費用';exportRows.push({'日期':item.requestDate||'','類型':'核准'+requestLabel,'區域':(typeof areaText!=='undefined'&&areaText[item.area])||item.area||'','門市':isExpense?'':salesStoreText(item),'銷售／處理人員':salesPersonName(item.submitterLineUserId,item.submitterName),'回傳人員':salesPersonName(item.submitterLineUserId,item.submitterName),'是否代銷售':'','上班時數':isExpense?'':salesExpenseDuration(item).replace(' 小時',''),'薪資狀態':'另列，不計入業績','上班備註':'','營業額':0,'退貨':0,'核准費用':isExpense?Number(item.amount||0):0,'核准公司帳':0,'撤櫃／進櫃／其他／費用說明':(isExpense?String(item.reason||''):[salesStoreText(item),item.overtimeStart+'～'+item.overtimeEnd].filter(Boolean).join('・'))+(item.note?'；申請人備註：'+item.note:'')+(item.reviewNote?'；後台備註：'+item.reviewNote:''),'原發票日期':'','最後更新':salesDateTime(item.reviewedAt||item.updatedAt)})});
     (salesAdminData.externalAccounts||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(state.key||'')}).forEach(function(item){exportRows.push({'日期':item.transactionDate||'','類型':'核准公司帳','區域':'','門市':'','銷售／處理人員':salesPersonName(item.submitterLineUserId,item.submitterName),'回傳人員':salesPersonName(item.submitterLineUserId,item.submitterName),'是否代銷售':'','上班時數':'','薪資狀態':'核准後列入個人業績底部','上班備註':'','營業額':0,'退貨':0,'核准費用':0,'核准公司帳':Number(item.customerAmount||0),'撤櫃／進櫃／費用說明':'公司帳客戶交易','原發票日期':'','最後更新':salesDateTime(item.reviewedAt||item.updatedAt)})});
   }
-  if(state.kind==='person'&&window.StarredPersonDeduction781)return window.StarredPersonDeduction781.exportWithSalesRows(exportRows,[13,10,10,24,16,16,12,12,14,28,14,14,14,14,34,14,21],title+'_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx');
+  if(state.kind==='person'){try{salesSetAdminStatus('正在匯出個人明細、扣款與結算…','working');var exported781=await window.StarredPersonDeduction781.exportWorkbook(exportRows,title,deductionSnapshot781);if(exported781)salesSetAdminStatus('已匯出結算摘要、業績明細與扣款明細；每日營業額已扣退貨，原始資料與月結合計不變。','success')}catch(error){salesSetAdminStatus('明細匯出失敗：'+String(error&&error.message||error),'error')}return}
   try{salesSetAdminStatus('正在匯出明細 Excel…','working');await salesExportSingleSheetExcel('業績明細',exportRows,[13,10,10,24,16,16,12,12,14,28,14,14,14,14,34,14,21],title+'_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',['營業額','核准公司帳']);salesSetAdminStatus('明細 Excel 已匯出；上班備註與核准申請也會一併列出。','success')}catch(error){salesSetAdminStatus('明細匯出失敗：'+String(error&&error.message||error),'error')}
 }
 async function exportSalesPersonDetailExcel(){
@@ -12700,6 +12784,10 @@ window.salesApprovedExpenseReportRows=salesApprovedExpenseReportRows;
 window.STARRED_SALES_REPORT_BRIDGE_V55={
   getData:function(){return salesAdminData},
   getDetailState:function(){return salesStatDetailState},
+  personDailyModel782:salesPersonDailyModel782,
+  personDailyPrintRows782:salesPersonDailyPrintRows782,
+  personDailyExportRows782:salesPersonDailyExportRows782,
+  personalNetExcel782:salesPersonalNetExcel782,
   esc:salesEsc,
   money:salesMoney,
   periodLabel:salesAdminPeriodLabel,
@@ -16565,12 +16653,12 @@ function v54StoreDetailPrint(){
 function v54ExpenseRowsForPerson(key){return (salesAdminData.expenses||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(key||'')&&String(item.status||'approved')==='approved'}).map(function(item){var expense=String(item.requestType||'')==='expense',label=item.requestType==='move_out'?'撤櫃':item.requestType==='move_in'?'進櫃':item.requestType==='overtime'?'移櫃／加班':item.requestType==='other'?'其他':'費用',pay=expense?{hoursText:'—',rate:0,amountText:v54Money(item.amount||0),formulaText:'費用金額'}:salesExpenseOperationPayModel(item),detail=expense?String(item.reason||'未填寫緣由'):[salesStoreText(item),item.overtimeStart&&item.overtimeEnd?item.overtimeStart+'～'+item.overtimeEnd:''].filter(Boolean).join('・'),notes=[item.note?'申請：'+item.note:'',item.reviewNote?'後台：'+item.reviewNote:''].filter(Boolean).join('；');return {'日期':item.requestDate||'','類型':label,'店點／申請內容':detail,'工時':pay.hoursText,'時薪':pay.rate?v54Money(pay.rate):'—','核准金額':pay.amountText,'計算方式':pay.formulaText,'核准／備註':[item.reviewerName?'核准人：'+item.reviewerName:'已核准',notes].filter(Boolean).join('；')}})}
 function v54ExternalRowsForPerson(key){return (salesAdminData.externalAccounts||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(key||'')&&String(item.status||'approved')==='approved'}).map(function(item){return {'交易日期':item.transactionDate||'','公司帳金額':v54Money(item.customerAmount||0),'備註':item.note||'—','核准人':item.reviewerName||'—','核准時間':salesDateTime(item.reviewedAt)}})}
 function v54PersonDetailPrint(){
-  if(window.StarredPersonDeduction781&&!window.StarredPersonDeduction781.requireReady())return;
   var state=salesStatDetailState||{},summary=state.summary||{},key=String(state.key||''),name=salesPersonName(summary.lineUserId,summary.name||'LINE 使用者'),baseNet=Number(summary.netAmount!=null?summary.netAmount:Number(summary.grossAmount||0)-Number(summary.returnAmount||0)),expenses=v54ExpenseRowsForPerson(key),external=v54ExternalRowsForPerson(key),expenseAmount=(salesAdminData.expenses||[]).filter(function(item){return String(item.submitterLineUserId||'')===key&&String(item.requestType||'')==='expense'&&String(item.status||'approved')==='approved'}).reduce(function(sum,item){return sum+Number(item.amount||0)},0),externalAmount=(salesAdminData.externalAccounts||[]).filter(function(item){return String(item.submitterLineUserId||'')===key&&String(item.status||'approved')==='approved'}).reduce(function(sum,item){return sum+Number(item.customerAmount||0)},0);
-  var detail=(state.rows||[]).map(function(record){var isReturn=salesRecordType(record)==='return',workNote=isReturn?'':salesWorkdayNoteForRecordIds([record.id]);return {'日期':record.businessDate||'','類型':isReturn?'退貨扣除':'業績','店點':salesStoreText(record)+(record.isProxySale?'（代銷售）':''),'營業額':isReturn?'—':v54Money(record.grossAmount||0),'退貨':isReturn?v54Money(record.returnAmount||0):'—','原發票日':record.originalInvoiceDate||'—','上班備註':workNote||'—','最後更新':salesDateTime(isReturn?record.returnAssignedAt:record.updatedAt)}});
+  var detail=reportBridge.personDailyPrintRows782(state.rows||[],key);
   var otherTotal=expenseAmount+externalAmount,combinedTotal=baseNet+otherTotal;
-  var content='<div class="person-print"><div class="print-summary"><div><span>營業總額</span><b class="'+v54HighClass(summary.grossAmount||0).trim()+'">'+v54Esc(v54Money(summary.grossAmount||0))+'</b></div><div><span>退貨</span><b>'+v54Esc(v54Money(summary.returnAmount||0))+'</b></div><div><span>核准費用＋公司帳</span><b class="'+v54HighClass(otherTotal).trim()+'">'+v54Esc(v54Money(otherTotal))+'</b></div><div><span>業績合計</span><b class="'+v54HighClass(combinedTotal).trim()+'">'+v54Esc(v54Money(combinedTotal))+'</b></div></div>'+v54PrintTable('業績明細',detail,'數字置中；偶數列使用淺灰底，方便逐格核對。','person-detail-table',['營業額'])+v54PrintTable('核准撤櫃／進櫃／其他／費用',expenses,'採清單型格式；可計算時會同時列出工時、時薪、金額與公式。','person-expense-table',['核准金額'])+v54PrintTable('核准公司帳',external,'核准後列入個人業績底部。','person-external-table',['公司帳金額'])+'</div>';
-  if(window.StarredPersonDeduction781)content+=window.StarredPersonDeduction781.printSection(key,v54PrintTable);
+  var content='<div class="person-print"><div class="print-summary"><div><span>營業總額</span><b class="'+v54HighClass(summary.grossAmount||0).trim()+'">'+v54Esc(v54Money(summary.grossAmount||0))+'</b></div><div><span>退貨</span><b>'+v54Esc(v54Money(summary.returnAmount||0))+'</b></div><div><span>核准費用＋公司帳</span><b class="'+v54HighClass(otherTotal).trim()+'">'+v54Esc(v54Money(otherTotal))+'</b></div><div><span>業績合計</span><b class="'+v54HighClass(combinedTotal).trim()+'">'+v54Esc(v54Money(combinedTotal))+'</b></div></div>'+v54PrintTable('業績明細',detail,'同一人、同日、同店的退貨已併入退貨欄；營業額為扣除後金額，請勿再扣一次。紅字以扣後金額滿 10,000 元判斷；退貨歸屬及歸列月份不變。','person-detail-table',['營業額'])+v54PrintTable('核准撤櫃／進櫃／其他／費用',expenses,'採清單型格式；可計算時會同時列出工時、時薪、金額與公式。','person-expense-table',['核准金額'])+v54PrintTable('核准公司帳',external,'核准後列入個人業績底部。','person-external-table',['公司帳金額'])+'</div>';
+  if(!window.StarredPersonDeduction781)throw new Error('扣款明細元件尚未載入，請重新整理。');
+  content+=window.StarredPersonDeduction781.printHtml();
   return v54OpenPrint(name+'｜個人業績明細',content,{compact:false});
 }
 window.showSalesComparisonView=function(view,button){comparisonView=view==='average'?'average':'detail';document.querySelectorAll('[data-sales-comparison-view]').forEach(function(item){item.classList.toggle('active',String(item.dataset.salesComparisonView)===comparisonView)});var detail=v54El('salesComparisonDetailPanel'),average=v54El('salesComparisonAveragePanel');if(detail)detail.hidden=comparisonView!=='detail';if(average)average.hidden=comparisonView!=='average';var heading=v54El('salesComparisonHeading'),description=v54El('salesComparisonDescription');if(heading)heading.textContent=comparisonView==='average'?'平均業績':'業績對比';if(description)description.textContent=comparisonView==='average'?'比較每個人的總營業額、上班天數與平均業績。':'可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。';if(comparisonView==='average')renderSalesAveragePerformance();else renderSalesPersonDetail();if(button&&button.focus)button.focus()};
@@ -19144,6 +19232,7 @@ async function api(action,payload){
   if(typeof window.starredApi!=='function')throw new Error('系統尚未完成登入，請稍後再試。');
   var result=await window.starredApi(action,payload||{});
   if(!result||result.deductionApiBuild!==BUILD)throw new Error('扣款功能後端尚未更新。請先部署本次 line-api；其他既有功能仍可使用。');
+  if(action==='deduction_mutate'&&window.StarredPersonDeduction781)window.StarredPersonDeduction781.changed();
   return result;
 }
 function queryValue(scope,name){return String((el('ded78-'+scope+'-'+name)||{}).value||'')}
@@ -19377,205 +19466,273 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 </script>
-<style id="person-deduction-v781-styles">
-/* Only personal-detail layout changes; store detail and all other screens retain v78 styling. */
-#salesStatDetailModal.person-detail-mode .sales-stat-dialog{max-height:calc(100dvh - 36px)}
-#salesStatDetailModal.person-detail-mode .sales-stat-dialog>header,#salesStatDetailModal.person-detail-mode .sales-stat-dialog>footer{flex:0 0 auto}
-#salesStatDetailModal.person-detail-mode .ded781-scroll-body{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;flex:1 1 auto}
-#salesStatDetailModal.person-detail-mode .sales-stat-detail-summary{grid-template-columns:repeat(6,minmax(0,1fr))!important}
-#salesStatDetailModal .ded781-card{border-color:#edcfcb;background:#fff6f4}
-#salesStatDetailModal .ded781-card b,#salesStatDetailModal .ded781-amount{color:#a13d39;font-variant-numeric:tabular-nums}
-#salesStatDetailModal .ded781-card .is-reversal,#salesStatDetailModal .ded781-amount.is-reversal{color:#28724d}
-#salesStatDetailModal.person-detail-mode .ded781-scroll-body>.sales-stat-detail-view{overflow:visible;max-height:none}
-#salesStatDetailModal.person-detail-mode .ded781-scroll-body .sales-stat-detail-table-wrap{max-height:none}
-#salesPersonDeductionSection{margin:14px 20px 4px;border:1px solid #d8e1e7;border-radius:12px;overflow:hidden;background:#fff;font-size:14px;font-weight:400;color:#274253}
-#salesPersonDeductionSection>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#f3f7f9}
-#salesPersonDeductionSection h4{margin:0;font-size:17px;font-weight:400}
-#salesPersonDeductionSection header p{margin:5px 0 0;font-size:14px;color:#657d89}
-#salesPersonDeductionSection button{font-weight:400!important;font-size:14px!important;min-width:0!important;white-space:nowrap}
-#salesPersonDeductionSection .ded781-note{margin:0;padding:10px 14px;color:#607786;font-size:14px;line-height:1.55}
-#salesPersonDeductionSection .ded781-message{margin:0 14px 10px;padding:10px 12px;border-radius:8px;background:#eef5f8;color:#426171;line-height:1.55;white-space:pre-wrap}
-#salesPersonDeductionSection .ded781-message.error{background:#fff0ed;color:#973c34}
-#salesPersonDeductionSection .ded781-totals:not(:empty){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 14px 12px}
-#salesPersonDeductionSection .ded781-totals>div{border:1px solid #dce5eb;border-radius:8px;padding:9px;background:#fafcfd}
-#salesPersonDeductionSection .ded781-totals span{display:block;font-size:14px;color:#647c89}
-#salesPersonDeductionSection .ded781-totals b{display:block;margin-top:4px;font-size:18px;font-weight:400}
-#salesPersonDeductionSection .ded781-empty{padding:14px;color:#657d89;border-top:1px solid #dce5eb;line-height:1.6}
-#salesPersonDeductionSection .ded781-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
-#salesPersonDeductionSection .ded781-table th{padding:8px 10px;background:#2d4b5b;color:#fff;text-align:left;font-weight:400}
-#salesPersonDeductionSection .ded781-table td{vertical-align:top;padding:10px;border-bottom:1px solid #e0e8ed;overflow-wrap:anywhere;white-space:pre-wrap}
-#salesPersonDeductionSection .ded781-table th:first-child{width:21%}
-#salesPersonDeductionSection .ded781-table th:nth-child(2){width:9%}
-#salesPersonDeductionSection .ded781-table th:nth-child(3){width:38%}
-#salesPersonDeductionSection .ded781-table th:nth-child(4){width:16%}
-#salesPersonDeductionSection .ded781-table th:last-child{width:16%}
-#salesPersonDeductionSection .ded781-table tr:nth-child(even){background:#f6f9fb}
-#salesPersonDeductionSection .ded781-table small{display:block;font-size:12px;color:#657d89;margin-top:5px;line-height:1.5}
-@media(max-width:760px){
- #salesStatDetailModal.person-detail-mode .sales-stat-dialog{max-height:calc(100dvh - 16px)}
+
+<!-- UI HOTFIX: 20260916-person-deduction-detail-v78.1; v78 API/SQL unchanged. -->
+<style id="person-deduction-v781-style">
+/* v78.1: only personal detail gains a separate ledger and settlement. */
+#salesStatDetailModal.person-detail-mode .sales-stat-dialog{overflow-y:auto!important;overscroll-behavior:contain}
+#salesStatDetailModal.person-detail-mode .sales-stat-dialog>header,
+#salesStatDetailModal.person-detail-mode .sales-stat-dialog>div,
+#salesStatDetailModal.person-detail-mode .sales-stat-dialog>section,
+#salesStatDetailModal.person-detail-mode .sales-stat-dialog>footer{flex-shrink:0}
+#salesStatDetailModal.person-detail-mode .sales-stat-detail-summary{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+#salesStatDetailModal.person-detail-mode .sales-stat-detail-summary>div{min-width:0;grid-column:auto!important}
+#salesStatDetailModal.person-detail-mode .sales-stat-detail-summary span{font-size:12px!important;font-weight:400!important}
+#salesStatDetailModal.person-detail-mode .sales-stat-detail-summary b{font-size:19px!important;font-weight:400!important}
+#salesStatDetailModal.person-detail-mode .sales-stat-dialog>footer{position:sticky;bottom:0;z-index:8;background:#fff;border-top:1px solid #d8e1e7}
+#salesStatDetailModal .ded781-card{background:#fff6f5;border-color:#eccac7}
+#salesStatDetailModal .ded781-card b{color:#b83535}
+#salesStatDetailModal .ded781-card.settlement{background:#edf7f2;border-color:#c7e2d6}
+#salesStatDetailModal .ded781-card.settlement b{color:#285f4b}
+#salesStatDetailModal .ded781-card small{display:block;font-size:12px;color:#708592;margin-top:4px;font-weight:400}
+#salesPersonDeduction781{margin:14px 20px 4px;padding:14px;border:1px solid #dfcaca;border-radius:12px;background:#fff;font-size:14px;font-weight:400}
+#salesPersonDeduction781>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:0;margin:0 0 8px;border:0}
+#salesPersonDeduction781 h4{margin:0;font-size:18px;font-weight:400;color:#294858}
+#salesPersonDeduction781 p{margin:5px 0 8px;line-height:1.6;color:#687f8d;font-size:14px}
+#salesPersonDeduction781 button{font-size:14px!important;font-weight:400!important;white-space:nowrap}
+#salesPersonDeduction781 .ded781-notice{padding:8px 10px;background:#f4f7f9;border-radius:8px}
+#salesPersonDeduction781 .ded781-status{padding:9px 10px;background:#f3f7fa;border-radius:8px;line-height:1.6}
+#salesPersonDeduction781 .ded781-status.error{color:#ac3535;background:#fff1ef}
+#salesPersonDeduction781 .ded781-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
+#salesPersonDeduction781 .ded781-table th,#salesPersonDeduction781 .ded781-table td{padding:9px 8px;text-align:left;vertical-align:top;border-bottom:1px solid #dce5e9;font-weight:400;overflow-wrap:anywhere}
+#salesPersonDeduction781 .ded781-table th{background:#edf3f6;color:#335569}
+#salesPersonDeduction781 .ded781-table th:nth-child(1){width:21%}
+#salesPersonDeduction781 .ded781-table th:nth-child(2){width:15%}
+#salesPersonDeduction781 .ded781-table th:nth-child(3){width:15%}
+#salesPersonDeduction781 .ded781-table th:nth-child(4){width:35%}
+#salesPersonDeduction781 .ded781-table th:nth-child(5){width:14%}
+#salesPersonDeduction781 small{display:block;font-size:12px;color:#708592;margin-top:4px;white-space:pre-wrap}
+#salesPersonDeduction781 .ded781-reason{white-space:pre-wrap}
+#salesPersonDeduction781 .ded781-money{color:#b83535;font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#salesStatDetailModal .reversal{color:#287856!important}
+#salesPersonDeduction781 .ded781-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px}
+#salesPersonDeduction781 .ded781-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+#salesPersonDeduction781 .ded781-totals>div{padding:9px 11px;background:#f6f8fa;border-radius:8px}
+#salesPersonDeduction781 .ded781-totals span{display:block;color:#708592;font-size:13px}
+#salesPersonDeduction781 .ded781-totals b{display:block;font-size:17px;font-weight:400;color:#294858;margin-top:3px}
+#salesPersonDeduction781 .ded781-totals .ded781-calculation{grid-column:1/-1;background:#edf7f2}
+@media(max-width:900px){#salesStatDetailModal.person-detail-mode .sales-stat-detail-summary{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:620px){
  #salesStatDetailModal.person-detail-mode .sales-stat-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
- #salesStatDetailModal.person-detail-mode .sales-stat-detail-summary>div:last-child{grid-column:auto!important}
- #salesPersonDeductionSection{margin:12px 14px 4px}
- #salesPersonDeductionSection>header{align-items:flex-start;flex-wrap:wrap;padding:11px}
- #salesPersonDeductionSection .ded781-note{padding:10px 11px}
- #salesPersonDeductionSection .ded781-totals:not(:empty){gap:5px;padding:0 11px 10px}
- #salesPersonDeductionSection .ded781-totals>div{padding:8px 6px}
- #salesPersonDeductionSection .ded781-table,#salesPersonDeductionSection .ded781-table tbody{display:block;width:100%}
- #salesPersonDeductionSection .ded781-table thead{display:none}
- #salesPersonDeductionSection .ded781-table tr{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #d8e1e7;padding:6px}
- #salesPersonDeductionSection .ded781-table td{display:block;border:0;padding:7px;min-width:0}
- #salesPersonDeductionSection .ded781-table td::before{display:block;content:attr(data-label);color:#657d89;font-size:12px;margin-bottom:4px}
- #salesPersonDeductionSection .ded781-table td:nth-child(3){grid-column:1/-1;grid-row:3;border-top:1px solid #e2e9ed}
- #salesStatDetailModal.person-detail-mode footer button{min-width:0!important;white-space:nowrap!important;font-size:14px!important}
+ #salesStatDetailModal.person-detail-mode .sales-stat-dialog{max-height:calc(100dvh - 16px)!important}
+ #salesPersonDeduction781{margin:10px 14px 4px;padding:10px}
+ #salesPersonDeduction781>header{flex-wrap:wrap}
+ #salesPersonDeduction781 .ded781-table,#salesPersonDeduction781 .ded781-table tbody{display:block}
+ #salesPersonDeduction781 .ded781-table thead{display:none}
+ #salesPersonDeduction781 .ded781-table tr{display:block;border-top:1px solid #d8e1e7;padding:6px 0}
+ #salesPersonDeduction781 .ded781-table td{display:grid;grid-template-columns:100px minmax(0,1fr);gap:4px 8px;width:100%;border:0;padding:5px 0;white-space:normal}
+ #salesPersonDeduction781 .ded781-table td:before{content:attr(data-label);font-size:13px;color:#708592}
+ #salesPersonDeduction781 .ded781-table small{grid-column:2;margin-top:0}
+ #salesPersonDeduction781 .ded781-totals{gap:5px}
+ #salesPersonDeduction781 .ded781-totals>div{padding:8px}
+ #salesPersonDeduction781 .ded781-pagination{flex-wrap:wrap;gap:6px}
 }
 </style>
 <script id="person-deduction-v781-module">
-/* v78.1: read-only personal deduction display. Never changes sales/expenses or the v78 API contract. */
+/* v78.1: read-only integration of the existing v78 ledger into personal details.
+   No deduction mutation, no new API, and no change to sales/ranking/expense totals. */
 (function(){
 'use strict';
-var API_BUILD='20260916-independent-deduction-v78';
 var bridge=window.STARRED_SALES_REPORT_BRIDGE_V55;
 if(!bridge)return;
-var active=null,sequence=0,exporting=false;
+var API_BUILD='20260916-independent-deduction-v78';
+var current=null,exportBusy=false,pageSize=20;
 function el(id){return document.getElementById(id)}
-function esc(v){return bridge.esc(v==null?'':String(v))}
-function money(v){return (v<0?'−':'')+'$'+Math.abs(v).toLocaleString('zh-TW')}
-function stamp(v){var d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
-function todayMonth(){var parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()),out={};parts.forEach(function(p){out[p.type]=p.value});return out.year+'-'+out.month}
+function esc(value){return bridge.esc(value==null?'':String(value))}
+function money(value){var n=Number(value);return (n<0?'−':'')+'$'+Math.abs(n).toLocaleString('zh-TW')}
+function stamp(value){if(!value)return '—';var d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
 function allowed(){return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
-function auth(){var u=typeof currentUser!=='undefined'?currentUser:null,p=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(u&&u.adminSessionToken||'')+'|'+String(window.starredVerifiedLineUser&&window.starredVerifiedLineUser.lineUserId||p&&p.id||'')}
-function dates(){return [String((el('salesAdminDateFrom')||{}).value||''),String((el('salesAdminDateTo')||{}).value||'')]}
-function monthNumber(s){if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(s)||Number(s.slice(0,4))<2000)throw new Error('扣款查詢月份不正確，請重新選擇業績日期。');return Number(s.slice(0,4))*12+Number(s.slice(5))-1}
-function monthText(n){return String(Math.floor(n/12)).padStart(4,'0')+'-'+String(n%12+1).padStart(2,'0')}
-function period(ds){
-  var from=ds[0].slice(0,7),to=ds[1].slice(0,7),note='';
-  if(!from||!to){from=to||from||todayMonth();to=from;note='未指定完整起訖日期，扣款僅顯示 '+from+' 整月。'}
-  if(ds[0]&&ds[1]&&ds[0]>ds[1])throw new Error('開始日期不能晚於結束日期。');
-  var start=monthNumber(from),end=monthNumber(to),months=[];
-  if(start>end||end-start>23)throw new Error('扣款明細一次最多查詢 24 個月，請縮小業績日期區間；不會顯示部分金額。');
-  for(var n=start;n<=end;n++)months.push(monthText(n));
-  return {months:months,label:from===to?from:from+' ～ '+to,note:note};
+function auth(){var profile=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(window.starredVerifiedLineUser?.lineUserId||profile?.id||'')+'|'+String(typeof currentUser!=='undefined'&&currentUser?currentUser.adminSessionToken||'':'')}
+function values(){return {dateFrom:String(el('salesAdminDateFrom')?.value||''),dateTo:String(el('salesAdminDateTo')?.value||''),area:String(el('salesAdminArea')?.value||''),storeId:String(el('salesAdminStore')?.value||''),lineUserId:String(el('salesAdminPerson')?.value||'')}}
+function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;var d=new Date(s+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===s}
+function monthsFor(q){
+  if(!validDate(q.dateFrom)||!validDate(q.dateTo))throw new Error('請設定完整的業績開始／結束日期，才能核對同月份扣款。');
+  if(q.dateFrom>q.dateTo)throw new Error('開始日期不能晚於結束日期。');
+  var from=Number(q.dateFrom.slice(0,4))*12+Number(q.dateFrom.slice(5,7))-1,to=Number(q.dateTo.slice(0,4))*12+Number(q.dateTo.slice(5,7))-1;
+  if(to-from>=24)throw new Error('扣款明細一次最多查詢 24 個月，請縮小日期區間；不會顯示不完整合計。');
+  var out=[];for(var i=from;i<=to;i++)out.push(String(Math.floor(i/12)).padStart(4,'0')+'-'+String(i%12+1).padStart(2,'0'));return out;
 }
-function current(s){var modal=el('salesStatDetailModal');return !!(s&&active===s&&s.seq===sequence&&modal&&!modal.hidden&&allowed()&&s.auth===auth()&&bridge.getDetailState()===s.detail&&JSON.stringify(s.dates)===JSON.stringify(dates()))}
-function message(text,error){var box=el('salesPersonDeductionMessage');if(box){box.textContent=text||'';box.classList.toggle('error',!!error);box.hidden=!text}}
+function isCurrent(t){var s=bridge.getDetailState();return !t.invalidated&&current===t&&s===t.state&&bridge.getData()===t.source&&auth()===t.auth&&allowed()&&JSON.stringify(values())===t.queryKey&&s.kind==='person'&&String(s.key)===t.person}
+function modalVisible(){return !!el('salesStatDetailModal')&&!el('salesStatDetailModal').hidden}
+function buttons(disabled){var modal=el('salesStatDetailModal');if(!modal)return;modal.querySelectorAll('footer button[onclick="printSalesStatDetail()"],footer button[onclick="exportSalesStatDetailExcel()"]').forEach(function(b){b.disabled=disabled;b.title=disabled?'扣款資料尚未完整載入，請稍候或重新讀取。':''})}
 function mount(){
-  var modal=el('salesStatDetailModal'),dialog=modal&&modal.querySelector('.sales-stat-dialog');if(!dialog)return;
-  if(!el('salesStatDetailDeductionCard')){
-    var card=document.createElement('div');card.id='salesStatDetailDeductionCard';card.className='ded781-card';card.hidden=true;
-    card.innerHTML='<span>扣款另列</span><b id="salesStatDetailDeductionNet">—</b><small>不計入業績合計</small>';
-    var summary=dialog.querySelector('.sales-stat-detail-summary');summary.insertBefore(card,summary.lastElementChild);
-  }
-  if(!el('salesPersonDeductionSection')){
-    var section=document.createElement('section');section.id='salesPersonDeductionSection';section.className='ded781-section';section.hidden=true;
-    section.innerHTML='<header><div><h4>扣款明細（獨立列示）</h4><p id="salesPersonDeductionPeriod"></p></div><button type="button" class="secondary" data-ded781-reload>重新整理扣款</button></header><p class="ded781-note" id="salesPersonDeductionScope"></p><div id="salesPersonDeductionMessage" class="ded781-message" role="status" aria-live="polite" hidden></div><div id="salesPersonDeductionTotals" class="ded781-totals"></div><div id="salesPersonDeductionList"></div>';
-    dialog.insertBefore(section,dialog.querySelector('footer'));
-  }
+  var modal=el('salesStatDetailModal');if(!modal||el('salesPersonDeduction781'))return;
+  var summary=modal.querySelector('.sales-stat-detail-summary');
+  var last=summary.lastElementChild;
+  last.insertAdjacentHTML('beforebegin','<div id="salesPersonDeductionCard781" class="ded781-card" hidden><span>當月淨扣款</span><b id="salesPersonDeductionNet781">—</b><small>核准扣款－沖回</small></div><div id="salesPersonSettlementCard781" class="ded781-card settlement" hidden><span>扣款後結算</span><b id="salesPersonSettlement781">—</b><small>業績合計－淨扣款</small></div>');
+  modal.querySelector('.sales-stat-dialog > footer').insertAdjacentHTML('beforebegin','<section id="salesPersonDeduction781" class="ded781-section" aria-label="個人當月扣款明細" hidden><header><div><h4 id="ded781Heading">當月扣款明細</h4><p id="ded781Period"></p></div><button type="button" class="secondary" data-ded781-action="refresh">重新讀取扣款</button></header><p id="ded781Notice" class="ded781-notice"></p><div id="ded781Status" class="ded781-status" role="status" aria-live="polite"></div><div id="ded781Rows"></div><div id="ded781Pagination" class="ded781-pagination"></div><div id="ded781Totals" class="ded781-totals"></div></section>');
 }
-function layout(person){
-  var modal=el('salesStatDetailModal'),dialog=modal&&modal.querySelector('.sales-stat-dialog');if(!dialog)return;
-  var body=el('salesPersonDetailScrollBody');
-  if(person&&!body){
-    body=document.createElement('div');body.id='salesPersonDetailScrollBody';body.className='ded781-scroll-body';
-    var nodes=Array.from(dialog.children).filter(function(node){return node.tagName!=='HEADER'&&node.tagName!=='FOOTER'});
-    dialog.insertBefore(body,dialog.querySelector('footer'));nodes.forEach(function(node){body.appendChild(node)});
-  }else if(!person&&body){while(body.firstChild)dialog.insertBefore(body.firstChild,body);body.remove()}
+function hide(){['salesPersonDeductionCard781','salesPersonSettlementCard781','salesPersonDeduction781'].forEach(function(id){if(el(id))el(id).hidden=true});buttons(false)}
+function setStatus(text,error){var box=el('ded781Status');if(box){box.textContent=text;box.hidden=!text;box.classList.toggle('error',!!error)}}
+function resetUI(t){
+  mount();['salesPersonDeductionCard781','salesPersonSettlementCard781','salesPersonDeduction781'].forEach(function(id){if(el(id))el(id).hidden=false});
+  el('salesPersonDeductionNet781').textContent='—';el('salesPersonSettlement781').textContent='—';
+  el('ded781Rows').innerHTML='';el('ded781Pagination').innerHTML='';el('ded781Totals').innerHTML='';
+  el('ded781Period').textContent='扣款月份：'+(t.months.length===1?t.months[0]:(t.months[0]||'—')+' ～ '+(t.months[t.months.length-1]||'—'));
+  el('ded781Heading').textContent=t.months.length>1?'查詢月份扣款明細':'當月扣款明細';
+  el('ded781Notice').textContent='按核准／沖回的入帳月份整月列示，不依原事件日期，也不受業績店點篩選影響。未核准不扣款；原業績與排行榜不變。';
+  var card=el('salesPersonDeductionCard781');card.querySelector('span').textContent=t.months.length>1?'查詢月份淨扣款':'當月淨扣款';
+  buttons(true);
 }
-function setOutputs(){var modal=el('salesStatDetailModal');if(!modal)return;modal.querySelectorAll('footer button[onclick]').forEach(function(b){if(!/^(printSalesStatDetail|exportSalesStatDetailExcel)\(/.test(b.getAttribute('onclick')))return;
-  var disabled=!!(active&&(!active.ready||exporting));
-  if(disabled&&!b.hasAttribute('data-ded781-lock')){b.dataset.ded781Lock='1';b.dataset.ded781WasDisabled=b.disabled?'1':'0';b.disabled=true}
-  else if(!disabled&&b.hasAttribute('data-ded781-lock')){b.disabled=b.dataset.ded781WasDisabled==='1';delete b.dataset.ded781Lock;delete b.dataset.ded781WasDisabled}
-})}
-function clear(){sequence++;active=null;['salesPersonDeductionSection','salesStatDetailDeductionCard'].forEach(function(id){if(el(id))el(id).hidden=true});['salesPersonDeductionList','salesPersonDeductionTotals'].forEach(function(id){if(el(id))el(id).textContent=''});if(el('salesStatDetailDeductionNet'))el('salesStatDetailDeductionNet').textContent='—';message('');setOutputs()}
-function addTotal(total,amount){if(amount>0)total.deduction+=amount;else total.reversal-=amount;total.net+=amount;if(!Number.isSafeInteger(total.deduction)||!Number.isSafeInteger(total.reversal)||!Number.isSafeInteger(total.net))throw new Error('扣款合計超出安全數值範圍，請縮小查詢區間。')}
-function emptyTotal(month){return {month:month,deduction:0,reversal:0,net:0}}
-function normalize(result,month,key){
-  if(!result||result.deductionApiBuild!==API_BUILD)throw new Error('扣款後端尚未更新為 v78；業績資料不受影響，請確認原扣款功能部署狀態。');
-  if(result.month!==month||!Array.isArray(result.entries)||!Array.isArray(result.requests)||!result.summary)throw new Error('扣款回傳資料不完整，請重新整理；本次不顯示部分金額。');
-  var total=emptyTotal(month),ids=new Set(),requests=new Map();
-  result.requests.forEach(function(r){if(String(r.employeeLineUserId||'')!==key)throw new Error('扣款人員資料不一致，請重新整理。');requests.set(String(r.id),r)});
-  var rows=result.entries.map(function(e){
-    if(!e.id||ids.has(String(e.id))||String(e.employeeLineUserId)!==key||e.month!==month)throw new Error('扣款月份、人員或明細筆數不一致，請重新整理。');
-    if(!Number.isSafeInteger(e.amount)||e.amount===0||!['deduction','reversal'].includes(e.type)||(e.type==='reversal')!==(e.amount<0))throw new Error('扣款金額資料不正確，請重新整理。');
-    ids.add(String(e.id));addTotal(total,e.amount);var r=requests.get(String(e.requestId))||{};
-    return {id:String(e.id),requestId:String(e.requestId||''),month:month,type:e.type,amount:e.amount,employeeName:String(e.employeeName||r.employeeName||''),reason:String(e.reason||''),note:String(r.note||''),reviewNote:String(r.reviewNote||''),actorName:String(e.actorName||''),createdAt:String(e.createdAt||'')};
-  });
-  if(total.deduction!==result.summary.deductionAmount||total.reversal!==result.summary.reversalAmount||total.net!==result.summary.netAmount)throw new Error('扣款合計與明細不一致，請重新整理；不會以不完整資料匯出。');
-  return {rows:rows,total:total};
+function totalsFor(state,source){
+  var s=state.summary||{},key=String(state.key),gross=Number(s.grossAmount||0),returns=Number(s.returnAmount||0);
+  var base=Number(s.netAmount!=null?s.netAmount:gross-returns);
+  var expenses=(source.expenses||[]).filter(function(r){return String(r.submitterLineUserId||'')===key&&String(r.requestType||'')==='expense'&&String(r.status||'approved')==='approved'}).reduce(function(a,r){return a+Number(r.amount||0)},0);
+  var external=(source.externalAccounts||[]).filter(function(r){return String(r.submitterLineUserId||'')===key&&String(r.status||'approved')==='approved'}).reduce(function(a,r){return a+Number(r.customerAmount||0)},0);
+  if(![gross,returns,base,expenses,external].every(Number.isFinite))throw new Error('業績合計資料不正確，請重新整理報表。');
+  return {gross:gross,returns:returns,base:base,other:expenses+external,before:base+expenses+external};
 }
-function render(s){
-  if(!current(s))return;var t=s.total;
-  el('salesStatDetailDeductionNet').textContent=money(t.net);el('salesStatDetailDeductionNet').classList.toggle('is-reversal',t.net<0);
-  el('salesPersonDeductionTotals').innerHTML=[['核准扣款',t.deduction],['沖回金額',t.reversal],['淨扣款',t.net]].map(function(pair){return '<div><span>'+pair[0]+'</span><b>'+esc(money(pair[1]))+'</b></div>'}).join('');
-  var headers=['記帳月份／時間','類型','扣款原因／備註','核准／經辦人','扣款金額'];
-  el('salesPersonDeductionList').innerHTML=s.rows.length?'<table class="ded781-table"><thead><tr>'+headers.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+s.rows.map(function(r){var cells=[esc(r.month)+'<small>'+esc(stamp(r.createdAt))+'</small>',r.type==='reversal'?'沖回':'扣款',esc(r.reason)+(r.note?'<small>備註：'+esc(r.note)+'</small>':'')+(r.reviewNote?'<small>審核備註：'+esc(r.reviewNote)+'</small>':''),esc(r.actorName||'—'),'<span class="ded781-amount'+(r.amount<0?' is-reversal':'')+'">'+esc(money(r.amount))+'</span>'];return '<tr>'+cells.map(function(cell,i){return '<td data-label="'+headers[i]+'">'+cell+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table>':'<div class="ded781-empty">此人員在上述月份沒有已入帳扣款或沖回；待審核申請不列入。</div>';
-  message('');setOutputs();
+async function readMonths(t){
+  var results=new Array(t.months.length),next=0;
+  async function worker(){while(next<t.months.length){
+    var index=next++,month=t.months[index];if(!isCurrent(t))return;
+    var result=await window.starredApi('deduction_list',{scope:'admin',month:month,employeeId:t.person});
+    if(!isCurrent(t))return;
+    if(!result||result.deductionApiBuild!==API_BUILD)throw new Error('請使用已部署的 v78 扣款後端；目前未取得相容的扣款資料。');
+    if(result.month!==month||!Array.isArray(result.entries)||!Array.isArray(result.requests)||!result.summary)throw new Error('扣款資料不完整或月份不一致，請重新讀取；不會以 0 元代替。');
+    var requests=new Map(result.requests.map(function(r){return [String(r.id),r]}));
+    var positive=0,negative=0;
+    var rows=result.entries.map(function(r){
+      var amount=Number(r.amount);
+      if(String(r.employeeLineUserId)!==t.person||r.month!==month||!r.id||!r.requestId||!Number.isSafeInteger(amount)||amount===0||!['deduction','reversal'].includes(r.type)||(r.type==='deduction'&&amount<0)||(r.type==='reversal'&&amount>0))throw new Error('扣款人員、月份或金額不一致，請重新讀取。');
+      if(amount>0)positive+=amount;else negative-=amount;
+      var request=requests.get(String(r.requestId));
+      if(request&&String(request.employeeLineUserId)!==t.person)throw new Error('扣款申請人員資料不一致。');
+      return {id:String(r.id),requestId:String(r.requestId),employeeLineUserId:t.person,employeeName:String(r.employeeName||t.name),month:month,type:r.type,amount:amount,reason:String(r.reason||''),note:String(request?.note||''),reviewNote:String(request?.reviewNote||''),actorName:String(r.actorName||''),createdAt:String(r.createdAt||'')};
+    });
+    if(positive!==Number(result.summary.deductionAmount)||negative!==Number(result.summary.reversalAmount)||positive-negative!==Number(result.summary.netAmount))throw new Error('扣款合計與明細不一致，請重新讀取；本次不顯示部分金額。');
+    results[index]=rows;
+  }}
+  await Promise.all(Array.from({length:Math.min(3,t.months.length)},worker));
+  if(!isCurrent(t))return null;
+  var rows=results.flat(),seen=new Set();rows.forEach(function(r){if(seen.has(r.id))throw new Error('扣款明細重複，請重新讀取。');seen.add(r.id)});
+  return rows.sort(function(a,b){return b.month.localeCompare(a.month)||b.createdAt.localeCompare(a.createdAt)||a.id.localeCompare(b.id)});
 }
 async function open(){
-  clear();var detail=bridge.getDetailState()||{},person=detail.kind==='person';mount();layout(person);if(!person)return false;
-  var s={seq:sequence,auth:auth(),detail:detail,key:String(detail.key||''),dates:dates(),ready:false,rows:[],monthly:[],total:emptyTotal(''),period:null};active=s;
-  el('salesPersonDeductionSection').hidden=false;el('salesStatDetailDeductionCard').hidden=false;
-  el('salesPersonDeductionPeriod').textContent='';el('salesPersonDeductionScope').textContent='扣款獨立列示，不扣營業額、業績合計、排行榜或其他費用。';
-  message('正在讀取此人員的扣款明細…');setOutputs();
+  var state=bridge.getDetailState();if(!state||state.kind!=='person'){current=null;hide();return false}
+  var query=state.query781||values();
+  var t={state:state,source:bridge.getData(),auth:auth(),person:String(state.key),name:bridge.personName(state.key,state.summary?.name||'LINE 使用者'),query:query,queryKey:JSON.stringify(query),months:[],ready:false,error:'',rows:[],page:1};
+  current=t;
   try{
-    if(!allowed()||!s.key)throw new Error('請以會計或系統管理員重新登入後查看扣款。');
-    s.period=period(s.dates);el('salesPersonDeductionPeriod').textContent='扣款月份：'+s.period.label+'（按記帳月份整月列示）';
-    el('salesPersonDeductionScope').textContent=(s.period.note?s.period.note+' ':'')+'扣款不計入業績；不依店點或單日篩選。正數為扣款，負數為沖回加回。';
-    // One month per v78 request: preserve the deployed backend and never add unsupported fields.
-    for(var i=0;i<s.period.months.length;i++){
-      if(!current(s))return false;var month=s.period.months[i];
-      var result=await window.starredApi('deduction_list',{scope:'admin',month:month,employeeId:s.key});
-      if(!current(s))return false;var normalized=normalize(result,month,s.key);
-      s.rows=s.rows.concat(normalized.rows);s.monthly.push(normalized.total);normalized.rows.forEach(function(row){addTotal(s.total,row.amount)});
-    }
-    s.rows.sort(function(a,b){return b.month.localeCompare(a.month)||b.createdAt.localeCompare(a.createdAt)||a.id.localeCompare(b.id)});
-    s.ready=true;render(s);return true;
+    t.months=monthsFor(query);resetUI(t);
+    if(!allowed())throw new Error('個人扣款明細僅開放已登入的會計與系統管理員，請重新登入。');
+    if(!isCurrent(t))throw new Error('業績篩選條件已變更，請等待報表更新後再開啟明細。');
+    t.totals=totalsFor(state,t.source);setStatus('正在讀取已入帳扣款，尚未完成前暫不顯示結算金額…',false);
+    var rows=await readMonths(t);if(!rows||!isCurrent(t))return false;
+    t.rows=rows;t.deduction=rows.filter(function(r){return r.amount>0}).reduce(function(a,r){return a+r.amount},0);
+    t.reversal=-rows.filter(function(r){return r.amount<0}).reduce(function(a,r){return a+r.amount},0);t.net=t.deduction-t.reversal;t.settlement=t.totals.before-t.net;t.ready=true;render(t);return true;
   }catch(error){
-    if(active!==s)return false;s.ready=false;s.rows=[];s.monthly=[];s.total=emptyTotal('');s.error=String(error&&error.message||error);
-    if(el('salesStatDetailDeductionNet'))el('salesStatDetailDeductionNet').textContent='—';
-    el('salesPersonDeductionTotals').textContent='';el('salesPersonDeductionList').textContent='';
-    message('扣款明細未完整載入：'+s.error+' 業績金額維持不變；請按「重新整理扣款」後再列印或匯出。',true);setOutputs();return false;
+    if(current!==t)return false;
+    // A failed/outdated request is never represented by a zero deduction or a final settlement.
+    t.ready=false;t.error=String(error&&error.message||error);resetUI(t);setStatus('扣款未完成載入：'+t.error,true);return false;
   }
 }
-function requireReady(key){if(!current(active)||!active.ready||(key&&String(key)!==active.key)){message('扣款尚未完整載入或登入／查詢條件已變更。請按「重新整理扣款」後再列印、匯出。',true);return false}return true}
-function printSection(key,printTable){
-  if(!requireReady(key))throw new Error('扣款尚未完整載入。');
-  var s=active,t=s.total,rows=s.rows.map(function(r){return {'記帳月份':r.month,'記帳時間':stamp(r.createdAt),'類型':r.type==='reversal'?'沖回':'扣款','原因／備註':[r.reason,r.note?'備註：'+r.note:'',r.reviewNote?'審核備註：'+r.reviewNote:''].filter(Boolean).join('；'),'核准／經辦人':r.actorName||'—','扣款金額':money(r.amount)}});
-  var note='扣款月份：'+s.period.label+'（整月）。核准扣款 '+money(t.deduction)+'；沖回 '+money(t.reversal)+'；淨扣款 '+money(t.net)+'。獨立列示，不計入業績或其他費用；負數為沖回加回。';
-  if(s.period.note)note+=' '+s.period.note;
-  return printTable('扣款明細（獨立列示）',rows,note,'person-deduction-table',[]);
+function render(t){
+  if(!isCurrent(t)||!t.ready)return;
+  setStatus('',false);el('salesPersonDeductionNet781').textContent=money(t.net);el('salesPersonSettlement781').textContent=money(t.settlement);
+  el('salesPersonDeductionNet781').classList.toggle('reversal',t.net<0);
+  el('salesPersonSettlement781').classList.toggle('sales-high-value',t.settlement>=10000);
+  var pages=Math.max(1,Math.ceil(t.rows.length/pageSize));t.page=Math.max(1,Math.min(t.page,pages));
+  var rows=t.rows.slice((t.page-1)*pageSize,t.page*pageSize);
+  el('ded781Rows').innerHTML=!rows.length?'<p class="ded781-empty">此人員在上述月份沒有已入帳扣款或沖回。未核准的申請不列入結算。</p>':'<table class="ded781-table"><thead><tr><th>入帳月份／時間</th><th>類型</th><th>扣款／沖回</th><th>原因／備註</th><th>經辦人</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td data-label="入帳月份／時間">'+esc(r.month)+'<small>'+esc(stamp(r.createdAt))+'</small></td><td data-label="類型">'+(r.type==='reversal'?'沖回（加回）':'核准扣款')+'</td><td data-label="扣款／沖回" class="ded781-money '+(r.amount<0?'reversal':'')+'">'+esc(money(r.amount))+'</td><td data-label="原因／備註" class="ded781-reason">'+esc(r.reason)+(r.note?'<small>備註：'+esc(r.note)+'</small>':'')+(r.reviewNote?'<small>審核備註：'+esc(r.reviewNote)+'</small>':'')+'</td><td data-label="經辦人">'+esc(r.actorName||'—')+'</td></tr>'}).join('')+'</tbody></table>';
+  el('ded781Pagination').innerHTML=t.rows.length>pageSize?'<button type="button" class="secondary" data-ded781-action="prev" '+(t.page<=1?'disabled':'')+'>上一頁</button><span>共 '+t.rows.length+' 筆｜第 '+t.page+' / '+pages+' 頁；列印、Excel 包含全部明細</span><button type="button" class="secondary" data-ded781-action="next" '+(t.page>=pages?'disabled':'')+'>下一頁</button>':'';
+  el('ded781Totals').innerHTML='<div><span>核准扣款</span><b>'+esc(money(t.deduction))+'</b></div><div><span>沖回金額（加回）</span><b>'+esc(money(t.reversal))+'</b></div><div><span>淨扣款</span><b>'+esc(money(t.net))+'</b></div><div class="ded781-calculation"><span>扣款後結算</span><b>'+esc(money(t.totals.before))+' − ('+esc(money(t.net))+') ＝ '+esc(money(t.settlement))+'</b><small>以上為本查詢業績合計扣除整月淨扣款，不是薪資計算；營業額、原業績合計不變。</small></div>';
+  buttons(exportBusy);
 }
-function excelSpecs(s,salesRows,widths){
-  var ledger=s.rows.map(function(r){return {'扣款月份':r.month,'人員':r.employeeName,'類型':r.type==='reversal'?'沖回':'扣款','金額（正數扣款／負數沖回）':r.amount,'原因':r.reason,'備註':r.note,'審核備註':r.reviewNote,'核准／經辦人':r.actorName,'記帳時間':stamp(r.createdAt),'申請編號':r.requestId}});
-  if(!ledger.length)ledger=[{'扣款月份':s.period.label,'人員':bridge.personName(s.key,s.detail.summary&&s.detail.summary.name),'類型':'無已入帳明細','金額（正數扣款／負數沖回）':0,'原因':'本列為查詢結果說明，不是扣款紀錄。','備註':'','審核備註':'','核准／經辦人':'','記帳時間':'','申請編號':''}];
-  var summary=s.monthly.map(function(t){return {'扣款月份':t.month,'人員':bridge.personName(s.key,s.detail.summary&&s.detail.summary.name),'核准扣款':t.deduction,'沖回金額':t.reversal,'淨扣款':t.net,'列示方式':'按記帳月份整月列示，不計入業績、排行榜或其他費用。','查詢說明':s.period.note||'扣款不依店點或單日篩選。'}});
-  return [{name:'業績明細',rows:bridge.rowsWithFilterDates(salesRows),widths:[16,16].concat(widths),high:['營業額','核准公司帳']},{name:'扣款明細',rows:ledger,widths:[14,18,12,24,42,32,32,18,23,40],high:[]},{name:'扣款合計',rows:summary,widths:[14,18,16,16,16,42,42],high:[]}];
+function snapshot(){
+  var t=current;
+  if(!t||!t.ready||!isCurrent(t)){var message=t?.error||'扣款明細尚未完整載入，請按「重新讀取扣款」後再列印或匯出。';if(el('ded781Status'))setStatus(message,true);throw new Error(message)}
+  return t;
 }
-async function exportWithSalesRows(rows,widths,fileName){
-  if(exporting||!requireReady())return false;var s=active,specs=excelSpecs(s,rows,widths);exporting=true;setOutputs();message('正在匯出業績及獨立扣款明細…');
+function printHtml(){
+  var t=snapshot(),heading=t.months.length===1?t.months[0]:t.months[0]+' ～ '+t.months[t.months.length-1];
+  var html='<section class="ded781-print"><h2>扣款明細｜'+esc(heading)+'</h2><p class="section-note">按入帳月份整月列示，不依原事件日期／店點篩選。未核准不扣款；正數扣款，負數沖回。</p>';
+  html+='<div class="print-summary"><div><span>核准扣款</span><b>'+esc(money(t.deduction))+'</b></div><div><span>沖回金額（加回）</span><b>'+esc(money(t.reversal))+'</b></div><div><span>淨扣款</span><b style="color:#b83535">'+esc(money(t.net))+'</b></div><div><span>扣款後結算</span><b>'+esc(money(t.settlement))+'</b></div></div>';
+  html+=t.rows.length?'<table><thead><tr><th>月份／入帳時間</th><th>類型</th><th>扣款／沖回</th><th>原因／備註</th><th>經辦人</th></tr></thead><tbody>'+t.rows.map(function(r){return '<tr><td>'+esc(r.month)+'<br>'+esc(stamp(r.createdAt))+'</td><td>'+(r.type==='reversal'?'沖回（加回）':'核准扣款')+'</td><td style="text-align:right;color:'+(r.amount<0?'#287856':'#b83535')+'">'+esc(money(r.amount))+'</td><td>'+esc(r.reason)+(r.note?'<br>備註：'+esc(r.note):'')+(r.reviewNote?'<br>審核備註：'+esc(r.reviewNote):'')+'</td><td>'+esc(r.actorName||'—')+'</td></tr>'}).join('')+'</tbody></table>':'<p class="empty">上述月份沒有已入帳扣款或沖回。</p>';
+  return html+'<p class="section-note">原業績合計 '+esc(money(t.totals.before))+' − 淨扣款 ('+esc(money(t.net))+') ＝ 扣款後結算 '+esc(money(t.settlement))+'。不改變業績、排行榜及其他費用；非薪資計算。</p></section>';
+}
+function unionRows(rows){var headers=[];rows.forEach(function(r){Object.keys(r).forEach(function(k){if(!headers.includes(k))headers.push(k)})});return rows.map(function(r){var o={};headers.forEach(function(k){o[k]=r[k]==null?'':r[k]});return o})}
+async function exportWorkbook(originalRows,title,t){
+  if(exportBusy)return false;if(snapshot()!==t)throw new Error('明細已更新，請重新匯出。');
+  exportBusy=true;buttons(true);
   try{
-    var excelReady=await bridge.ensureExcel(),buffer;
-    if(!current(s)||!s.ready)throw new Error('查詢或登入身分已變更，已停止匯出，請重新開啟明細。');
-    if(excelReady){
-      var workbook=new window.ExcelJS.Workbook();workbook.creator='星紅織品業績系統';
-      specs.forEach(function(spec){var sheet=bridge.createStyledSheet(workbook,spec.name,spec.rows,spec.widths);bridge.markHighValueCells(sheet,spec.high);
-        if(spec.name!=='業績明細'){sheet.eachRow(function(row,n){if(n>1){row.height=36;row.eachCell(function(cell){cell.alignment={vertical:'middle',wrapText:true}})}})}
-      });buffer=await workbook.xlsx.writeBuffer();
+    var summary=[
+      {'項目':'人員','金額／內容':t.name,'說明':''},
+      {'項目':'業績查詢區間','金額／內容':t.query.dateFrom+' ～ '+t.query.dateTo,'說明':'依畫面篩選'},
+      {'項目':'扣款月份','金額／內容':t.months.join('、'),'說明':'按月份整月列示；不依原事件日期或店點篩選'},
+      {'項目':'營業總額','金額／內容':t.totals.gross,'說明':'不受扣款影響'},
+      {'項目':'退貨','金額／內容':t.totals.returns,'說明':'沿用原報表'},
+      {'項目':'當月業績','金額／內容':t.totals.base,'說明':'沿用原報表，不扣本次扣款'},
+      {'項目':'其他費用','金額／內容':t.totals.other,'說明':'原核准費用＋公司帳，不混入扣款'},
+      {'項目':'業績合計（扣款前）','金額／內容':t.totals.before,'說明':'當月業績＋其他費用'},
+      {'項目':'核准扣款','金額／內容':t.deduction,'說明':'依入帳月份'},
+      {'項目':'沖回金額','金額／內容':t.reversal,'說明':'依沖回入帳月份加回，不改前月'},
+      {'項目':'淨扣款','金額／內容':t.net,'說明':'核准扣款－沖回金額；負數代表加回'},
+      {'項目':'扣款後結算','金額／內容':t.settlement,'說明':'原業績合計－淨扣款；非薪資計算'}
+    ];
+    var ledger=t.rows.map(function(r){return {'扣款月份':r.month,'人員':r.employeeName,'類型':r.type==='reversal'?'沖回（加回）':'核准扣款','金額（正數扣款／負數沖回）':r.amount,'原因':r.reason,'備註':r.note,'審核備註':r.reviewNote,'經辦人':r.actorName,'入帳時間':stamp(r.createdAt),'申請編號':r.requestId,'記帳編號':r.id}});
+    var detail=unionRows(originalRows);if(!detail.length)detail=[{'說明':'此區間沒有業績、費用或公司帳；扣款與結算請見另兩張工作表。'}];
+    if(!ledger.length)ledger=[{'說明':'上述月份沒有已入帳扣款或沖回。'}];
+    var specs=[{name:'結算摘要',rows:summary,widths:[26,38,60]},{name:'業績明細',rows:detail,widths:Object.keys(detail[0]).map(function(k){return /說明|備註/.test(k)?42:/時間|更新/.test(k)?23:18})},{name:'扣款明細',rows:ledger,widths:[15,18,17,23,46,32,32,18,24,40,40]}];
+    await bridge.ensureExcel();if(snapshot()!==t)throw new Error('人員、月份或扣款資料已變更，已停止舊資料匯出。');
+    var buffer;
+    if(window.ExcelJS&&typeof window.ExcelJS.Workbook==='function'){
+      var book=new window.ExcelJS.Workbook();book.creator='星紅織品';
+      specs.forEach(function(spec){var sheet=bridge.createStyledSheet(book,spec.name,spec.rows,spec.widths);sheet.eachRow(function(row,i){row.height=i===1?28:36;row.eachCell(function(cell){cell.font=Object.assign({},cell.font,{name:'Microsoft JhengHei',size:12,bold:false});cell.alignment=Object.assign({},cell.alignment,{wrapText:true,vertical:'middle'});if(typeof cell.value==='number')cell.numFmt='#,##0;[Red]-#,##0';});});bridge.markHighValueCells(sheet,['營業額','核准公司帳']);if(spec.name==='業績明細')bridge.personalNetExcel782(sheet,spec.rows,false);});
+      var ss=book.getWorksheet('結算摘要');ss.getCell('B9').value={formula:'B7+B8',result:t.totals.before};ss.getCell('B12').value={formula:'B10-B11',result:t.net};ss.getCell('B13').value={formula:'B9-B12',result:t.settlement};
+      ['B5','B7','B9','B13'].forEach(function(k){var c=ss.getCell(k),v=typeof c.value==='object'?c.value.result:c.value;if(v>=10000)c.font=Object.assign({},c.font,{color:{argb:'FFC62828'}})});
+      buffer=await book.xlsx.writeBuffer();
     }else{
-      if(!window.XLSX||!window.XLSX.utils)throw new Error('Excel 元件尚未載入，請重新整理。');
-      var book=window.XLSX.utils.book_new();specs.forEach(function(spec){window.XLSX.utils.book_append_sheet(book,bridge.createSheetJs(spec.rows,spec.widths,spec.high),spec.name)});
-      buffer=window.XLSX.write(book,{bookType:'xlsx',type:'array',compression:true,cellStyles:true});
+      if(!window.XLSX?.utils)throw new Error('Excel 元件尚未載入，請重新整理後再試。');
+      var wb=window.XLSX.utils.book_new();specs.forEach(function(spec){var ws=bridge.createSheetJs(spec.rows,spec.widths,['營業額','核准公司帳']);if(spec.name==='業績明細')bridge.personalNetExcel782(ws,spec.rows,true);window.XLSX.utils.book_append_sheet(wb,ws,spec.name)});
+      [['B9','B7+B8',t.totals.before],['B12','B10-B11',t.net],['B13','B9-B12',t.settlement]].forEach(function(x){Object.assign(wb.Sheets['結算摘要'][x[0]],{t:'n',f:x[1],v:x[2],z:'#,##0;[Red]-#,##0'})});
+      buffer=window.XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true,cellStyles:true});
     }
-    if(!current(s)||!s.ready)throw new Error('查詢或登入身分已變更，已停止匯出。');
-    bridge.downloadExcel(buffer,fileName);message('Excel 已匯出：業績明細、扣款明細及扣款合計分開列示。');return true;
-  }catch(error){if(active===s)message('匯出失敗：'+String(error&&error.message||error),true);return false}
-  finally{exporting=false;setOutputs()}
+    if(snapshot()!==t)throw new Error('人員、月份或扣款資料已變更，已停止舊資料匯出。');
+    bridge.downloadExcel(buffer,title.replace(/[\\/:*?"<>|]/g,'_')+'_'+t.query.dateFrom+'_至_'+t.query.dateTo+'_含扣款.xlsx');return true;
+  }finally{exportBusy=false;if(current===t&&t.ready&&isCurrent(t))render(t)}
 }
-window.StarredPersonDeduction781={open:open,clear:clear,requireReady:requireReady,printSection:printSection,exportWithSalesRows:exportWithSalesRows};
-window.STARRED_PERSON_DEDUCTION_UI_BUILD='20260916-person-deduction-display-v78.1';
-document.addEventListener('click',function(event){if(event.target.closest('[data-ded781-reload]'))open()});
-var oldLogout=window.logout;window.logout=function(){clear();if(typeof window.closeSalesStatDetail==='function')window.closeSalesStatDetail();return oldLogout.apply(this,arguments)};
-window.addEventListener('storage',function(event){if(active&&/starred_(current_user|admin_login_expiry|current_line_user)/.test(event.key||'')){clear();if(typeof window.closeSalesStatDetail==='function')window.closeSalesStatDetail()}});
+function reportLoading(){if(current){current.invalidated=true;current.ready=false;current.error='業績報表更新中，請稍候…';resetUI(current);setStatus(current.error,false)}}
+function reportReady(){if(modalVisible()&&bridge.getDetailState()?.kind==='person')window.openSalesStatDetail('person',bridge.getDetailState().key)}
+function reportFailed(){if(current){current.ready=false;current.error='業績報表未完成更新，請先重新整理報表，再核對扣款。';resetUI(current);setStatus(current.error,true)}}
+function changed(){if(modalVisible()&&bridge.getDetailState()?.kind==='person')open();else current=null}
+function close(){current=null;hide()}
+function clear(){current=null;hide();if(el('salesStatDetailModal')?.classList.contains('person-detail-mode')){el('salesStatDetailModal').hidden=true;document.body.classList.remove('sales-stat-modal-open')}}
+document.addEventListener('click',function(event){var b=event.target.closest('[data-ded781-action]');if(!b||b.disabled)return;var action=b.dataset.ded781Action;if(action==='refresh'){open();return}if(current?.ready&&isCurrent(current)){current.page+=action==='prev'?-1:1;render(current)}});
+var oldLogout=window.logout;window.logout=function(){clear();return oldLogout.apply(this,arguments)};
+window.StarredPersonDeduction781={open:open,close:close,snapshot:snapshot,printHtml:printHtml,exportWorkbook:exportWorkbook,changed:changed,reportLoading:reportLoading,reportReady:reportReady,reportFailed:reportFailed,clear:clear};
+window.STARRED_PERSON_DEDUCTION_UI_BUILD='20260916-person-deduction-detail-v78.1';
 })();
 </script>
+
+<!-- v78.2: daily returns/net presentation; API contract remains v76, deductions v78. -->
+<style id="person-daily-returns-v782-style">
+#salesStatDetailModal.person-detail-mode .return782-net-cell{white-space:normal!important;min-width:210px}
+#salesStatDetailModal .return782-net-value{font-size:inherit;font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
+#salesStatDetailModal .return782-net-note{display:inline-block;font-size:14px;font-weight:400;color:#667b88;white-space:nowrap;margin-left:4px}
+#salesStatDetailModal .return782-meta{display:block;font-size:12px;font-weight:400;color:#708592;line-height:1.5;margin-top:3px}
+#salesStatDetailModal .return782-source{margin-top:4px;font-size:12px;font-weight:400;white-space:normal;max-width:100%}
+#salesStatDetailModal .return782-source>summary{cursor:pointer;color:#536f7f;font-weight:400;line-height:1.5;list-style-position:inside}
+#salesStatDetailModal .return782-source>div{margin-top:6px;padding:7px;border:1px solid #d8e1e7;border-radius:8px;background:#f7fafc}
+#salesStatDetailModal .return782-source-row{margin:0;padding:5px 0;border-bottom:1px solid #d8e1e7}
+#salesStatDetailModal .return782-source-row:last-child{border:0}
+#salesStatDetailModal .return782-source-row small{display:block;font-size:12px;font-weight:400;line-height:1.6;color:#667b88;white-space:normal}
+#salesStatDetailModal .return782-audit{min-height:28px!important;height:auto!important;padding:4px 8px!important;font-size:12px!important;font-weight:400!important;margin-top:4px}
+#salesStatDetailModal .return782-only{background:#fff9f7}
+@media(min-width:901px){#salesStatDetailModal.person-detail-mode .sales-stat-detail-table{table-layout:fixed;width:100%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(1){width:11%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(2){width:8%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(3){width:20%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(4){width:25%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(5){width:9%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(6){width:12%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table th:nth-child(7){width:15%}#salesStatDetailModal.person-detail-mode .sales-stat-detail-table td{white-space:normal;overflow-wrap:anywhere}}
+@media(max-width:620px){
+ #salesStatDetailModal.person-detail-mode .sales-stat-detail-table-wrap{overflow-x:visible!important;min-width:0!important;border:0!important;background:transparent!important}
+ #salesStatDetailModal.person-detail-mode .sales-stat-detail-table,#salesStatDetailModal.person-detail-mode .sales-stat-detail-table tbody{display:block!important;min-width:0!important;width:100%!important;table-layout:auto!important}
+ #salesStatDetailModal.person-detail-mode .sales-stat-detail-table thead{display:none!important}
+ #salesStatDetailModal.person-detail-mode .return782-daily-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-bottom:9px;padding:6px;border:1px solid #d8e1e7;border-radius:11px;overflow:hidden;background:#fff}
+ #salesStatDetailModal.person-detail-mode .return782-daily-row>td{display:block!important;min-width:0!important;width:auto!important;padding:6px 7px!important;border:0!important;font-size:14px!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere}
+ #salesStatDetailModal.person-detail-mode .return782-daily-row>td:before{display:block;content:attr(data-label);font-size:12px;color:#708592;line-height:1.4;margin-bottom:3px;font-weight:400}
+ #salesStatDetailModal.person-detail-mode .return782-daily-row>td:nth-child(3){grid-column:1/-1}
+ #salesStatDetailModal.person-detail-mode .return782-daily-row>td:nth-child(4),#salesStatDetailModal.person-detail-mode .return782-daily-row>td:nth-child(5){border-top:1px solid #e4ebef!important;border-bottom:1px solid #e4ebef!important}
+ #salesStatDetailModal.person-detail-mode .return782-net-note{display:block;margin-left:0;font-size:14px}
+ #salesStatDetailModal.person-detail-mode .return782-only{background:#fff9f7}
+}
+</style>
+<script id="person-daily-returns-v782-marker">window.STARRED_PERSON_RETURNS_UI_BUILD='20260916-person-daily-net-returns-v78.2';</script>
 </body>
 </html>
