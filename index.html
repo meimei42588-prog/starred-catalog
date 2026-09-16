@@ -3959,7 +3959,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <div>
       <span class="expense-eyebrow">OVERTIME &amp; EXPENSE</span>
       <h1>費用申請</h1>
-      <p>選擇撤櫃、進櫃、其他或費用，送出後可在下方追蹤審核狀態；既有移櫃／加班紀錄仍會保留。</p>
+      <p>選擇撤櫃、進櫃、其他、費用或扣款；扣款核准後另列於扣款明細，不影響業績。既有紀錄仍保留。</p>
     </div>
     <div class="expense-current-user"><span>目前申請人</span><b id="expenseCurrentUser">LINE 登入後自動帶入</b></div>
   </section>
@@ -13965,7 +13965,7 @@ function expenseMoney(value){return '$'+Math.max(0,Number(value||0)).toLocaleStr
 function expenseDateTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(value)}}
 function expenseIdentity(){var profile=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;var verified=window.starredVerifiedLineUser||{};return {id:String((profile&&profile.id)||verified.lineUserId||''),name:String(verified.employeeName||(profile&&(profile.employeeName||profile.name))||verified.lineDisplayName||(profile&&profile.displayName)||'LINE 使用者')}}
 function expenseStatusLabel(value){return value==='approved'?'已核准':value==='rejected'?'未通過':value==='cancelled'?'已取消':'待審核'}
-function expenseTypeLabel(value){return value==='move_out'?'撤櫃':value==='move_in'?'進櫃':value==='overtime'?'移櫃／加班':value==='other'?'其他':'費用'}
+function expenseTypeLabel(value){return value==='deduction'?'扣款':value==='move_out'?'撤櫃':value==='move_in'?'進櫃':value==='overtime'?'移櫃／加班':value==='other'?'其他':'費用'}
 function expenseIsOperationType(value){return value==='move_out'||value==='move_in'||value==='overtime'||value==='other'}
 function expenseStoreText(item){return [item&&item.storeName,item&&item.storeFloor].filter(Boolean).join('｜')||'未指定店點'}
 function expenseDuration(start,end){start=String(start||'');end=String(end||'');if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end))return '';var a=Number(start.slice(0,2))*60+Number(start.slice(3));var b=Number(end.slice(0,2))*60+Number(end.slice(3));if(b<=a)return '';return window.starredHoursMinutesNumberText((b-a)/60)+' 小時'}
@@ -13974,8 +13974,8 @@ function expenseDetailText(item){return expenseIsOperationType(item.requestType)
 
 function updateExpenseDuration(){var text=expenseDuration((expenseEl('expenseStartTime')||{}).value,(expenseEl('expenseEndTime')||{}).value);if(expenseEl('expenseDurationPreview'))expenseEl('expenseDurationPreview').textContent=text||'—'}
 function rebuildExpenseStoreOptions(){var select=expenseEl('expenseStore');if(!select)return;var area=String((expenseEl('expenseArea')||{}).value||'');var list=(typeof stores!=='undefined'?stores:[]).filter(function(store){return (!area||String(store.area||store.region||'')===area)&&store.is_enabled!==false&&store.enabled!==false}).slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant')||String(a.floor||'').localeCompare(String(b.floor||''),'zh-Hant')});select.innerHTML='<option value="">'+(area?'請選擇店點':'請先選擇區域')+'</option>'+list.map(function(store){return '<option value="'+expenseEsc(store.id)+'">'+expenseEsc([store.name,store.floor].filter(Boolean).join('｜'))+'</option>'}).join('')}
-function toggleExpenseRequestType(){var type=String((expenseEl('expenseRequestType')||{}).value||'move_out'),isOperation=expenseIsOperationType(type),isOther=type==='other';if(expenseEl('expenseOvertimeFields'))expenseEl('expenseOvertimeFields').hidden=!isOperation;if(expenseEl('expenseCostFields'))expenseEl('expenseCostFields').hidden=type!=='expense';if(expenseEl('expenseSubmitBtn'))expenseEl('expenseSubmitBtn').textContent='送出'+expenseTypeLabel(type)+'申請';if(expenseEl('expenseOperationDateLabel'))expenseEl('expenseOperationDateLabel').textContent=expenseTypeLabel(type)+'日期 *';if(expenseEl('expenseNoteLabel'))expenseEl('expenseNoteLabel').textContent=isOther?'備註 *':'備註（選填）';if(expenseEl('expenseNoteHelp'))expenseEl('expenseNoteHelp').textContent=isOther?'選擇「其他」時一定要填寫備註，最多 500 個字。':'撤櫃、進櫃與費用都可填寫，最多 500 個字。';if(expenseEl('expenseNote'))expenseEl('expenseNote').placeholder=isOther?'請說明其他作業內容（必填）':'有需要再補充；沒有填也可以送出';document.querySelectorAll('[data-expense-type]').forEach(function(button){var active=String(button.dataset.expenseType||'')===type;button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false')});expenseSetMessage('expenseFormStatus','')}
-function setExpenseRequestType(type){type=['move_out','move_in','other','expense'].includes(String(type||''))?String(type):'move_out';if(expenseEl('expenseRequestType'))expenseEl('expenseRequestType').value=type;toggleExpenseRequestType()}
+function toggleExpenseRequestType(){var type=String((expenseEl('expenseRequestType')||{}).value||'move_out'),isOperation=expenseIsOperationType(type),isOther=type==='other';if(expenseEl('expenseOvertimeFields'))expenseEl('expenseOvertimeFields').hidden=!isOperation;if(expenseEl('expenseCostFields'))expenseEl('expenseCostFields').hidden=type!=='expense';if(expenseEl('expenseSubmitBtn'))expenseEl('expenseSubmitBtn').textContent='送出'+expenseTypeLabel(type)+'申請';if(expenseEl('expenseOperationDateLabel'))expenseEl('expenseOperationDateLabel').textContent=expenseTypeLabel(type)+'日期 *';if(expenseEl('expenseNoteLabel'))expenseEl('expenseNoteLabel').textContent=isOther?'備註 *':'備註（選填）';if(expenseEl('expenseNoteHelp'))expenseEl('expenseNoteHelp').textContent=isOther?'選擇「其他」時一定要填寫備註，最多 500 個字。':'撤櫃、進櫃與費用都可填寫，最多 500 個字。';if(expenseEl('expenseNote'))expenseEl('expenseNote').placeholder=isOther?'請說明其他作業內容（必填）':'有需要再補充；沒有填也可以送出';document.querySelectorAll('[data-expense-type]').forEach(function(button){var active=String(button.dataset.expenseType||'')===type;button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false')});expenseSetMessage('expenseFormStatus','');if(window.StarredDeduction78)window.StarredDeduction78.syncType(type)}
+function setExpenseRequestType(type){type=['move_out','move_in','other','expense','deduction'].includes(String(type||''))?String(type):'move_out';if(expenseEl('expenseRequestType'))expenseEl('expenseRequestType').value=type;toggleExpenseRequestType()}
 function renderExpenseReceiptPreview(){var box=expenseEl('expenseReceiptPreview');if(!box)return;box.innerHTML=expenseReceiptData.map(function(url,index){return '<div class="expense-receipt-item"><img src="'+expenseEsc(url)+'" alt="單據照片 '+String(index+1)+'"><button type="button" onclick="removeExpenseReceipt('+String(index)+')" aria-label="移除第 '+String(index+1)+' 張">×</button></div>'}).join('')}
 async function previewExpenseReceipts(event){var files=Array.from(event&&event.target&&event.target.files||[]);if(!files.length)return;if(files.length>5){alert('發票或明細照片最多 5 張。');files=files.slice(0,5)}expenseReceiptData=[];expenseSetMessage('expenseFormStatus','正在壓縮單據照片…','working');try{for(var i=0;i<files.length;i++){if(!String(files[i].type||'').startsWith('image/'))throw new Error('請選擇圖片檔');expenseReceiptData.push(await compressOrderPhoto(files[i]))}renderExpenseReceiptPreview();expenseSetMessage('expenseFormStatus','已加入 '+String(expenseReceiptData.length)+' 張單據照片。','success')}catch(error){expenseReceiptData=[];renderExpenseReceiptPreview();expenseSetMessage('expenseFormStatus','照片處理失敗：'+String(error&&error.message||error),'error')}finally{if(event&&event.target)event.target.value=''}}
 function removeExpenseReceipt(index){expenseReceiptData.splice(Number(index),1);renderExpenseReceiptPreview();expenseSetMessage('expenseFormStatus',expenseReceiptData.length?'目前保留 '+String(expenseReceiptData.length)+' 張單據照片。':'')}
@@ -14003,7 +14003,7 @@ function renderExpenseOwnList(){
 }
 async function loadExpenseData(){if(expenseLoading)return;expenseLoading=true;var identity=expenseIdentity();if(expenseEl('expenseCurrentUser'))expenseEl('expenseCurrentUser').textContent=identity.name||'LINE 使用者';expenseSetMessage('expenseFormStatus','正在讀取申請紀錄…','working');try{var result=await starredApi('expense_bootstrap',{});expenseOwnData=Array.isArray(result.requests)?result.requests:[];renderExpenseOwnList();expenseSetMessage('expenseFormStatus','')}catch(error){expenseSetMessage('expenseFormStatus','申請紀錄載入失敗：'+String(error&&error.message||error),'error')}finally{expenseLoading=false}}
 function resetExpenseForm(type){var today=expenseToday();['expenseReason','expenseNote','expenseAmount','expenseStartTime','expenseEndTime'].forEach(function(id){if(expenseEl(id))expenseEl(id).value=''});if(expenseEl('expenseOvertimeDate'))expenseEl('expenseOvertimeDate').value=today;if(expenseEl('expenseDate'))expenseEl('expenseDate').value=today;expenseReceiptData=[];renderExpenseReceiptPreview();updateExpenseDuration();if(expenseIsOperationType(type)&&expenseEl('expenseStore'))expenseEl('expenseStore').value=''}
-async function submitExpenseRequest(){var type=String((expenseEl('expenseRequestType')||{}).value||'move_out'),isOperation=expenseIsOperationType(type);var requestDate=isOperation?String((expenseEl('expenseOvertimeDate')||{}).value||''):String((expenseEl('expenseDate')||{}).value||'');var payload={requestType:type,requestDate:requestDate,area:isOperation?String((expenseEl('expenseArea')||{}).value||''):'',storeId:isOperation?String((expenseEl('expenseStore')||{}).value||''):'',overtimeStart:isOperation?String((expenseEl('expenseStartTime')||{}).value||''):'',overtimeEnd:isOperation?String((expenseEl('expenseEndTime')||{}).value||''):'',reason:type==='expense'?String((expenseEl('expenseReason')||{}).value||'').trim():'',note:String((expenseEl('expenseNote')||{}).value||'').trim(),amount:type==='expense'?Number((expenseEl('expenseAmount')||{}).value||0):0,receiptDataList:type==='expense'?expenseReceiptData:[]};if(!requestDate){expenseSetMessage('expenseFormStatus','請填寫申請日期。','error');return}if(payload.note.length>500){expenseSetMessage('expenseFormStatus','備註最多 500 個字。','error');return}if(type==='other'&&!payload.note){expenseSetMessage('expenseFormStatus','類型選擇「其他」時，備註一定要填寫。','error');if(expenseEl('expenseNote'))expenseEl('expenseNote').focus();return}if(isOperation&&(!payload.area||!payload.storeId||!payload.overtimeStart||!payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','請完整選擇區域、店點、日期與作業時間。','error');return}if(isOperation&&!expenseDuration(payload.overtimeStart,payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','作業結束時間必須晚於開始時間。','error');return}if(type==='expense'&&(payload.reason.length<2||payload.amount<=0)){expenseSetMessage('expenseFormStatus','請填寫費用緣由與正確金額。','error');return}var button=expenseEl('expenseSubmitBtn');if(button)button.disabled=true;expenseSetMessage('expenseFormStatus','正在送出申請…','working');try{await starredApi('expense_submit',payload);resetExpenseForm(type);expenseSetMessage('expenseFormStatus',expenseTypeLabel(type)+'申請已送出，等待後台審核。','success');await loadExpenseData()}catch(error){expenseSetMessage('expenseFormStatus','送出失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
+async function submitExpenseRequest(){if(String((expenseEl('expenseRequestType')||{}).value||'')==='deduction'){if(!window.StarredDeduction78){expenseSetMessage('expenseFormStatus','扣款模組尚未載入，請重新整理。','error');return}return window.StarredDeduction78.submitOwn()}var type=String((expenseEl('expenseRequestType')||{}).value||'move_out'),isOperation=expenseIsOperationType(type);var requestDate=isOperation?String((expenseEl('expenseOvertimeDate')||{}).value||''):String((expenseEl('expenseDate')||{}).value||'');var payload={requestType:type,requestDate:requestDate,area:isOperation?String((expenseEl('expenseArea')||{}).value||''):'',storeId:isOperation?String((expenseEl('expenseStore')||{}).value||''):'',overtimeStart:isOperation?String((expenseEl('expenseStartTime')||{}).value||''):'',overtimeEnd:isOperation?String((expenseEl('expenseEndTime')||{}).value||''):'',reason:type==='expense'?String((expenseEl('expenseReason')||{}).value||'').trim():'',note:String((expenseEl('expenseNote')||{}).value||'').trim(),amount:type==='expense'?Number((expenseEl('expenseAmount')||{}).value||0):0,receiptDataList:type==='expense'?expenseReceiptData:[]};if(!requestDate){expenseSetMessage('expenseFormStatus','請填寫申請日期。','error');return}if(payload.note.length>500){expenseSetMessage('expenseFormStatus','備註最多 500 個字。','error');return}if(type==='other'&&!payload.note){expenseSetMessage('expenseFormStatus','類型選擇「其他」時，備註一定要填寫。','error');if(expenseEl('expenseNote'))expenseEl('expenseNote').focus();return}if(isOperation&&(!payload.area||!payload.storeId||!payload.overtimeStart||!payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','請完整選擇區域、店點、日期與作業時間。','error');return}if(isOperation&&!expenseDuration(payload.overtimeStart,payload.overtimeEnd)){expenseSetMessage('expenseFormStatus','作業結束時間必須晚於開始時間。','error');return}if(type==='expense'&&(payload.reason.length<2||payload.amount<=0)){expenseSetMessage('expenseFormStatus','請填寫費用緣由與正確金額。','error');return}var button=expenseEl('expenseSubmitBtn');if(button)button.disabled=true;expenseSetMessage('expenseFormStatus','正在送出申請…','working');try{await starredApi('expense_submit',payload);resetExpenseForm(type);expenseSetMessage('expenseFormStatus',expenseTypeLabel(type)+'申請已送出，等待後台審核。','success');await loadExpenseData()}catch(error){expenseSetMessage('expenseFormStatus','送出失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
 
 function openExpenseReceipts(scope,requestId){var source=scope==='admin'?expenseAdminData:scope==='sales'&&window.salesAdminData?window.salesAdminData.expenses:expenseOwnData;var item=(source||[]).find(function(row){return String(row.id||'')===String(requestId||'')});var urls=item&&Array.isArray(item.receiptUrls)?item.receiptUrls.filter(Boolean):[];if(!urls.length){alert('這筆申請沒有可查看的單據照片。');return}if(typeof openLightboxGallery==='function')openLightboxGallery(urls,0);else window.open(urls[0],'_blank','noopener')}
 function expenseAdminFilteredRows(){var type=String((expenseEl('expenseAdminType')||{}).value||'');var keyword=String((expenseEl('expenseAdminKeyword')||{}).value||'').trim().toLocaleLowerCase('zh-Hant');return expenseAdminData.filter(function(item){var text=[item.submitterName,item.storeName,item.storeFloor,item.reason,item.note,item.reviewNote,item.requestDate,expenseTypeLabel(item.requestType),expenseStatusLabel(item.status)].join(' ').toLocaleLowerCase('zh-Hant');return (!type||item.requestType===type)&&(!keyword||text.includes(keyword))})}
@@ -19085,5 +19085,291 @@ body.leave67-wide-active main.container{
 <script id="employee-leave-v76-build-marker">window.STARRED_UI_PATCH='20260908-leave-settlement-contract-v76';</script>
 <script id="employee-leave-v761-click-fix-marker">window.STARRED_UI_PATCH='20260908-leave-subtab-click-fix-v76.1';</script>
 <script id="line-store-alias-reply-v771-marker">window.STARRED_LINE_WORKFLOW_BUILD='20260914-store-alias-reply-v77.1';window.STARRED_UI_PATCH='20260914-store-alias-reply-v77.1';</script>
+<!-- v78 adds independent deductions; login/API contract remains v76 for cached clients. -->
+<style id="deduction-v78-styles">
+/* v78 styles scoped to deductions; existing screens keep their original appearance. */
+.ded78,.ded78 button,.ded78 input,.ded78 select,.ded78 textarea{font-family:inherit;font-size:14px;font-weight:400!important;line-height:1.5}
+.ded78{min-width:0;color:#274253}.ded78 h2{margin:0;font-size:21px;font-weight:400!important}.ded78 p{margin:6px 0 10px}.ded78 b,.ded78 strong{font-weight:400!important}
+.ded78-heading{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;margin-bottom:16px}.ded78-heading>div{min-width:0}.ded78-heading p{color:#637b89;max-width:780px}.ded78-heading>button{flex:none}
+.ded78-switch{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.ded78-switch>button{border:1px solid #cbd8df;border-radius:9px;background:#fff;color:#274253;padding:9px 13px;font-size:14px;font-weight:400!important;min-height:40px}.ded78-switch>button.active{background:#274253;color:#fff;border-color:#274253}.ded78-switch>button>span:not(:empty){margin-left:5px;padding:2px 6px;background:#f9e9de;color:#8a491b;border-radius:6px;font-size:12px;white-space:nowrap}
+.ded78-outer-switch{margin:0 0 16px}
+.ded78-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}.ded78-form>label,.ded78-dialog label{display:flex;flex-direction:column;gap:6px}.ded78-full{grid-column:1/-1}.ded78-form textarea{min-height:76px!important;resize:vertical}.ded78-form input,.ded78-form select,.ded78-filters input,.ded78-filters select{width:100%;min-width:0}
+.ded78-note{background:#f4f8fa;border:1px solid #dce6eb;border-radius:10px;padding:10px 12px;font-size:14px;color:#5e7583;overflow-wrap:anywhere}
+.ded78-filters{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin-bottom:12px}.ded78-filters>label{display:flex;flex-direction:column;gap:5px;min-width:140px;flex:0 1 190px}.ded78-filters>.ded78-search{flex:1 1 210px}.ded78-filters>button{flex:none}
+.ded78-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #d6e1e7;border-radius:12px;overflow:hidden;margin-top:10px}.ded78-summary>div{padding:14px 12px;background:#f6f9fb;border-right:1px solid #d6e1e7;min-width:0}.ded78-summary>div:last-child{border-right:0;background:#f9eeee}.ded78-summary span{display:block;font-size:13px;color:#657e8a}.ded78-summary b{display:block;font-size:24px;color:#274253;margin-top:4px;overflow-wrap:anywhere}.ded78-summary>div:last-child b{color:#a13d39}
+.ded78-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 10px}.ded78-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ded78-actions>button{min-width:0!important;min-height:34px!important;padding:6px 9px!important;border-radius:8px!important;font-size:14px!important;font-weight:400!important}
+.ded78-status-filter{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:14px}.ded78-status-filter select{width:auto;min-width:120px}.ded78-status-filter>span{flex:1 1 200px;color:#6c818c;font-size:13px}
+.ded78-message{margin:10px 0;padding:10px 12px;background:#eaf4ee;border:1px solid #cde1d5;border-radius:10px;color:#2e6547;white-space:pre-wrap}.ded78-message.error{background:#fff1ef;color:#933c31;border-color:#efcdc7}.ded78-message:empty{display:none}
+.ded78-table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:14px}.ded78-table th{padding:10px 7px;background:#edf3f6;color:#345567;font-weight:400!important;text-align:left;border-bottom:1px solid #cfdee5;vertical-align:top}.ded78-table td{padding:11px 7px;border-bottom:1px solid #dde5e9;vertical-align:top;overflow-wrap:anywhere;white-space:normal}.ded78-table tr:nth-child(even){background:#f8fafb}.ded78-table small{display:block;font-size:12px;color:#6c818e;margin-top:4px;white-space:normal}.ded78-table th:nth-child(1){width:16%}.ded78-table th:nth-child(2){width:10%}.ded78-table th:nth-child(3){width:13%}.ded78-table th:nth-child(4){width:18%}.ded78-table th:nth-child(5){width:21%}.ded78-table th:nth-child(6){width:22%}.ded78-table .ded78-actions{margin-top:8px;gap:5px}.ded78-amount{font-size:16px;color:#a13d39;white-space:nowrap;font-variant-numeric:tabular-nums}.ded78-amount.reversal{color:#2a7651}.ded78-warning{color:#a13d39!important}.ded78-status{display:inline-flex;padding:3px 8px;border-radius:7px;background:#f4ead5;color:#8a6224;font-size:13px;margin:3px 0}.ded78-status.approved{background:#e4f2e9;color:#2d6849}.ded78-status.rejected{background:#f8e5e2;color:#993e34}.ded78-status.cancelled{background:#eceff1;color:#6c7b85}.ded78-status.voided{background:#e4edf6;color:#426387}
+.ded78-empty{padding:30px 16px;border:1px dashed #d1dde5;border-radius:10px;text-align:center;color:#69818e}.ded78-pagination{display:flex;justify-content:center;align-items:center;gap:12px;padding:14px 0 0;font-size:14px}.ded78-pagination>button{min-width:0!important;padding:8px 12px!important}
+.ded78-modal{position:fixed;inset:0;z-index:1200000;display:flex;align-items:center;justify-content:center;background:rgba(23,44,57,.55);padding:20px}.ded78-dialog{width:min(720px,100%);max-height:92dvh;overflow:auto;background:#fff;border:1px solid #d5e1e8;border-radius:18px;padding:20px;box-shadow:0 18px 70px rgba(24,45,58,.25)}.ded78-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #dce5eb;margin-bottom:15px;padding-bottom:10px}.ded78-dialog>header>button{min-width:40px!important;min-height:40px!important;padding:4px!important;font-size:25px}.ded78-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.ded78-modal-actions>button{min-width:100px}.ded78-confirm{padding:15px;border:1px solid #d5e0e7;border-radius:12px}.ded78-confirm>span{font-size:17px}.ded78-confirm>strong{float:right;font-size:23px;color:#a03d39}.ded78-confirm>p{clear:both;padding-top:10px}.ded78-history{border-bottom:1px solid #dde6eb;padding:14px 2px}.ded78-history header{font-size:16px}.ded78-history small{display:block;color:#6b8290;font-size:12px;margin-top:3px}.ded78-history p{white-space:pre-wrap}
+.expense-new-type-buttons{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+#expensePage.ded78-mode .expense-front-layout{grid-template-columns:minmax(280px,.65fr) minmax(0,1.35fr)!important}#expensePage.ded78-mode .expense-own-panel{min-width:0!important;overflow:visible!important}
+@media(max-width:1100px){#expensePage.ded78-mode .expense-front-layout{grid-template-columns:1fr!important}}
+@media(max-width:760px){
+ .ded78-heading{flex-direction:column;gap:10px}.ded78-heading>button{width:100%!important}.ded78 h2{font-size:20px}
+ .ded78 input,.ded78 select,.ded78 textarea{font-size:16px!important}.ded78-filters{display:grid;grid-template-columns:1fr 1fr;align-items:end}.ded78-filters>label{min-width:0}.ded78-filters>.ded78-search{grid-column:1/-1}.ded78-filters>button{width:100%}
+ .ded78-summary b{font-size:21px}.ded78-summary>div{padding:11px 8px}.ded78-summary span{font-size:12px}.ded78-toolbar{align-items:stretch;flex-direction:column}.ded78-toolbar>.ded78-actions{justify-content:flex-end}.ded78-switch>button{flex:1;min-width:0;white-space:normal!important;padding:9px 7px!important}.ded78-switch>button>span:not(:empty){display:block;margin:3px 0 0}
+ .ded78-table,.ded78-table tbody{display:block}.ded78-table thead{display:none}.ded78-table tr{display:grid;grid-template-columns:1fr 1fr;border:1px solid #d7e3e9;border-radius:12px;overflow:hidden;margin-top:10px;padding:6px;background:#fff}.ded78-table td{display:block;width:auto!important;padding:8px;border:0;min-width:0}.ded78-table td::before{content:attr(data-label);display:block;font-size:12px;color:#6a818f;margin-bottom:3px}.ded78-table td:nth-child(n+5){grid-column:1/-1;border-top:1px solid #e3eaee}.ded78-table .ded78-actions{flex-wrap:wrap}.ded78-actions>button{min-height:40px!important}.ded78-table small{font-size:12px}.ded78-status-filter>span{flex-basis:100%}
+ .ded78-modal{padding:10px}.ded78-dialog{padding:15px;max-height:94dvh}.ded78-form{grid-template-columns:1fr}.ded78-full{grid-column:auto}.ded78-modal-actions>button{flex:1;min-width:0!important}.ded78-pagination{gap:8px}
+ .expense-new-type-buttons{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+
+</style>
+<script id="deduction-v78-module">
+/* v78: independent deduction UI. Existing expense/report state is never reused as a money source. */
+(function(){
+'use strict';
+var BUILD='20260916-independent-deduction-v78';
+var states={own:makeState(),admin:makeState()};
+var modalState=null,lastFocus=null;
+function makeState(){return {data:null,auth:'',loading:0,writing:false,view:'requests',page:1,ready:false,month:'',person:''}}
+function el(id){return document.getElementById(id)}
+function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function today(){var p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),o={};p.forEach(function(x){o[x.type]=x.value});return o.year+'-'+o.month+'-'+o.day}
+function money(value){var n=Number(value||0);return (n<0?'−':'')+'$'+Math.abs(n).toLocaleString('zh-TW')}
+function time(value){if(!value)return '—';var date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
+function nameOfStatus(value){return {pending:'待審核',approved:'已核准',rejected:'未通過',cancelled:'已取消',voided:'已沖回'}[value]||value}
+function identity(){var p=typeof getCurrentLineUser==='function'?getCurrentLineUser():{},v=window.starredVerifiedLineUser||{};return String(v.lineUserId||(p&&p.id)||'')}
+function adminAllowed(){return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
+function authKey(scope){return identity()+'|'+(scope==='admin'&&typeof currentUser!=='undefined'&&currentUser?String(currentUser.adminSessionToken||''):'own')}
+function status(scope,text,bad){var box=el('ded78-'+scope+'-message');if(box){box.textContent=text||'';box.className='ded78-message'+(bad?' error':'');box.hidden=!text}}
+async function api(action,payload){
+  if(typeof window.starredApi!=='function')throw new Error('系統尚未完成登入，請稍後再試。');
+  var result=await window.starredApi(action,payload||{});
+  if(!result||result.deductionApiBuild!==BUILD)throw new Error('扣款功能後端尚未更新。請先部署本次 line-api；其他既有功能仍可使用。');
+  return result;
+}
+function queryValue(scope,name){return String((el('ded78-'+scope+'-'+name)||{}).value||'')}
+function setDefaults(scope){var month=el('ded78-'+scope+'-month');if(month&&!month.value)month.value=today().slice(0,7)}
+function activeScope(scope){return scope==='admin'?el('expenseAdminTab')?.classList.contains('active'):el('expensePage')?.classList.contains('active')}
+async function load(scope){
+  var s=states[scope];
+  if(scope==='admin'&&!adminAllowed()){
+    s.data=null;s.ready=false;render(scope);status(scope,'扣款後台僅開放已登入的會計與系統管理員。',true);return false;
+  }
+  var key=authKey(scope);
+  if(s.auth!==key){s.data=null;s.ready=false;s.auth=key;render(scope)}
+  setDefaults(scope);
+  var seq=++s.loading,month=queryValue(scope,'month'),person=queryValue(scope,'person');
+  s.ready=false;renderButtons(scope);status(scope,'正在讀取扣款資料…');
+  try{
+    var result=await api('deduction_list',{scope:scope,month:month,employeeId:person});
+    if(seq!==s.loading||key!==authKey(scope))return false;
+    s.data=result;s.ready=true;s.month=month;s.person=person;s.page=1;
+    if(scope==='admin')fillPeople(result.people||[]);
+    render(scope);status(scope,'');
+    var badge=el('ded78-'+scope+'-badge');if(badge){var count=result.summary.pendingCount;badge.textContent=count?'待審核 '+count:'';badge.hidden=!count}
+    if(scope==='own')updateMonthText(result.serverMonth);
+    return true;
+  }catch(error){
+    if(seq!==s.loading||key!==authKey(scope))return false;
+    // Fail closed: never display cached totals as current or allow export of a failed load.
+    s.data=null;s.ready=false;render(scope);status(scope,String(error&&error.message||error),true);return false;
+  }
+}
+function fillPeople(people){var select=el('ded78-admin-person');if(!select)return;var current=select.value;select.innerHTML='<option value="">全部人員</option>'+people.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name)+(p.enabled?'':'（已停用）')+'</option>'}).join('');if(people.some(function(p){return p.id===current}))select.value=current}
+function updateMonthText(month){var box=el('ded78OwnMonthHint');if(box)box.textContent='目前月份：'+String(month||today().slice(0,7))+'；實際扣款一律歸入核准當月。'}
+function syncType(type){var isDeduction=type==='deduction',fields=el('ded78Fields'),note=el('expenseNote')?.closest('.field');if(fields)fields.hidden=!isDeduction;if(note)note.hidden=isDeduction;if(isDeduction){updateMonthText(states.own.data?.serverMonth);showOwn(true);if(el('expenseSubmitBtn'))el('expenseSubmitBtn').textContent='送出扣款申請'}}
+function showOwn(deduction){el('expensePage').classList.toggle('ded78-mode',!!deduction);el('ded78OldOwn').hidden=!!deduction;el('ded78OwnPanel').hidden=!deduction;document.querySelectorAll('[data-ded78-own-mode]').forEach(function(b){b.classList.toggle('active',(b.dataset.ded78OwnMode==='deduction')===!!deduction)});if(deduction&&!states.own.ready)load('own')}
+function showAdmin(deduction){
+  var original=document.querySelector('#expenseAdminTab > .expense-admin-panel');if(original)original.hidden=!!deduction;
+  el('ded78AdminPanel').hidden=!deduction;document.querySelectorAll('[data-ded78-admin-mode]').forEach(function(b){b.classList.toggle('active',(b.dataset.ded78AdminMode==='deduction')===!!deduction)});
+  if(deduction)load('admin');
+}
+function rowsFor(scope){var s=states[scope],data=s.data;if(!data)return [];var q=queryValue(scope,'search').trim().toLocaleLowerCase(),filter=queryValue(scope,'status');var rows=s.view==='entries'?data.entries:data.requests;return rows.filter(function(row){return (s.view==='entries'||!filter||row.status===filter)&&(!q||[row.employeeName,row.reason,row.note,row.reviewNote,row.createdByName,row.actorName,row.amount,row.id,row.requestId].join(' ').toLocaleLowerCase().includes(q))})}
+function renderButtons(scope){var s=states[scope];document.querySelectorAll('#ded78-'+scope+' [data-ded78-needs-ready]').forEach(function(b){b.disabled=!s.ready||s.writing||(scope==='admin'&&!adminAllowed())})}
+function actionButton(action,id,label,kind){return '<button type="button" class="'+(kind||'secondary')+'" data-ded78-action="'+action+'" data-id="'+esc(id)+'">'+label+'</button>'}
+function render(scope){
+  var s=states[scope],root=el('ded78-'+scope);if(!root)return;
+  if(scope==='admin'&&!adminAllowed()){s.data=null;s.ready=false}
+  var data=s.data,summary=data?.summary||{};
+  ['deductionAmount','reversalAmount','netAmount'].forEach(function(k){el('ded78-'+scope+'-'+k).textContent=data?money(summary[k]):'—'});
+  var pending=el('ded78-'+scope+'-pending');pending.textContent=data?'待審核 '+summary.pendingCount+' 筆':'待審核 —';
+  root.querySelectorAll('[data-ded78-view]').forEach(function(b){b.classList.toggle('active',b.dataset.ded78View===s.view)});
+  el('ded78-'+scope+'-status-wrap').hidden=s.view==='entries';
+  var rows=rowsFor(scope),pages=Math.max(1,Math.ceil(rows.length/10));s.page=Math.min(Math.max(1,s.page),pages);
+  var visible=rows.slice((s.page-1)*10,s.page*10),body=el('ded78-'+scope+'-list');
+  var header=s.view==='entries'?['記帳月份／日期','人員','類型','扣款金額','扣款原因','經辦／操作']:['申請日期','人員','扣款金額','扣款月份／狀態','原因／備註','申請／審核／操作'];
+  body.innerHTML=!data?'<div class="ded78-empty">資料尚未載入；請按重新整理。</div>':!rows.length?'<div class="ded78-empty">目前篩選條件沒有'+(s.view==='entries'?'已入帳扣款':'申請紀錄')+'。</div>':'<table class="ded78-table"><thead><tr>'+header.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+visible.map(function(row){
+    var cells=[];
+    if(s.view==='entries'){
+      cells=[esc(row.month)+'<small>'+esc(time(row.createdAt))+'</small>',esc(row.employeeName),row.type==='reversal'?'<span class="ded78-status voided">沖回</span>':'扣款','<span class="ded78-amount '+(row.amount<0?'reversal':'')+'">'+money(row.amount)+'</span>',esc(row.reason),esc(row.actorName)+'<div class="ded78-actions">'+actionButton('history',row.requestId,'歷程')+'</div>'];
+    }else{
+      var controls=actionButton('history',row.id,'歷程');
+      if(s.ready&&!s.writing){
+        if(['pending','rejected'].includes(row.status)){controls=actionButton('edit',row.id,'編輯')+actionButton('cancel',row.id,'取消', 'danger')+controls}
+        if(scope==='admin'&&adminAllowed()&&row.status==='pending')controls=actionButton('approve',row.id,'核准','primary')+actionButton('reject',row.id,'駁回')+controls;
+        if(scope==='admin'&&adminAllowed()&&row.status==='approved')controls=actionButton('void',row.id,'沖回','danger')+controls;
+      }
+      var text=esc(row.reason)+(row.note?'<small>備註：'+esc(row.note)+'</small>':'')+(row.reviewNote?'<small class="ded78-warning">審核：'+esc(row.reviewNote)+'</small>':'')+(row.voidReason?'<small class="ded78-warning">沖回：'+esc(row.voidReason)+'</small>':'');
+      var target=row.deductionMonth||(['pending','rejected'].includes(row.status)?'核准當月（尚未扣款）':'未入帳');
+      cells=[esc(row.requestDate)+'<small>'+esc(time(row.createdAt))+'</small>',esc(row.employeeName),'<span class="ded78-amount">'+money(row.amount)+'</span>',esc(target)+'<br><span class="ded78-status '+esc(row.status)+'">'+esc(nameOfStatus(row.status))+'</span>'+(row.reversalMonth?'<small>'+esc(row.reversalMonth)+' 沖回</small>':''),text,(row.source==='admin'?'代申請：':'自行申請：')+esc(row.createdByName)+(row.reviewerName?'<small>審核：'+esc(row.reviewerName)+'<br>'+esc(time(row.reviewedAt))+'</small>':'')+'<div class="ded78-actions">'+controls+'</div>'];
+    }
+    return '<tr>'+cells.map(function(cell,i){return '<td data-label="'+esc(header[i])+'">'+cell+'</td>'}).join('')+'</tr>';
+  }).join('')+'</tbody></table>';
+  el('ded78-'+scope+'-pagination').innerHTML='<button type="button" class="secondary" data-ded78-page="-1" '+(s.page<=1?'disabled':'')+'>上一頁</button><span>'+rows.length+' 筆｜第 '+s.page+' / '+pages+' 頁</span><button type="button" class="secondary" data-ded78-page="1" '+(s.page>=pages?'disabled':'')+'>下一頁</button>';
+  renderButtons(scope);
+}
+function resetPage(scope){states[scope].page=1;render(scope)}
+async function intentId(scope,payload){
+  var text=JSON.stringify(payload),digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+  var fingerprint=Array.from(new Uint8Array(digest)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');
+  var key='starred_deduction_v78_intent_'+scope+'_'+identity();
+  var saved=null;try{saved=JSON.parse(sessionStorage.getItem(key)||'null')}catch(_){}
+  if(saved&&saved.fingerprint===fingerprint)return saved.id;
+  var id=crypto.randomUUID();try{sessionStorage.setItem(key,JSON.stringify({fingerprint:fingerprint,id:id}))}catch(_){}
+  return id;
+}
+function clearIntent(scope){try{sessionStorage.removeItem('starred_deduction_v78_intent_'+scope+'_'+identity())}catch(_){}}
+function inputPayload(prefix){var raw=String(el(prefix+'Amount').value).trim(),amount=Number(raw),reason=String(el(prefix+'Reason').value).trim(),note=String(el(prefix+'Note').value).trim();if(!raw||!Number.isSafeInteger(amount)||amount<1||amount>10000000)throw new Error('扣款金額請填寫 1～10,000,000 元整數。');if(reason.length<2||reason.length>500)throw new Error('扣款原因請填寫 2～500 個字。');if(note.length>500)throw new Error('備註最多 500 個字。');return {amount:amount,reason:reason,note:note}}
+function ownFormMessage(text,bad){var box=el('expenseFormStatus');if(box){box.className='expense-form-status show '+(bad?'error':'success');box.textContent=text}}
+async function submitOwn(){
+  var s=states.own;if(s.writing)return;
+  var payload;try{payload=inputPayload('ded78Own')}catch(error){ownFormMessage(error.message,true);return}
+  var button=el('expenseSubmitBtn'),key=authKey('own');s.writing=true;if(button)button.disabled=true;
+  ownFormMessage('正在送出扣款申請…');
+  try{
+    payload.requestId=await intentId('own',payload);payload.scope='own';payload.operation='create';
+    var result=await api('deduction_mutate',payload);clearIntent('own');
+    if(key!==authKey('own'))return;
+    ['Amount','Reason','Note'].forEach(function(name){el('ded78Own'+name).value=''});
+    el('ded78-own-month').value=result.serverMonth;states.own.view='requests';showOwn(true);
+    await load('own');ownFormMessage('扣款申請已送出。核准後才會列入核准當月，不影響業績。');
+  }catch(error){ownFormMessage('扣款申請未確認成功：'+String(error&&error.message||error)+'；可直接重試，系統會防止相同申請重複建立。',true)}
+  finally{s.writing=false;if(button)button.disabled=false;render('own')}
+}
+function modalOpen(title,html){
+  lastFocus=document.activeElement;el('ded78ModalTitle').textContent=title;el('ded78ModalContent').innerHTML=html;
+  el('ded78ModalMessage').textContent='';el('ded78Modal').hidden=false;
+  setTimeout(function(){el('ded78ModalContent').querySelector('input,select,textarea,button')?.focus()},0);
+}
+function modalClose(force){if(modalState?.busy&&!force)return;el('ded78Modal').hidden=true;modalState=null;if(lastFocus?.isConnected)lastFocus.focus()}
+function modalError(text){el('ded78ModalMessage').textContent=text}
+function modalFooter(label,danger){return '<div class="ded78-modal-actions"><button type="button" class="secondary" data-ded78-close>返回</button><button id="ded78ModalSave" type="submit" class="'+(danger?'danger':'primary')+'">'+label+'</button></div>'}
+function employeeOptions(search,selected){return (states.admin.data?.people||[]).filter(function(p){return p.enabled&&(!search||p.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()))}).map(function(p){return '<option value="'+esc(p.id)+'" '+(p.id===selected?'selected':'')+'>'+esc(p.name)+'</option>'}).join('')}
+function openEdit(scope,row){
+  if(scope==='admin'&&!adminAllowed())return;
+  var fresh=!row,title=fresh?'代員工申請扣款':'編輯扣款申請';
+  if(fresh&&(!states.admin.ready||states.admin.writing)){status('admin','請先重新整理，確認扣款資料已載入。',true);return}
+  modalState={scope:scope,row:row,operation:fresh?'create':'update',busy:false,auth:authKey(scope)};
+  var employee=fresh?'<label class="ded78-full">選擇員工 *<input id="ded78EmployeeSearch" type="search" placeholder="輸入姓名篩選員工" autocomplete="off"><select id="ded78Employee" required><option value="">請選擇員工</option>'+employeeOptions('','')+'</select></label>':'<div class="ded78-full ded78-note">扣款人員：'+esc(row.employeeName)+'（人員不可變更）</div>';
+  modalOpen(title,'<form id="ded78ModalForm"><div class="ded78-form">'+employee+'<label>扣款金額 *<input id="ded78EditAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" required value="'+esc(row?.amount||'')+'"></label><div class="ded78-note">核准當月入帳<br>目前：'+esc(states[scope].data?.serverMonth||today().slice(0,7))+'</div><label class="ded78-full">扣款原因 *<textarea id="ded78EditReason" rows="3" minlength="2" maxlength="500" required>'+esc(row?.reason||'')+'</textarea></label><label class="ded78-full">備註（選填）<textarea id="ded78EditNote" rows="2" maxlength="500">'+esc(row?.note||'')+'</textarea></label></div><p class="ded78-note">送出後為待審核；尚未核准前不會記入扣款明細，也不影響業績。</p>'+modalFooter(fresh?'送出扣款申請':'儲存並送審')+'</form>');
+}
+function openAction(scope,operation,row){
+  if(!row)return;
+  if(['approve','reject','void'].includes(operation)&&(scope!=='admin'||!adminAllowed()))return;
+  var title={approve:'核准扣款',reject:'駁回扣款',cancel:'取消申請',void:'沖回已核准扣款'}[operation];
+  var month=states[scope].data?.serverMonth||today().slice(0,7);
+  var text=operation==='approve'?'核准後將扣在「'+month+'」（以伺服器操作當月為準），不回扣申請月份，也不影響業績。':operation==='void'?'原扣款明細會保留，並在操作當月新增同額沖回。跨月沖回不修改以前月份的帳。':operation==='cancel'?'只取消尚未核准的申請，不會產生扣款。':'駁回後不會扣款，員工可修改內容再送審。';
+  modalState={scope:scope,row:row,operation:operation,busy:false,auth:authKey(scope)};
+  modalOpen(title,'<form id="ded78ModalForm"><div class="ded78-confirm"><span>'+esc(row.employeeName)+'</span><strong>'+money(row.amount)+'</strong><p>'+esc(row.reason)+'</p></div><p class="ded78-note">'+esc(text)+'</p><label>操作原因'+(['reject','void'].includes(operation)?' *':'（選填）')+'<textarea id="ded78ActionNote" rows="3" maxlength="500" '+(['reject','void'].includes(operation)?'required minlength="2"':'')+'></textarea></label>'+modalFooter('確認'+title,operation==='void'||operation==='cancel')+'</form>');
+}
+async function saveModal(event){
+  event.preventDefault();var m=modalState;if(!m||m.busy||states[m.scope].writing)return;
+  var payload={scope:m.scope,operation:m.operation,requestId:m.row?.id,version:m.row?.version};
+  try{
+    if(['create','update'].includes(m.operation))Object.assign(payload,inputPayload('ded78Edit'));
+    if(m.operation==='create'){payload.employeeId=el('ded78Employee').value;if(!payload.employeeId)throw new Error('請選擇扣款員工。')}
+    if(el('ded78ActionNote'))payload.actionNote=el('ded78ActionNote').value.trim();
+    if(['reject','void'].includes(m.operation)&&String(payload.actionNote||'').length<2)throw new Error('請填寫至少 2 個字的原因。');
+    if(m.auth!==authKey(m.scope))throw new Error('登入身分已變更，請關閉視窗並重新整理。');
+  }catch(error){modalError(error.message);return}
+  m.busy=true;states[m.scope].writing=true;el('ded78ModalSave').disabled=true;modalError('正在儲存…');
+  try{
+    if(m.operation==='create')payload.requestId=await intentId('admin',payload);
+    var result=await api('deduction_mutate',payload);if(m.operation==='create')clearIntent('admin');
+    if(m.auth!==authKey(m.scope)){modalClose(true);return}
+    var month=result.request.reversalMonth||result.request.deductionMonth||result.serverMonth;
+    el('ded78-'+m.scope+'-month').value=month;states[m.scope].view=['approve','void'].includes(m.operation)?'entries':'requests';
+    modalClose(true);var ok=await load(m.scope);
+    if(ok)status(m.scope,'已完成'+({create:'扣款申請',update:'修改並送審',approve:'核准扣款',reject:'駁回',cancel:'取消申請',void:'當月沖回'}[m.operation])+'；業績不受影響。');
+    if(activeScope(m.scope==='admin'?'own':'admin'))load(m.scope==='admin'?'own':'admin');
+  }catch(error){modalError(String(error&&error.message||error))}
+  finally{m.busy=false;states[m.scope].writing=false;if(el('ded78ModalSave'))el('ded78ModalSave').disabled=false;render(m.scope)}
+}
+async function openHistory(scope,id){
+  modalState={scope:scope,operation:'history',busy:false,auth:authKey(scope)};var token=modalState;
+  modalOpen('扣款申請歷程','<p>正在讀取操作紀錄…</p>');
+  try{
+    var result=await api('deduction_history',{scope:scope,requestId:id});
+    if(modalState!==token||token.auth!==authKey(scope))return;
+    var r=result.request,labels={create:'建立申請',update:'修改並送審',approve:'核准扣款',reject:'駁回申請',cancel:'取消申請',void:'沖回扣款'};
+    el('ded78ModalContent').innerHTML='<div class="ded78-note">人員：'+esc(r.employeeName)+'<br>申請編號：'+esc(r.id)+'<br>目前狀態：'+esc(nameOfStatus(r.status))+'</div>'+result.history.map(function(h){var before=h.before_data||{},after=h.after_data||{};return '<article class="ded78-history"><header>'+esc(labels[h.action]||h.action)+'｜'+esc(h.actor_name)+'<small>'+esc(time(h.created_at))+'</small></header><p>金額：'+(h.before_data?money(before.amount)+' → ':'')+money(after.amount)+'<br>原因：'+esc(after.reason||'')+(h.before_data&&before.reason!==after.reason?'<br>原原因：'+esc(before.reason||''):'')+(after.note?'<br>備註：'+esc(after.note):'')+'</p><p>'+esc(h.note||'')+'</p></article>'}).join('');
+  }catch(error){if(modalState===token){el('ded78ModalContent').innerHTML='';modalError(String(error&&error.message||error))}}
+}
+function exportRows(scope){var s=states[scope];return rowsFor(scope).map(function(r){return s.view==='entries'?{'扣款月份':r.month,'人員':r.employeeName,'類型':r.type==='reversal'?'沖回':'扣款','金額（正數扣款／負數沖回）':r.amount,'原因':r.reason,'經辦人':r.actorName,'記帳時間':time(r.createdAt),'申請編號':r.requestId}:{'申請日期':r.requestDate,'人員':r.employeeName,'扣款金額':r.amount,'扣款月份':r.deductionMonth||'核准當月（未入帳）','狀態':nameOfStatus(r.status),'原因':r.reason,'備註':r.note,'申請方式':r.source==='admin'?'後台代申請':'自行申請','申請人':r.createdByName,'審核人':r.reviewerName,'審核時間':time(r.reviewedAt),'審核備註':r.reviewNote,'沖回月份':r.reversalMonth,'申請編號':r.id}})}
+function exportExcel(scope){
+  if(!states[scope].ready)return;
+  var rows=exportRows(scope);if(!rows.length){status(scope,'目前沒有可匯出的資料。',true);return}
+  try{
+    if(!window.XLSX)throw new Error('Excel 元件尚未載入，請重新整理後再試。');
+    var book=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(rows),headers=Object.keys(rows[0]);
+    sheet['!cols']=headers.map(function(k){return {wch:Math.min(48,Math.max(14,k.length*2,...rows.slice(0,200).map(function(r){return String(r[k]??'').length*1.5})))}});
+    XLSX.utils.book_append_sheet(book,sheet,states[scope].view==='entries'?'扣款明細':'扣款申請紀錄');
+    if(states[scope].view==='entries'){
+      var totals=new Map();rowsFor(scope).forEach(function(r){var item=totals.get(r.employeeLineUserId)||{'月份':r.month,'人員':r.employeeName,'核准扣款':0,'沖回金額':0,'淨扣款':0};if(r.amount>0)item['核准扣款']+=r.amount;else item['沖回金額']-=r.amount;item['淨扣款']+=r.amount;totals.set(r.employeeLineUserId,item)});
+      var summary=XLSX.utils.json_to_sheet(Array.from(totals.values()));summary['!cols']=[{wch:14},{wch:18},{wch:18},{wch:18},{wch:18}];XLSX.utils.book_append_sheet(book,summary,'人員扣款合計');
+    }
+    XLSX.writeFile(book,'星紅_扣款_'+states[scope].month+'_'+(states[scope].view==='entries'?'明細':'申請')+'.xlsx');
+  }catch(error){status(scope,String(error&&error.message||error),true)}
+}
+function printReport(scope){
+  if(!states[scope].ready)return;
+  var rows=exportRows(scope);if(!rows.length){status(scope,'目前沒有可列印的資料。',true);return}
+  // Keep print columns readable. Full request IDs/audit fields remain in Excel/history.
+  if(states[scope].view==='entries')rows=rows.map(function(r){return {'月份':r['扣款月份'],'人員':r['人員'],'類型':r['類型'],'扣款／沖回':r['金額（正數扣款／負數沖回）'],'原因':r['原因'],'經辦人':r['經辦人'],'記帳時間':r['記帳時間']}});
+  else rows=rows.map(function(r){return {'申請日期':r['申請日期'],'人員':r['人員'],'金額':r['扣款金額'],'扣款月份':r['扣款月份'],'狀態':r['狀態'],'原因／備註':[r['原因'],r['備註']].filter(Boolean).join('；'),'申請人':r['申請人'],'審核人':r['審核人']}});
+  var popup=window.open('','_blank','width=1180,height=800');if(!popup){status(scope,'請允許彈出視窗後再列印。',true);return}
+  var title=states[scope].month+'｜'+(states[scope].view==='entries'?'扣款明細':'扣款申請紀錄'),headers=Object.keys(rows[0]);
+  var total=states[scope].view==='entries'?'｜本次篩選淨扣款 '+money(rowsFor(scope).reduce(function(sum,r){return sum+r.amount},0)):'';
+  popup.document.open();popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 landscape;margin:12mm}body{font:12px "Microsoft JhengHei",sans-serif;color:#172f3d}h1{font-size:20px;font-weight:500}table{border-collapse:collapse;width:100%;table-layout:auto}th,td{border:1px solid #c8d2d8;padding:7px;text-align:left;overflow-wrap:anywhere;max-width:280px;font-weight:400}thead{display:table-header-group}tr{break-inside:avoid}th{background:#edf2f5}tr:nth-child(even){background:#f8fafb}.print-actions{margin:14px 0}@media print{.print-actions{display:none}}</style></head><body><h1>星紅織品｜'+esc(title)+'</h1><p>共 '+rows.length+' 筆'+esc(total)+'。扣款獨立對帳，不影響業績；正數扣款，負數沖回。</p><div class="print-actions"><button onclick="window.print()">開始列印</button></div><table><thead><tr>'+headers.map(function(h){return '<th>'+esc(h)+'</th>'}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+headers.map(function(h){return '<td>'+esc(row[h])+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></body></html>');popup.document.close();popup.focus();setTimeout(function(){try{if(!popup.closed)popup.print()}catch(_){}},200);
+}
+function panel(scope){var admin=scope==='admin';return '<div id="ded78-'+scope+'" class="ded78" data-ded78-scope="'+scope+'"><header class="ded78-heading"><div><h2>'+(admin?'扣款明細':'我的扣款明細')+'</h2><p>核准才入帳，依台灣時間歸入核准當月；獨立對帳，不影響業績、排行榜或其他費用。</p></div>'+(admin?'<button type="button" class="primary" data-ded78-action="create" data-ded78-needs-ready>＋ 代員工申請扣款</button>':'')+'</header><div class="ded78-filters"><label>扣款月份<input id="ded78-'+scope+'-month" type="month" value="'+today().slice(0,7)+'"></label>'+(admin?'<label>扣款人員<select id="ded78-admin-person"><option value="">全部人員</option></select></label>':'')+'<label class="ded78-search">搜尋<input id="ded78-'+scope+'-search" type="search" placeholder="搜尋姓名、原因、金額"></label><button type="button" class="secondary" data-ded78-action="reload">重新整理</button></div><div id="ded78-'+scope+'-message" class="ded78-message" role="status" aria-live="polite" hidden></div><div class="ded78-summary">'+[['deductionAmount','所選月份核准扣款'],['reversalAmount','所選月份沖回金額'],['netAmount','所選月份淨扣款']].map(function(pair){return '<div><span>'+pair[1]+'</span><b id="ded78-'+scope+'-'+pair[0]+'">—</b></div>'}).join('')+'</div><p class="ded78-note">上方合計依月份與人員計算；搜尋／狀態只篩選下方清單。淨扣款為負數時代表本月應加回。</p><div class="ded78-toolbar"><div class="ded78-switch"><button type="button" data-ded78-view="entries">已入帳扣款明細</button><button type="button" class="active" data-ded78-view="requests">申請／審核紀錄 <span id="ded78-'+scope+'-pending">待審核 —</span></button></div><div class="ded78-actions"><button type="button" class="secondary" data-ded78-action="print" data-ded78-needs-ready>友善列印</button><button type="button" class="secondary" data-ded78-action="export" data-ded78-needs-ready>匯出 Excel</button></div></div><label id="ded78-'+scope+'-status-wrap" class="ded78-status-filter">申請狀態<select id="ded78-'+scope+'-status"><option value="">全部狀態</option><option value="pending">待審核</option><option value="approved">已核准</option><option value="rejected">未通過</option><option value="cancelled">已取消</option><option value="voided">已沖回</option></select><span>含所有月份尚未核准的待審核申請；核准時才決定扣款月份。</span></label><div id="ded78-'+scope+'-list"></div><div id="ded78-'+scope+'-pagination" class="ded78-pagination"></div></div>'}
+function mount(){
+  if(el('ded78Fields'))return;
+  var typeButtons=document.querySelector('.expense-new-type-buttons');
+  if(!typeButtons)return;
+  typeButtons.insertAdjacentHTML('beforeend','<button type="button" data-expense-type="deduction" onclick="setExpenseRequestType(\'deduction\',this)">扣款</button>');
+  el('expenseCostFields').insertAdjacentHTML('afterend','<div id="ded78Fields" class="expense-wide ded78" hidden><div class="ded78-form"><div id="ded78OwnMonthHint" class="ded78-note ded78-full"></div><label class="ded78-full">扣款金額 *<input id="ded78OwnAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="請輸入正整數金額"></label><label class="ded78-full">扣款原因 *<textarea id="ded78OwnReason" minlength="2" maxlength="500" rows="3" placeholder="請說明扣款原因"></textarea></label><label class="ded78-full">備註（選填）<textarea id="ded78OwnNote" maxlength="500" rows="2"></textarea></label><p class="ded78-note ded78-full">只能申請自己的扣款。尚未核准前不扣款；核准後在「扣款明細」查看，不會改變業績。</p></div></div>');
+  var own=document.querySelector('.expense-own-panel'),old=document.createElement('div');old.id='ded78OldOwn';while(own.firstChild)old.appendChild(own.firstChild);own.appendChild(old);
+  own.insertAdjacentHTML('afterbegin','<nav class="ded78-switch ded78-outer-switch"><button type="button" class="active" data-ded78-own-mode="expense">費用申請紀錄</button><button type="button" data-ded78-own-mode="deduction">扣款明細 <span id="ded78-own-badge" hidden></span></button></nav>');
+  own.insertAdjacentHTML('beforeend','<div id="ded78OwnPanel" hidden>'+panel('own')+'</div>');
+  var admin=el('expenseAdminTab');admin.insertAdjacentHTML('afterbegin','<nav class="ded78-switch ded78-outer-switch"><button type="button" class="active" data-ded78-admin-mode="expense">費用明細</button><button type="button" data-ded78-admin-mode="deduction">扣款明細 <span id="ded78-admin-badge" hidden></span></button></nav>');
+  admin.insertAdjacentHTML('beforeend','<section id="ded78AdminPanel" class="panel" hidden>'+panel('admin')+'</section>');
+  document.body.insertAdjacentHTML('beforeend','<div id="ded78Modal" class="ded78-modal ded78" role="dialog" aria-modal="true" aria-labelledby="ded78ModalTitle" hidden><section class="ded78-dialog"><header><h2 id="ded78ModalTitle"></h2><button type="button" class="secondary" data-ded78-close aria-label="關閉扣款視窗">×</button></header><div id="ded78ModalContent"></div><div id="ded78ModalMessage" class="ded78-message error" role="status" aria-live="polite"></div></section></div>');
+  updateMonthText();render('own');render('admin');
+}
+function clearPrivateState(){states.own=makeState();states.admin=makeState();modalClose(true);render('own');render('admin');['own','admin'].forEach(function(scope){var badge=el('ded78-'+scope+'-badge');if(badge){badge.hidden=true;badge.textContent=''}})}
+mount();
+document.addEventListener('click',function(event){
+  var b=event.target.closest('button');
+  if(b?.hasAttribute('data-ded78-close')){modalClose();return}
+  if(b?.dataset.ded78OwnMode){showOwn(b.dataset.ded78OwnMode==='deduction');return}
+  if(b?.dataset.ded78AdminMode){showAdmin(b.dataset.ded78AdminMode==='deduction');return}
+  var root=b?.closest('[data-ded78-scope]');if(!root||b.disabled)return;
+  var scope=root.dataset.ded78Scope,s=states[scope];
+  if(b.dataset.ded78View){s.view=b.dataset.ded78View;resetPage(scope);return}
+  if(b.dataset.ded78Page){s.page+=Number(b.dataset.ded78Page);render(scope);return}
+  var action=b.dataset.ded78Action;if(!action)return;
+  if(action==='reload'){load(scope);return}if(action==='export'){exportExcel(scope);return}if(action==='print'){printReport(scope);return}
+  if(action==='history'){openHistory(scope,b.dataset.id);return}if(action==='create'){openEdit('admin',null);return}
+  if(!s.ready||s.writing)return;var row=s.data.requests.find(function(r){return r.id===b.dataset.id});if(!row)return;
+  if(action==='edit')openEdit(scope,row);else openAction(scope,action,row);
+});
+document.addEventListener('input',function(event){if(event.target.id==='ded78EmployeeSearch'){var selected=el('ded78Employee').value;el('ded78Employee').innerHTML='<option value="">請選擇員工</option>'+employeeOptions(event.target.value,selected);return}var scope=event.target.closest('[data-ded78-scope]')?.dataset.ded78Scope;if(scope&&event.target.id.endsWith('-search'))resetPage(scope)});
+document.addEventListener('change',function(event){var scope=event.target.closest('[data-ded78-scope]')?.dataset.ded78Scope;if(!scope)return;if(event.target.id.endsWith('-month')||event.target.id.endsWith('-person'))load(scope);else if(event.target.id.endsWith('-status'))resetPage(scope)});
+document.addEventListener('submit',function(event){if(event.target.id==='ded78ModalForm')saveModal(event)});
+document.addEventListener('keydown',function(event){if(el('ded78Modal').hidden)return;if(event.key==='Escape'){event.preventDefault();modalClose()}if(event.key==='Tab'){var controls=Array.from(el('ded78Modal').querySelectorAll('button,input,select,textarea')).filter(function(x){return !x.disabled&&x.offsetParent!==null});var first=controls[0],last=controls[controls.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}});
+var prevShowPage=window.showPage;window.showPage=function(page){var result=prevShowPage.apply(this,arguments);if(page==='expense'&&el('expensePage')?.classList.contains('active'))load('own');return result};
+var prevShowAdmin=window.showAdminTab;window.showAdminTab=function(tab){var result=prevShowAdmin.apply(this,arguments);if(tab==='expenseAdmin'&&el('expenseAdminTab')?.classList.contains('active')){if(adminAllowed())load('admin');else{states.admin.data=null;states.admin.ready=false;render('admin')}}return result};
+var prevLogout=window.logout;window.logout=function(){clearPrivateState();return prevLogout.apply(this,arguments)};
+window.StarredDeduction78={build:BUILD,syncType:syncType,submitOwn:submitOwn,showOwn:showOwn,showAdmin:showAdmin,load:load,render:render,clear:clearPrivateState};
+window.STARRED_DEDUCTION_UI_BUILD=BUILD;
+function restored(){if(activeScope('own'))load('own');if(activeScope('admin')&&adminAllowed())load('admin')}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restored);else restored();
+})();
+
+</script>
 </body>
 </html>
