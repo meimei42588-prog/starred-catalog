@@ -16988,8 +16988,8 @@ window.leave66ShowView=showView;
 
 async function load(force){
   ensureUI();if(!canAccessLocal()){setStatus('目前帳號沒有員工資料／休假管理權限。','error');return}if(state.loading)return;if(state.loaded&&!force){renderAll();return}
-  state.loading=true;setStatus('正在載入員工資料與請假紀錄…','working');
-  try{var r=await api('leave_admin_bootstrap_v2',{});state.profiles=Array.isArray(r.profiles)?r.profiles:[];state.requests=Array.isArray(r.requests)?r.requests:[];state.users=Array.isArray(r.users)?r.users:[];state.warnings=Array.isArray(r.warnings)?r.warnings:[];state.annualSettlements=Array.isArray(r.annualSettlements)?r.annualSettlements:[];state.summary=r.summary||{};state.asOf=String(r.asOf||today());state.canConfigurePermissions=!!r.canConfigurePermissions;state.loaded=true;if(state.selectedEmployeeId&&!profileById(state.selectedEmployeeId))state.selectedEmployeeId='';renderAll();setStatus('','');updateDashboardFromData()}catch(error){setStatus('載入失敗：'+String(error&&error.message||error),'error')}finally{state.loading=false}
+  state.loading=true;var loadTicket785=state.loadEpoch785=(state.loadEpoch785||0)+1,loadAuth785=String(current()?.adminSessionToken||'')+'|'+lineIdentity().id;setStatus('正在載入員工資料與請假紀錄…','working');
+  try{var r=await api('leave_admin_bootstrap_v2',{});if(loadTicket785!==state.loadEpoch785||loadAuth785!==String(current()?.adminSessionToken||'')+'|'+lineIdentity().id)return;state.employeeProfileApiBuild=String(r.employeeProfileApiBuild||'');state.employeeDependentsReady=r.employeeDependentsReady===true;state.profiles=Array.isArray(r.profiles)?r.profiles:[];state.requests=Array.isArray(r.requests)?r.requests:[];state.users=Array.isArray(r.users)?r.users:[];state.warnings=Array.isArray(r.warnings)?r.warnings:[];state.annualSettlements=Array.isArray(r.annualSettlements)?r.annualSettlements:[];state.summary=r.summary||{};state.asOf=String(r.asOf||today());state.canConfigurePermissions=!!r.canConfigurePermissions;state.loaded=true;if(state.selectedEmployeeId&&!profileById(state.selectedEmployeeId))state.selectedEmployeeId='';renderAll();setStatus('','');updateDashboardFromData()}catch(error){if(loadTicket785!==state.loadEpoch785||loadAuth785!==String(current()?.adminSessionToken||'')+'|'+lineIdentity().id)return;setStatus('載入失敗：'+String(error&&error.message||error),'error')}finally{if(loadTicket785===state.loadEpoch785)state.loading=false}
 }
 window.leave66Load=load;
 function renderAll(){renderOverview();fillEmployeeSelects();renderEmployees();renderRecords();renderPermissions();if(state.selectedEmployeeId&&e('leave66PersonModal')?.classList.contains('show'))renderPerson()}
@@ -17577,6 +17577,14 @@ openEmployee=function(id){
 };window.leave66OpenEmployee=openEmployee;
 
 saveEmployee=async function(){
+  if(leave785Edit&&leave785Edit.busy)return;
+  if(!canAccessLocal()||!leave785Edit||leave785Edit.auth!==String(current()?.adminSessionToken||'')){leave785Error('登入身分已變更，請重新登入並重新開啟編輯。');return}
+  leave785Error('');
+  if(leave785Edit.dependentsReady!==leave785Supported()){leave785Error('眷屬功能版本在編輯期間有變更，已停止儲存以免覆蓋資料。請先保留本次修改，重新整理後再開啟編輯。');return}
+  var dependents785;
+  try{if(leave785Supported())dependents785=leave785ReadDependents()}catch(error){leave785Error(error.message);return}
+  e('leave66EmployeeForm').querySelectorAll('input').forEach(function(x){leave785FormatDateInput(x,true)});
+
   var employeeId=String(e('leave66EmployeeId').value||''),oldProfile=profileById(employeeId),name=String(e('leave66EmployeeName').value||'').trim(),hire=parseRoc(e('leave66HireRoc').value),exitRaw=String(e('leave66ExitRoc').value||'').trim(),exit=exitRaw?parseRoc(exitRaw):'',birthRaw=String(e('leave74BirthRoc').value||'').trim(),birth=birthRaw?parseRoc(birthRaw):'',company=leave74NormalizeCompany(e('leave66Company').value),oldCompany=leave74NormalizeCompany(e('leave66Company').dataset.originalCompany||''),companyChanged=!!(oldProfile&&oldProfile.isActive!==false&&oldCompany&&company!==oldCompany),changeRaw=String(e('leave74CompanyChangeRoc').value||'').trim(),companyChangeDate=companyChanged?parseRoc(changeRaw):'',salaryRaw=String(e('leave74BaseSalary').value||'').trim(),baseSalary=salaryRaw===''?null:Number(salaryRaw);
   if(!name){alert('請填寫姓名');e('leave66EmployeeName').focus();return}
   if(!hire){alert('到職日期格式錯誤，請輸入例如 115/09/04');e('leave66HireRoc').focus();return}
@@ -17594,10 +17602,11 @@ saveEmployee=async function(){
     if(exit&&companyChangeDate>exit){alert('公司更換生效日不能晚於離職日期');return}
     if(!confirm('確定將「'+String(oldProfile.employeeName||name)+'」的公司由「'+oldCompany+'」更換為「'+(company||'未填公司')+'」？\n生效日：'+roc(companyChangeDate)+'\n\n到職日與年資不會改變，舊公司期間會保留在公司更換紀錄。'))return
   }
-  var btn=e('leave66EmployeeSaveBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='儲存中…';
+  var btn=e('leave66EmployeeSaveBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='儲存中…';leave785Lock(true);
   try{
-    var result=await api('leave_employee_save_v2',{
+    var result=await api(leave785Supported()?'leave_employee_save_v785':'leave_employee_save_v2',{
       employeeId:employeeId,
+      ...(leave785Supported()?{dependents:dependents785,expectedUpdatedAt:leave785Edit.expectedUpdatedAt,draftEmployeeId:leave785Edit.draftEmployeeId}:{}),
       linkedLineUserId:employeeId?'':String(e('leave66LinkedLineUser').value||''),
       employeeName:name,
       company:company,
@@ -17620,9 +17629,9 @@ saveEmployee=async function(){
     });
     var saved=result&&result.profile||null;
     if(saved&&saved.lineUserId){if(saved.isActive===false)state.selectedFormerEmployeeId=String(saved.lineUserId);else state.selectedActiveEmployeeId=String(saved.lineUserId);state.selectedEmployeeId=String(saved.lineUserId)}
-    closeModal('leave66EmployeeModal');state.loaded=false;await load(true);showView(saved&&saved.isActive===false?'former':'employees');if(e('leave66PersonModal')&&e('leave66PersonModal').classList.contains('show'))renderPerson()
-  }catch(error){alert('員工資料儲存失敗：'+String(error&&error.message||error))}
-  finally{btn.disabled=false;btn.textContent=old}
+    leave785Lock(false);leave785Accept();closeModal('leave66EmployeeModal');state.loaded=false;await load(true);showView(saved&&saved.isActive===false?'former':'employees');if(e('leave66PersonModal')&&e('leave66PersonModal').classList.contains('show'))renderPerson()
+  }catch(error){leave785Error('員工資料未確認儲存成功：'+String(error&&error.message||error)+'\n已保留畫面內容，請核對後再儲存。')}
+  finally{leave785Lock(false);btn.disabled=false;btn.textContent=old;leave785UpdateIndicator()}
 };window.leave66SaveEmployee=saveEmployee;
 
 openRecord=function(employeeId,requestId){ensureUI();if(!state.profiles.length){alert('請先建立至少一位在職員工，才能新增請假紀錄。');showView('employees');return}fillEmployeeSelects();var row=requestId?state.requests.find(function(x){return String(x.id)===String(requestId)}):null,selected=profileById(employeeId||row&&row.requesterLineUserId||'');if(!row&&selected&&selected.isActive===false){alert('離職人員不能新增新的請假紀錄；舊紀錄仍可在離職人員資料中查看。');showView('former');return}if(row&&String(row.source)!=='admin_paper'){alert('舊版線上申請請使用核准／退回，不直接覆蓋原始簽署內容。');return}e('leave66RecordId').value=row?String(row.id):'';e('leave66RecordModalTitle').textContent=row?'修改請假紀錄':'新增請假紀錄';e('leave66RecordEmployee').value=String(employeeId||row&&row.requesterLineUserId||'');e('leave66RecordType').value=row?row.leaveType:'annual';e('leave66StartRoc').value=row?rocInput(row.startDate):rocInput(today());e('leave66EndRoc').value=row?rocInput(row.endDate):rocInput(today());e('leave66PaperRoc').value=row?rocInput(row.paperReceivedDate||row.startDate):rocInput(today());e('leave66Days').value=row?numberText(row.days||0):'1';e('leave66Hours').value=row?numberText(row.hours||0):'0';e('leave66Reason').value=row?row.reason||'':'';e('leave66RecordNote').value=row?row.recordNote||row.reviewNote||'':'';openModal('leave66RecordModal');setTimeout(function(){e('leave66RecordEmployee')&&e('leave66RecordEmployee').focus()},70)};window.leave66OpenRecord=openRecord;
@@ -17645,13 +17654,16 @@ window.leave68ExportEmployeeExcel=function(){
   if(typeof XLSX==='undefined'){alert('Excel 元件尚未載入，請重新整理後再試。');return}
   var employees=state.profiles.slice().sort(function(a,b){return (a.isActive===false)-(b.isActive===false)||String(a.employeeName).localeCompare(String(b.employeeName),'zh-Hant')}).map(function(p){
     var b=p.balances||{},a=b.annual||{};
-    return {'員工ID':p.lineUserId||'','姓名':p.employeeName||'','所在公司':p.company||'','在職狀態':p.isActive===false?'已離職':'在職','出生年月日':leave68RocPlain(p.birthDate),'身分證字號':p.nationalId||'','電話':p.phone||'','地址':p.address||'','底薪':p.baseSalary===null||p.baseSalary===undefined?'':n(p.baseSalary),'銀行名稱':p.bankName||'','銀行代碼':p.bankCode||'','分行':p.bankBranch||'','戶名':p.bankAccountName||'','轉帳帳號':p.bankAccountNumber||'','到職日期':leave68RocPlain(p.hireDate),'離職日期':leave68RocPlain(p.exitDate),'每日正常工時':n(p.dailyHours)||8,'協議遞延特休':n(p.deferredAnnualDays),'目前年資':p.seniority&&p.seniority.label||'','特休可用':n(a.entitlement),'特休已用':n(a.used),'特休剩餘':n(a.remaining),'特休期間':a.periodStart&&a.periodEnd?leave68RocPlain(a.periodStart)+'～'+leave68RocPlain(a.periodEnd):'','病假剩餘':n(b.sick&&b.sick.remaining),'事假剩餘':n(b.personal&&b.personal.remaining),'家庭照顧假剩餘':n(b.family&&b.family.remaining),'備註':p.note||'','最後更新':dateTime(p.updatedAt)}
+    return {'員工ID':p.lineUserId||'','姓名':p.employeeName||'','所在公司':p.company||'','在職狀態':p.isActive===false?'已離職':'在職','出生年月日':leave68RocPlain(p.birthDate),'身分證字號':p.nationalId||'','電話':p.phone||'','地址':p.address||'','底薪':p.baseSalary===null||p.baseSalary===undefined?'':n(p.baseSalary),'銀行名稱':p.bankName||'','銀行代碼':p.bankCode||'','分行':p.bankBranch||'','戶名':p.bankAccountName||'','轉帳帳號':p.bankAccountNumber||'','到職日期':leave68RocPlain(p.hireDate),'離職日期':leave68RocPlain(p.exitDate),'每日正常工時':n(p.dailyHours)||8,'協議遞延特休':n(p.deferredAnnualDays),'目前年資':p.seniority&&p.seniority.label||'','特休可用':n(a.entitlement),'特休已用':n(a.used),'特休剩餘':n(a.remaining),'特休期間':a.periodStart&&a.periodEnd?leave68RocPlain(a.periodStart)+'～'+leave68RocPlain(a.periodEnd):'','病假剩餘':n(b.sick&&b.sick.remaining),'事假剩餘':n(b.personal&&b.personal.remaining),'家庭照顧假剩餘':n(b.family&&b.family.remaining),'備註':p.note||'','眷屬資料JSON':leave785Supported()?JSON.stringify(p.dependents||[]):'','最後更新':dateTime(p.updatedAt)}
   });
   var companyPeriods=[];state.profiles.forEach(function(p){leave74CompanyPeriods(p).forEach(function(x){companyPeriods.push({'員工ID':p.lineUserId||'','姓名':p.employeeName||'','紀錄狀態':x.current?(p.isActive===false?'離職時':'目前'):'歷史','所在公司':x.company||'','公司起日':leave68RocPlain(x.startDate),'公司迄日':leave68RocPlain(x.endDate),'登記人':x.changedBy||'','登記時間':dateTime(x.changedAt)})})});
   var periods=[];state.profiles.forEach(function(p){leave68EmploymentPeriods(p).forEach(function(x){periods.push({'員工ID':p.lineUserId||'','姓名':p.employeeName||'','任職狀態':x.current?'目前／最近':'歷史','所在公司':x.company||'','到職日期':leave68RocPlain(x.hireDate),'離職日期':leave68RocPlain(x.exitDate),'每日正常工時':x.dailyHours})})});
   var requests=state.requests.map(function(x){return {'員工ID':x.requesterLineUserId||'','姓名':x.requesterName||'','申請編號':x.requestNo||'','假別':leaveType(x.leaveType),'開始日期':leave68RocPlain(x.startDate),'結束日期':leave68RocPlain(x.endDate),'天數':n(x.days),'小時':n(x.hours),'折算日數':n(x.equivalentDays),'事由':x.reason||'','狀態':requestStatus(x.status),'來源':sourceLabel(x),'建檔備註':x.recordNote||x.reviewNote||'','最後更新':dateTime(x.updatedAt||x.createdAt)}});
   var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(employees),'員工資料');
+  var employeeSheet=XLSX.utils.json_to_sheet(employees);
+  if(employees.length)employeeSheet['!cols']=Object.keys(employees[0]).map(function(k){return {wch:18,hidden:k==='眷屬資料JSON'}});
+  XLSX.utils.book_append_sheet(wb,employeeSheet,'員工資料');
+  if(leave785Supported()){var dependentRows=[];state.profiles.forEach(function(p){(p.dependents||[]).forEach(function(d){dependentRows.push({'員工ID':p.lineUserId,'員工姓名':p.employeeName,'眷屬姓名':d.name,'出生日期（民國）':leave785Roc(d.birthDate),'身分證字號':d.nationalId||'','關係':d.relationship})})});var dependentSheet=XLSX.utils.json_to_sheet(dependentRows,{header:['員工ID','員工姓名','眷屬姓名','出生日期（民國）','身分證字號','關係']});dependentSheet['!cols']=[{wch:40},{wch:18},{wch:18},{wch:22},{wch:20},{wch:16}];XLSX.utils.book_append_sheet(wb,dependentSheet,'眷屬資料')}
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(companyPeriods),'公司更換紀錄');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(periods),'到離職紀錄');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(requests),'請假紀錄');
@@ -17679,7 +17691,9 @@ window.leave68ImportEmployeeExcel=function(event){
         var payload={employeeId:existing?String(existing.lineUserId):'',linkedLineUserId:'',employeeName:item.name,company:company,companyChangeDate:changed?(companyChangeDate||today()):null,birthDate:birth||null,baseSalary:baseSalary,nationalId:national,phone:phone,address:String(leave68Value(row,['地址'])).trim(),hireDate:item.hire,exitDate:exit||null,dailyHours:daily,deferredAnnualDays:deferred,bankName:String(leave68Value(row,['銀行名稱'])).trim(),bankCode:String(leave68Value(row,['銀行代碼'])).trim(),bankBranch:String(leave68Value(row,['分行'])).trim(),bankAccountName:String(leave68Value(row,['戶名'])).trim(),bankAccountNumber:String(leave68Value(row,['轉帳帳號','帳號'])).trim(),note:String(leave68Value(row,['備註'])).trim()};
         try{
           if(existing&&existing.isActive===false&&!exit&&item.hire>String(existing.exitDate||'')){var rr=await api('leave_employee_rehire',{employeeId:existing.lineUserId,hireDate:item.hire,company:company,dailyHours:daily,deferredAnnualDays:deferred});existing=rr&&rr.profile||existing;payload.employeeId=String(existing.lineUserId);rehired++}
-          var result=await api('leave_employee_save_v2',payload),saved=result&&result.profile||null;
+          var importAction='leave_employee_save_v2',dependentJson=String(row['眷屬資料JSON']||'').trim();
+          if(dependentJson){if(!leave785Supported())throw new Error('匯入檔含眷屬資料，請先完成v78.5資料庫及後端更新');try{payload.dependents=JSON.parse(dependentJson)}catch(_){throw new Error('眷屬資料JSON格式不正確')}if(!Array.isArray(payload.dependents))throw new Error('眷屬資料JSON必須為陣列');payload.expectedUpdatedAt=existing?String(existing.updatedAt||''):'';payload.draftEmployeeId='employee:'+crypto.randomUUID();importAction='leave_employee_save_v785'}
+          var result=await api(importAction,payload),saved=result&&result.profile||null;
           if(saved){byId.set(String(saved.lineUserId),saved);if(String(saved.nationalId||'').trim())byNational.set(String(saved.nationalId).trim().toUpperCase(),saved);if(String(saved.phone||'').trim())byNamePhone.set(String(saved.employeeName||'').trim()+'|'+String(saved.phone).trim(),saved)}
           if(changed)companyChanged++;
           if(payload.employeeId)updated++;else created++
@@ -17953,6 +17967,116 @@ function leave76ContractPrintBody(doc,index){var lines=String(doc.content||'').r
 window.leave76PrintContractDocument=function(contractId,key){contractId=contractId===null?String(e('leave76DocumentsContractId')&&e('leave76DocumentsContractId').value||''):String(contractId||'');var docs=leave76ContractDocuments(contractId,key);if(!docs.length){alert('找不到範本內容');return}var win=window.open('','_blank','width=1000,height=840');if(!win){alert('瀏覽器阻擋列印視窗');return}var body=docs.map(leave76ContractPrintBody).join('');win.document.open();win.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>約聘合約文件</title><style>@page{size:A4;margin:15mm}*{box-sizing:border-box}body{margin:0;background:#edf2f4;color:#222;font-family:"Microsoft JhengHei",sans-serif}.bar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:10px 18px;background:#274253;color:#fff}.bar button{padding:8px 16px;border:0;border-radius:8px;background:#fff;color:#274253;font-size:14px}.doc{width:210mm;min-height:297mm;margin:10px auto;padding:15mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.12)}.page-break{page-break-before:always}h1{text-align:center;font-size:24px;margin:0 0 9mm;font-weight:600}h2{font-size:17px;margin:5mm 0 2mm;font-weight:600}h3{font-size:15px;margin:4mm 0 1.5mm;font-weight:600}p{margin:1.5mm 0;font-size:14px;line-height:1.65;white-space:pre-wrap}.bullet{padding-left:7mm;text-indent:-4mm}.blank{margin:0;line-height:.8}@media print{body{background:#fff}.bar{display:none}.doc{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.doc.page-break{break-before:page;page-break-before:always}}</style></head><body><div class="bar"><b>約聘合約列印預覽</b><button onclick="window.print()">開始列印</button></div>'+body+'</body></html>');win.document.close();win.focus()};
 window.leave76DownloadContractDocument=async function(contractId,key){contractId=contractId===null?String(e('leave76DocumentsContractId')&&e('leave76DocumentsContractId').value||''):String(contractId||'');try{setStatus('正在產生 Word 文件…','working');var result=await api('employment_contract_download_docx',{contractId:contractId,documentKey:key}),binary=atob(String(result.base64||'')),bytes=new Uint8Array(binary.length);for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);var blob=new Blob([bytes],{type:result.mimeType||'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=result.filename||'約聘合約.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},60000);setStatus('Word 文件已產生。','ok')}catch(error){setStatus('Word 下載失敗：'+String(error&&error.message||error),'error');alert('Word 下載失敗：'+String(error&&error.message||error))}};
 
+
+/* v78.5: HR-only form protection, ROC date formatting and dependent records.
+   Dates are displayed with slashes; API/storage dates remain ISO YYYY-MM-DD. */
+var LEAVE785_BUILD='20260917-employee-dependents-v78.5';
+var leave785Edit=null;
+function leave785Half(value){return String(value==null?'':value).replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-65248)}).replace(/／/g,'/').trim()}
+function leave785ParseDate(value){
+  var s=leave785Half(value).replace(/^民國\s*/,'').replace(/年|月/g,'/').replace(/日/g,'').replace(/[.\-]/g,'/').replace(/\s/g,''),m;
+  if(/^\d{6,8}$/.test(s)){var width=s.length-4;m=[s,s.slice(0,width),s.slice(width,width+2),s.slice(width+2)]}
+  else m=s.match(/^(\d{1,4})\/(\d{1,2})\/(\d{1,2})$/);
+  if(!m)return '';
+  var y=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
+  if(m[1].length<4){if(y<1||y>999)return '';y+=1911}else if(y<1912||y>2910)return '';
+  var date=new Date(Date.UTC(y,month-1,day));
+  if(date.getUTCFullYear()!==y||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)return '';
+  return String(y).padStart(4,'0')+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+}
+function leave785Roc(value){var m=String(value||'').slice(0,10).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m||!leave785ParseDate(m[0]))return '';return String(Number(m[1])-1911).padStart(3,'0')+'/'+m[2]+'/'+m[3]}
+parseRoc=leave785ParseDate;
+rocInput=leave785Roc;
+leave68RocPlain=leave785Roc;
+roc=function(value){return leave785Roc(value)?'民國'+leave785Roc(value):String(value||'—')};
+function leave785DateField(node){return !!(node&&node.tagName==='INPUT'&&node.type!=='hidden'&&node.closest('.leave66-modal')&&(node.hasAttribute('data-leave785-date')||/^\d{2,4}\//.test(node.placeholder||'')))}
+function leave785FormatDateInput(node,finish){
+  if(!leave785DateField(node))return;
+  var raw=leave785Half(node.value),iso=leave785ParseDate(raw),compact=/^\d{7,8}$/.test(raw);
+  // A six-digit ROC date is accepted on blur. Do not guess the year while typing.
+  if(iso&&(finish||compact)){node.value=leave785Roc(iso);node.setCustomValidity('');node.removeAttribute('aria-invalid')}
+  else if(finish&&raw){node.setCustomValidity('請輸入有效日期，例如 1070524 或 107/05/24。');node.setAttribute('aria-invalid','true')}
+  else{node.setCustomValidity('');node.removeAttribute('aria-invalid')}
+}
+function leave785BindDates(root){(root||document).querySelectorAll('.leave66-modal input').forEach(function(input){if(leave785DateField(input)){input.dataset.leave785Date='1';input.inputMode='numeric';input.setAttribute('autocomplete','off');input.title='民國年月日可連打：1070524 → 107/05/24；未滿100年請補零，例如0850425。';input.setCustomValidity('');if(input.value)leave785FormatDateInput(input,true)}})}
+document.addEventListener('input',function(ev){if(ev.isComposing)return;if(leave785DateField(ev.target)){if(!/^delete/.test(ev.inputType||''))leave785FormatDateInput(ev.target,false);else{ev.target.setCustomValidity('');ev.target.removeAttribute('aria-invalid')}}if(ev.target.closest&&ev.target.closest('#leave66EmployeeForm'))leave785UpdateIndicator()});
+document.addEventListener('change',function(ev){if(ev.target.closest&&ev.target.closest('#leave66EmployeeForm'))leave785UpdateIndicator()});
+document.addEventListener('compositionend',function(ev){leave785FormatDateInput(ev.target,false);leave785UpdateIndicator()});
+document.addEventListener('focusout',function(ev){leave785FormatDateInput(ev.target,true);leave785UpdateIndicator()});
+function leave785Supported(){return state.employeeProfileApiBuild===LEAVE785_BUILD&&state.employeeDependentsReady===true}
+function leave785Snapshot(){var form=e('leave66EmployeeForm');if(!form)return '';return JSON.stringify(Array.from(form.querySelectorAll('input,select,textarea')).map(function(x){var value=x.type==='checkbox'?x.checked:x.value;if(leave785DateField(x)&&leave785ParseDate(value))value=leave785ParseDate(value);return [x.id||x.dataset.depField||'',value]}))}
+function leave785Visible(){return !!e('leave66EmployeeModal')&&e('leave66EmployeeModal').classList.contains('show')}
+function leave785Dirty(){return !!(leave785Edit&&leave785Visible()&&leave785Edit.snapshot!==leave785Snapshot())}
+function leave785UpdateIndicator(){var label=e('leave785Unsaved');if(label){label.hidden=!leave785Dirty();label.textContent='尚有未儲存的修改'}}
+function leave785CanLeave(){if(!leave785Visible())return true;if(leave785Edit&&leave785Edit.busy){alert('資料正在儲存，請稍候，避免重複送出或遺失資料。');return false}return !leave785Dirty()||confirm('資料尚未儲存，確定要不存檔退出嗎？\n\n按「取消」繼續編輯；按「確定」放棄本次修改。')}
+function leave785Accept(){if(leave785Edit){leave785Edit.snapshot=leave785Snapshot();leave785Edit.busy=false}leave785UpdateIndicator()}
+function leave785Lock(busy){if(!leave785Edit)return;leave785Edit.busy=busy;var root=e('leave66EmployeeModal');root.querySelectorAll('input,select,textarea,button').forEach(function(x){if(busy){x.dataset.leave785WasDisabled=x.disabled?'1':'0';x.disabled=true}else if(x.hasAttribute('data-leave785-was-disabled')){x.disabled=x.dataset.leave785WasDisabled==='1';delete x.dataset.leave785WasDisabled}})}
+function leave785Error(text){var box=e('leave785SaveStatus');if(box){box.textContent=text||'';box.hidden=!text}}
+function leave785Mount(){
+  var form=e('leave66EmployeeForm');if(!form||e('leave785DependentsEditor'))return;
+  var heading=e('leave66EmployeeModal').querySelector('.leave66-dialog-head>div');heading.insertAdjacentHTML('beforeend','<p id="leave785Unsaved" class="leave785-unsaved" hidden></p>');
+  form.querySelector('.leave66-form-section').insertAdjacentHTML('afterend','<p class="full leave785-date-help">日期可直接輸入數字，系統自動整理為「民國年/月/日」。例如 1070524 → 107/05/24；未滿100年可補零，例如0850425。</p>');
+  e('leave66HireRoc').closest('label').previousElementSibling.insertAdjacentHTML('beforebegin','<section id="leave785DependentsEditor" class="full leave785-dependents"><header><div><h3>眷屬資料</h3><p>可新增多位眷屬，與員工資料一起儲存。</p></div><button type="button" class="secondary" id="leave785AddDependent" onclick="window.leave785AddDependent()">＋ 新增眷屬</button></header><p id="leave785DependentWarning" class="leave785-warning" hidden></p><div id="leave785DependentRows"></div><p id="leave785DependentEmpty">尚未新增眷屬。</p><datalist id="leave785Relations"><option value="母女"><option value="母子"><option value="父女"><option value="父子"><option value="夫妻"><option value="父母"><option value="子女"><option value="其他"></datalist><p id="leave785LegacyFamily" class="leave785-legacy" hidden></p></section>');
+  e('leave66EmployeeModal').querySelector('.leave66-dialog-foot').insertAdjacentHTML('beforebegin','<div id="leave785SaveStatus" class="leave785-save-status" role="status" hidden></div>');
+}
+function leave785DependentNode(row){
+  row=row||{};var node=document.createElement('div');node.className='leave785-dependent-row';node.dataset.depId=String(row.id||crypto.randomUUID());
+  node.innerHTML='<label>姓名 *<input data-dep-field="name" maxlength="80" autocomplete="off"></label><label>出生日期（民國） *<input data-dep-field="birthDate" data-leave785-date inputmode="numeric" placeholder="107/05/24" autocomplete="off"></label><label>身分證字號（選填）<input data-dep-field="nationalId" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false"></label><label>關係 *<input data-dep-field="relationship" list="leave785Relations" maxlength="40" placeholder="例如：母女"></label><button type="button" class="danger" aria-label="移除此筆眷屬">移除</button>';
+  ['name','birthDate','nationalId','relationship'].forEach(function(key){var input=node.querySelector('[data-dep-field="'+key+'"]');input.value=key==='birthDate'?leave785Roc(row.birthDate):String(row[key]||'');input.id='leave785Dep_'+node.dataset.depId+'_'+key});
+  node.querySelector('button').onclick=function(){if(leave785Edit&&leave785Edit.busy)return;var filled=Array.from(node.querySelectorAll('input')).some(function(x){return x.value.trim()});if(filled&&!confirm('確定移除此筆眷屬？\n按「儲存員工資料」後才會正式更新，取消編輯可保留原資料。'))return;node.remove();leave785RefreshRows();leave785UpdateIndicator()};return node;
+}
+function leave785RefreshRows(){var nodes=document.querySelectorAll('#leave785DependentRows .leave785-dependent-row');e('leave785DependentEmpty').hidden=nodes.length>0;e('leave785AddDependent').disabled=!leave785Supported()||nodes.length>=20||!!leave785Edit?.busy}
+window.leave785AddDependent=function(){if(!leave785Supported()||leave785Edit?.busy)return;var box=e('leave785DependentRows');if(box.children.length>=20){alert('每位員工最多可建立20位眷屬。');return}var node=leave785DependentNode();box.appendChild(node);leave785RefreshRows();leave785UpdateIndicator();node.querySelector('input').focus()};
+function leave785FillDependents(p){var box=e('leave785DependentRows');box.innerHTML='';(Array.isArray(p&&p.dependents)?p.dependents:[]).forEach(function(row){box.appendChild(leave785DependentNode(row))});var warning=e('leave785DependentWarning');warning.hidden=leave785Supported();warning.textContent='眷屬功能尚未啟用：請先執行 v78.5 SQL 並更新 line-api，再重新整理。本次仍可儲存原有員工欄位，不會覆蓋既有眷屬。';box.querySelectorAll('input,button').forEach(function(x){x.disabled=!leave785Supported()});var legacy=e('leave785LegacyFamily');legacy.hidden=!p?.familyMembers;legacy.textContent=p?.familyMembers?'既有家庭成員紀錄（原文保留）：'+p.familyMembers:'';leave785RefreshRows()}
+function leave785ReadDependents(){
+  var result=[],seen=new Set();
+  function fail(input,text){input.focus();input.setAttribute('aria-invalid','true');throw new Error(text)}
+  Array.from(document.querySelectorAll('#leave785DependentRows .leave785-dependent-row')).forEach(function(node,index){
+    var get=function(key){return node.querySelector('[data-dep-field="'+key+'"]')},name=get('name').value.trim(),birth=get('birthDate').value.trim(),id=leave785Half(get('nationalId').value).replace(/\s/g,'').toUpperCase(),relation=get('relationship').value.trim(),prefix='第'+(index+1)+'位眷屬：';
+    if(!name&&!birth&&!id&&!relation)return;
+    if(!name)fail(get('name'),prefix+'請填寫姓名');if(!relation)fail(get('relationship'),prefix+'請填寫關係');
+    var date=leave785ParseDate(birth);if(!date)fail(get('birthDate'),prefix+'出生日期不正確，請輸入例如1070524');if(date>today())fail(get('birthDate'),prefix+'出生日期不能晚於今天');
+    if(id&&!/^[A-Z0-9-]{1,30}$/.test(id))fail(get('nationalId'),prefix+'證件字號請填寫英文字母、數字或連字號');
+    if(id&&seen.has(id))fail(get('nationalId'),prefix+'證件字號與同一員工的其他眷屬重複');if(id)seen.add(id);
+    get('birthDate').value=leave785Roc(date);get('nationalId').value=id;
+    result.push({id:node.dataset.depId,name:name,birthDate:date,nationalId:id,relationship:relation});
+  });return result;
+}
+function leave785DependentsHtml(p,printing){
+  var rows=Array.isArray(p&&p.dependents)?p.dependents:[],legacy=String(p&&p.familyMembers||'');
+  var header='<h3>眷屬資料'+(rows.length?'（'+rows.length+'位）':'')+'</h3>';
+  if(!leave785Supported())return '<section class="leave785-family-view">'+header+'<p>眷屬資料尚未啟用，請更新資料庫與後端後重新整理。</p></section>';
+  var table=rows.length?'<table class="'+(printing?'table':'leave785-family-table')+'"><thead><tr><th>姓名</th><th>出生日期（民國）</th><th>身分證字號</th><th>關係</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td data-label="姓名">'+esc(r.name)+'</td><td data-label="出生日期">'+esc(leave785Roc(r.birthDate))+'</td><td data-label="身分證字號">'+esc(r.nationalId||'未填寫')+'</td><td data-label="關係">'+esc(r.relationship)+'</td></tr>'}).join('')+'</tbody></table>':'<p>尚未建立眷屬。</p>';
+  return '<section class="leave785-family-view">'+header+table+(legacy?'<p class="leave785-legacy">既有家庭成員紀錄（原文保留）：'+esc(legacy)+'</p>':'')+'</section>';
+}
+var leave785OriginalPerson=leave68PersonContent;
+leave68PersonContent=function(p){var html=leave785OriginalPerson(p);if(!p)return html;return html.replace('<section class="leave74-company-history">',leave785DependentsHtml(p,false)+'<section class="leave74-company-history">')};
+var leave785OriginalPrint=leave68PrintEmployeeHtml;
+leave68PrintEmployeeHtml=function(p){return leave785OriginalPrint(p).replace('<h2>公司更換紀錄</h2>',leave785DependentsHtml(p,true)+'<h2>公司更換紀錄</h2>')};
+var leave785OriginalOpenModal=openModal;
+openModal=function(id){if(id!=='leave66EmployeeModal'&&leave785Visible()){if(!leave785CanLeave())return;leave785Accept();closeModal('leave66EmployeeModal')}leave785OriginalOpenModal(id);leave785BindDates(document)};
+var leave785OriginalCloseModal=closeModal;
+closeModal=function(id){if(id==='leave66EmployeeModal'){if(!leave785CanLeave())return false;leave785Edit=null}leave785OriginalCloseModal(id);return true};
+var leave785OriginalOpenEmployee=openEmployee;
+openEmployee=function(id){
+  if(!canAccessLocal()){alert('目前帳號沒有員工資料管理權限。');return}
+  if(id&&!profileById(id)){alert('找不到這位員工，請重新整理員工清單。');return}
+  if(!leave785CanLeave())return;leave785Edit=null;
+  leave785OriginalOpenEmployee(id);leave785Mount();var p=id?profileById(id):null;leave785FillDependents(p);leave785BindDates(document);leave785Error('');
+  leave785Edit={dependentsReady:leave785Supported(),snapshot:leave785Snapshot(),expectedUpdatedAt:p?String(p.updatedAt||''):'',busy:false,draftEmployeeId:'employee:'+crypto.randomUUID(),auth:String(current()?.adminSessionToken||'')};leave785UpdateIndicator();
+};window.leave66OpenEmployee=openEmployee;
+var leave785ShowViewBase=showView;
+showView=function(view){if(leave785Visible()){if(!leave785CanLeave())return;leave785Accept();closeModal('leave66EmployeeModal')}return leave785ShowViewBase.apply(this,arguments)};window.leave66ShowView=showView;
+// Browser refresh/close uses the browser's native confirmation message.
+window.addEventListener('beforeunload',function(ev){if(leave785Dirty()||leave785Edit?.busy){ev.preventDefault();ev.returnValue=''}});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&leave785Visible()){ev.preventDefault();ev.stopImmediatePropagation();closeModal('leave66EmployeeModal')}},true);
+function leave785ClearPrivate(){
+  leave785Edit=null;state.loaded=false;state.loading=false;state.loadEpoch785=(state.loadEpoch785||0)+1;state.contractsLoaded=false;state.employeeProfileApiBuild='';state.employeeDependentsReady=false;
+  ['profiles','requests','users','warnings','annualSettlements','contracts','contractTemplates','contractUsers','contractStores'].forEach(function(k){state[k]=[]});
+  state.summary={};state.contractSummary={};state.selectedEmployeeId='';state.selectedActiveEmployeeId='';state.selectedFormerEmployeeId='';
+  document.querySelectorAll('.leave66-modal').forEach(function(x){x.remove()});e('leave66ModalHolder')?.remove();e('leaveAdminTab')?.remove();document.body.classList.remove('leave67-modal-open');
+}
+window.StarredEmployee785={build:LEAVE785_BUILD,clear:leave785ClearPrivate,dirty:leave785Dirty,canLeave:leave785CanLeave,close:function(){leave785Accept();closeModal('leave66EmployeeModal')},parseDate:leave785ParseDate,formatDate:leave785Roc};
 
 function init(){ensureUI();removeFrontLeave();normalizeTopbarDom();syncVisibility();if(hasBackofficeLogin())loadDashboardSummary(false)}
 init();
@@ -19931,5 +20055,47 @@ window.STARRED_MY_SALES_LAYOUT_BUILD='20260916-own-sales-mobile-list-v78.4';
 })();
 </script>
 
+
+<style id="employee-editor-v785-style">
+/* v78.5 styles are limited to the HR page and employee editor. */
+#leave66EmployeeModal .leave785-unsaved{color:#a26012;font-size:14px;font-weight:400;margin:5px 0 0}
+#leave66EmployeeModal .leave785-date-help{font-size:14px;line-height:1.55;color:#637d8b;background:#f3f7fa;padding:9px 11px;border-radius:8px;margin:0}
+#leave66EmployeeModal .leave785-dependents{grid-column:1/-1;border:1px solid #d7e2e8;border-radius:11px;padding:12px;min-width:0}
+#leave66EmployeeModal .leave785-dependents>header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;border:0;padding:0}
+#leave66EmployeeModal .leave785-dependents h3,#leaveAdminTab .leave785-family-view h3{font-size:17px;font-weight:400;margin:0}
+#leave66EmployeeModal .leave785-dependents p{font-size:14px;font-weight:400;margin:4px 0;color:#637d8b}
+#leave66EmployeeModal .leave785-dependent-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(135px,1.1fr) minmax(155px,1.2fr) minmax(95px,.8fr) auto;align-items:end;gap:8px;padding:10px 0;border-top:1px solid #dce6eb}
+#leave66EmployeeModal .leave785-dependent-row label{display:grid;min-width:0;gap:5px;font-size:14px;font-weight:400}
+#leave66EmployeeModal .leave785-dependent-row button,#leave66EmployeeModal #leave785AddDependent{font-weight:400!important;white-space:nowrap!important;min-width:0!important}
+#leave66EmployeeModal .leave785-dependent-row input{width:100%;min-width:0;font-size:14px;font-weight:400}
+#leave66EmployeeModal [aria-invalid=true]{border-color:#bd4f47!important}
+#leave66EmployeeModal .leave785-warning{color:#9b4137!important;background:#fff3ef;padding:9px;border-radius:7px}
+#leave66EmployeeModal .leave785-save-status{flex:none;padding:9px 18px;background:#fff3ef;color:#963d35;font-size:14px;white-space:pre-wrap}
+.leave785-legacy{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;font-weight:400;color:#607984}
+#leaveAdminTab .leave785-family-view,#leave66PersonModal .leave785-family-view{margin:14px 0;padding:12px;border:1px solid #d7e2e8;border-radius:10px;background:#fff;font-size:14px;font-weight:400}
+.leave785-family-table{width:100%;border-collapse:collapse;margin-top:8px;table-layout:fixed}
+.leave785-family-table th,.leave785-family-table td{border:1px solid #dbe5ea;padding:7px 9px;font-size:14px;text-align:left;font-weight:400;overflow-wrap:anywhere}
+.leave785-family-table th{background:#edf4f7}.leave785-family-table tbody tr:nth-child(even){background:#f7fafb}
+@media(max-width:760px){
+ #leave66EmployeeModal .leave785-dependent-row{grid-template-columns:1fr 1fr;gap:9px}
+ #leave66EmployeeModal .leave785-dependent-row button{grid-column:2;justify-self:end}
+ #leave66EmployeeModal .leave785-dependent-row input{font-size:16px}
+ #leave66EmployeeModal .leave785-dependents{padding:9px}
+ #leave66EmployeeModal .leave785-dependents>header{align-items:flex-start}
+ #leave66EmployeeModal .leave785-dependents>header p{max-width:190px}
+ .leave785-family-table thead{display:none}.leave785-family-table,.leave785-family-table tbody{display:block}
+ .leave785-family-table tr{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #dbe5ea;padding:5px 0}
+ .leave785-family-table td{display:block;min-width:0;border:0;padding:5px}
+ .leave785-family-table td:before{content:attr(data-label);display:block;color:#70838f;font-size:12px;margin-bottom:2px}
+}
+
+</style>
+<script id="employee-editor-v785-navigation">
+(function(){
+ function leave(){var api=window.StarredEmployee785;if(!api)return true;if(!api.canLeave())return false;api.close();return true}
+ ['showPage','showAdminTab','logout'].forEach(function(key){var original=window[key];if(typeof original!=='function')return;window[key]=function(){if(!leave())return;if(key==='logout')window.StarredEmployee785?.clear();return original.apply(this,arguments)}});
+ window.STARRED_EMPLOYEE_UI_PATCH='20260917-employee-dependents-v78.5';
+})();
+</script>
 </body>
 </html>
