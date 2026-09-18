@@ -20558,5 +20558,54 @@ window.STARRED_MY_SALES_LAYOUT_BUILD='20260916-own-sales-mobile-list-v78.4';
 }
 </style>
 <script id="health-dependents-v7811-build">window.STARRED_HEALTH_DEPENDENTS_UI_BUILD='20260918-health-dependents-inline-v78.11';</script>
+
+<!-- v78.12: fix personnel company labels overlapping employee names; CSS only. -->
+<style id="personnel-company-bounds-v7812">
+/* v78.12: personnel company label bounds. Layout only; all JS/API contracts unchanged. */
+#leave66PersonnelView .leave75-personnel-cell.company{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+#leave66PersonnelView .leave75-personnel-cell.company>.leave74-company-tag{
+  display:block!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  width:auto!important;
+  height:auto!important;
+  box-sizing:border-box!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  line-height:1.35!important;
+  text-align:center!important;
+  text-overflow:clip!important;
+}
+/* Header and all rows share the same columns; long labels wrap, never cover names. */
+@media(min-width:1151px){
+  #leave66PersonnelView .leave75-personnel-table-head,
+  #leave66PersonnelView .leave75-personnel-row{
+    grid-template-columns:120px 99px 102px 117px 116px 102px minmax(130px,1.2fr) minmax(115px,1fr)!important;
+  }
+}
+@media(min-width:901px) and (max-width:1150px){
+  #leave66PersonnelView .leave75-personnel-table-head,
+  #leave66PersonnelView .leave75-personnel-row{
+    grid-template-columns:108px 91px 100px 112px 106px 100px minmax(115px,1.2fr) minmax(100px,1fr)!important;
+  }
+}
+/* Mobile keeps its compact columns. The badge can grow vertically within its own cell. */
+#leave66PersonnelView .leave75-personnel-cell.name{
+  min-width:0!important;
+  max-width:100%!important;
+  flex-wrap:wrap!important;
+}
+#leave66PersonnelView .leave75-personnel-cell.name>b{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow-wrap:anywhere!important;
+}
+</style>
 </body>
 </html>
