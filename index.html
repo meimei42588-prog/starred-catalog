@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: 20260921-mixed-pay-date-review-v79; existing v76 login contract retained -->
 <!-- UI PATCH: 20260904-v68.2-sync-error-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
 <!-- STARRED UI BUILD: 20260914-store-alias-reply-v77.1; base: index(20260914-092817).html; API contract: 20260908-leave-settlement-contract-v76 -->
@@ -4318,9 +4319,9 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div id="salesReportPersonView" class="sales-report-view"><div id="salesAdminPersonStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b id="salesComparisonHeading">業績對比</b><span id="salesComparisonDescription">可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesComparisonCurrent()">友善列印</button><button type="button" class="primary" onclick="exportSalesComparisonCurrentExcel()">匯出 Excel</button></div></div><div class="sales-comparison-switcher" role="tablist" aria-label="業績對比檢視"><button type="button" class="active" data-sales-comparison-view="detail" onclick="showSalesComparisonView('detail',this)">業績對比</button><button type="button" data-sales-comparison-view="average" onclick="showSalesComparisonView('average',this)">平均業績</button></div><div id="salesComparisonDetailPanel"><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div><div id="salesComparisonAveragePanel" hidden><div class="sales-average-inline-note">平均業績＝個人營業總額 ÷ 已確認上班日期；同一天只算 1 天，計日薪與時薪日期都納入，代銷售不增加上班天數。</div><div id="salesAveragePerformanceTable" class="sales-average-table-wrap"></div></div></div>
         <div id="salesReportWorkdaysView" class="sales-report-view">
-          <div class="sales-workday-note">業績與薪資分開計算：同店同日只有一人本人回傳時自動計 1 日薪；同店多人或同一人同日跨兩個門市時，會進入核准。代銷售不計日薪。0.5～7.5 小時自動計時薪；若整組人員都能領日薪，可直接按「確認日薪」，不用逐一填工時。</div>
+          <div class="sales-workday-note">業績與薪資分開計算：同店同日只有一人本人回傳時自動計 1 日薪；同店多人或同一人同日跨兩個門市時，會進入核准。代銷售不計日薪。0.5～7.5 小時自動計時薪；勾選日薪者可個別免填工時，同組可混合日薪與時薪。日期異動後，相關工時與薪資需重新確認。</div>
           <section class="sales-workday-review-panel">
-            <header class="sales-workday-review-heading"><div><span>WORK HOURS &amp; PAY REVIEW</span><h3>待確認工時與薪資</h3><p>一般情況可填工時後確認；若這一組所有人都能領日薪，可直接按「確認日薪」，每人各計 1 日薪且不必填工時。</p></div><b id="salesWorkdayPendingSummary">待確認 0 組</b></header>
+            <header class="sales-workday-review-heading"><div><span>WORK HOURS &amp; PAY REVIEW</span><h3>待確認工時與薪資</h3><p>可逐人勾選日薪（工時免填），其餘人員填寫工時後，一次儲存日薪與時薪。若全部領日薪，仍可直接按「確認日薪」。</p></div><b id="salesWorkdayPendingSummary">待確認 0 組</b></header>
             <div id="salesWorkdayPendingList" class="sales-workday-review-list"></div>
             <details id="salesWorkdayConfirmedSection" class="sales-workday-confirmed-section"><summary>查看／修改已確認的工時與薪資</summary><div id="salesWorkdayConfirmedList" class="sales-workday-review-list confirmed"></div></details>
           </section>
@@ -4328,7 +4329,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
           <div id="salesAdminWorkdayStats" class="sales-stat-list"></div>
         </div>
         <div id="salesReportReturnsView" class="sales-report-view"><div class="sales-return-toolbar"><div><span>退貨銷售歸屬</span><p>依班表選擇原銷售人員後按「確認歸列」；金額會扣在確認當月的個人業績，不受原發票月份影響。</p></div><b id="salesReturnListSummary">共 0 筆退貨</b></div><div id="salesAdminReturnList" class="sales-return-admin-list"></div></div>
-        <div id="salesReportRequestsView" class="sales-report-view"><div class="sales-request-toolbar"><div><b>修改申請與歷程</b><span>會計或系統管理員可比較原值與申請值；同意時才套用新金額並標示「修改完成」。</span></div><select id="salesAdminRequestFilter" onchange="renderSalesAdminRequests()"><option value="">全部狀態</option><option value="pending">申請中</option><option value="approved">已核准（舊版）</option><option value="completed">修改完成</option><option value="rejected">未通過</option></select></div><div id="salesAdminRequestList" class="sales-review-list"></div></div>
+        <div id="salesReportRequestsView" class="sales-report-view"><div class="sales-request-toolbar"><div><b>修改申請與歷程</b><span>會計或系統管理員可比較原值與申請值；同意時才套用新日期／金額並標示「修改完成」。</span></div><select id="salesAdminRequestFilter" onchange="renderSalesAdminRequests()"><option value="">全部狀態</option><option value="pending">申請中</option><option value="approved">已核准（舊版）</option><option value="completed">修改完成</option><option value="rejected">未通過</option></select></div><div id="salesAdminRequestList" class="sales-review-list"></div></div>
       </section>
     </div>
     <div id="accountTab" class="admin-tab-panel">
@@ -9323,6 +9324,19 @@ document.addEventListener("DOMContentLoaded",()=>{
 'use strict';
 
 window.STARRED_SALES_TEST_MODE = false;
+var SALES_EDIT_PAY_BUILD79='20260921-mixed-pay-date-review-v79';
+var salesReviewInFlight79=new Set();
+async function ensureSalesEditPayApi79(){
+  if(window.STARRED_SALES_TEST_MODE)return;
+  // Verify on writes rather than caching forever, so backend rollback cannot silently drop a date.
+  var result;
+  try{result=await starredApi('sales_edit_pay_capabilities',{})}catch(error){throw new Error('請先部署本次 line-api，再重新整理網頁；目前後端尚未確認支援混合計薪與日期審核。')}
+  if(!result||result.salesEditPayBuild!==SALES_EDIT_PAY_BUILD79)throw new Error('請先部署本次 line-api；為避免日期未保存，本次操作尚未送出。');
+}
+function salesValidDate79(value){
+  var text=String(value||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||text.slice(0,4)==='0000')return false;
+  var date=new Date(text+'T00:00:00Z');return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===text;
+}
 
 var SALES_TEST_KEY = 'starred_sales_performance_test_v3';
 var SALES_TEST_REQUEST_KEY = 'starred_sales_edit_requests_test_v5';
@@ -9888,6 +9902,8 @@ function salesBuildWorkdayGroups(records){
       var sameStore=Array.from(peopleByStore.values()).some(function(set){return set.size>1});
       var dualStore=Array.from(storesByPerson.values()).some(function(set){return set.size>1});
       var reason=sameStore&&dualStore?'mixed':dualStore?'dual_store':sameStore?'same_store':'';
+      var isolatedReview=!reason&&componentRows.some(function(record){return ['pending','counted','excluded'].includes(salesWorkdayStatus(record))&&record.workdayReviewReason});
+      if(isolatedReview)reason='single_review';
       if(!reason)return;
       var labels=Array.from(storeLabels.values()).filter(Boolean).sort(function(a,b){return a.localeCompare(b,'zh-Hant')});
       var peopleList=Array.from(people.values()).sort(function(a,b){return a.name.localeCompare(b.name,'zh-Hant')});
@@ -10362,7 +10378,7 @@ function ensureSalesRequestModal(){
   modal.id='salesRequestModal';
   modal.className='sales-request-modal';
   modal.hidden=true;
-  modal.innerHTML='<div class="sales-request-dialog" role="dialog" aria-modal="true" aria-labelledby="salesRequestTitle"><div class="sales-request-dialog-head"><div><span>EDIT REQUEST</span><h3 id="salesRequestTitle">申請修改業績</h3></div><button type="button" onclick="closeSalesRequestModal()" aria-label="關閉">×</button></div><p id="salesRequestTarget" class="sales-request-target"></p><div class="sales-request-change-box"><b>申請修改為</b><div class="sales-request-fields"><div id="salesRequestGrossField"><label for="salesRequestGrossAmount">營業額 *</label><div class="sales-request-money"><span>$</span><input id="salesRequestGrossAmount" type="number" min="0" step="1" inputmode="numeric"></div></div><div id="salesRequestReturnField"><label for="salesRequestReturnAmount">退貨金額 *</label><div class="sales-request-money return"><span>$</span><input id="salesRequestReturnAmount" type="number" min="1" step="1" inputmode="numeric"></div></div><div id="salesRequestInvoiceField" class="sales-request-invoice"><label for="salesRequestOriginalInvoiceDate">原發票日期 *</label><div class="sales-request-date-control"><input id="salesRequestOriginalInvoiceDate" type="date" onchange="enforceSalesInvoiceDateMax(this)"></div></div></div></div><label for="salesRequestReason">修改原因 *</label><textarea id="salesRequestReason" rows="3" placeholder="例如：金額輸入錯誤，申請更正"></textarea><p class="sales-request-note">送出不會立即更動資料；後台同意後會自動套用並標示「修改完成」。</p><div id="salesRequestModalStatus" class="sales-form-status" role="status"></div><div class="sales-request-dialog-actions"><button type="button" class="secondary" onclick="closeSalesRequestModal()">取消</button><button id="salesRequestSendBtn" type="button" class="primary" onclick="submitSalesEditRequest()">送出申請</button></div></div>';
+  modal.innerHTML='<div class="sales-request-dialog" role="dialog" aria-modal="true" aria-labelledby="salesRequestTitle"><div class="sales-request-dialog-head"><div><span>EDIT REQUEST</span><h3 id="salesRequestTitle">申請修改業績</h3></div><button type="button" onclick="closeSalesRequestModal()" aria-label="關閉">×</button></div><p id="salesRequestTarget" class="sales-request-target"></p><div class="sales-request-change-box"><b>申請修改為</b><div class="sales-request-fields"><div id="salesRequestBusinessDateField" class="sales-request-invoice"><label for="salesRequestBusinessDate">業績日期 *</label><div class="sales-request-date-control"><input id="salesRequestBusinessDate" type="date"></div></div><div id="salesRequestGrossField"><label for="salesRequestGrossAmount">營業額 *</label><div class="sales-request-money"><span>$</span><input id="salesRequestGrossAmount" type="number" min="0" step="1" inputmode="numeric"></div></div><div id="salesRequestReturnField"><label for="salesRequestReturnAmount">退貨金額 *</label><div class="sales-request-money return"><span>$</span><input id="salesRequestReturnAmount" type="number" min="1" step="1" inputmode="numeric"></div></div><div id="salesRequestInvoiceField" class="sales-request-invoice"><label for="salesRequestOriginalInvoiceDate">原發票日期 *</label><div class="sales-request-date-control"><input id="salesRequestOriginalInvoiceDate" type="date" onchange="enforceSalesInvoiceDateMax(this)"></div></div></div></div><label for="salesRequestReason">修改原因 *</label><textarea id="salesRequestReason" rows="3" placeholder="例如：業績日期或金額輸入錯誤，申請更正"></textarea><p class="sales-request-note">送出不會立即更動日期或金額；後台同意後才套用。日期異動後，相關工時與薪資會重新待確認。</p><div id="salesRequestModalStatus" class="sales-form-status" role="status"></div><div class="sales-request-dialog-actions"><button type="button" class="secondary" onclick="closeSalesRequestModal()">取消</button><button id="salesRequestSendBtn" type="button" class="primary" onclick="submitSalesEditRequest()">送出申請</button></div></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesRequestModal()});
   document.body.appendChild(modal);
   return modal;
@@ -10378,6 +10394,8 @@ function openSalesEditRequest(id){
   var isReturn=salesRecordType(record)==='return';
   if(salesEl('salesRequestTitle'))salesEl('salesRequestTitle').textContent=isReturn?'申請修改退貨':'申請修改業績';
   if(salesEl('salesRequestTarget'))salesEl('salesRequestTarget').textContent='目前｜'+record.businessDate+'・'+salesStoreText(record)+'・'+(isReturn?'退貨 '+salesMoney(record.returnAmount):'營業額 '+salesMoney(record.grossAmount));
+  if(salesEl('salesRequestBusinessDateField'))salesEl('salesRequestBusinessDateField').hidden=isReturn;
+  if(salesEl('salesRequestBusinessDate')){salesEl('salesRequestBusinessDate').value=record.businessDate||'';salesEl('salesRequestBusinessDate').max=salesToday();salesEl('salesRequestBusinessDate').required=!isReturn;}
   if(salesEl('salesRequestGrossField'))salesEl('salesRequestGrossField').hidden=isReturn;
   if(salesEl('salesRequestReturnField'))salesEl('salesRequestReturnField').hidden=!isReturn;
   if(salesEl('salesRequestInvoiceField'))salesEl('salesRequestInvoiceField').hidden=!isReturn;
@@ -10422,31 +10440,37 @@ async function submitSalesEditRequest(){
   var button=salesEl('salesRequestSendBtn');
   function setModalStatus(message,type){if(!statusBox)return;statusBox.textContent=message;statusBox.className='sales-form-status show '+type}
   if(!record){setModalStatus('找不到這筆業績資料，請重新整理。','error');return}
+  if(String(record.submitterLineUserId||'')!==salesIdentity().id){setModalStatus('只能申請修改自己回傳的業績。','error');return}
   var isReturn=salesRecordType(record)==='return';
+  var businessDate=isReturn?record.businessDate:String((salesEl('salesRequestBusinessDate')||{}).value||'').trim();
+  if(!isReturn&&(!salesValidDate79(businessDate)||businessDate>salesToday())){setModalStatus('請選擇有效且不晚於今天的業績日期。','error');return}
+  if(!isReturn&&businessDate!==record.businessDate&&salesOwnRecords.some(function(other){return String(other.id)!==String(record.id)&&salesRecordType(other)==='sales'&&other.businessDate===businessDate&&String(other.storeId)===String(record.storeId)&&salesCreditedLineUserId(other)===salesCreditedLineUserId(record)})){setModalStatus('修改後日期、同一門市已有這位人員的業績，請先核對。','error');return}
   if(isReturn&&!enforceSalesInvoiceDateMax(salesEl('salesRequestOriginalInvoiceDate'),record.businessDate||salesToday()))return;
   originalInvoiceDate=String((salesEl('salesRequestOriginalInvoiceDate')||{}).value||'').trim();
   if(!isReturn&&(!grossRaw||!Number.isFinite(grossAmount)||grossAmount<0)){setModalStatus('請填寫正確的修改後營業額。','error');return}
   if(isReturn&&(!returnRaw||!Number.isFinite(returnAmount)||returnAmount<=0)){setModalStatus('請填寫正確的修改後退貨金額。','error');return}
   if(isReturn&&!originalInvoiceDate){setModalStatus('修改退貨時，必須填寫原發票日期。','error');return}
   if(isReturn&&originalInvoiceDate>record.businessDate){setModalStatus('原發票日期不可晚於退貨回傳日期。','error');return}
-  var hasChange=isReturn?(returnAmount!==Number(record.returnAmount||0)||String(originalInvoiceDate||'')!==String(record.originalInvoiceDate||'')):grossAmount!==Number(record.grossAmount||0);
+  var hasChange=isReturn?(returnAmount!==Number(record.returnAmount||0)||String(originalInvoiceDate||'')!==String(record.originalInvoiceDate||'')):(grossAmount!==Number(record.grossAmount||0)||businessDate!==String(record.businessDate||''));
   if(!hasChange){setModalStatus('請至少修改一項資料。','error');return}
   if(reason.length<2){setModalStatus('請填寫修改原因。','error');return}
   if(button)button.disabled=true;
   setModalStatus('正在送出修改申請…','working');
   try{
+    if(!isReturn&&businessDate!==record.businessDate)await ensureSalesEditPayApi79();
     if(window.STARRED_SALES_TEST_MODE){
       var identity=salesIdentity();
       var requests=salesReadTestRequests();
       if(requests.some(function(item){return String(item.salesReportId)===String(record.id)&&['pending','approved'].includes(String(item.status))}))throw new Error('這筆資料已有進行中的修改申請');
       var proposed=salesSnapshot(record);
+      proposed.businessDate=businessDate;
       proposed.grossAmount=isReturn?0:grossAmount;
       proposed.returnAmount=isReturn?returnAmount:0;
       proposed.originalInvoiceDate=isReturn?originalInvoiceDate:'';
       requests.unshift({id:'sales-edit-'+Date.now(),salesReportId:String(record.id),requesterLineUserId:identity.id,requesterName:identity.name,reason:reason,status:'pending',requestedSnapshot:salesSnapshot(record),proposedSnapshot:proposed,completedSnapshot:null,requestedAt:new Date().toISOString(),reviewerName:'',reviewedAt:'',completedAt:''});
       salesWriteTestRequests(requests);
     }else{
-      await starredApi('sales_request_edit',{recordId:record.id,reason:reason,proposed:{grossAmount:isReturn?0:grossAmount,returnAmount:isReturn?returnAmount:0,originalInvoiceDate:isReturn?originalInvoiceDate:''}});
+      await starredApi('sales_request_edit',{recordId:record.id,reason:reason,proposed:{businessDate:businessDate,grossAmount:isReturn?0:grossAmount,returnAmount:isReturn?returnAmount:0,originalInvoiceDate:isReturn?originalInvoiceDate:''}});
     }
     closeSalesRequestModal();
     await loadSalesData();
@@ -11102,10 +11126,10 @@ function salesWorkdayReviewCardHtml(group,confirmed){
     var hourly=salesWorkdayIsHourly(hours);var checked=person.status==='counted'&&!hourly;
     var resultText=hours===''?(checked?'計 1 日薪':confirmed?'未填工時':'請填工時'):salesWorkdayPayText(hours,checked?'counted':'excluded');
     var resultClass=hourly?'hourly':checked?'counted':'excluded';
-    return '<div class="sales-workday-review-person'+(hourly?' hourly':'')+'"><label class="sales-workday-wage-choice"><input type="checkbox" data-line-user-id="'+salesEsc(person.lineUserId)+'"'+(checked?' checked':'')+(hourly?' disabled':'')+' onchange="syncSalesWorkdayWageResult(this)" aria-label="'+salesEsc(person.name)+'是否計 1 日薪"><span class="sales-workday-review-copy"><span class="title">'+salesEsc(person.name)+'</span><small>'+salesMoney(person.grossAmount)+' 業績</small></span></label><label class="sales-workday-hours-field"><span>上班時數</span><span class="sales-workday-hours-control"><input class="sales-workday-hours-input" type="number" min="0" max="24" step="0.5" inputmode="decimal" data-line-user-id="'+salesEsc(person.lineUserId)+'" value="'+salesEsc(hours)+'" placeholder="必填" aria-label="'+salesEsc(person.name)+'上班時數" oninput="syncSalesWorkdayHoursRow(this)"><em>小時</em></span></label><span class="sales-workday-wage-result '+resultClass+'">'+salesEsc(resultText)+'</span></div>';
+    return '<div class="sales-workday-review-person'+(hourly?' hourly':'')+'"><label class="sales-workday-wage-choice"><input type="checkbox" data-line-user-id="'+salesEsc(person.lineUserId)+'"'+(checked?' checked':'')+' onchange="syncSalesWorkdayWageResult(this)" aria-label="'+salesEsc(person.name)+'是否計 1 日薪"><span class="sales-workday-review-copy"><span class="title">'+salesEsc(person.name)+'</span><small class="sales79-daily-label">計 1 日薪（可免填工時）</small><small>'+salesMoney(person.grossAmount)+' 業績</small></span></label><label class="sales-workday-hours-field"><span>上班時數</span><span class="sales-workday-hours-control"><input class="sales-workday-hours-input" type="number" min="0" max="24" step="0.5" inputmode="decimal" data-line-user-id="'+salesEsc(person.lineUserId)+'" value="'+salesEsc(hours)+'" placeholder="'+(checked?'日薪可免填':'必填')+'"'+(checked?'':' required')+' aria-label="'+salesEsc(person.name)+'上班時數" oninput="syncSalesWorkdayHoursRow(this)"><em>小時</em></span></label><span class="sales-workday-wage-result '+resultClass+'">'+salesEsc(resultText)+'</span></div>';
   }).join('');
-  var reasonLabel=group.reviewReason==='dual_store'?'一日雙門市':group.reviewReason==='mixed'?'同店多人＋一日雙門市':'同店多人';
-  var note=confirmed?'<small class="sales-workday-review-confirmed-note">最後確認：'+salesEsc(confirmer||'後台人員')+'・'+salesEsc(salesDateTime(confirmedAt))+'；可直接修改後再次確認。</small>':'<small class="sales-workday-review-warning">'+(group.reviewReason==='dual_store'?'同一人同一天跨兩個門市；若為請人代班且薪資仍算此人，可直接確認日薪。':'0.5～7.5 小時自動計時薪且不計日薪；若這組人員都能領日薪，可直接按「確認日薪」。')+'</small>';
+  var reasonLabel=group.reviewReason==='single_review'?'單人薪資複核':group.reviewReason==='dual_store'?'一日雙門市':group.reviewReason==='mixed'?'同店多人＋一日雙門市':'同店多人';
+  var note=confirmed?'<small class="sales-workday-review-confirmed-note">最後確認：'+salesEsc(confirmer||'後台人員')+'・'+salesEsc(salesDateTime(confirmedAt))+'；可直接修改後再次確認。</small>':'<small class="sales-workday-review-warning">'+(group.reviewReason==='dual_store'?'同一人同一天跨兩個門市；若為請人代班且薪資仍算此人，可直接確認日薪。':'逐人勾選日薪可免填工時；未勾選者填工時。0.5～7.5 小時計時薪。')+'</small>';
   var dailyWageButton=!confirmed&&group.people.length?'<button type="button" class="secondary sales-workday-daily-wage-btn" data-person-count="'+String(group.people.length)+'" title="'+salesEsc(group.people.length>1?'整組人員各計 1 日薪，不必填工時':'直接計 1 日薪，不必填工時')+'" onclick="window.confirmSalesDailyWage(this,event);return false">確認日薪</button>':'';
   return '<article class="sales-workday-review-card '+(confirmed?'confirmed':'pending')+'" data-business-date="'+salesEsc(group.businessDate)+'" data-store-id="'+salesEsc(group.storeId)+'" data-record-ids="'+salesEsc((group.recordIds||[]).join(','))+'"><header><div><time>'+salesEsc(String(group.businessDate).replace(/-/g,'/'))+'</time><b>'+salesEsc(salesStoreText(group))+'</b></div><span class="sales-workday-review-reason">'+salesEsc(reasonLabel)+'・'+String(group.people.length)+' 人・'+salesMoney(group.grossAmount)+'</span></header><div class="sales-workday-review-people">'+people+'</div><footer>'+note+'<span class="sales-workday-review-actions">'+dailyWageButton+'<button type="button" class="primary" onclick="confirmSalesWorkdayGroup(this)">'+(confirmed?'修改工時與薪資':'確認工時與薪資')+'</button></span></footer></article>';
 }
@@ -11129,14 +11153,22 @@ function renderSalesWorkdayReviews(){
   if(salesEl('salesWorkdayConfirmedSection'))salesEl('salesWorkdayConfirmedSection').hidden=!confirmed.length;
 }
 function syncSalesWorkdayWageResult(input){
-  var row=input&&input.closest?input.closest('.sales-workday-review-person'):null;var result=row&&row.querySelector('.sales-workday-wage-result');var hoursInput=row&&row.querySelector('.sales-workday-hours-input');if(!result)return;
-  var hours=hoursInput?salesWorkHoursValue({workHours:hoursInput.value}):null;var hourly=salesWorkdayIsHourly(hours);
-  if(hourly){input.checked=false;input.disabled=true}else input.disabled=false;
+  var row=input&&input.closest?input.closest('.sales-workday-review-person'):null;
+  var result=row&&row.querySelector('.sales-workday-wage-result'),hoursInput=row&&row.querySelector('.sales-workday-hours-input');if(!result||!hoursInput)return;
+  input.disabled=false;
+  // Explicitly selecting daily pay switches short hourly input to the no-hours daily mode.
+  if(input.checked&&String(hoursInput.value).trim()!==''&&Number(hoursInput.value)<=7.5){hoursInput.dataset.hourlyDraft=hoursInput.value;hoursInput.value=''}
+  if(!input.checked&&hoursInput.value===''&&hoursInput.dataset.hourlyDraft){hoursInput.value=hoursInput.dataset.hourlyDraft;delete hoursInput.dataset.hourlyDraft}
+  var raw=String(hoursInput.value||'').trim(),hours=raw===''?null:salesWorkHoursValue({workHours:raw});
+  var hourly=!input.checked&&salesWorkdayIsHourly(hours);
+  hoursInput.required=!input.checked;hoursInput.placeholder=input.checked?'日薪可免填':'必填';hoursInput.classList.remove('invalid');
   row.classList.toggle('hourly',hourly);result.classList.remove('counted','excluded','hourly');result.classList.add(hourly?'hourly':input.checked?'counted':'excluded');
-  result.textContent=hours===null?'請填工時':salesWorkdayPayText(hours,input.checked?'counted':'excluded');
+  result.textContent=hours===null?(input.checked?'計 1 日薪':'請填工時'):salesWorkdayPayText(hours,input.checked?'counted':'excluded');
 }
 function syncSalesWorkdayHoursRow(input){
-  input.classList.remove('invalid');var row=input&&input.closest?input.closest('.sales-workday-review-person'):null;var checkbox=row&&row.querySelector('.sales-workday-wage-choice input[type="checkbox"]');if(checkbox)syncSalesWorkdayWageResult(checkbox);
+  input.classList.remove('invalid');var row=input&&input.closest?input.closest('.sales-workday-review-person'):null;
+  var checkbox=row&&row.querySelector('.sales-workday-wage-choice input[type="checkbox"]');
+  if(checkbox){if(String(input.value).trim()!==''&&Number(input.value)<=7.5)checkbox.checked=false;delete input.dataset.hourlyDraft;syncSalesWorkdayWageResult(checkbox)}
 }
 async function confirmSalesDailyWage(button,event){
   if(event){event.preventDefault();event.stopPropagation()}
@@ -11177,46 +11209,58 @@ async function confirmSalesDailyWage(button,event){
   finally{actionButtons.forEach(function(item){item.disabled=false})}
 }
 async function confirmSalesWorkdayGroup(button){
-  var card=button&&button.closest?button.closest('.sales-workday-review-card'):null;if(!card)return;
-  var businessDate=String(card.dataset.businessDate||'');var storeId=String(card.dataset.storeId||'');
-  var recordIds=String(card.dataset.recordIds||'').split(',').map(function(value){return value.trim()}).filter(Boolean);
-  var hourInputs=Array.from(card.querySelectorAll('.sales-workday-hours-input'));var workHours=[];var invalidInput=null;
-  hourInputs.forEach(function(input){
-    input.classList.remove('invalid');var raw=String(input.value||'').trim();var hours=Number(raw);
+  var card=button&&button.closest?button.closest('.sales-workday-review-card'):null;if(!card||button.disabled)return;
+  var businessDate=String(card.dataset.businessDate||''),storeId=String(card.dataset.storeId||'');
+  var recordIds=String(card.dataset.recordIds||'').split(',').map(function(v){return v.trim()}).filter(Boolean);
+  var rows=Array.from(card.querySelectorAll('.sales-workday-review-person'));
+  var workHours=[],dailyWageOnlyLineUserIds=[],countedLineUserIds=[],hourLines=[],invalidInput=null;
+  rows.forEach(function(row){
     if(invalidInput)return;
+    var input=row.querySelector('.sales-workday-hours-input'),checkbox=row.querySelector('.sales-workday-wage-choice input[type="checkbox"]');
+    if(!input||!checkbox)return;
+    input.classList.remove('invalid');
+    var id=String(input.dataset.lineUserId||''),raw=String(input.value||'').trim(),hours=Number(raw);
+    var name=(row.querySelector('.sales-workday-review-copy .title')||{}).textContent||'人員';
+    if(checkbox.checked&&raw===''){
+      countedLineUserIds.push(id);dailyWageOnlyLineUserIds.push(id);hourLines.push(name+'：計 1 日薪（工時免填）');return;
+    }
     if(raw===''||!Number.isFinite(hours)||hours<0||hours>24||Math.abs(hours*2-Math.round(hours*2))>0.000001){invalidInput=input;return}
-    workHours.push({lineUserId:String(input.dataset.lineUserId||''),hours:hours});
+    // Keep the existing half-hour rules; short hours never round up to a day.
+    if(salesWorkdayIsHourly(hours))checkbox.checked=false;
+    if(checkbox.checked&&hours<=7.5){invalidInput=input;return}
+    if(checkbox.checked)countedLineUserIds.push(id);
+    workHours.push({lineUserId:id,hours:hours});
+    hourLines.push(name+'：'+salesWorkHoursText(hours)+'｜'+salesWorkdayPayText(hours,checkbox.checked?'counted':'excluded'));
   });
-  if(invalidInput||workHours.length!==hourInputs.length){
+  if(invalidInput||workHours.length+dailyWageOnlyLineUserIds.length!==rows.length){
     if(invalidInput){invalidInput.classList.add('invalid');invalidInput.focus()}
-    salesSetAdminStatus('每位人員都要填寫 0～24 小時，並以 0.5 小時為單位。','error');return
+    salesSetAdminStatus('日薪人員可免填工時；其餘人員請填 0～24 小時（每 0.5 小時一格）。0.5～7.5 小時計時薪，0 小時不計薪。','error');return;
   }
-  var hoursById=new Map(workHours.map(function(item){return [item.lineUserId,item.hours]}));
-  var checked=Array.from(card.querySelectorAll('.sales-workday-wage-choice input[type="checkbox"]:checked'));
-  var countedLineUserIds=checked.map(function(input){return String(input.dataset.lineUserId||'')}).filter(Boolean);
-  var invalidDailyWage=countedLineUserIds.find(function(id){return Number(hoursById.get(id)||0)<=7.5});
-  if(invalidDailyWage){var invalidDailyInput=hourInputs.find(function(input){return String(input.dataset.lineUserId||'')===invalidDailyWage});if(invalidDailyInput){invalidDailyInput.classList.add('invalid');invalidDailyInput.focus()}salesSetAdminStatus('計 1 日薪者的工時必須大於 7.5 小時；0.5～7.5 小時會自動計時薪。','error');return}
-  var countedSetForPreview=new Set(countedLineUserIds);
-  var hourLines=workHours.map(function(item){var row=hourInputs.find(function(input){return String(input.dataset.lineUserId||'')===item.lineUserId});var person=row&&row.closest('.sales-workday-review-person');var name=person&&person.querySelector('.sales-workday-review-copy .title');var status=countedSetForPreview.has(item.lineUserId)?'counted':'excluded';return (name?name.textContent:'人員')+'：'+salesWorkHoursText(item.hours)+'｜'+salesWorkdayPayText(item.hours,status)});
-  var names=checked.map(function(input){var person=input.closest('.sales-workday-review-person');var name=person&&person.querySelector('.sales-workday-review-copy .title');return name?name.textContent:''}).filter(Boolean);
-  if(!window.confirm('確認 '+businessDate+' 的工時與薪資：\n'+hourLines.join('\n')+'\n\n計 1 日薪：'+(names.length?names.join('、'):'無')+'\n0.5～7.5 小時已自動改為時薪，不會進位成日薪。'))return;
-  button.disabled=true;salesSetAdminStatus('正在儲存工時與薪資…','working');
+  if(!window.confirm('確認 '+businessDate+' 的工時與薪資：\n'+hourLines.join('\n')+'\n\n每人分別計算，營業額不變。'))return;
+  var actionButtons=Array.from(card.querySelectorAll('.sales-workday-review-actions button'));
+  actionButtons.forEach(function(item){item.disabled=true});salesSetAdminStatus('正在儲存工時與薪資…','working');
   try{
+    await ensureSalesEditPayApi79();
     if(window.STARRED_SALES_TEST_MODE){
-      var counted=new Set(countedLineUserIds);var now=new Date().toISOString();var actor=(currentUser&&currentUser.name)||'測試會計';var beforeRows=[];var afterRows=[];
+      var counted=new Set(countedLineUserIds),direct=new Set(dailyWageOnlyLineUserIds),target=new Set(recordIds);
+      var hoursById=new Map(workHours.map(function(item){return [item.lineUserId,item.hours]}));
+      var seen=new Set(),now=new Date().toISOString(),actor=(currentUser&&currentUser.name)||'測試會計',beforeRows=[],afterRows=[];
       var records=salesReadTestRecords().map(function(record){
-        if(salesRecordType(record)!=='sales'||record.isProxySale===true||String(record.businessDate)!==businessDate||String(record.storeId)!==storeId)return record;
-        var lineUserId=salesCreditedLineUserId(record);var before=Object.assign({},record);var after=Object.assign({},record,{workdayStatus:counted.has(lineUserId)?'counted':'excluded',workHours:Number(hoursById.get(lineUserId)),workdayConfirmedAt:now,workdayConfirmedByLineUserId:salesIdentity().id||'sales-test-admin',workdayConfirmedByName:actor,updatedAt:now});beforeRows.push(before);afterRows.push(after);return after;
+        if(!target.has(String(record.id))||salesRecordType(record)!=='sales'||record.isProxySale===true)return record;
+        var id=salesCreditedLineUserId(record),hours=direct.has(id)||seen.has(id)?null:hoursById.get(id);seen.add(id);
+        var after=Object.assign({},record,{workdayStatus:counted.has(id)?'counted':'excluded',workHours:hours,workdayReviewReason:record.workdayReviewReason||'same_store',workdayConfirmedAt:now,workdayConfirmedByLineUserId:salesIdentity().id||'sales-test-admin',workdayConfirmedByName:actor,updatedAt:now});
+        beforeRows.push(record);afterRows.push(after);return after;
       });
+      if(afterRows.length!==target.size)throw new Error('核准組成員已變更，請重新整理。');
       salesWriteTestRecords(records);
-      afterRows.forEach(function(after,index){salesAddTestAudit(after,salesSnapshot(beforeRows[index]),salesSnapshot(after),'workday_confirm',salesWorkHoursText(after.workHours)+'；'+salesWorkdayPayText(after.workHours,after.workdayStatus),actor)});
+      afterRows.forEach(function(after,i){salesAddTestAudit(after,salesSnapshot(beforeRows[i]),salesSnapshot(after),'workday_confirm',salesWorkdayPayText(after.workHours,after.workdayStatus),actor)});
     }else{
-      await starredApi('sales_confirm_workday_group',{businessDate:businessDate,storeId:storeId,recordIds:recordIds,countedLineUserIds:countedLineUserIds,workHours:workHours});
+      await starredApi('sales_confirm_workday_group',{businessDate:businessDate,storeId:storeId,recordIds:recordIds,countedLineUserIds:countedLineUserIds,dailyWageOnlyLineUserIds:dailyWageOnlyLineUserIds,workHours:workHours});
     }
     await Promise.all([loadSalesAdminReport(),loadSalesData()]);
-    salesSetAdminStatus('工時與薪資確認已完成，上班天數與時薪工時已重新計算。','success');
+    salesSetAdminStatus('工時與薪資確認已完成；日薪與時薪分別計算，營業額未變更。','success');
   }catch(error){salesSetAdminStatus('工時與薪資確認失敗：'+String(error&&error.message||error),'error')}
-  finally{button.disabled=false}
+  finally{actionButtons.forEach(function(item){item.disabled=false})}
 }
 function salesWorkdayNoteForRecordIds(recordIds){
   var ids=new Set((Array.isArray(recordIds)?recordIds:[]).map(function(id){return String(id||'')}).filter(Boolean));if(!ids.size)return '';
@@ -12103,21 +12147,33 @@ function renderSalesAdminRequests(){
     var snapshot=request.requestedSnapshot||{};
     var proposed=request.proposedSnapshot||request.completedSnapshot||snapshot;
     var meta=salesStatusMeta(request.status);
-    var beforeLabel=request.status==='pending'?'目前金額':'修改前';
+    var beforeLabel=request.status==='pending'?'申請時原資料':'修改前';
     var isReturn=salesRecordType(snapshot)==='return';
+    var dateChanged=!isReturn&&String(proposed.businessDate||snapshot.businessDate)!==String(snapshot.businessDate);
+    var dateBefore=dateChanged?'<small class="sales79-date-before">'+salesEsc(snapshot.businessDate)+'</small>':'';
+    var dateAfter=dateChanged?'<small class="sales79-date-after">'+salesEsc(proposed.businessDate)+'</small>':'';
     var action=request.status==='pending'?'<div class="sales-review-actions"><button type="button" class="secondary reject" onclick="reviewSalesEditRequest(\''+salesEsc(request.id)+'\',\'reject\')">不同意</button><button type="button" class="primary" onclick="reviewSalesEditRequest(\''+salesEsc(request.id)+'\',\'approve\')">同意並套用</button></div>':'';
     var review=request.reviewedAt?'<small>審核：'+salesEsc(request.reviewerName||'管理員')+'・'+salesEsc(salesDateTime(request.reviewedAt))+'</small>':'';
     var requestedChange=Object.keys(proposed).length?'<div class="sales-review-change"><b>申請修改內容</b><p>'+salesChangeSummary(snapshot,proposed)+'</p></div>':'';
     var applied=request.status==='completed'?'<div class="sales-review-applied">已於後台同意時套用完成</div>':'';
     var beforeAmount=isReturn?'退貨 '+salesMoney(snapshot.returnAmount):'營業 '+salesMoney(snapshot.grossAmount);
     var afterAmount=isReturn?'退貨 '+salesMoney(proposed.returnAmount):'營業 '+salesMoney(proposed.grossAmount);
-    return '<details class="sales-review-card"><summary><div class="sales-review-person"><b>'+salesEsc(request.requesterName||snapshot.submitterName||'LINE 使用者')+'</b><span>'+salesEsc(snapshot.businessDate||'—')+'・'+salesEsc(salesStoreText(snapshot))+'</span></div><div class="sales-review-inline-change"><span>'+beforeAmount+'</span><b>→ '+afterAmount+'</b></div><span class="sales-record-status '+meta.className+'">'+meta.label+'</span><time>'+salesEsc(salesDateTime(request.requestedAt))+'</time><span class="sales-record-chevron">⌄</span></summary><div class="sales-review-detail"><div class="sales-review-compare"><div class="before"><span>'+beforeLabel+'</span><b>'+beforeAmount+'</b></div><div class="arrow">→</div><div class="after"><span>申請改為</span><b>'+afterAmount+'</b></div></div>'+requestedChange+'<div class="sales-review-reason"><span>申請原因</span><b>'+salesEsc(request.reason||'未填寫')+'</b></div>'+review+applied+action+'</div></details>';
+    return '<details class="sales-review-card" data-sales-review-id="'+salesEsc(request.id)+'"><summary><div class="sales-review-person"><b>'+salesEsc(request.requesterName||snapshot.submitterName||'LINE 使用者')+'</b><span>'+salesEsc(snapshot.businessDate||'—')+'・'+salesEsc(salesStoreText(snapshot))+'</span></div><div class="sales-review-inline-change"><span>'+beforeAmount+dateBefore+'</span><b>→ '+afterAmount+dateAfter+'</b></div><span class="sales-record-status '+meta.className+'">'+meta.label+'</span><time>'+salesEsc(salesDateTime(request.requestedAt))+'</time><span class="sales-record-chevron">⌄</span></summary><div class="sales-review-detail"><div class="sales-review-compare"><div class="before"><span>'+beforeLabel+'</span><b>'+beforeAmount+'</b>'+dateBefore+'</div><div class="arrow">→</div><div class="after"><span>申請改為</span><b>'+afterAmount+'</b>'+dateAfter+'</div></div>'+requestedChange+'<div class="sales-review-reason"><span>申請原因</span><b>'+salesEsc(request.reason||'未填寫')+'</b></div>'+review+applied+action+'</div></details>';
   }).join('');
 }
 async function reviewSalesEditRequest(id,decision){
+  if(salesReviewInFlight79.has(String(id)))return;
+  var request79=(salesAdminData.editRequests||[]).find(function(item){return String(item.id)===String(id)});
+  var before79=request79&&request79.requestedSnapshot||{},proposed79=request79&&request79.proposedSnapshot||{};
+  var dateChanged79=!!proposed79.businessDate&&proposed79.businessDate!==before79.businessDate;
+  if(decision==='approve'&&dateChanged79&&!window.confirm('同意將業績日期由 '+before79.businessDate+' 改為 '+proposed79.businessDate+'？\n\n核准後才調整業績歸屬；本人業績的相關工時與薪資會重新待確認。'))return;
+  salesReviewInFlight79.add(String(id));
+  var reviewButtons79=Array.from(document.querySelectorAll('[data-sales-review-id]')).filter(function(el){return el.dataset.salesReviewId===String(id)}).flatMap(function(el){return Array.from(el.querySelectorAll('button'))});
+  reviewButtons79.forEach(function(button){button.disabled=true});
   var label=decision==='approve'?'同意並套用修改':'不同意申請';
   salesSetAdminStatus('正在'+label+'…','working');
   try{
+    if(decision==='approve'&&dateChanged79)await ensureSalesEditPayApi79();
     if(window.STARRED_SALES_TEST_MODE){
       var now=new Date().toISOString();
       var found=false;
@@ -12135,7 +12191,7 @@ async function reviewSalesEditRequest(id,decision){
           all=all.map(function(record){
             if(String(record.id)!==String(request.salesReportId))return record;
             var isReturn=salesRecordType(record)==='return';
-            updatedRecord=Object.assign({},record,{recordType:isReturn?'return':'sales',grossAmount:isReturn?0:Number(proposed.grossAmount||0),returnAmount:isReturn?Number(proposed.returnAmount||0):0,originalInvoiceDate:isReturn?String(proposed.originalInvoiceDate||''):'',updatedAt:now});
+            updatedRecord=Object.assign({},record,{businessDate:isReturn?record.businessDate:String(proposed.businessDate||record.businessDate),recordType:isReturn?'return':'sales',grossAmount:isReturn?0:Number(proposed.grossAmount||0),returnAmount:isReturn?Number(proposed.returnAmount||0):0,originalInvoiceDate:isReturn?String(proposed.originalInvoiceDate||''):'',updatedAt:now});
             auditPayload={record:updatedRecord,before:salesSnapshot(record),after:salesSnapshot(updatedRecord),reason:String(request.reason||'')};
             return updatedRecord;
           });
@@ -12146,6 +12202,13 @@ async function reviewSalesEditRequest(id,decision){
         return Object.assign({},request,{status:nextStatus,completedSnapshot:completedSnapshot||request.completedSnapshot||null,reviewerName:(currentUser&&currentUser.name)||'測試管理員',reviewedAt:now,completedAt:nextStatus==='completed'?now:(request.completedAt||'')});
       });
       if(!found)throw new Error('找不到這筆修改申請');
+      if(decision==='approve'&&dateChanged79&&auditPayload&&auditPayload.record.isProxySale!==true){
+        var movedId=String(auditPayload.record.id),beforeAll=salesReadTestRecords(),affected=new Set([movedId]);
+        [beforeAll,all].forEach(function(source){salesBuildWorkdayGroups(source).filter(function(g){return g.recordIds.includes(movedId)}).forEach(function(g){g.recordIds.forEach(function(id){affected.add(id)})})});
+        all=all.map(function(record){return affected.has(String(record.id))?Object.assign({},record,{workdayStatus:'pending',workHours:null,workdayReviewReason:'same_store',workdayConfirmedAt:'',workdayConfirmedByLineUserId:'',workdayConfirmedByName:'',updatedAt:now}):record});
+        auditPayload.record=all.find(function(record){return String(record.id)===movedId});auditPayload.after=salesSnapshot(auditPayload.record);
+        requests=requests.map(function(request){return String(request.id)===String(id)?Object.assign({},request,{completedSnapshot:auditPayload.after}):request});
+      }
       salesWriteTestRecords(all);
       salesWriteTestRequests(requests);
       if(auditPayload)salesAddTestAudit(auditPayload.record,auditPayload.before,auditPayload.after,'approved_request',auditPayload.reason,(currentUser&&currentUser.name)||'測試管理員');
@@ -12153,10 +12216,10 @@ async function reviewSalesEditRequest(id,decision){
       await starredApi('sales_admin_review_edit',{requestId:id,decision:decision});
     }
     await Promise.all([loadSalesAdminReport(),loadSalesData()]);
-    salesSetAdminStatus(label+'完成。','success');
+    salesSetAdminStatus(label+'完成。'+(decision==='approve'&&dateChanged79?'日期已套用，請核對「待確認工時與薪資」。':''),'success');
   }catch(error){
     salesSetAdminStatus('審核失敗：'+String(error&&error.message||error),'error');
-  }
+  }finally{salesReviewInFlight79.delete(String(id));reviewButtons79.forEach(function(button){button.disabled=false})}
 }
 function resetSalesAdminFilters(){
   var today=salesToday();
@@ -12217,7 +12280,7 @@ function printSalesReport(){
   sections.push(salesFriendlyPrintTable('核准撤櫃／進櫃／其他／費用',salesApprovedExpenseReportRows().map(function(row){var copy=Object.assign({},row);copy['核准金額']=copy['核准金額']===''?'':salesMoney(copy['核准金額']);return copy})));
   sections.push(salesFriendlyPrintTable('核准公司帳',salesApprovedExternalReportRows().map(function(row){var copy=Object.assign({},row);copy['核准公司帳']=salesMoney(copy['核准公司帳']);return copy})));
   sections.push(salesFriendlyPrintTable('業績對比',salesPersonDetailExportRows()));
-  sections.push(salesFriendlyPrintTable('修改審核',(salesAdminData.editRequests||[]).map(function(request){var before=request.requestedSnapshot||{},proposed=request.proposedSnapshot||request.completedSnapshot||before;return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','原日期':before.businessDate||'','原門市':salesStoreText(before),'原營業額':salesMoney(before.grossAmount||0),'修改後營業額':salesMoney(proposed.grossAmount||0),'原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||''}})));
+  sections.push(salesFriendlyPrintTable('修改審核',(salesAdminData.editRequests||[]).map(function(request){var before=request.requestedSnapshot||{},proposed=request.proposedSnapshot||request.completedSnapshot||before;return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','原日期':before.businessDate||'','申請日期':proposed.businessDate||before.businessDate||'','原門市':salesStoreText(before),'原營業額':salesMoney(before.grossAmount||0),'修改後營業額':salesMoney(proposed.grossAmount||0),'原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||''}})));
   salesOpenFriendlyPrint('星紅織品｜完整業績報表',sections);
 }
 function printSalesAveragePerformance(){var rows=salesAveragePerformanceExportRows();if(!rows.length){salesSetAdminStatus('目前沒有可列印的平均業績。','error');return}salesOpenFriendlyPrint('星紅織品｜平均業績',[salesFriendlyPrintTable('平均業績',rows.map(function(row){var copy=Object.assign({},row);copy['個人營業總額']=salesMoney(copy['個人營業總額']);copy['平均業績']=copy['平均業績']===''?'—':salesMoney(copy['平均業績']);return copy}),'平均業績＝個人營業總額 ÷ 平均計算天數；計日薪與時薪日期皆納入，同一天只算 1 天。')])}
@@ -12397,7 +12460,7 @@ async function salesExportReportExcelWithExcelJs(){
     '退貨日期':record.businessDate,'原發票日期':record.originalInvoiceDate||'','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':record.storeName,'樓層／櫃位':record.storeFloor,'退貨處理人':salesSubmitterName(record),'退貨金額':Number(record.returnAmount||0),'歸屬銷售人員':record.assignedSalespersonLineUserId?salesPersonName(record.assignedSalespersonLineUserId,record.assignedSalespersonName):'待指定','歸列業績月份':String(record.returnPerformanceMonth||'').slice(0,7),'歸列操作人':record.returnAssignedByName||'','歸列時間':salesDateTime(record.returnAssignedAt)
   }});
   var requestsSheet=salesAdminData.editRequests.map(function(request){var before=request.requestedSnapshot||{},after=request.completedSnapshot||{},proposed=request.proposedSnapshot||request.completedSnapshot||before;return {
-    '申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName,'原業績日期':before.businessDate||'','原門市':salesStoreText(before),'原營業額':Number(before.grossAmount||0),'原退貨金額':Number(before.returnAmount||0),'原發票日期':before.originalInvoiceDate||'','申請修改後營業額':Number(proposed.grossAmount||0),'申請修改後退貨金額':Number(proposed.returnAmount||0),'申請修改後原發票日期':proposed.originalInvoiceDate||'','修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'','審核時間':salesDateTime(request.reviewedAt),'完成時間':salesDateTime(request.completedAt),'實際修改後營業額':request.status==='completed'?Number(after.grossAmount||0):'','實際修改後退貨金額':request.status==='completed'?Number(after.returnAmount||0):'','實際修改後原發票日期':request.status==='completed'?(after.originalInvoiceDate||''):''
+    '申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName,'原業績日期':before.businessDate||'','申請修改後日期':proposed.businessDate||before.businessDate||'','原門市':salesStoreText(before),'原營業額':Number(before.grossAmount||0),'原退貨金額':Number(before.returnAmount||0),'原發票日期':before.originalInvoiceDate||'','申請修改後營業額':Number(proposed.grossAmount||0),'申請修改後退貨金額':Number(proposed.returnAmount||0),'申請修改後原發票日期':proposed.originalInvoiceDate||'','修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'','審核時間':salesDateTime(request.reviewedAt),'完成時間':salesDateTime(request.completedAt),'實際修改後日期':request.status==='completed'?(after.businessDate||before.businessDate||''):'','實際修改後營業額':request.status==='completed'?Number(after.grossAmount||0):'','實際修改後退貨金額':request.status==='completed'?Number(after.returnAmount||0):'','實際修改後原發票日期':request.status==='completed'?(after.originalInvoiceDate||''):''
   }});
   var workdaysRows=(salesAdminData.workDays||[]).map(function(row){return {'人員':salesPersonName(row.lineUserId,row.name),'已計1日薪天數':Number(row.workDays||0),'自動計入天數':Number(row.autoDays||0),'主管確認天數':Number(row.confirmedDays||0),'不計1日薪天數':Number(row.excludedDays||0),'時薪工時合計':salesWorkHoursNumberText(Number(row.hourlyHours||0)),'時薪日期數':Number(row.hourlyDays||0),'待確認天數':Number(row.pendingDays||0),'已填工時合計':salesWorkHoursNumberText(Number(row.recordedHours||0)),'已填工時天數':Number(row.recordedHourDays||0),'營業總額':Number(row.grossAmount||0),'業績筆數':Number(row.recordCount||0)}});
   var personDetailModel=salesPersonDetailModel();
@@ -12469,7 +12532,7 @@ function salesExportReportExcelWithSheetJs(){
   var storesSheet=byStore.map(function(row,index){row=row||{};return {'排名':index+1,'區域':(typeof areaText!=='undefined'&&areaText[row.area])||row.area||'','門市':row.storeName||'','樓層／櫃位':row.storeFloor||'','營業總額':Number(row.grossAmount||0),'退貨總額（另計）':Number(row.returnAmount||0),'回傳筆數':Number(row.recordCount||0)}});
   var peopleSheet=byPerson.map(function(row,index){row=row||{};return {'排名':index+1,'銷售人員':salesPersonName(row.lineUserId,row.name||''),'店點':(Array.isArray(row.locations)?row.locations:[]).map(salesStoreText).join('、'),'個人營業總額':Number(row.grossAmount||0),'退貨':Number(row.returnAmount||0),'當月業績':Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)),'明細筆數':Number(row.recordCount||0)}});
   var returnsSheet=records.filter(function(record){return salesRecordType(record)==='return'}).map(function(record){record=record||{};return {'退貨日期':record.businessDate||'','原發票日期':record.originalInvoiceDate||'','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':record.storeName||'','樓層／櫃位':record.storeFloor||'','退貨處理人':salesSubmitterName(record),'退貨金額':Number(record.returnAmount||0),'歸屬銷售人員':record.assignedSalespersonLineUserId?salesPersonName(record.assignedSalespersonLineUserId,record.assignedSalespersonName):'待指定','歸列業績月份':String(record.returnPerformanceMonth||'').slice(0,7),'歸列操作人':record.returnAssignedByName||'','歸列時間':salesDateTime(record.returnAssignedAt)}});
-  var requestsSheet=editRequests.map(function(request){request=request||{};var before=request.requestedSnapshot&&typeof request.requestedSnapshot==='object'?request.requestedSnapshot:{},after=request.completedSnapshot&&typeof request.completedSnapshot==='object'?request.completedSnapshot:{},proposed=request.proposedSnapshot&&typeof request.proposedSnapshot==='object'?request.proposedSnapshot:(Object.keys(after).length?after:before);return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','原業績日期':before.businessDate||'','原門市':salesStoreText(before),'原營業額':Number(before.grossAmount||0),'原退貨金額':Number(before.returnAmount||0),'原發票日期':before.originalInvoiceDate||'','申請修改後營業額':Number(proposed.grossAmount||0),'申請修改後退貨金額':Number(proposed.returnAmount||0),'申請修改後原發票日期':proposed.originalInvoiceDate||'','修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'','審核時間':salesDateTime(request.reviewedAt),'完成時間':salesDateTime(request.completedAt),'實際修改後營業額':request.status==='completed'?Number(after.grossAmount||0):'','實際修改後退貨金額':request.status==='completed'?Number(after.returnAmount||0):'','實際修改後原發票日期':request.status==='completed'?(after.originalInvoiceDate||''):''}});
+  var requestsSheet=editRequests.map(function(request){request=request||{};var before=request.requestedSnapshot&&typeof request.requestedSnapshot==='object'?request.requestedSnapshot:{},after=request.completedSnapshot&&typeof request.completedSnapshot==='object'?request.completedSnapshot:{},proposed=request.proposedSnapshot&&typeof request.proposedSnapshot==='object'?request.proposedSnapshot:(Object.keys(after).length?after:before);return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','原業績日期':before.businessDate||'','申請修改後日期':proposed.businessDate||before.businessDate||'','原門市':salesStoreText(before),'原營業額':Number(before.grossAmount||0),'原退貨金額':Number(before.returnAmount||0),'原發票日期':before.originalInvoiceDate||'','申請修改後營業額':Number(proposed.grossAmount||0),'申請修改後退貨金額':Number(proposed.returnAmount||0),'申請修改後原發票日期':proposed.originalInvoiceDate||'','修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'','審核時間':salesDateTime(request.reviewedAt),'完成時間':salesDateTime(request.completedAt),'實際修改後日期':request.status==='completed'?(after.businessDate||before.businessDate||''):'','實際修改後營業額':request.status==='completed'?Number(after.grossAmount||0):'','實際修改後退貨金額':request.status==='completed'?Number(after.returnAmount||0):'','實際修改後原發票日期':request.status==='completed'?(after.originalInvoiceDate||''):''}});
   var workdaysRows=(salesAdminData.workDays||[]).map(function(row){return {'人員':salesPersonName(row.lineUserId,row.name),'已計1日薪天數':Number(row.workDays||0),'自動計入天數':Number(row.autoDays||0),'主管確認天數':Number(row.confirmedDays||0),'不計1日薪天數':Number(row.excludedDays||0),'時薪工時合計':salesWorkHoursNumberText(Number(row.hourlyHours||0)),'時薪日期數':Number(row.hourlyDays||0),'待確認天數':Number(row.pendingDays||0),'已填工時合計':salesWorkHoursNumberText(Number(row.recordedHours||0)),'已填工時天數':Number(row.recordedHourDays||0),'營業總額':Number(row.grossAmount||0),'業績筆數':Number(row.recordCount||0)}});
   var personDetailModel=salesPersonDetailModel();var personDetailRows=salesPersonDetailExportRows();
   var proxyRows=salesProxyReportRows();var averageRows=salesAveragePerformanceExportRows();var expenseRows=salesApprovedExpenseReportRows();var externalRows=salesApprovedExternalReportRows();
@@ -16632,7 +16695,7 @@ function v54StoreRows(excel){return (salesAdminData.byStore||[]).map(function(ro
 function v54PersonRows(excel){return (salesAdminData.byPerson||[]).map(function(row,index){var net=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));return {'排名':row.expenseOnly?'—':index+1,'銷售人員':salesPersonName(row.lineUserId,row.name),'店點':(row.locations||[]).map(salesStoreText).join('、')||'—','營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'當月業績':excel?net:v54Money(net),'筆數':Number(row.recordCount||0)}})}
 function v54WorkdayRows(excel){return (salesAdminData.workDays||[]).map(function(row){var hourly=Number(row.hourlyHours||0),recorded=Number(row.recordedHours||0);return {'人員':salesPersonName(row.lineUserId,row.name),'已計薪資':String(Number(row.workDays||0))+' 天'+(hourly?'＋'+salesWorkHoursNumberText(hourly)+' 小時薪':''),'自動計入':Number(row.autoDays||0)+' 天','主管確認':Number(row.confirmedDays||0)+' 天','時薪工時':hourly?salesWorkHoursNumberText(hourly)+' 小時':'—','待確認':Number(row.pendingDays||0)+' 天','已填工時':recorded?salesWorkHoursNumberText(recorded)+' 小時':'—','營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0)}})}
 function v54ReturnRows(excel){return (salesAdminData.records||[]).filter(function(record){return salesRecordType(record)==='return'}).map(function(record){return {'退貨日期':record.businessDate||'','原發票日期':record.originalInvoiceDate||'','門市':salesStoreText(record),'處理人員':salesSubmitterName(record),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'歸屬銷售人員':record.assignedSalespersonLineUserId?salesPersonName(record.assignedSalespersonLineUserId,record.assignedSalespersonName):'待指定','歸列月份':String(record.returnPerformanceMonth||'').slice(0,7)||'—','歸列狀態':record.assignedSalespersonLineUserId?'已歸列':'待指定'}})}
-function v54RequestRows(excel){var filter=String((v54El('salesAdminRequestFilter')||{}).value||'');return (salesAdminData.editRequests||[]).filter(function(request){return !filter||String(request.status||'')===filter}).map(function(request){var before=request.requestedSnapshot||{},proposed=request.proposedSnapshot||request.completedSnapshot||before,isReturn=salesRecordType(before)==='return';var oldAmount=Number(isReturn?before.returnAmount:before.grossAmount)||0,newAmount=Number(isReturn?proposed.returnAmount:proposed.grossAmount)||0;return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','業績日期':before.businessDate||'','門市':salesStoreText(before),'原金額':excel?oldAmount:v54Money(oldAmount),'申請修改後':excel?newAmount:v54Money(newAmount),'修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'—'}})}
+function v54RequestRows(excel){var filter=String((v54El('salesAdminRequestFilter')||{}).value||'');return (salesAdminData.editRequests||[]).filter(function(request){return !filter||String(request.status||'')===filter}).map(function(request){var before=request.requestedSnapshot||{},proposed=request.proposedSnapshot||request.completedSnapshot||before,isReturn=salesRecordType(before)==='return';var oldAmount=Number(isReturn?before.returnAmount:before.grossAmount)||0,newAmount=Number(isReturn?proposed.returnAmount:proposed.grossAmount)||0;return {'申請時間':salesDateTime(request.requestedAt),'申請人':request.requesterName||'','原業績日期':before.businessDate||'','申請修改後日期':proposed.businessDate||before.businessDate||'','門市':salesStoreText(before),'原金額':excel?oldAmount:v54Money(oldAmount),'申請修改後':excel?newAmount:v54Money(newAmount),'修改原因':request.reason||'','狀態':salesStatusMeta(request.status).label,'審核人':request.reviewerName||'—'}})}
 function v54AverageRows(excel,source){return salesAveragePerformanceExportRows(source).map(function(row){var copy=Object.assign({},row);copy['時薪工時']=salesWorkHoursNumberText(copy['時薪工時'])+(excel?'':' 小時');if(!excel){copy['個人營業總額']=v54Money(copy['個人營業總額']);copy['平均業績']=copy['平均業績']===''?'—':v54Money(copy['平均業績']);copy['計日薪天數']=String(copy['計日薪天數'])+' 天';copy['時薪日期數']=String(copy['時薪日期數'])+' 天';copy['平均計算天數']=String(copy['平均計算天數'])+' 天';copy['待確認天數']=String(copy['待確認天數'])+' 天'}return copy})}
 function v54ComparisonRows(excel){return salesPersonDetailExportRows().map(function(row){if(excel)return Object.assign({},row);var copy={};Object.keys(row).forEach(function(key){copy[key]=key==='日期'?row[key]:(row[key]===''?'':v54Money(row[key]))});return copy})}
 function v54PageSpec(view,excel){
@@ -16641,7 +16704,7 @@ function v54PageSpec(view,excel){
   if(view==='person')return {title:'業績總覽',rows:v54PersonRows(excel),widths:[8,16,38,16,14,16,12],high:['營業總額','當月業績']};
   if(view==='workdays')return {title:'上班天數',rows:v54WorkdayRows(excel),note:'同一人同一天最多計 1 天；時薪日期另列工時。',widths:[16,20,14,14,16,14,16,16],high:['營業總額']};
   if(view==='returns')return {title:'退貨明細',rows:v54ReturnRows(excel),widths:[13,13,28,16,16,18,14,14],high:[]};
-  if(view==='requests')return {title:'修改審核',rows:v54RequestRows(excel),widths:[21,16,13,28,16,16,34,14,16],high:[]};
+  if(view==='requests')return {title:'修改審核',rows:v54RequestRows(excel),widths:[21,16,13,13,28,16,16,34,14,16],high:[]};
   if(view==='personDetail'&&comparisonView==='average')return {title:'平均業績',rows:v54AverageRows(excel),note:'平均業績＝個人營業總額 ÷ 平均計算天數；計日薪與時薪日期皆納入，同一天只算 1 天。',widths:[8,16,16,14,14,14,16,16,14,12],high:['個人營業總額','平均業績']};
   if(view==='personDetail')return {title:'業績對比',rows:v54ComparisonRows(excel),note:'目前勾選人員的每日營業額對比。',widths:[13].concat(salesPersonDetailModel().people.map(function(){return 14})).concat([16]),high:salesPersonDetailModel().people.map(function(person){return person.name}).concat(['銷售總額'])};
   return {title:'每日明細',rows:v54DailyRows(excel),widths:[13,10,28,16,16,16,13,14,21],high:['營業總額']};
@@ -20606,6 +20669,18 @@ window.STARRED_MY_SALES_LAYOUT_BUILD='20260916-own-sales-mobile-list-v78.4';
   max-width:100%!important;
   overflow-wrap:anywhere!important;
 }
+</style>
+
+<style id="sales-mixed-pay-date-v79-style">
+.sales79-daily-label{font-size:13px!important;font-weight:400!important;color:#315568!important;line-height:1.4!important}
+.sales-workday-review-person .sales-workday-wage-choice input[type="checkbox"]{cursor:pointer!important}
+.sales79-date-before,.sales79-date-after{display:block;font-size:14px!important;font-weight:400!important;white-space:nowrap;margin-top:3px}
+.sales79-date-after{color:#a3541e!important}
+#salesRequestBusinessDateField{grid-column:1/-1;min-width:0}
+#salesRequestBusinessDate{width:100%;min-width:0;font-size:16px;font-weight:400}
+#salesRequestModal .sales-request-dialog{max-height:calc(100dvh - 24px);overflow-y:auto}
+#salesRequestModal .sales-request-note{font-size:14px;line-height:1.6}
+@media(max-width:760px){.sales79-daily-label{font-size:12px!important}.sales79-date-before,.sales79-date-after{font-size:13px!important}}
 </style>
 </body>
 </html>
