@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: 20260921-v79.1-workday-save-success-modal; base: index_20260921_v79.html; API unchanged -->
 <!-- UI PATCH: 20260921-mixed-pay-date-review-v79; existing v76 login contract retained -->
 <!-- UI PATCH: 20260904-v68.2-sync-error-company-permission-search -->
 <!-- UI PATCH: compact auto-width navigation, mobile max two rows -->
@@ -11259,6 +11260,7 @@ async function confirmSalesWorkdayGroup(button){
     }
     await Promise.all([loadSalesAdminReport(),loadSalesData()]);
     salesSetAdminStatus('工時與薪資確認已完成；日薪與時薪分別計算，營業額未變更。','success');
+    showSalesSuccessModal('工時與薪資已儲存，日薪與時薪設定已更新。','修改完成');
   }catch(error){salesSetAdminStatus('工時與薪資確認失敗：'+String(error&&error.message||error),'error')}
   finally{actionButtons.forEach(function(item){item.disabled=false})}
 }
