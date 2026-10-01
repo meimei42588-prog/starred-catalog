@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: 20261001-company-account-friendly-print-v82; base: expense_cross_day_fix_v81/index.html; read-only UI, API/SQL unchanged -->
 <!-- UI PATCH: 20261001-expense-store-overnight-v81; base: workday_pay_fix_20260930/index.html; retains v79.3 pay/deduction/date fixes -->
 <!-- UI PATCH: 20260930-no-pay-save-v79.3; v79/v80 pay payload compatibility; original backend and schema unchanged -->
 <!-- UI PATCH: 20260923-v79.2-deduction-delete-void; base: workhours_popup_v79_1/index.html; existing v78 deduction API/SQL unchanged -->
@@ -4323,7 +4324,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     </div>
     <div id="externalAccountAdminTab" class="admin-tab-panel">
       <section class="panel external-account-admin-panel">
-        <header class="external-account-admin-heading"><div><span>COMPANY ACCOUNT REVIEW</span><h2>公司帳管理</h2><p>依日期、人員與狀態管理大量公司帳紀錄；每頁最多顯示 100 筆。</p></div><button type="button" class="secondary" onclick="loadExternalAccountAdminReport()">重新整理</button></header>
+        <header class="external-account-admin-heading"><div><span>COMPANY ACCOUNT REVIEW</span><h2>公司帳管理</h2><p>依日期、人員與狀態管理大量公司帳紀錄；每頁最多顯示 100 筆。</p></div><div class="ea82-heading-actions"><button id="externalAccountPrintBtn82" type="button" class="secondary" onclick="printExternalAccountAdminReport()">友善列印</button><button type="button" class="secondary" onclick="loadExternalAccountAdminReport()">重新整理</button></div></header>
         <details id="externalAccountSettingsSection" class="external-account-settings-section">
           <summary>公司匯款帳號設定 <small id="externalAccountSettingsPermission">只有系統管理員可以修改</small></summary>
           <div class="external-account-settings-grid">
@@ -20967,5 +20968,143 @@ window.STARRED_MY_SALES_LAYOUT_BUILD='20260916-own-sales-mobile-list-v78.4';
 @media(max-width:620px){.expense-time-hint81{grid-column:1/-1!important}#expenseDurationPreview{font-size:18px!important;font-weight:400!important}.expense-feedback81>section{padding:20px}}
 </style>
 
+
+<style id="company-account-print-v82-style">
+/* Isolated company-account print preview; no changes to the existing table, filters or write controls. */
+#externalAccountAdminTab .ea82-heading-actions{display:flex;align-items:center;flex-wrap:nowrap;gap:10px;flex:0 0 auto}
+#externalAccountAdminTab .ea82-heading-actions>button{font-size:14px!important;font-weight:400!important;white-space:nowrap!important;min-height:42px!important}
+.ea82-modal{position:fixed;inset:0;z-index:2600000;background:rgba(27,46,58,.6);padding:18px;display:grid;place-items:center}
+.ea82-dialog{width:min(1240px,100%);height:calc(100dvh - 36px);max-height:100%;min-width:0;display:flex;flex-direction:column;background:#fff;border:1px solid #cfdce4;border-radius:16px;overflow:hidden;box-shadow:0 22px 70px rgba(23,43,56,.28);font-weight:400;font-size:14px}
+.ea82-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:1px solid #d9e3e9;background:#fff;flex-shrink:0}
+.ea82-toolbar h3{margin:0;font-size:20px;font-weight:400;color:#274253;line-height:1.4}
+.ea82-toolbar p{margin:4px 0 0;font-size:14px;color:#617c8c;line-height:1.4}
+.ea82-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ea82-actions>button{font-size:15px!important;font-weight:400!important;min-width:90px;min-height:44px!important;white-space:nowrap!important}
+.ea82-actions>button:disabled{opacity:.45;cursor:not-allowed}
+.ea82-message{padding:10px 18px;background:#f0f6f9;color:#345b70;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;flex-shrink:0;line-height:1.5}
+.ea82-message.error{color:#9c392f;background:#fff1ef}
+#companyPrintFrame82{display:block;flex:1;min-height:0;min-width:0;width:100%;border:0;background:#eef2f5}
+.ea82-help{margin:0;padding:9px 18px;border-top:1px solid #d9e3e9;font-size:12px;line-height:1.5;color:#6c8190;flex-shrink:0}
+@media(max-width:760px){
+ #externalAccountAdminTab .external-account-admin-heading{align-items:flex-start;flex-wrap:wrap;gap:12px}
+ #externalAccountAdminTab .ea82-heading-actions{width:100%;gap:10px}
+ #externalAccountAdminTab .ea82-heading-actions>button{flex:1;min-width:0}
+ .ea82-modal{padding:8px}.ea82-dialog{height:calc(100dvh - 16px);border-radius:12px}
+ .ea82-toolbar{padding:12px;align-items:stretch;flex-direction:column;gap:10px}
+ .ea82-toolbar h3{font-size:19px}.ea82-toolbar p{font-size:13px}
+ .ea82-actions>button{flex:1;min-width:0}.ea82-message{padding:9px 12px}.ea82-help{padding:8px 12px}
+}
+</style>
+<script id="company-account-print-v82-script">
+/* v82: read-only company-account printing. Existing API, schema and write paths are unchanged. */
+(function(){
+'use strict';
+var active=null;
+var ids=['externalAccountAdminDateFrom','externalAccountAdminDateTo','externalAccountAdminStatus','externalAccountAdminPerson','externalAccountAdminKeyword'];
+function el(id){return document.getElementById(id)}
+function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function money(value){return (value<0?'−':'')+'$'+Math.abs(value).toLocaleString('zh-TW',{maximumFractionDigits:2})}
+function stamp(value){if(!value)return '—';var d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
+function label(status){return {pending:'待審核',approved:'已核准',rejected:'未通過',cancelled:'已取消'}[status]||status}
+function allowed(){return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&typeof normalizeCurrentAdminRole==='function'&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
+function auth(){if(!allowed())return '';var v=window.starredVerifiedLineUser||{};return [currentUser.id||currentUser.account||'',currentUser.adminSessionToken||'',currentUser.role||'',v.lineUserId||''].join('|')}
+function filters(){var v=ids.map(function(id){return String((el(id)||{}).value||'').trim()});return {dateFrom:v[0],dateTo:v[1],status:v[2],lineUserId:v[3],keyword:v[4].slice(0,80)}}
+function selectedPerson(){var s=el('externalAccountAdminPerson');return s&&s.value&&s.selectedOptions.length?s.selectedOptions[0].textContent:'全部人員'}
+function validDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;var d=new Date(v+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v}
+function notice(text,bad){var s=el('externalAccountAdminStatusMessage');if(s){s.textContent=text;s.className='external-account-status show '+(bad?'error':'working')}}
+function live(t){return active===t&&!t.cancelled&&t.auth===auth()}
+function assertLive(t){if(!live(t))throw new Error('登入身分已變更或預覽已關閉，已停止列印。');if(JSON.stringify(filters())!==t.filterKey)throw new Error('篩選條件已變更，請關閉預覽後重新按「友善列印」。')}
+function message(t,text,bad){if(active!==t)return;var s=el('companyPrintMessage82');s.textContent=text;s.classList.toggle('error',!!bad)}
+function frameClear(){var f=el('companyPrintFrame82');if(f){f.hidden=true;f.removeAttribute('srcdoc');f.src='about:blank'}}
+function close(){var t=active;if(!t)return;t.cancelled=true;active=null;clearInterval(t.guard);clearTimeout(t.frameTimer);el('companyPrintModal82').hidden=true;frameClear();el('companyPrintRun82').disabled=true;document.body.style.overflow=t.oldOverflow;var b=el('externalAccountPrintBtn82');if(b)b.disabled=false;if(t.lastFocus&&t.lastFocus.isConnected)t.lastFocus.focus()}
+function mount(){
+ if(el('companyPrintModal82'))return;
+ var modal=document.createElement('div');modal.id='companyPrintModal82';modal.className='ea82-modal';modal.hidden=true;
+ modal.innerHTML='<section class="ea82-dialog" role="dialog" aria-modal="true" aria-labelledby="companyPrintTitle82"><header class="ea82-toolbar"><div><h3 id="companyPrintTitle82">公司帳管理｜友善列印</h3><p>依目前篩選條件列印全部明細，不限畫面當頁筆數。</p></div><div class="ea82-actions"><button id="companyPrintRun82" type="button" class="primary" disabled>開始列印</button><button id="companyPrintClose82" type="button" class="secondary">關閉</button></div></header><div id="companyPrintMessage82" class="ea82-message" role="status" aria-live="polite"></div><iframe id="companyPrintFrame82" title="公司帳完整列印預覽" sandbox="allow-same-origin allow-modals" hidden></iframe><p class="ea82-help">A4 橫向；可在列印視窗另存 PDF。若不需網址及瀏覽器日期，請取消勾選「頁首及頁尾」。</p></section>';
+ document.body.appendChild(modal);
+ el('companyPrintClose82').addEventListener('click',close);
+ el('companyPrintRun82').addEventListener('click',print);
+ modal.addEventListener('click',function(e){if(e.target===modal)close()});
+ document.addEventListener('keydown',function(e){if(!active)return;if(e.key==='Escape'){e.preventDefault();close();return}if(e.key==='Tab'){var first=el('companyPrintRun82').disabled?el('companyPrintClose82'):el('companyPrintRun82'),last=el('companyPrintClose82');if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+}
+async function call(t,page){
+ assertLive(t);
+ if(typeof window.starredApi!=='function')throw new Error('系統尚未完成登入，請重新登入後再試。');
+ var timer;
+ try{
+  var result=await Promise.race([window.starredApi('external_account_admin_report',Object.assign({},t.query,{page:page,pageSize:100})),new Promise(function(_,reject){timer=setTimeout(function(){reject(new Error('讀取逾時，請關閉預覽後再試；本次不會列印不完整的明細。'))},30000)})]);
+  assertLive(t);
+  if(!result||result.success===false)throw new Error(String(result&&result.error||'公司帳資料讀取失敗。'));
+  if(!Array.isArray(result.transactions)||!result.summary)throw new Error('公司帳回傳資料不完整，請重新整理後再試。');
+  var total=Number(result.total),size=Number(result.pageSize);
+  if(!Number.isSafeInteger(total)||total<0||!Number.isInteger(size)||size<1||size>100||Number(result.page)!==page)throw new Error('公司帳分頁資料不正確，已停止列印。');
+  if(total>10000)throw new Error('篩選結果超過 10,000 筆，請縮小日期或人員範圍後再列印。');
+  if(result.transactions.length!==Math.max(0,Math.min(size,total-(page-1)*size)))throw new Error('明細筆數與分頁不符，已停止列印，請重新整理。');
+  return result;
+ }finally{clearTimeout(timer)}
+}
+function summaryKey(s){return ['totalCount','pendingCount','approvedCount','rejectedCount','cancelledCount','approvedAmount'].map(function(k){var n=Number(s[k]);if(s[k]===undefined||s[k]===null||!Number.isFinite(n))throw new Error('金額摘要尚未完整載入，已停止列印。');return n}).join('|')}
+function summarize(rows){var s={totalCount:rows.length,pendingCount:0,approvedCount:0,rejectedCount:0,cancelledCount:0,approvedAmount:0,pendingAmount:0,totalAmount:0};rows.forEach(function(r){s[r.status+'Count']+=1;s.totalAmount+=r.customerAmount;if(r.status==='approved')s.approvedAmount+=r.customerAmount;if(r.status==='pending')s.pendingAmount+=r.customerAmount});return s}
+function validateRow(r,t,seen){
+ if(!r||!String(r.id||'')||seen.has(String(r.id)))throw new Error('明細有重複或缺少編號，可能有人同時異動資料；請重新讀取。');
+ if(r.isDeleted===true||!['pending','approved','rejected','cancelled'].includes(r.status))throw new Error('公司帳狀態已變更，請重新讀取後列印。');
+ if(r.customerAmount===null||r.customerAmount===undefined||r.customerAmount===''||!Number.isFinite(Number(r.customerAmount)))throw new Error('有一筆交易金額不正確，已停止列印。');
+ var q=t.query,date=String(r.transactionDate||'');
+ if(!validDate(date)||(q.dateFrom&&date<q.dateFrom)||(q.dateTo&&date>q.dateTo)||(q.status&&r.status!==q.status)||(q.lineUserId&&String(r.submitterLineUserId)!==q.lineUserId))throw new Error('公司帳明細與本次篩選條件不符，請重新整理。');
+ seen.add(String(r.id));return Object.assign({},r,{customerAmount:Number(r.customerAmount)});
+}
+function audit(r){var a=[];if(r.reviewerName)a.push((r.status==='rejected'?'審核人：':'核准人：')+r.reviewerName);if(r.reviewedAt)a.push('審核：'+stamp(r.reviewedAt));if(r.editedAt)a.push('修改：'+stamp(r.editedAt)+(r.editedByName?'（'+r.editedByName+'）':''));if(r.cancelledAt)a.push('取消：'+stamp(r.cancelledAt)+(r.cancelledByName?'（'+r.cancelledByName+'）':''));if(r.createdAt)a.push('送出：'+stamp(r.createdAt));return a.length?a.join('\n'):'—'}
+function notes(r){return [r.note?'申請備註：'+r.note:'',r.reviewNote?'審核備註：'+r.reviewNote:''].filter(Boolean).join('\n')||'—'}
+function report(t){
+ var q=t.query,s=t.summary;
+ var filtersText='交易日期：'+(q.dateFrom||'不限')+' ～ '+(q.dateTo||'不限')+'　｜　人員：'+t.person+'　｜　狀態：'+(q.status?label(q.status):'全部狀態')+(q.keyword?'　｜　搜尋姓名：'+q.keyword:'');
+ var high=function(n){return Math.abs(n)>=10000?' ea82-high':''};
+ var body='<main class="sheet"><header class="report-head"><div><p class="eyebrow">星紅織品 · 公司帳管理</p><h1>公司帳交易明細</h1></div><p class="generated">資料讀取時間（台灣）<br>'+esc(stamp(t.loadedAt))+'</p></header><p class="filters">'+esc(filtersText)+'</p>';
+ body+='<div class="totals"><div><span>列印筆數</span><strong>'+s.totalCount+' 筆</strong><small>包含全部分頁</small></div><div><span>已核准金額</span><strong class="'+high(s.approvedAmount).trim()+'">'+money(s.approvedAmount)+'</strong><small>'+s.approvedCount+' 筆已核准</small></div><div><span>待審核金額</span><strong class="'+high(s.pendingAmount).trim()+'">'+money(s.pendingAmount)+'</strong><small>'+s.pendingCount+' 筆，尚未核准</small></div><div><span>未通過／已取消</span><strong>'+(s.rejectedCount+s.cancelledCount)+' 筆</strong><small>不列入核准金額</small></div></div>';
+ body+='<table><colgroup><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:9%"><col style="width:30%"><col style="width:25%"></colgroup><thead><tr>'+['交易日期','人員','客戶交易金額','狀態','備註','審核／異動'].map(function(h){return '<th scope="col">'+h+'</th>'}).join('')+'</tr></thead><tbody>';
+ body+=t.rows.map(function(r){var longNote=notes(r).length>260||notes(r).split('\n').length>8;return '<tr'+(longNote?' class="ea82-long-row"':'')+'><td data-label="交易日期" class="date">'+esc(r.transactionDate)+'</td><td data-label="人員">'+esc(r.submitterName||'LINE 使用者')+'</td><td data-label="客戶交易金額" class="amount'+high(r.customerAmount)+'">'+money(r.customerAmount)+'</td><td data-label="狀態">'+esc(label(r.status))+'</td><td data-label="備註" class="notes">'+esc(notes(r))+'</td><td data-label="審核／異動" class="audit">'+esc(audit(r))+'</td></tr>'}).join('');
+ body+='</tbody></table><footer class="report-footer"><p>本次交易金額合計（含未核准）：<span class="'+high(s.totalAmount).trim()+'">'+money(s.totalAmount)+'</span>　｜　已核准金額：<span class="'+high(s.approvedAmount).trim()+'">'+money(s.approvedAmount)+'</span></p><p>待審核、未通過及已取消紀錄不列入核准金額；本表為目前未刪除的公司帳交易清單，不混入業績、費用或扣款。</p></footer></main>';
+ return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>星紅織品－公司帳明細</title><style>'+reportCss()+'</style></head><body>'+body+'</body></html>';
+}
+function reportCss(){return '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}html,body{margin:0;background:#eef2f5;color:#263e4b;font:14px "Microsoft JhengHei","Noto Sans CJK TC","Noto Sans TC",sans-serif;line-height:1.5;font-weight:400;-webkit-print-color-adjust:exact;print-color-adjust:exact}.sheet{max-width:1150px;padding:26px;margin:18px auto;background:#fff}.report-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;border-bottom:2px solid #355669;padding-bottom:10px}.eyebrow{margin:0 0 4px;font-size:13px;color:#667e8b}h1{margin:0;font-size:24px;font-weight:400}.generated{font-size:12px;color:#617783;margin:0;text-align:right}.filters{font-size:13px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 16px;break-inside:avoid}.totals>div{background:#f4f7f9;border:1px solid #d3dde3;padding:10px 12px;min-width:0}.totals span,.totals small{display:block;font-size:12px;color:#5f7480}.totals strong{display:block;font-size:21px;font-weight:400;font-variant-numeric:tabular-nums}.ea82-high{color:#c62828!important}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #c3cfd6;padding:8px;vertical-align:top;text-align:left;font-weight:400;overflow-wrap:anywhere}th{background:#e6edf1;color:#284959;font-size:14px}thead{display:table-header-group}tbody{display:table-row-group}tr{break-inside:avoid;page-break-inside:avoid}tr.ea82-long-row{break-inside:auto;page-break-inside:auto}tbody tr:nth-child(even){background:#f7f9fa}.date,.amount{white-space:nowrap;font-variant-numeric:tabular-nums}.amount{text-align:right}.notes,.audit{white-space:pre-wrap;line-height:1.55}.audit{font-size:12px;color:#506b7b}.report-footer{margin-top:12px;border-top:1px solid #c6d2d9;padding-top:8px;font-size:12px;color:#506b7b;break-inside:avoid}.report-footer p{margin:4px 0}.report-footer p:first-child{font-size:14px;color:#263e4b} @media screen and (max-width:640px){.sheet{margin:0;padding:14px 10px}.report-head{align-items:flex-start;flex-direction:column;gap:6px}h1{font-size:22px}.generated{text-align:left}.generated br{display:none}.totals{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.totals>div{padding:8px}.totals strong{font-size:20px}table,tbody{display:block}colgroup,thead{display:none}tr{display:grid;grid-template-columns:1fr 1fr;margin:10px 0;border:1px solid #c7d5dd;border-radius:10px;overflow:hidden;padding:6px}td{display:block;border:0;padding:6px;min-width:0;white-space:normal}td::before{content:attr(data-label);display:block;font-size:12px;color:#677e89;margin-bottom:2px}.amount{text-align:left}td:nth-child(n+5){grid-column:1/-1;border-top:1px solid #dbe3e8;margin-top:4px}.notes,.audit{white-space:pre-wrap}.report-footer p:first-child{font-size:13px}} @media print{html,body{background:#fff;font-size:13px}.sheet{max-width:none;margin:0;padding:0}h1{font-size:22px}.report-head{break-inside:avoid}.totals{margin:8px 0 12px}.totals strong{font-size:19px}th,td{font-size:13px;padding:6px 7px}.audit{font-size:12px}.report-footer{font-size:12px}}'}
+async function open(){
+ if(active){el('companyPrintClose82').focus();return}
+ if(!allowed()){notice('公司帳列印僅開放已登入的會計與系統管理員。',true);return}
+ var q=filters();if((q.dateFrom&&!validDate(q.dateFrom))||(q.dateTo&&!validDate(q.dateTo))||(q.dateFrom&&q.dateTo&&q.dateFrom>q.dateTo)){notice('公司帳日期區間不正確，請確認開始日期不晚於結束日期。',true);return}
+ mount();
+ var t={query:q,filterKey:JSON.stringify(q),person:selectedPerson(),auth:auth(),oldOverflow:document.body.style.overflow,lastFocus:document.activeElement,rows:[],ready:false,cancelled:false};active=t;
+ el('companyPrintModal82').hidden=false;el('companyPrintRun82').disabled=true;el('externalAccountPrintBtn82').disabled=true;document.body.style.overflow='hidden';el('companyPrintClose82').focus();message(t,'正在讀取全部公司帳明細…');
+ t.guard=setInterval(function(){if(active===t&&!live(t))close()},750);
+ try{
+  var first=await call(t,1),expected=Number(first.total),size=Number(first.pageSize),key=summaryKey(first.summary),seen=new Set(),pages=Math.ceil(expected/size);
+  var collect=function(result){if(Number(result.total)!==Number(expected)||Number(result.pageSize)!==size||summaryKey(result.summary)!==key)throw new Error('讀取期間公司帳資料已變更，請關閉預覽後重新列印。');result.transactions.forEach(function(r){t.rows.push(validateRow(r,t,seen))})};
+  collect(first);
+  if(!expected){message(t,'目前篩選條件沒有公司帳資料，請關閉預覽後調整篩選。');return}
+  for(var page=2;page<=pages;page++){message(t,'正在讀取公司帳明細：'+t.rows.length+'／'+expected+' 筆…');collect(await call(t,page))}
+  // Recheck the first page and summary after a multi-page read; do not silently print a partial list.
+  if(pages>1){var verify=await call(t,1);if(Number(verify.total)!==Number(expected)||summaryKey(verify.summary)!==key||JSON.stringify(verify.transactions)!==JSON.stringify(first.transactions))throw new Error('讀取期間公司帳資料已變更，請重新列印。')}
+  assertLive(t);t.summary=summarize(t.rows);
+  if(t.rows.length!==Number(expected)||summaryKey(t.summary)!==key)throw new Error('明細合計與後台摘要不一致，已停止列印，請重新整理。');
+  t.loadedAt=new Date().toISOString();t.html=report(t);
+  var frame=el('companyPrintFrame82');frame.hidden=false;
+  frame.onload=function(){
+   if(!live(t)||!frame.contentDocument||!frame.contentDocument.querySelector('.sheet'))return;
+   var enable=function(){if(!live(t))return;clearTimeout(t.frameTimer);t.ready=true;el('companyPrintRun82').disabled=false;message(t,'已載入 '+t.rows.length+' 筆完整明細；請核對後按「開始列印」。');frame.contentDocument.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();close()}})};
+   if(frame.contentDocument.fonts&&frame.contentDocument.fonts.ready)frame.contentDocument.fonts.ready.then(enable,enable);else enable();
+  };
+  frame.srcdoc=t.html;
+  t.frameTimer=setTimeout(function(){if(live(t)&&!t.ready){message(t,'預覽載入未完成，請關閉視窗後重新列印。',true);frameClear()}},15000);
+ }catch(error){if(active===t){frameClear();t.ready=false;el('companyPrintRun82').disabled=true;message(t,'列印資料未完成：'+String(error&&error.message||error),true)}}
+}
+function print(){
+ var t=active;if(!t||!t.ready||t.printing)return;
+ try{assertLive(t);var frame=el('companyPrintFrame82');if(!frame||!frame.contentWindow||!frame.contentDocument.querySelector('.sheet'))throw new Error('列印預覽尚未完成，請重新開啟。');t.printing=true;frame.contentWindow.focus();frame.contentWindow.print()}
+ catch(error){message(t,'無法啟動列印：'+String(error&&error.message||error)+'。若使用 LINE 內建瀏覽器，請改用系統瀏覽器開啟。',true)}
+ finally{if(t)t.printing=false}
+}
+window.printExternalAccountAdminReport=open;
+window.StarredCompanyPrint82={open:open,close:close,print:print,build:'20261001-company-account-friendly-print-v82'};
+})();
+</script>
 </body>
 </html>
