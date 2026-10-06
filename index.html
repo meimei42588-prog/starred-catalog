@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v87: personal company accounts survive sales region/store filters; base v86; v87 read-only backend, no SQL. -->
 <!-- v86: approved date/store daily units + server-verified duplicate expense review; base v85 UI / v84 API; data retained. -->
 <!-- UI PATCH v85: personal performance = net sales + company account; payroll expenses separate. Base v84; API/SQL unchanged. -->
 <!-- v84: same-day unique sender-store reconciliation. Base v83 retained; no database migration. -->
@@ -23,6 +24,48 @@
 <!-- UI PATCH: 20260819-mobile-fit-expense-only-person-v31 -->
 <html lang="zh-Hant">
 <head>
+<script id="company-account-scope-v87-core">
+/* v87: one authoritative company-account source for cards, detail, deductions and exports.
+ * Never recover the amount from a previous person's/page's UI or localStorage. */
+(function(){
+'use strict';
+var BUILD='20261006-person-company-geography-v87',phase='idle',loadedKey='',failure='',requestAuth='',loadedAuth='';
+var NOTE='公司帳依此人員與查詢日期完整列示，不受業績區域／門市篩選影響。';
+function key(q){q=q||{};return JSON.stringify(['dateFrom','dateTo','area','storeId','lineUserId'].map(function(k){return String(q[k]||'').trim()}))}
+function auth(){var p=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(window.starredVerifiedLineUser&&window.starredVerifiedLineUser.lineUserId||p&&p.id||'')+'|'+String(typeof currentUser!=='undefined'&&currentUser?currentUser.adminSessionToken||'':'')}
+function values(){var out={};[['dateFrom','salesAdminDateFrom'],['dateTo','salesAdminDateTo'],['area','salesAdminArea'],['storeId','salesAdminStore'],['lineUserId','salesAdminPerson']].forEach(function(p){out[p[0]]=String((document.getElementById(p[1])||{}).value||'')});return out}
+function validate(result,q,test){
+  var scope=result&&result.companyAccountScope;
+  if(test)return;
+  if(!scope){if(q.area||q.storeId)throw new Error('公司帳區域篩選修正尚未部署至 line-api。請先更新本次 v87 後端；不會將缺少的公司帳當成 0 元。');return}
+  if(scope.build!==BUILD||scope.complete!==true||scope.geographyApplied!==false||key(scope)!==key(q)||!Array.isArray(result.externalAccounts)||scope.recordCount!==result.externalAccounts.length)
+    throw new Error('公司帳範圍或資料筆數不一致，請重新整理；本次不顯示未確認的公司帳合計。');
+  var seen=new Set();result.externalAccounts.forEach(function(r){
+    var id=String(r&&r.id||''),person=String(r&&r.submitterLineUserId||''),date=String(r&&r.transactionDate||'');
+    if(!id||seen.has(id)||!person||r.status!=='approved'||!Number.isFinite(Number(r.customerAmount))||
+      (q.lineUserId&&person!==q.lineUserId)||(q.dateFrom&&date<q.dateFrom)||(q.dateTo&&date>q.dateTo))
+      throw new Error('公司帳人員、日期或金額不完整，請重新整理；本次不以 0 元替代。');
+    seen.add(id);
+  });
+}
+function blank(){var modal=document.getElementById('salesStatDetailModal');if(!modal||modal.hidden)return;
+  ['salesStatDetailExternal85','salesStatDetailNet','salesPersonSettlement781'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent='—'});
+  var section=document.getElementById('salesStatDetailExternalAccountSection');if(section){section.hidden=true;section.innerHTML=''}
+}
+function notice(text,bad){var el=document.getElementById('salesCompanyScopeNote87');if(el&&!el.hidden){el.textContent=text;el.classList.toggle('is-error',!!bad)}}
+function begin(){phase='loading';failure='';requestAuth=auth();blank();notice('正在重新讀取報表與公司帳，完成前暫不顯示合計。',false)}
+function accept(result,q,test){if(requestAuth!==auth())throw new Error('登入身分已變更，請重新登入並載入報表。');validate(result,q,test);loadedKey=key(q);loadedAuth=auth();phase='ready';failure=''}
+function failed(message){phase='failed';failure=String(message||'報表載入未完成');blank();notice('公司帳尚未完成核對：'+failure,true)}
+function assertReady(){if(phase!=='ready'||loadedAuth!==auth()||key(values())!==loadedKey)throw new Error(failure||'報表尚未完成載入，請等待或重新整理後再查看／輸出；避免使用上一次篩選的金額。')}
+function note(modal,isPerson){var el=document.getElementById('salesCompanyScopeNote87');if(!el){el=document.createElement('p');el.id='salesCompanyScopeNote87';el.className='sales-company-scope87';modal.querySelector('.sales-stat-detail-summary').insertAdjacentElement('beforebegin',el)}el.hidden=!isPerson;el.textContent=NOTE;el.classList.remove('is-error')}
+window.StarredCompanyScope87={build:BUILD,noteText:NOTE,validate:validate,begin:begin,accept:accept,failed:failed,assertReady:assertReady,note:note,values:values};
+})();
+</script>
+<style id="company-account-scope-v87-style">
+#salesStatDetailModal .sales-company-scope87{margin:12px 20px 0;padding:9px 12px;border:1px solid #d7e5ed;border-radius:10px;background:#f3f8fc;color:#456777;font-size:14px;font-weight:400;line-height:1.5}
+#salesStatDetailModal .sales-company-scope87.is-error{background:#fff2ef;border-color:#e5b9b3;color:#963d35}
+@media(max-width:760px){#salesStatDetailModal .sales-company-scope87{margin:10px 14px 0;padding:8px 10px}}
+</style>
 <script id="personal-performance-v85-core">
 /* v85: presentation-only separation; never mutate stored reports or legacy API totals.
  * Performance = existing net sales + approved company accounts.
@@ -11221,6 +11264,7 @@ function salesApplyRealNames(){
 async function loadSalesAdminReport(){
   if(!salesEl('salesReportTab'))return false;
   var query781=salesAdminQuerySnapshot781(),seq781=++salesAdminLoadSequence781;
+  window.StarredCompanyScope87.begin();
   if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportLoading();
   salesSetAdminStatus('正在整理業績報表…','working');
   try{
@@ -11232,6 +11276,7 @@ async function loadSalesAdminReport(){
       result=await starredApi('sales_admin_report',query781);
     }
     if(seq781!==salesAdminLoadSequence781||JSON.stringify(query781)!==JSON.stringify(salesAdminQuerySnapshot781()))return false;
+    window.StarredCompanyScope87.accept(result,query781,window.STARRED_SALES_TEST_MODE===true);
     salesAdminQuery781=Object.assign({},query781);
     salesAdminData={
       records:Array.isArray(result.records)?result.records:[],
@@ -11246,6 +11291,7 @@ async function loadSalesAdminReport(){
       reportingPeriods:Array.isArray(result.reportingPeriods)?result.reportingPeriods:[],
       expenses:Array.isArray(result.expenses)?result.expenses:[],
       externalAccounts:Array.isArray(result.externalAccounts)?result.externalAccounts:[],
+      companyAccountScope:result.companyAccountScope||null,
       missingTrackingEnabled:result.missingTrackingEnabled!==false
     };
     window.salesAdminData=salesAdminData;
@@ -11258,6 +11304,7 @@ async function loadSalesAdminReport(){
     return true;
   }catch(error){
     if(seq781!==salesAdminLoadSequence781)return false;
+    window.StarredCompanyScope87.failed(error&&error.message||error);
     if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportFailed();
     console.error('載入業績報表失敗',error);
     salesSetAdminStatus('報表載入失敗：'+String(error&&error.message||error),'error');
@@ -12039,6 +12086,7 @@ function salesPersonalNetExcel782(sheet,rows,sheetJs){
 }
 
 function openSalesStatDetail(kind,key){
+  try{window.StarredCompanyScope87.assertReady()}catch(error){salesSetAdminStatus(String(error&&error.message||error),'error');return}
   kind=kind==='person'?'person':'store';
   key=String(key||'');
   var summaryRows=kind==='store'?salesAdminData.byStore:salesAdminData.byPerson;
@@ -12056,6 +12104,7 @@ function openSalesStatDetail(kind,key){
   var modal=ensureSalesStatDetailModal();
   modal.classList.toggle('store-detail-mode',kind==='store');
   modal.classList.toggle('person-detail-mode',kind==='person');
+  window.StarredCompanyScope87.note(modal,kind==='person');
   var title=kind==='store'?salesStoreText(summary):salesPersonName(summary.lineUserId,summary.name||'LINE 使用者');
   if(salesEl('salesStatDetailTitle'))salesEl('salesStatDetailTitle').textContent=title+'｜業績明細';
   if(salesEl('salesStatDetailPeriod'))salesEl('salesStatDetailPeriod').textContent='查詢區間：'+salesAdminPeriodLabel();
@@ -15426,7 +15475,7 @@ function renderSalesPersonExternalAccountSection(lineUserId){
   if(!rows.length){section.hidden=true;section.innerHTML='';return}
   var total=rows.reduce(function(sum,item){return sum+Number(item.customerAmount||0)},0);
   section.hidden=false;
-  section.innerHTML='<div class="sales-person-ledger-heading sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准公司帳</h4><p>計入上方業績總額；與其他費用分開核對。跨月刪除仍在刪除當月沖減。</p></div><div class="sales-person-ledger-total"><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-ledger-head"><span>日期</span><span>類型</span><span>明細／備註</span><span>審核資訊</span><span>金額／時數</span><span>單據</span></div><div class="sales-person-ledger-list sales-person-external-account-list">'+rows.map(function(item){
+  section.innerHTML='<div class="sales-person-ledger-heading sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准公司帳</h4><p>依本人及查詢日期列示，不受業績區域／門市篩選影響；計入業績總額。跨月刪除仍在刪除當月沖減。</p></div><div class="sales-person-ledger-total"><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-ledger-head"><span>日期</span><span>類型</span><span>明細／備註</span><span>審核資訊</span><span>金額／時數</span><span>單據</span></div><div class="sales-person-ledger-list sales-person-external-account-list">'+rows.map(function(item){
     var isAdjustment=item.isDeletionAdjustment===true;
     var title=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalTransactionDate||'原日期')+' 的公司帳')):'客戶交易';
     var detailMeta=isAdjustment?'原日期：'+String(item.originalTransactionDate||'—'):(item.note?'備註：'+item.note:'無備註');
@@ -17209,7 +17258,7 @@ function v54PersonDetailPrint(){
   var content='<style>.person85-print-summary{grid-template-columns:repeat(7,minmax(0,1fr))!important}.person85-print-summary small{display:block;font-size:12px!important;line-height:1.5;font-weight:400}.person85-print-summary span{font-size:12px!important}.person85-print-summary b{font-size:16px!important}.person85-print-summary>div{padding:8px 6px!important;min-width:0}@media print{.person85-print-summary b{font-size:14px!important}}@media screen and (max-width:760px){.person85-print-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}}</style><div class="person-print"><p class="section-note">回傳筆數：'+String((state.rows||[]).length)+' 筆；其他費用由會計另計薪資，不包含在業績總額或扣款後結算。</p><div class="print-summary person85-print-summary">'+cards.map(function(c){return '<div><span>'+v54Esc(c[0])+'</span><b class="'+v54HighClass(c[1]).trim()+'">'+v54Esc(v54Money(c[1]))+'</b><small>'+v54Esc(c[2])+'</small></div>'}).join('')+'</div>';
   content+=v54PrintTable('業績明細',detail,'營業額欄已扣退貨，請勿再扣一次；公司帳另加至業績總額。','person-detail-table',['營業額']);
   content+=v54PrintTable('其他費用｜會計另計薪資',expenses,'核准撤櫃、進櫃、其他、費用與既有移櫃／加班；不納入業績總額或扣款後結算。','person-expense-table',['核准金額']);
-  content+=v54PrintTable('公司帳｜計入業績總額',external,'僅加計核准公司帳；保留原交易日期與跨月刪除沖減。','person-external-table',['公司帳金額'])+'</div>';
+  content+=v54PrintTable('公司帳｜計入業績總額',external,'依本人與查詢日期加計核准公司帳，不受業績區域／門市篩選影響；保留原交易日期與跨月刪除沖減。','person-external-table',['公司帳金額'])+'</div>';
   content+=window.StarredPersonDeduction781.printHtml();
   return v54OpenPrint(name+'｜個人業績明細',content,{compact:false});
 }
@@ -20660,7 +20709,7 @@ async function exportWorkbook(originalRows,title,t){
       {'項目':'原始營業總額','金額／內容':t.totals.gross,'說明':'門市原始業績，未含公司帳'},
       {'項目':'退貨','金額／內容':t.totals.returns,'說明':'沿用原報表'},
       {'項目':'扣退貨業績','金額／內容':t.totals.base,'說明':'原始營業總額－退貨'},
-      {'項目':'公司帳','金額／內容':t.totals.external,'說明':'核准公司帳，計入業績總額；保留刪除沖減'},
+      {'項目':'公司帳','金額／內容':t.totals.external,'說明':'依本人與查詢日期列示，不受業績區域／門市篩選影響；核准後計入業績總額，保留刪除沖減'},
       {'項目':'其他費用（薪資另計）','金額／內容':t.totals.other,'說明':window.StarredPerformance85.expenseNote(t.totals)+'；不納入業績總額或扣款後結算'},
       {'項目':'業績總額（扣款前）','金額／內容':t.totals.before,'說明':'扣退貨業績＋公司帳；不加其他費用'},
       {'項目':'核准扣款','金額／內容':t.deduction,'說明':'依入帳月份'},
@@ -21438,3 +21487,13 @@ window.StarredCompanyPrint82={open:open,close:close,print:print,build:'20261001-
 </style>
 </body>
 </html>
+
+<script id="company-account-scope-v87-output-guard">
+(function(){
+'use strict';
+['printSalesStatDetail','exportSalesStatDetailExcel','printCurrentSalesReport','exportCurrentSalesReportExcel','printSalesComparisonCurrent','exportSalesComparisonCurrentExcel'].forEach(function(name){
+  var original=window[name];if(typeof original!=='function')return;
+  window[name]=function(){try{window.StarredCompanyScope87.assertReady()}catch(error){var text=String(error&&error.message||error);if(typeof window.salesSetAdminStatus==='function')window.salesSetAdminStatus(text,'error');else {var box=document.getElementById('salesAdminStatus');if(box)box.textContent=text}window.alert(text);return false}return original.apply(this,arguments)};
+});
+})();
+</script>
