@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
 <html lang="zh-Hant">
 <head>
@@ -4762,6 +4763,13 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <div id="lineUserTab" class="admin-tab-panel">
       <section class="panel">
         <div class="manage-list-heading"><div><h2>LINE 使用者</h2><div class="manage-list-description">LINE 登入串接後，使用者姓名會自動出現在這裡。停用後，該 LINE 身分將無法開啟系統。</div></div><div id="lineUserCount" class="manage-result-count">0 位</div></div>
+        <div id="lineUserFilters92" class="lu92-toolbar" hidden>
+          <label class="lu92-search-label" for="lineUserSearch92"><span>搜尋</span><input id="lineUserSearch92" type="search" placeholder="LINE 名稱／本名／ID" aria-label="搜尋 LINE 名稱、本名或 ID" autocomplete="off" oninput="filterLineUsers92(event)" oncompositionend="filterLineUsers92(event)"></label>
+          <label class="lu92-status-label" for="lineUserStatus92"><span>狀態</span><select id="lineUserStatus92" aria-label="使用者狀態" onchange="filterLineUsers92()"><option value="">全部狀態</option><option value="enabled">已啟用</option><option value="disabled">已停用</option></select></label>
+          <button type="button" class="secondary" onclick="resetLineUserFilters92()">清除篩選</button>
+          <label class="lu92-id-option"><input id="lineUserShowId92" type="checkbox" onchange="filterLineUsers92()">顯示 LINE ID</label>
+          <span id="lineUserFilterCount92" role="status" aria-live="polite"></span>
+        </div>
         <div id="lineUserList" class="line-user-list"></div>
       </section>
     </div>
@@ -5165,17 +5173,136 @@ function getCurrentLineUser(){try{return JSON.parse(window.StarredStorage89.loca
 function syncCurrentLineUser(profile){if(!profile||!profile.id)return null;const id=String(profile.id),now=new Date().toISOString();let user=lineUsers.find(x=>String(x.id)===id);if(!user){user={id,name:profile.name||profile.displayName||"LINE 使用者",displayName:profile.displayName||profile.name||"LINE 使用者",employeeName:"",pictureUrl:profile.pictureUrl||"",enabled:true,createdAt:now,lastLogin:now};lineUsers.unshift(user)}else{user.displayName=profile.displayName||profile.name||user.displayName||user.name||"LINE 使用者";user.name=user.employeeName||user.displayName;user.pictureUrl=profile.pictureUrl||user.pictureUrl||"";user.lastLogin=now}persistLineUsers();return user}
 function isCurrentLineUserEnabled(){const profile=getCurrentLineUser();if(!profile||!profile.id)return true;const user=lineUsers.find(x=>String(x.id)===String(profile.id));return !user||user.enabled!==false}
 function enforceLineUserAccess(){const block=$("lineAccessBlock");if(!block)return true;const enabled=isCurrentLineUserEnabled();block.classList.toggle("show",!enabled);document.body.style.overflow=enabled?"":"hidden";return enabled}
-function renderLineUsers(){
- const list=$("lineUserList"),count=$("lineUserCount");
+// v92: LINE users list presentation only. Existing save/toggle API contracts are unchanged.
+function lineUserListAllowed92(){
+ return !!currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin';
+}
+function lineUserListOwner92(){
+ return JSON.stringify([currentUser?.id||'',currentUser?.account||currentUser?.username||'',currentUser?.name||'',currentUser?.role||'']);
+}
+function lineUserNameParts92(user){
+ const display=String(user.displayName||user.lineDisplayName||user.name||'未命名');
+ return {display,employee:String(user.employeeName||((user.name&&user.name!==display)?user.name:''))};
+}
+function lineUserLoginText92(value){
+ if(!value)return {full:'尚無紀錄',compact:'尚無紀錄',iso:''};
+ const date=new Date(value);
+ if(!Number.isFinite(date.getTime()))return {full:'日期格式異常',compact:'日期格式異常',iso:''};
+ try{
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(date);
+  const fields={};parts.forEach(p=>{fields[p.type]=p.value});
+  const compact=`${fields.year}/${fields.month}/${fields.day} ${fields.hour}:${fields.minute}`;
+  return {full:compact+':'+fields.second,compact,iso:date.toISOString()};
+ }catch(_){return {full:String(value),compact:String(value),iso:''}}
+}
+function lineUserDraftState92(input){
+ if(!input)return;
+ const row=input.closest('.line-user-item');if(!row)return;
+ const dirty=input.value!==String(input.dataset.savedName92||'');
+ row.classList.toggle('lu92-dirty',dirty);
+ input.title=dirty?'尚未儲存；請按本列「儲存本名」。':'備註本名（最多 40 字）';
+ const button=row.querySelector('[data-lu92-save]');
+ if(button)button.title=dirty?'儲存這筆修改':'儲存本名';
+}
+function filterLineUsers92(event){
+ if(event&&event.isComposing)return;
+ const list=$('lineUserList'),toolbar=$('lineUserFilters92'),result=$('lineUserFilterCount92');
  if(!list)return;
- if(currentUser&&typeof normalizeCurrentAdminRole==="function"&&normalizeCurrentAdminRole(currentUser.role)!=="admin"){list.innerHTML="";if(count)count.textContent="0 位";return}
- count.textContent=`${lineUsers.length} 位`;
- if(!lineUsers.length){list.innerHTML='<div class="line-user-empty">目前尚無 LINE 使用者。完成 LINE Login 串接後，首次登入的姓名會自動加入這裡。</div>';return}
- list.innerHTML=lineUsers.map(u=>{
-  const displayName=u.displayName||u.lineDisplayName||u.name||"未命名";
-  const employeeName=u.employeeName||((u.name&&u.name!==displayName)?u.name:"");
-  return `<div class="line-user-item" data-line-user-id="${escapeLineHtml(u.id||"")}"><div><div class="line-user-sub">LINE 名稱</div><div class="line-user-name">${escapeLineHtml(displayName)}</div><div class="line-user-sub line-user-id">${escapeLineHtml(u.id||"—")}</div></div><label class="line-user-realname"><span>備註本名</span><input type="text" maxlength="40" value="${escapeLineHtml(employeeName)}" placeholder="例如：陳鈺婷"></label><div><span class="line-user-status ${u.enabled===false?'disabled':''}">${u.enabled===false?'已停用':'已啟用'}</span></div><div><div class="line-user-sub">最後登入</div><div>${u.lastLogin?new Date(u.lastLogin).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}):'尚無紀錄'}</div></div><div class="line-user-actions"><button class="primary" onclick="saveLineUserEmployeeName(this)">儲存本名</button><button class="${u.enabled===false?'primary':'secondary'}" onclick="toggleLineUser('${String(u.id).replace(/'/g,"\\'")}')">${u.enabled===false?'啟用':'停用'}</button></div></div>`;
- }).join('')
+ if(!lineUserListAllowed92()){
+  list.replaceChildren();delete list.dataset.owner92;
+  if(toolbar)toolbar.hidden=true;if(result)result.textContent='';
+  if($('lineUserCount'))$('lineUserCount').textContent='0 位';return;
+ }
+ const query=String($('lineUserSearch92')?.value||'').trim().normalize('NFKC').toLocaleLowerCase('zh-Hant');
+ const tokens=query.split(/\s+/).filter(Boolean),status=String($('lineUserStatus92')?.value||'');
+ const showId=!!$('lineUserShowId92')?.checked;
+ list.classList.toggle('lu92-show-id',showId);
+ let shown=0;
+ const rows=Array.from(list.querySelectorAll('tbody > .line-user-item'));
+ rows.forEach(row=>{
+  const input=row.querySelector('.line-user-realname input');
+  const text=[row.dataset.search92||'',input?.value||''].join(' ').normalize('NFKC').toLocaleLowerCase('zh-Hant');
+  const matches=(!status||status===row.dataset.status92)&&tokens.every(token=>text.includes(token));
+  row.hidden=!matches;if(matches)shown++;
+ });
+ const empty=$('lineUserEmpty92');
+ if(empty){empty.hidden=shown>0;empty.textContent=rows.length?'沒有符合搜尋條件的使用者，請調整搜尋或清除篩選。':'目前尚無 LINE 使用者。首次登入後，姓名會自動加入這裡。'}
+ const table=list.querySelector('table');if(table)table.hidden=rows.length===0;
+ if(result)result.textContent=`顯示 ${shown} / ${rows.length} 位`;
+}
+function resetLineUserFilters92(){
+ if($('lineUserSearch92'))$('lineUserSearch92').value='';
+ if($('lineUserStatus92'))$('lineUserStatus92').value='';
+ filterLineUsers92();
+}
+function makeLineUserRow92(){
+ const row=document.createElement('tr');row.className='line-user-item';
+ row.innerHTML='<td class="lu92-identity"><div class="lu92-name-line"><span class="line-user-name"></span><span class="line-user-status lu92-mobile-status"></span></div><span class="line-user-sub line-user-id"></span></td>'+ 
+ '<td class="lu92-realname"><label class="line-user-realname"><span class="lu92-sr-only">備註本名</span><input type="text" maxlength="40" autocomplete="off" placeholder="填寫本名" oninput="lineUserDraftState92(this)"></label></td>'+ 
+ '<td class="lu92-status"><span class="line-user-status"></span></td>'+ 
+ '<td class="lu92-login"><time><span class="lu92-login-full"></span><span class="lu92-login-mobile"></span></time></td>'+ 
+ '<td class="lu92-actions-cell"><div class="line-user-actions"><button type="button" class="secondary" data-lu92-save onclick="saveLineUserEmployeeName(this)">儲存本名</button><button type="button" class="secondary" data-lu92-toggle onclick="toggleLineUser(this.closest(\'.line-user-item\').dataset.lineUserId)"></button></div></td>';
+ return row;
+}
+function renderLineUsers(){
+ const list=$('lineUserList'),count=$('lineUserCount'),toolbar=$('lineUserFilters92');
+ if(!list)return;
+ if(!lineUserListAllowed92()){
+  list.replaceChildren();delete list.dataset.owner92;
+  if(count)count.textContent='0 位';if(toolbar)toolbar.hidden=true;
+  if($('lineUserFilterCount92'))$('lineUserFilterCount92').textContent='';
+  if($('lineUserSearch92'))$('lineUserSearch92').value='';
+  if($('lineUserStatus92'))$('lineUserStatus92').value='';
+  if($('lineUserShowId92'))$('lineUserShowId92').checked=false;
+  return;
+ }
+ const owner=lineUserListOwner92();
+ if(list.dataset.owner92!==owner){
+  list.replaceChildren();list.dataset.owner92=owner;
+  if($('lineUserSearch92'))$('lineUserSearch92').value='';
+  if($('lineUserStatus92'))$('lineUserStatus92').value='';
+  if($('lineUserShowId92'))$('lineUserShowId92').checked=false;
+ }
+ if(toolbar)toolbar.hidden=false;
+ const users=Array.isArray(lineUsers)?lineUsers:[];
+ if(count)count.textContent=`${users.length} 位`;
+ if(!list.querySelector('tbody')){
+  list.innerHTML='<table class="lu92-table" aria-label="LINE 使用者管理清單"><colgroup><col class="lu92-col-name"><col class="lu92-col-realname"><col class="lu92-col-status"><col class="lu92-col-login"><col class="lu92-col-actions"></colgroup><thead><tr><th scope="col">LINE 名稱</th><th scope="col">備註本名</th><th scope="col">狀態</th><th scope="col">最後登入（台灣時間）</th><th scope="col">操作</th></tr></thead><tbody></tbody></table><div id="lineUserEmpty92" class="line-user-empty" role="status" hidden></div>';
+ }
+ const body=list.querySelector('tbody'),existing=new Map();
+ Array.from(body.children).forEach(row=>existing.set(row.dataset.key92,row));
+ const keys=new Set(),ordered=[];
+ users.forEach((user,index)=>{
+  const id=String(user.id||''),key=id||'missing-id-'+index;keys.add(key);
+  const names=lineUserNameParts92(user),date=lineUserLoginText92(user.lastLogin),enabled=user.enabled!==false;
+  let row=existing.get(key);const fresh=!row;
+  if(fresh){row=makeLineUserRow92();row.dataset.key92=key;body.appendChild(row)}
+  row.dataset.lineUserId=id;row.dataset.status92=enabled?'enabled':'disabled';
+  row.dataset.search92=[names.display,names.employee,id].join(' ');
+  row.querySelector('.line-user-name').textContent=names.display;
+  row.querySelector('.line-user-name').title=names.display+'\nLINE ID：'+(id||'—');
+  const idLabel=row.querySelector('.line-user-id');idLabel.textContent=id||'—';idLabel.title='LINE ID：'+(id||'—');
+  const input=row.querySelector('.line-user-realname input');
+  const oldSaved=String(input.dataset.savedName92||''),hasLocalChange=!fresh&&input.value!==oldSaved;
+  // Keep unsaved text, focus and IME composition through the original periodic cloud refresh.
+  if(fresh||!hasLocalChange){if(input.value!==names.employee)input.value=names.employee}
+  input.dataset.savedName92=names.employee;input.setAttribute('aria-label',names.display+'的備註本名');
+  row.querySelectorAll('.line-user-status').forEach(status=>{status.textContent=enabled?'已啟用':'已停用';status.classList.toggle('disabled',!enabled)});
+  const time=row.querySelector('time');time.title=date.full+(date.iso?'（台灣時間）':'');
+  if(date.iso)time.dateTime=date.iso;else time.removeAttribute('datetime');
+  row.querySelector('.lu92-login-full').textContent=date.full;row.querySelector('.lu92-login-mobile').textContent=date.compact;
+  const toggle=row.querySelector('[data-lu92-toggle]');toggle.textContent=enabled?'停用':'啟用';toggle.classList.toggle('lu92-enable',!enabled);toggle.setAttribute('aria-label',(enabled?'停用':'啟用')+names.display);
+  const save=row.querySelector('[data-lu92-save]');save.setAttribute('aria-label','儲存'+names.display+'的本名');
+  if(!id){save.disabled=true;toggle.disabled=true}
+  lineUserDraftState92(input);ordered.push(row);
+ });
+ Array.from(body.children).forEach(row=>{if(!keys.has(row.dataset.key92))row.remove()});
+ // Do not detach a focused row. Reconcile server order next time it is not being edited.
+ if(!body.contains(document.activeElement)){
+  let cursor=body.firstElementChild;
+  ordered.forEach(row=>{if(row===cursor)cursor=cursor.nextElementSibling;else body.insertBefore(row,cursor)});
+ }
+ filterLineUsers92();
 }
 async function saveLineUserEmployeeName(button){
  if(!currentUser||normalizeCurrentAdminRole(currentUser.role)!=="admin"){alert("只有系統管理員可以設定備註本名");return}
@@ -21821,4 +21948,92 @@ window.openSalesAdminOvernightCreate=open;
  #expenseAdminSections91:has(>button[hidden]){grid-template-columns:repeat(2,minmax(0,1fr))}
  #expenseAdminSections91 #ded78-admin-badge:not([hidden]){display:inline-flex}
 }
+</style>
+
+<style id="line-users-compact-list-v92">
+/* v92: scoped solely to the admin LINE-user list; no global form/table overrides. */
+#lineUserTab .manage-list-heading{margin-bottom:12px;align-items:center}
+#lineUserTab h2{font-size:20px!important;font-weight:500!important;margin-bottom:4px!important}
+#lineUserTab .manage-list-description{font-size:14px!important;font-weight:400;line-height:1.6}
+#lineUserTab .manage-result-count{font-size:14px;font-weight:400;white-space:nowrap}
+#lineUserTab .lu92-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #d8e3e9;border-radius:10px;background:#f6f9fa}
+#lineUserTab .lu92-search-label{display:flex;align-items:center;gap:8px;flex:1 1 270px;min-width:180px}
+#lineUserTab .lu92-status-label{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+#lineUserTab .lu92-search-label>span,#lineUserTab .lu92-status-label>span{font-size:14px;white-space:nowrap;color:#536c7b}
+#lineUserTab .lu92-toolbar input[type="search"]{min-width:0;width:100%;max-width:340px}
+#lineUserTab .lu92-toolbar select{width:124px!important}
+#lineUserTab .lu92-toolbar input[type="search"],#lineUserTab .lu92-toolbar select{height:36px!important;min-height:36px!important;padding:6px 10px!important;font-size:14px!important;font-weight:400;border-radius:7px!important}
+#lineUserTab .lu92-toolbar button{height:36px!important;min-height:36px!important;padding:5px 12px!important;font-size:14px!important;font-weight:400!important;border-radius:7px!important;box-shadow:none!important;white-space:nowrap}
+#lineUserTab .lu92-id-option{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;font-weight:400;color:#617784}
+#lineUserTab .lu92-id-option input{width:16px!important;height:16px!important;min-height:16px!important;margin:0;accent-color:#315a6d}
+#lineUserTab #lineUserFilterCount92{margin-left:auto;white-space:nowrap;color:#687f8b;font-size:13px;font-weight:400}
+#lineUserTab #lineUserList{display:block!important;gap:0!important;margin-top:0!important;border:1px solid #d4e0e7;border-radius:10px;overflow:hidden;background:#fff}
+#lineUserTab .lu92-table{width:100%;table-layout:fixed;border-collapse:collapse;margin:0;font-size:14px;line-height:1.45;color:#294958}
+#lineUserTab .lu92-col-name{width:24%}#lineUserTab .lu92-col-realname{width:26%}#lineUserTab .lu92-col-status{width:10%}#lineUserTab .lu92-col-login{width:21%}#lineUserTab .lu92-col-actions{width:19%}
+#lineUserTab .lu92-table thead th{padding:10px 12px;background:#315568;color:#fff;text-align:left;font-size:14px;font-weight:400;white-space:nowrap;border:0}
+#lineUserTab .lu92-table thead th:last-child{text-align:center}
+#lineUserTab .lu92-table .line-user-item{display:table-row!important;min-height:0!important;height:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff;transform:none!important}
+#lineUserTab .lu92-table .line-user-item:nth-child(even){background:#f7f9fb}
+#lineUserTab .lu92-table .line-user-item:hover{background:#eef4f7}
+#lineUserTab .lu92-table .line-user-item>td{padding:7px 12px;border:0;border-bottom:1px solid #e0e8ed;vertical-align:middle;min-width:0;font-weight:400}
+#lineUserTab .lu92-table .line-user-item:last-child>td{border-bottom:0}
+#lineUserTab .lu92-name-line{display:flex;align-items:center;gap:6px;min-width:0}
+#lineUserTab .line-user-name{display:block;min-width:0;font-size:15px;font-weight:400!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#27495a}
+#lineUserTab .line-user-id{display:none!important;margin:4px 0 0;font:12px/1.4 ui-monospace,monospace;opacity:1;color:#667e8c;overflow-wrap:anywhere;word-break:break-all}
+#lineUserTab .lu92-show-id .line-user-id{display:block!important}
+#lineUserTab .line-user-realname{display:block!important;margin:0;min-width:0}
+#lineUserTab .line-user-realname input{width:100%!important;min-width:0;height:34px!important;min-height:34px!important;padding:5px 9px!important;font-size:14px!important;font-weight:400!important;border:1px solid #cfdce4!important;border-radius:6px!important;background:#fff;box-shadow:none}
+#lineUserTab .line-user-realname input:focus{border-color:#5c8298!important;box-shadow:0 0 0 2px rgba(61,109,133,.1)}
+#lineUserTab .lu92-dirty .line-user-realname input{border-color:#c5933b!important;background:#fffbf0}
+#lineUserTab .line-user-status{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:400!important;white-space:nowrap;color:#34694d}
+#lineUserTab .line-user-status:before{width:7px;height:7px;flex:0 0 7px}
+#lineUserTab .line-user-status.disabled{color:#8a6060}
+#lineUserTab .line-user-status.disabled:before{background:#a17c7c}
+#lineUserTab .lu92-login time{font-size:14px;font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap;color:#466170}
+#lineUserTab .line-user-actions{display:flex!important;flex-wrap:nowrap!important;align-items:center;justify-content:center;gap:7px;width:100%;min-width:0;grid-column:auto!important}
+#lineUserTab .line-user-actions button{min-width:0!important;width:auto!important;min-height:34px!important;height:34px!important;padding:5px 10px!important;font-size:14px!important;line-height:1.3;font-weight:400!important;white-space:nowrap!important;box-shadow:none!important;border:1px solid #ccdae3!important;border-radius:6px!important;background:#eef4f7;color:#2b5368}
+#lineUserTab .line-user-actions [data-lu92-toggle]{min-width:54px!important;background:#fff;color:#715b5b}
+#lineUserTab .line-user-actions [data-lu92-toggle].lu92-enable{background:#eef8f1;color:#2f7550}
+#lineUserTab .line-user-actions button:hover:not(:disabled){background:#e3edf3;border-color:#89a7b9!important}
+#lineUserTab .line-user-actions button:disabled{opacity:.5;cursor:wait}
+#lineUserTab .lu92-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#lineUserTab .lu92-mobile-status,#lineUserTab .lu92-login-mobile{display:none!important}
+#lineUserTab #lineUserEmpty92{border:0;border-radius:0;margin:0;padding:28px 14px;font-size:14px;line-height:1.6;font-weight:400}
+#lineUserTab [hidden]{display:none!important}
+@media(max-width:1050px) and (min-width:761px){
+ #lineUserTab .lu92-col-name{width:22%}#lineUserTab .lu92-col-realname{width:22%}#lineUserTab .lu92-col-status{width:10%}#lineUserTab .lu92-col-login{width:23%}#lineUserTab .lu92-col-actions{width:23%}
+ #lineUserTab .lu92-table thead th,#lineUserTab .lu92-table .line-user-item>td{padding-left:8px;padding-right:8px}
+ #lineUserTab .line-user-actions button{padding-left:7px!important;padding-right:7px!important}
+}
+@media(max-width:760px){
+ #lineUserTab .lu92-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px}
+ #lineUserTab .lu92-search-label{grid-column:1/-1;min-width:0;width:100%;display:block}
+ #lineUserTab .lu92-search-label>span,#lineUserTab .lu92-status-label>span{display:none}
+ #lineUserTab .lu92-toolbar input[type="search"]{max-width:none}
+ #lineUserTab .lu92-toolbar input[type="search"],#lineUserTab .lu92-toolbar select{font-size:16px!important;height:40px!important;min-height:40px!important}
+ #lineUserTab .lu92-status-label{min-width:0}#lineUserTab .lu92-toolbar select{width:100%!important}
+ #lineUserTab .lu92-toolbar button{height:40px!important;min-height:40px!important}
+ #lineUserTab #lineUserFilterCount92{margin-left:0;justify-self:end}
+ #lineUserTab .lu92-table,#lineUserTab .lu92-table tbody{display:block;width:100%}
+ #lineUserTab .lu92-table colgroup,#lineUserTab .lu92-table thead{display:none}
+ #lineUserTab .lu92-table .line-user-item{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(142px,1.12fr)!important;grid-template-areas:"name realname" "login actions";gap:6px 8px!important;padding:9px 10px!important;border-bottom:1px solid #dce6ec!important}
+ #lineUserTab .lu92-table .line-user-item:last-child{border-bottom:0!important}
+ #lineUserTab .lu92-table .line-user-item>td{padding:0;border:0;display:block;min-width:0}
+ #lineUserTab .lu92-table .lu92-identity{grid-area:name;align-self:center}
+ #lineUserTab .lu92-table .lu92-realname{grid-area:realname}
+ #lineUserTab .lu92-table .lu92-status{display:none!important}
+ #lineUserTab .lu92-table .lu92-login{grid-area:login;align-self:center}
+ #lineUserTab .lu92-table .lu92-actions-cell{grid-area:actions}
+ #lineUserTab .line-user-name{font-size:15px;flex:1 1 auto}
+ #lineUserTab .lu92-mobile-status{display:inline-flex!important;flex:0 0 auto;gap:3px;font-size:12px}
+ #lineUserTab .lu92-mobile-status:before{width:5px;height:5px;flex-basis:5px}
+ #lineUserTab .line-user-realname input{font-size:16px!important;height:40px!important;min-height:40px!important}
+ #lineUserTab .lu92-login time{font-size:12px}
+ #lineUserTab .lu92-login-full{display:none!important}#lineUserTab .lu92-login-mobile{display:inline!important}
+ #lineUserTab .line-user-actions{justify-content:stretch;gap:6px}
+ #lineUserTab .line-user-actions button{flex:1 1 auto;height:40px!important;min-height:40px!important;padding:5px 7px!important;font-size:14px!important}
+ #lineUserTab .line-user-actions [data-lu92-toggle]{min-width:48px!important;flex:0 0 48px}
+}
+#lineUserTab #lineUserFilters92[hidden],#lineUserTab #lineUserList [hidden]{display:none!important}
+
 </style>
