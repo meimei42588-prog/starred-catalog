@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -4443,7 +4444,6 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       <button id="orderAdminTabBtn" onclick="showAdminTab('orderAdmin')">訂單管理</button>
       <button id="orderBackupTabBtn" onclick="showAdminTab('orderBackup')">備份</button>
       <button id="expenseAdminTabBtn" onclick="showAdminTab('expenseAdmin')">費用明細</button>
-      <button id="externalAccountAdminTabBtn" onclick="showAdminTab('externalAccountAdmin')">公司帳管理</button>
       <button id="salesReportTabBtn" onclick="showAdminTab('salesReport')">業績報表</button>
       <button id="accountTabBtn" onclick="showAdminTab('account')">管理員設定</button>
       <button id="lineUserTabBtn" onclick="showAdminTab('lineUser')">LINE 使用者</button>
@@ -4604,7 +4604,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       </section>
     </div>
     <div id="expenseAdminTab" class="admin-tab-panel">
-      <section class="panel expense-admin-panel">
+      <section id="expenseAdminDetailsPanel91" class="panel expense-admin-panel">
         <div class="expense-admin-heading">
           <div><span>EXPENSE REVIEW</span><h2>費用明細</h2><p>查看人員提出的撤櫃、進櫃、其他、既有移櫃／加班與費用申請，核准後會顯示在該人員的業績明細底部。</p></div>
           <div class="expense-admin-heading-actions"><button type="button" class="secondary" onclick="printExpenseAdminReport()">友善列印</button><button type="button" class="primary" onclick="exportExpenseAdminExcel()">匯出 Excel</button><button type="button" class="secondary" onclick="loadExpenseAdminReport()">重新整理</button></div>
@@ -4642,8 +4642,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         </div>
         <div id="expenseAdminList" class="expense-admin-list"><div class="expense-empty">切換到此頁後會載入費用明細。</div></div>
       </section>
-    </div>
-    <div id="externalAccountAdminTab" class="admin-tab-panel">
+      <div id="externalAccountAdminTab" class="expense-admin-company-panel" role="region" aria-label="公司帳管理" hidden>
       <section class="panel external-account-admin-panel">
         <header class="external-account-admin-heading"><div><span>COMPANY ACCOUNT REVIEW</span><h2>公司帳管理</h2><p>依日期、人員與狀態管理大量公司帳紀錄；每頁最多顯示 100 筆。</p></div><div class="ea82-heading-actions"><button id="externalAccountPrintBtn82" type="button" class="secondary" onclick="printExternalAccountAdminReport()">友善列印</button><button type="button" class="secondary" onclick="loadExternalAccountAdminReport()">重新整理</button></div></header>
         <details id="externalAccountSettingsSection" class="external-account-settings-section">
@@ -4677,6 +4676,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div id="externalAccountAdminMobile" class="external-account-admin-mobile"></div>
         <div id="externalAccountAdminPagination" class="external-account-pagination"></div>
       </section>
+      </div>
     </div>
     <div id="salesReportTab" class="admin-tab-panel">
       <section class="panel sales-admin-panel">
@@ -15550,7 +15550,14 @@ async function deleteExternalAccountOwn(id){
 }
 function eaCanManageAdmin(){return Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)!=='manager')}
 function eaCanSystemAdmin(){return Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin')}
-function eaSyncAdminRole(){var button=eaEl('externalAccountAdminTabBtn');if(button)button.classList.toggle('hidden-by-role',!eaCanManageAdmin())}
+function eaSyncAdminRole(){
+  var allowed=eaCanManageAdmin(),button=eaEl('externalAccountAdminTabBtn');
+  if(button){button.classList.toggle('hidden-by-role',!allowed);button.hidden=!allowed}
+  var root=eaEl('expenseAdminTab');
+  if(!allowed&&root&&root.dataset.expenseAdminSection==='company'&&window.StarredDeduction78){
+    window.StarredDeduction78.showAdmin('expense',{skipLoad:true});
+  }
+}
 function eaFillSettingsForm(){var setting=eaAdminState.setting||{};var values={externalAccountSettingTitle:setting.displayTitle||'公司匯款帳號',externalAccountSettingBank:setting.bankName||'',externalAccountSettingBankCode:setting.bankCode||'',externalAccountSettingBranch:setting.branchName||'',externalAccountSettingName:setting.accountName||'',externalAccountSettingNumber:setting.accountNumber||'',externalAccountSettingNote:setting.remittanceNote||''};Object.keys(values).forEach(function(id){var input=eaEl(id);if(input){input.value=values[id];input.disabled=!eaAdminState.canEditSettings}});if(eaEl('externalAccountSettingSave'))eaEl('externalAccountSettingSave').disabled=!eaAdminState.canEditSettings;if(eaEl('externalAccountSettingsPermission'))eaEl('externalAccountSettingsPermission').textContent=eaAdminState.canEditSettings?'目前可編輯':'只有系統管理員可以修改'}
 function eaFillAdminPeople(){var select=eaEl('externalAccountAdminPerson');if(!select)return;var old=select.value;select.innerHTML='<option value="">全部人員</option>'+eaAdminState.people.map(function(person){return '<option value="'+eaEsc(person.lineUserId)+'">'+eaEsc(person.name)+(person.enabled===false?'（已停用）':'')+'</option>'}).join('');select.value=old}
 function eaAdminActionHtml(item){var review=item.status==='pending'?'<button type="button" class="primary" onclick="reviewExternalAccountTransaction(\''+eaEsc(item.id)+'\',\'approved\')">核准</button><button type="button" class="secondary" onclick="reviewExternalAccountTransaction(\''+eaEsc(item.id)+'\',\'rejected\')">駁回</button>':'';return '<div class="external-account-admin-actions">'+review+'<button type="button" class="secondary" onclick="openExternalAccountEdit(\''+eaEsc(item.id)+'\')">編輯</button><button type="button" class="secondary" onclick="deleteExternalAccountTransaction(\''+eaEsc(item.id)+'\')">刪除</button></div>'}
@@ -15626,7 +15633,18 @@ function renderSalesPersonExternalAccountSection(lineUserId){
   }).join('')+'</div>';
 }
 var eaPreviousShowPage=window.showPage;window.showPage=function(page){if(page==='externalAccount'){if(typeof enforceLineUserAccess==='function'&&!enforceLineUserAccess())return;if(typeof eaPreviousShowPage==='function')eaPreviousShowPage('home');['homePage','orderPage','salesPage','expensePage','adminPage'].forEach(function(id){eaEl(id)?.classList.remove('active')});['homeNav','orderNav','salesNav','expenseNav','adminNav'].forEach(function(id){eaEl(id)?.classList.remove('active')});eaEl('externalAccountPage')?.classList.add('active');eaEl('externalAccountNav')?.classList.add('active');loadExternalAccountData();window.scrollTo({top:0,behavior:'smooth'});return}if(typeof eaPreviousShowPage==='function')eaPreviousShowPage(page);eaEl('externalAccountPage')?.classList.remove('active');eaEl('externalAccountNav')?.classList.remove('active')};
-var eaPreviousShowAdminTab=window.showAdminTab;window.showAdminTab=function(name){if(name==='externalAccountAdmin'){if(!eaCanManageAdmin()){alert('公司帳管理僅開放會計與系統管理員。');return}if(typeof eaPreviousShowAdminTab==='function')eaPreviousShowAdminTab('dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(panel){panel.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs button').forEach(function(button){button.classList.remove('active')});eaEl('externalAccountAdminTab')?.classList.add('active');eaEl('externalAccountAdminTabBtn')?.classList.add('active');loadExternalAccountAdminReport(eaAdminState.page);return}if(typeof eaPreviousShowAdminTab==='function')eaPreviousShowAdminTab(name);eaEl('externalAccountAdminTab')?.classList.remove('active');eaEl('externalAccountAdminTabBtn')?.classList.remove('active')};
+var eaPreviousShowAdminTab=window.showAdminTab;
+window.showAdminTab=function(name){
+  // v91: retain the old route used by saved pages and existing admin links.
+  if(name==='externalAccountAdmin'){
+    if(!eaCanManageAdmin()){alert('公司帳管理僅開放會計與系統管理員。');return}
+    if(typeof eaPreviousShowAdminTab==='function')eaPreviousShowAdminTab('expenseAdmin');
+    if(window.StarredDeduction78)window.StarredDeduction78.showAdmin('company');
+    return;
+  }
+  if(typeof eaPreviousShowAdminTab==='function')eaPreviousShowAdminTab(name);
+  if(name!=='expenseAdmin')eaEl('externalAccountAdminTab')?.classList.remove('active');
+};
 var eaPreviousApplyAdminRoleUI=window.applyAdminRoleUI;if(typeof eaPreviousApplyAdminRoleUI==='function')window.applyAdminRoleUI=function(){var result=eaPreviousApplyAdminRoleUI.apply(this,arguments);eaSyncAdminRole();return result};
 window.copyExternalAccountInfo=copyExternalAccountInfo;window.renderExternalAccountOwnList=renderExternalAccountOwnList;window.loadExternalAccountData=loadExternalAccountData;window.submitExternalAccountTransaction=submitExternalAccountTransaction;window.openExternalAccountOwnEdit=openExternalAccountOwnEdit;window.closeExternalAccountOwnEdit=closeExternalAccountOwnEdit;window.saveExternalAccountOwnEdit=saveExternalAccountOwnEdit;window.cancelExternalAccountOwn=cancelExternalAccountOwn;window.deleteExternalAccountOwn=deleteExternalAccountOwn;window.loadExternalAccountAdminReport=loadExternalAccountAdminReport;window.reloadExternalAccountAdminReport=reloadExternalAccountAdminReport;window.goExternalAccountAdminPage=goExternalAccountAdminPage;window.resetExternalAccountAdminFilters=resetExternalAccountAdminFilters;window.saveExternalAccountSettings=saveExternalAccountSettings;window.reviewExternalAccountTransaction=reviewExternalAccountTransaction;window.openExternalAccountEdit=openExternalAccountEdit;window.closeExternalAccountEdit=closeExternalAccountEdit;window.saveExternalAccountEdit=saveExternalAccountEdit;window.deleteExternalAccountTransaction=deleteExternalAccountTransaction;window.renderSalesPersonExternalAccountSection=renderSalesPersonExternalAccountSection;
 document.addEventListener('DOMContentLoaded',function(){var today=eaToday();if(eaEl('externalAccountDate')){eaEl('externalAccountDate').value=today;eaEl('externalAccountDate').max=today}if(eaEl('externalAccountOwnMonth'))eaEl('externalAccountOwnMonth').value=today.slice(0,7);if(eaEl('externalAccountAdminDateFrom')){eaEl('externalAccountAdminDateFrom').value=today.slice(0,7)+'-01';eaEl('externalAccountAdminDateFrom').max=today}if(eaEl('externalAccountAdminDateTo')){eaEl('externalAccountAdminDateTo').value=today;eaEl('externalAccountAdminDateTo').max=today}var identity=eaIdentity();if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;eaSyncAdminRole()});
@@ -15786,14 +15804,17 @@ function ensureBanner(){var banner=el('adminAttentionSummaryV35');if(banner)bann
 function setBadge(id,count,title){var button=el(id);if(!button)return;var old=button.querySelector('.admin-attention-badge');count=number(count);button.classList.toggle('has-attention',count>0);if(count>0){if(!old){old=document.createElement('span');old.className='admin-attention-badge';old.setAttribute('aria-label','待處理');button.appendChild(old)}old.textContent=compact(count);button.title=title||('有 '+String(count)+' 筆待處理')}else{if(old)old.remove();button.removeAttribute('title')}}
 window.syncSalesReportAttentionBadgeV50=function(){var missing=number((el('salesStoreMissingTabCount')||{}).textContent),workday=number((el('salesWorkdayTabCount')||{}).textContent),returns=number((el('salesReturnTabCount')||{}).textContent),salesEdit=number((el('salesRequestTabCount')||{}).textContent),sales=missing+workday+returns+salesEdit;setBadge('salesReportTabBtn',sales,[missing?'門市漏傳 '+missing+' 天':'',workday?'日薪確認 '+workday+' 組':'',returns?'退貨待歸列 '+returns+' 筆':'',salesEdit?'業績修改 '+salesEdit+' 筆':''].filter(Boolean).join('；'));return sales};
 function render(result){lastResult=result||{};var expense=number(result.expensePending),external=number(result.externalPending),salesEdit=number(result.salesEditPending),workday=number(result.workdayPending),missing=number(result.missingDaysCount),returns=number(result.returnUnassignedPending),orders=number(result.orderChangePending),line=number(result.lineUnprocessed),sales=salesEdit+workday+missing+returns,total=expense+external+sales+orders+line;
-  setBadge('expenseAdminTabBtn',expense,expense?'費用待審核 '+String(expense)+' 筆':'');
-  setBadge('externalAccountAdminTabBtn',external,external?'公司帳待審核 '+String(external)+' 筆':'');
+  var canSeeCompany91=activeAdminUser()&&typeof normalizeCurrentAdminRole==='function'&&['admin','accounting'].includes(normalizeCurrentAdminRole(activeAdminUser().role));
+  var companyPending91=canSeeCompany91?external:0;
+  setBadge('expenseAdminTabBtn',expense+companyPending91,[expense?'費用待審核 '+String(expense)+' 筆':'',companyPending91?'公司帳待審核 '+String(companyPending91)+' 筆':''].filter(Boolean).join('；'));
+  setBadge('expenseAdminDetailsTabBtn91',expense,expense?'費用待審核 '+String(expense)+' 筆':'');
+  setBadge('externalAccountAdminTabBtn',companyPending91,companyPending91?'公司帳待審核 '+String(companyPending91)+' 筆':'');
   if(window.starredSalesReminderReadyV50===true)window.syncSalesReportAttentionBadgeV50();else setBadge('salesReportTabBtn',sales,[salesEdit?'業績修改 '+salesEdit+' 筆':'',workday?'日薪確認 '+workday+' 組':'',missing?'漏傳業績 '+missing+' 天':'',returns?'退貨待歸列 '+returns+' 筆':''].filter(Boolean).join('；'));
   setBadge('orderAdminTabBtn',orders,orders?'訂單更改申請 '+String(orders)+' 筆':'');
   setBadge('lineGroupMessagesTabBtn',line,line?'未處理群組訊息 '+String(line)+' 筆':'');
   document.title=baseTitle;
 }
-function clear(){['expenseAdminTabBtn','externalAccountAdminTabBtn','salesReportTabBtn','orderAdminTabBtn','lineGroupMessagesTabBtn'].forEach(function(id){setBadge(id,0,'')});ensureBanner();document.title=baseTitle}
+function clear(){['expenseAdminTabBtn','expenseAdminDetailsTabBtn91','externalAccountAdminTabBtn','salesReportTabBtn','orderAdminTabBtn','lineGroupMessagesTabBtn'].forEach(function(id){setBadge(id,0,'')});ensureBanner();document.title=baseTitle}
 async function load(force){if(loading||!baseApi||document.hidden)return;if(!activeAdminUser()){clear();return}var admin=el('adminContent');if(!force&&admin&&getComputedStyle(admin).display==='none')return;loading=true;try{var result=await baseApi('admin_attention_summary',{});render(result)}catch(error){if(force&&el('adminAttentionSummaryV35')){var banner=el('adminAttentionSummaryV35');banner.hidden=false;banner.querySelector('span').textContent='提醒讀取失敗：'+String(error&&error.message||error)}}finally{loading=false}}
 function schedule(){clearTimeout(refreshTimer);refreshTimer=setTimeout(function(){load(true)},550)}
 function init(){baseApi=typeof window.starredApi==='function'?window.starredApi.bind(window):null;if(!baseApi)return;var wrapped=async function(action,payload){var result=await baseApi(action,payload);if(refreshActions.has(String(action||'')))schedule();return result};window.starredApi=wrapped;window.loadAdminAttentionSummaryV35=function(){return load(true)};var previousShow=window.showAdminTab;window.showAdminTab=function(name){var result=typeof previousShow==='function'?previousShow.apply(this,arguments):undefined;if(name)load(true);return result};ensureBanner();load(false);setInterval(function(){load(false)},60000);window.addEventListener('focus',function(){load(false)});document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)})}
@@ -20350,6 +20371,7 @@ body.leave67-wide-active main.container{
 var BUILD='20260916-independent-deduction-v78';
 var states={own:makeState(),admin:makeState()};
 var modalState=null,lastFocus=null;
+var ADMIN_SECTION_KEY91='starred_expense_admin_section_v91';
 function makeState(){return {data:null,auth:'',loading:0,writing:false,view:'requests',page:1,ready:false,month:'',person:''}}
 function el(id){return document.getElementById(id)}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -20400,10 +20422,39 @@ function fillPeople(people){var select=el('ded78-admin-person');if(!select)retur
 function updateMonthText(month){var box=el('ded78OwnMonthHint');if(box)box.textContent='目前月份：'+String(month||today().slice(0,7))+'；實際扣款一律歸入核准當月。'}
 function syncType(type){var isDeduction=type==='deduction',fields=el('ded78Fields'),note=el('expenseNote')?.closest('.field');if(fields)fields.hidden=!isDeduction;if(note)note.hidden=isDeduction;if(isDeduction){updateMonthText(states.own.data?.serverMonth);showOwn(true);if(el('expenseSubmitBtn'))el('expenseSubmitBtn').textContent='送出扣款申請'}}
 function showOwn(deduction){el('expensePage').classList.toggle('ded78-mode',!!deduction);el('ded78OldOwn').hidden=!!deduction;el('ded78OwnPanel').hidden=!deduction;document.querySelectorAll('[data-ded78-own-mode]').forEach(function(b){b.classList.toggle('active',(b.dataset.ded78OwnMode==='deduction')===!!deduction)});if(deduction&&!states.own.ready)load('own')}
-function showAdmin(deduction){
-  var original=document.querySelector('#expenseAdminTab > .expense-admin-panel');if(original)original.hidden=!!deduction;
-  el('ded78AdminPanel').hidden=!deduction;document.querySelectorAll('[data-ded78-admin-mode]').forEach(function(b){b.classList.toggle('active',(b.dataset.ded78AdminMode==='deduction')===!!deduction)});
-  if(deduction)load('admin');
+function readAdminSection91(){
+  try{var mode=String(window.StarredStorage89.session.getItem(ADMIN_SECTION_KEY91)||'');return ['expense','deduction','company'].includes(mode)?mode:'expense'}catch(_){return 'expense'}
+}
+function rememberAdminSection91(mode){
+  // Use the existing quota-safe store. A cache failure must not affect navigation.
+  try{
+    window.StarredStorage89.session.setItem(ADMIN_SECTION_KEY91,mode);
+    if(el('expenseAdminTab')?.classList.contains('active'))window.StarredStorage89.session.setItem('starred_active_admin_tab_v49','expenseAdmin');
+  }catch(_){}
+}
+function showAdmin(value,options){
+  options=options||{};
+  // Legacy callers still use true/false for deduction/expense.
+  var mode=value===true?'deduction':value===false?'expense':String(value||'expense');
+  if(!['expense','deduction','company'].includes(mode))mode='expense';
+  if(mode==='company'&&!adminAllowed()){
+    if(!options.silent)window.alert('公司帳管理僅開放已登入的會計與系統管理員。');
+    return false;
+  }
+  var root=el('expenseAdminTab');if(!root)return false;
+  var original=root.querySelector(':scope > .expense-admin-panel'),deduction=el('ded78AdminPanel'),company=el('externalAccountAdminTab');
+  if(original)original.hidden=mode!=='expense';
+  if(deduction)deduction.hidden=mode!=='deduction';
+  if(company){company.hidden=mode!=='company';company.classList.toggle('active',mode==='company'&&root.classList.contains('active'))}
+  root.dataset.expenseAdminSection=mode;
+  root.querySelectorAll('[data-ded78-admin-mode]').forEach(function(button){var selected=button.dataset.ded78AdminMode===mode;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});
+  if(options.remember!==false)rememberAdminSection91(mode);
+  if(!options.skipLoad){
+    if(mode==='deduction')load('admin');
+    else if(mode==='company'&&typeof window.loadExternalAccountAdminReport==='function')window.loadExternalAccountAdminReport();
+    else if(mode==='expense'&&typeof window.loadExpenseAdminReport==='function')window.loadExpenseAdminReport();
+  }
+  return true;
 }
 function rowsFor(scope){var s=states[scope],data=s.data;if(!data)return [];var q=queryValue(scope,'search').trim().toLocaleLowerCase(),filter=queryValue(scope,'status');var rows=s.view==='entries'?data.entries:data.requests;return rows.filter(function(row){return (s.view==='entries'||!filter||(scope==='admin'&&filter==='active'?!['cancelled','voided'].includes(row.status):row.status===filter))&&(!q||[row.employeeName,row.reason,row.note,row.reviewNote,row.createdByName,row.actorName,row.amount,row.id,row.requestId].join(' ').toLocaleLowerCase().includes(q))})}
 function renderButtons(scope){var s=states[scope];document.querySelectorAll('#ded78-'+scope+' [data-ded78-needs-ready]').forEach(function(b){b.disabled=!s.ready||s.writing||(scope==='admin'&&!adminAllowed())})}
@@ -20622,18 +20673,18 @@ function mount(){
   var own=document.querySelector('.expense-own-panel'),old=document.createElement('div');old.id='ded78OldOwn';while(own.firstChild)old.appendChild(own.firstChild);own.appendChild(old);
   own.insertAdjacentHTML('afterbegin','<nav class="ded78-switch ded78-outer-switch"><button type="button" class="active" data-ded78-own-mode="expense">費用申請紀錄</button><button type="button" data-ded78-own-mode="deduction">扣款明細 <span id="ded78-own-badge" hidden></span></button></nav>');
   own.insertAdjacentHTML('beforeend','<div id="ded78OwnPanel" hidden>'+panel('own')+'</div>');
-  var admin=el('expenseAdminTab');admin.insertAdjacentHTML('afterbegin','<nav class="ded78-switch ded78-outer-switch"><button type="button" class="active" data-ded78-admin-mode="expense">費用明細</button><button type="button" data-ded78-admin-mode="deduction">扣款明細 <span id="ded78-admin-badge" hidden></span></button></nav>');
+  var admin=el('expenseAdminTab');admin.insertAdjacentHTML('afterbegin','<nav id="expenseAdminSections91" class="ded78-switch ded78-outer-switch" aria-label="費用明細子頁"><button id="expenseAdminDetailsTabBtn91" type="button" class="active" data-ded78-admin-mode="expense" aria-controls="expenseAdminDetailsPanel91" aria-pressed="true">費用明細</button><button id="expenseAdminDeductionTabBtn91" type="button" data-ded78-admin-mode="deduction" aria-controls="ded78AdminPanel" aria-pressed="false">扣款明細 <span id="ded78-admin-badge" hidden></span></button><button id="externalAccountAdminTabBtn" type="button" data-ded78-admin-mode="company" aria-controls="externalAccountAdminTab" aria-pressed="false"'+(adminAllowed()?'':' hidden class="hidden-by-role"')+'>公司帳</button></nav>');
   admin.insertAdjacentHTML('beforeend','<section id="ded78AdminPanel" class="panel" hidden>'+panel('admin')+'</section>');
   document.body.insertAdjacentHTML('beforeend','<div id="ded78Modal" class="ded78-modal ded78" role="dialog" aria-modal="true" aria-labelledby="ded78ModalTitle" hidden><section class="ded78-dialog"><header><h2 id="ded78ModalTitle"></h2><button type="button" class="secondary" data-ded78-close aria-label="關閉扣款視窗">×</button></header><div id="ded78ModalContent"></div><div id="ded78ModalMessage" class="ded78-message error" role="status" aria-live="polite"></div></section></div>');
   updateMonthText();render('own');render('admin');
 }
-function clearPrivateState(){states.own=makeState();states.admin=makeState();modalClose(true);render('own');render('admin');['own','admin'].forEach(function(scope){var badge=el('ded78-'+scope+'-badge');if(badge){badge.hidden=true;badge.textContent=''}})}
+function clearPrivateState(){states.own=makeState();states.admin=makeState();modalClose(true);render('own');render('admin');['own','admin'].forEach(function(scope){var badge=el('ded78-'+scope+'-badge');if(badge){badge.hidden=true;badge.textContent=''}});try{window.StarredStorage89.session.removeItem(ADMIN_SECTION_KEY91)}catch(_){}showAdmin('expense',{skipLoad:true,remember:false})}
 mount();
 document.addEventListener('click',function(event){
   var b=event.target.closest('button');
   if(b?.hasAttribute('data-ded78-close')){modalClose();return}
   if(b?.dataset.ded78OwnMode){showOwn(b.dataset.ded78OwnMode==='deduction');return}
-  if(b?.dataset.ded78AdminMode){showAdmin(b.dataset.ded78AdminMode==='deduction');return}
+  if(b?.dataset.ded78AdminMode){if(!b.disabled)showAdmin(b.dataset.ded78AdminMode);return}
   var root=b?.closest('[data-ded78-scope]');if(!root||b.disabled)return;
   var scope=root.dataset.ded78Scope,s=states[scope];
   if(b.dataset.ded78View){s.view=b.dataset.ded78View;resetPage(scope);return}
@@ -20649,7 +20700,17 @@ document.addEventListener('change',function(event){var scope=event.target.closes
 document.addEventListener('submit',function(event){if(event.target.id==='ded78ModalForm')saveModal(event)});
 document.addEventListener('keydown',function(event){if(el('ded78Modal').hidden)return;if(event.key==='Escape'){event.preventDefault();modalClose()}if(event.key==='Tab'){var controls=Array.from(el('ded78Modal').querySelectorAll('button,input,select,textarea')).filter(function(x){return !x.disabled&&x.offsetParent!==null});var first=controls[0],last=controls[controls.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}});
 var prevShowPage=window.showPage;window.showPage=function(page){var result=prevShowPage.apply(this,arguments);if(page==='expense'&&el('expensePage')?.classList.contains('active'))load('own');return result};
-var prevShowAdmin=window.showAdminTab;window.showAdminTab=function(tab){var result=prevShowAdmin.apply(this,arguments);if(tab==='expenseAdmin'&&el('expenseAdminTab')?.classList.contains('active')){if(adminAllowed())load('admin');else{states.admin.data=null;states.admin.ready=false;render('admin')}}return result};
+var prevShowAdmin=window.showAdminTab;
+window.showAdminTab=function(tab){
+  var result=prevShowAdmin.apply(this,arguments);
+  if(tab==='expenseAdmin'&&el('expenseAdminTab')?.classList.contains('active')){
+    var mode=readAdminSection91();if(mode==='company'&&!adminAllowed())mode='expense';
+    showAdmin(mode,{skipLoad:true});
+    if(adminAllowed())load('admin');else{states.admin.data=null;states.admin.ready=false;render('admin')}
+    if(mode==='company'&&typeof window.loadExternalAccountAdminReport==='function')window.loadExternalAccountAdminReport();
+  }
+  return result;
+};
 var prevLogout=window.logout;window.logout=function(){clearPrivateState();return prevLogout.apply(this,arguments)};
 window.StarredDeduction78={build:BUILD,syncType:syncType,submitOwn:submitOwn,showOwn:showOwn,showAdmin:showAdmin,load:load,render:render,clear:clearPrivateState};
 window.STARRED_DEDUCTION_UI_BUILD=BUILD;
@@ -21743,3 +21804,21 @@ window.openSalesAdminOvernightCreate=open;
 })();
 </script>
 
+
+<style id="expense-company-navigation-v91-style">
+/* v91: scope all navigation styles to the expense hub; leave company forms/print unchanged. */
+#expenseAdminSections91{display:flex;flex-wrap:nowrap;align-items:stretch;gap:8px;width:100%;margin:0 0 16px;min-width:0}
+#expenseAdminSections91>button{display:inline-flex;align-items:center;justify-content:center;gap:5px;position:relative;flex:none;font-size:14px!important;font-weight:400!important;min-height:42px!important;padding:9px 14px!important;white-space:nowrap!important;line-height:1.45}
+#expenseAdminSections91>button.active{background:#274253!important;border-color:#274253!important;color:#fff!important}
+#expenseAdminSections91>button:focus-visible{outline:3px solid #7894a4;outline-offset:2px}
+#expenseAdminSections91>button>.admin-attention-badge{position:static!important;display:inline-flex!important;align-items:center;justify-content:center;flex:none;min-width:18px;height:18px;margin:0!important;padding:0 5px!important;border:0!important;border-radius:9px;background:#c94b42!important;color:#fff!important;font-size:12px!important;line-height:1.5;transform:none!important}
+#expenseAdminSections91 #ded78-admin-badge{margin:0;padding:2px 5px;font-size:12px;white-space:nowrap}
+#expenseAdminTab>.expense-admin-company-panel{width:100%;min-width:0}
+#expenseAdminTab>.expense-admin-company-panel>.external-account-admin-panel{margin-top:0}
+@media(max-width:760px){
+ #expenseAdminSections91{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ #expenseAdminSections91>button{width:100%;min-width:0;min-height:44px!important;padding:8px 4px!important;flex-wrap:wrap;align-content:center;gap:3px 4px}
+ #expenseAdminSections91:has(>button[hidden]){grid-template-columns:repeat(2,minmax(0,1fr))}
+ #expenseAdminSections91 #ded78-admin-badge:not([hidden]){display:inline-flex}
+}
+</style>
