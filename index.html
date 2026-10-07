@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
 <!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
 <html lang="zh-Hant">
@@ -6,6 +7,8 @@
 <meta charset="UTF-8">
 <!-- v90: report schema recovery; exact v89 base retained. -->
 <style id="sales-schema-v90-style">
+#salesReportTab[data-load90="loading"] #salesSettlementNote93,
+#salesReportTab[data-load90="error"] #salesSettlementNote93,
 #salesReportTab[data-load90="loading"] .sales-report-view,
 #salesReportTab[data-load90="error"] .sales-report-view{display:none!important}
 .sales-schema90-notice{margin:10px 0 14px;padding:12px 14px;border:1px solid #e6c78e;border-radius:12px;background:#fff8e9;color:#77531f;font-size:15px;font-weight:400;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -4124,6 +4127,35 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 }
 </style>
 <style id="order-upload-feedback-v89">#orderActionModal .success-dialog{max-height:calc(100dvh - 32px);overflow-y:auto}#orderActionText{white-space:pre-line;overflow-wrap:anywhere;font-size:15px;line-height:1.65}</style>
+<style id="today-upload-nextmonth-v93-style">
+/* v93, scoped; existing expense/company/LINE UI is untouched. */
+.sales-ranking-controls.today-mode93{grid-template-columns:1fr!important}.sales-ranking-month[hidden]{display:none!important}
+#salesRankingList .sales-rank-row.today-upload93{font-size:14px;font-weight:400;border:1px solid #dbe4e8;background:#fff}
+#salesRankingList .sales-rank-row.today-upload93 .sales-rank-person b{font-size:15px;font-weight:500}
+#salesRankingList .sales-rank-row.today-upload93.top-five93{background:#fff7e3!important;border-color:#c99536!important;box-shadow:inset 4px 0 0 #b87a15}
+#salesRankingList .today-upload93.top-five93 .sales-rank-number{background:#8a5a08!important;color:#fff!important;border-radius:8px}
+#salesRankingList .today-upload93:not(.top-five93) .sales-rank-number{background:#edf2f5!important;color:#526b79!important}
+.today93-mark{font-style:normal;font-size:12px;font-weight:500;border-radius:6px;background:#f0dda9;color:#62400a;padding:2px 6px;margin-left:6px;white-space:nowrap}
+.overnight93-store-summary{padding:10px 13px;border:1px solid #a9c6d1;background:#edf6f9;border-radius:12px;margin:10px 0;font-size:14px;line-height:1.65;color:#294d60}
+.overnight93-store-summary p{margin:5px 0}.overnight93-store-summary span,.overnight93-store-summary b{display:block;font-weight:400}
+.overnight93-row-note{display:block;font-size:13px!important;line-height:1.5;color:#506e80!important;white-space:normal;font-weight:400;max-width:360px}
+#salesAdminStoreStats .gross .overnight93-row-note{font-size:12px!important;max-width:270px}
+.overnight93-intro{font-size:14px;line-height:1.65;margin-top:0}
+.overnight93-two-days{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.overnight93-day{border:1px solid #d2dfe6;border-radius:10px;overflow:hidden;background:#f8fbfc}
+.overnight93-day-heading{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;background:#edf4f7;color:#345465;font-size:14px}
+.overnight93-day-heading strong{font-weight:500;white-space:nowrap}
+.overnight93-day-list{max-height:136px;overflow:auto}.overnight93-day-list>div{display:flex;justify-content:space-between;gap:12px;padding:6px 12px;border-top:1px solid #e1e9ee;font-size:14px;line-height:1.45}
+.overnight93-day>p{font-size:14px;padding:8px 12px;margin:0;color:#677e8b}
+#overnight93PersonHint{font-size:13px;line-height:1.45;font-weight:400;color:#677e8b}
+#overnight88Modal .overnight93-message{margin:0 16px 10px;max-height:112px;overflow:auto;flex:none;font-size:14px;line-height:1.5}
+#overnight88Modal .overnight88-grid input[readonly]{background:#f1f5f7;color:#506e80;cursor:default}
+#overnight88Modal .overnight88-head h3{font-size:23px}#overnight88Modal .overnight88-grid label{font-weight:400!important}
+#overnight88Modal .overnight88-body{overscroll-behavior:contain;min-height:0}
+#overnight88Modal .overnight88-footer button{font-size:15px!important}
+@media(max-width:760px){.overnight93-two-days{grid-template-columns:1fr}.overnight93-day-list{max-height:100px}#overnight88Modal .overnight88-footer{grid-template-columns:1fr 1fr}#overnight88Modal #overnight88Save{grid-column:1/-1}#salesRankingList .sales-rank-row.today-upload93{grid-template-columns:32px minmax(0,1fr) auto;gap:6px}.today93-mark{display:inline-block;margin-left:4px}}
+
+</style>
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
@@ -4330,7 +4362,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div><span class="sales-step">03</span><h2>銷售排行榜</h2></div>
         <div class="sales-ranking-controls">
           <select id="salesRankingType" aria-label="排行項目" onchange="changeSalesRankingType()">
-            <option value="today">今日TOP5</option>
+            <option value="today">今日上傳</option>
             <option value="month">本月TOP10</option>
             <option value="monthStoresTop10">店點TOP10</option>
             <option value="monthStoresAll">店點營業額</option>
@@ -8711,7 +8743,7 @@ async function starredApi(action,payload={}){
       expiredError.relogin=true;
       throw expiredError;
     }
-    const e=new Error(message);e.blocked=!!result.blocked;e.errorCode=result.errorCode||"";e.outcomeUnknown=result.outcomeUnknown===true;e.writeNotStarted=result.writeNotStarted===true;e.httpStatus=response.status;throw e;
+    const e=new Error(message);e.blocked=!!result.blocked;e.errorCode=result.errorCode||"";e.outcomeUnknown=result.outcomeUnknown===true;e.writeNotStarted=result.writeNotStarted===true;e.httpStatus=response.status;if(/^sales_overnight_/.test(String(action)))e.rawMessage93=String(result.error||message);throw e;
   }
   return result;
 }
@@ -10000,9 +10032,21 @@ function salesStoreById(id){
 function salesStoreText(record){
   return [record.storeName,record.storeFloor].filter(Boolean).join('｜') || '未指定門市';
 }
+// v93: use the personal ledger only in personal views; store reports stay on posting dates.
+function salesPersonRecords93(){return Array.isArray(salesAdminData.personRecords)?salesAdminData.personRecords:salesAdminData.records||[]}
+function salesNextMonthRecord93(r){return !!(r&&r.overnightMeta&&Number(r.overnightMeta.policyVersion)===93)}
+function salesPersonGroupDate93(g){return g.sales.length&&g.sales.every(salesNextMonthRecord93)?g.sales[0].overnightMeta.performanceMonth+' 月業績':g.date||'—'}
+function salesOvernightPartsText93(parts){return (parts||[]).map(function(p){return String(p.name||'原銷售人員')+' '+salesMoney(p.amount)+'／隔夜帳'+(p.performanceMonth?'（'+p.performanceMonth+' 業績）':'')}).join('；')}
+function salesOvernightRowNote93(r){return salesIsOvernight88(r)?'<small class="overnight93-row-note">'+salesEsc(salesOvernightInfo88(r))+'；不列當班人員業績</small>':''}
+function salesStoreDaySummary93(records){var map=new Map();(records||[]).forEach(function(r){if(salesRecordType(r)==='return')return;var key=r.businessDate+'|'+r.storeId,g=map.get(key)||{date:r.businessDate,store:salesStoreText(r),total:0,parts:[]};g.total+=Number(r.grossAmount||0);if(salesIsOvernight88(r))g.parts.push({name:salesCreditedName(r),amount:Number(r.grossAmount||0),performanceMonth:r.overnightMeta.performanceMonth||r.businessDate.slice(0,7)});map.set(key,g)});return Array.from(map.values()).filter(function(g){return g.parts.length})}
+function salesStoreDaySummaryHtml93(records){var rows=salesStoreDaySummary93(records);return rows.length?'<div class="overnight93-store-summary">'+rows.map(function(g){return '<p><b>'+salesEsc(g.date+'｜'+g.store)+'　業績 '+salesMoney(g.total)+'</b><span>含 '+salesEsc(salesOvernightPartsText93(g.parts))+'；隔夜帳不算當班人員業績。</span></p>'}).join('')+'</div>':''}
+function renderSalesSettlementNote93(){var anchor=document.querySelector('#salesReportTab .sales-admin-summary');if(!anchor)return;var n=document.getElementById('salesSettlementNote93');if(!n){n=document.createElement('p');n.id='salesSettlementNote93';n.className='overnight93-store-summary';anchor.insertAdjacentElement('afterend',n)}n.hidden=!(salesAdminData.records||[]).concat(salesPersonRecords93()).some(salesNextMonthRecord93);n.textContent='門市／每日金額依入帳日；個人業績含原成交日次月歸屬的隔夜帳。跨月時兩者合計可能不同，不代表少算。月份結算列以該月 1 日納入日期篩選，不新增上班日。';}
+function renderSalesStoreDaySummary93(){var parent=document.getElementById('salesReportDailyView');if(!parent)return;var box=document.getElementById('salesStoreDaySummary93');if(!box){box=document.createElement('div');box.id='salesStoreDaySummary93';parent.prepend(box)}box.innerHTML=salesStoreDaySummaryHtml93(salesAdminData.records)}
+function salesTodayOvernightHtml93(){var x=window.salesTodayExtra93||{},rows=x.rows||[];if(!rows.length)return '';return '<div class="overnight93-store-summary"><p><b>今日門市入帳合計 '+salesMoney(x.total)+'</b><span>其中隔夜帳 '+salesMoney(rows.reduce(function(s,r){return s+Number(r.grossAmount||0)},0))+'；不列下方當班人員排名。</span></p>'+rows.map(function(r){return '<p><span>'+salesEsc(salesStoreText(r)+'：含 '+salesCreditedName(r)+' '+salesMoney(r.grossAmount)+'／隔夜帳（'+(r.overnightMeta.performanceMonth||r.businessDate.slice(0,7))+' 業績）')+'</span></p>'}).join('')+'</div>'}
+
 function salesIsOvernight88(record){return !!(record&&(record.isOvernightSale===true||record.overnightMeta))}
 function salesKindLabel88(record){return salesRecordType(record)==='return'?'退貨':salesIsOvernight88(record)?'隔夜帳':record&&record.isProxySale?'代銷售':'業績'}
-function salesOvernightInfo88(record){var m=record.overnightMeta||{};return '原成交 '+(m.originalDate||'—')+'；入帳 '+(record.businessDate||'—')+'；'+(m.mode==='included'?'由 '+(m.sourcePersonName||'原人員')+' 原回傳拆出':'額外加入門市')+(record.note?'；'+record.note:'')}
+function salesOvernightInfo88(record){return window.StarredOvernight88?window.StarredOvernight88.info(record):'隔夜帳'}
 function salesRecordType(record){
   if(record&&record.recordType==='return')return 'return';
   if(record&&record.recordType==='sales')return 'sales';
@@ -10354,10 +10398,10 @@ function salesBuildRanking(records,limit,options){
     current.returnAmount+=Number(record.returnAmount||0);
     current.recordCount+=1;
     var store=salesStoreText(record);
-    if(store&&Number(record.grossAmount||0)>0)current.locations.set(String(record.area||'')+'|'+store,{area:String(record.area||''),storeName:String(record.storeName||''),storeFloor:String(record.storeFloor||'')});
+    if(store&&(Number(record.grossAmount||0)>0||options.includeZero))current.locations.set(String(record.area||'')+'|'+store,{area:String(record.area||''),storeName:String(record.storeName||''),storeFloor:String(record.storeFloor||'')});
     map.set(key,current);
   });
-  var rows=Array.from(map.values()).filter(function(item){return item.grossAmount>0||(options.attributeAssignedReturns&&item.returnAmount>0)}).sort(function(a,b){
+  var rows=Array.from(map.values()).filter(function(item){return options.includeZero||item.grossAmount>0||(options.attributeAssignedReturns&&item.returnAmount>0)}).sort(function(a,b){
     var amountA=options.sortByNet?a.grossAmount-a.returnAmount:a.grossAmount;
     var amountB=options.sortByNet?b.grossAmount-b.returnAmount:b.grossAmount;
     return amountB-amountA||a.name.localeCompare(b.name,'zh-Hant');
@@ -10570,7 +10614,7 @@ function salesTestBootstrap(rankingMonth){
       return Object.assign({},record,{editRequests:requests.filter(function(request){return String(request.salesReportId)===String(record.id)}).sort(function(a,b){return String(b.requestedAt).localeCompare(String(a.requestedAt))})});
     }).sort(function(a,b){return String(b.businessDate).localeCompare(String(a.businessDate))||String(b.updatedAt).localeCompare(String(a.updatedAt))}),
     rankings:{
-      today:salesBuildRanking(all.filter(function(record){return record.businessDate===today}),5),
+      today:salesBuildRanking(all.filter(function(record){return record.businessDate===today&&salesRecordType(record)!=='return'&&!salesIsOvernight88(record)}),undefined,{includeZero:true}),
       month:salesBuildRanking(monthPersonRows,10,{attributeAssignedReturns:true,sortByNet:true}),
       all:salesBuildRanking(monthPersonRows,undefined,{attributeAssignedReturns:true,sortByNet:true}),
       monthStoresTop10:salesBuildStoreRanking(monthRows,10),
@@ -10921,7 +10965,7 @@ function salesGroupAdminDailyRecords(records){
 function salesAdminPersonCellHtml(record){
   if(salesRecordType(record)==='return')return '<span class="sales-person-cell"><b>'+salesEsc(salesSubmitterName(record))+'</b><small>退貨處理人</small></span>';
   var credited=salesCreditedName(record);
-  if(record&&record.isProxySale===true)return '<span class="sales-person-cell proxy"><b>'+salesEsc(credited)+'</b><small>'+salesKindLabel88(record)+'・'+salesEsc(salesSubmitterName(record))+' 回傳</small></span>';
+  if(record&&record.isProxySale===true)return '<span class="sales-person-cell proxy"><b>'+salesEsc(credited)+'</b><small>'+salesKindLabel88(record)+'・'+salesEsc(salesSubmitterName(record))+' 回傳</small>'+salesOvernightRowNote93(record)+'</span>';
   return '<span class="sales-person-cell"><b>'+salesEsc(credited)+'</b><small>本人回傳</small></span>';
 }
 function salesGroupStatus(group){
@@ -11157,12 +11201,14 @@ function renderSalesRanking(){
   var pagination=salesEl('salesRankingPagination');
   if(!list)return;
   var type=(salesEl('salesRankingType')||{}).value||'today';
+  var monthControl93=salesEl('salesRankingMonth')?.closest('label');if(monthControl93)monthControl93.hidden=type==='today';
+  document.querySelector('.sales-ranking-controls')?.classList.toggle('today-mode93',type==='today');
   var rows=salesRankings[type]||[];
   var isDaily=type==='storeDaily';
   var isStoreRanking=type==='monthStoresTop10'||type==='monthStoresAll';
   var month=(salesEl('salesRankingMonth')||{}).value||salesMonth();
   var note='';
-  if(type==='today')note='本日依營業總額顯示前 5 名；退貨另計，不扣除任何人員業績。';
+  if(type==='today')note='依今日業績日期列出全部已回傳人員，由高到低排序；前五名以金色區分，每頁 10 筆。隔夜帳另列門市金額，不算當班人員業績。';
   else if(isDaily){
     var selectedArea=String((salesEl('salesRankingArea')||{}).value||'');
     var selectedStore=String((salesEl('salesRankingStore')||{}).value||'');
@@ -11180,7 +11226,8 @@ function renderSalesRanking(){
   else if(isStoreRanking)note=salesMonthLabel(month)+'店點依營業總額排序；退貨另計，不從店點營業額扣除。';
   else note=salesMonthLabel(month)+'銷售人員依當月業績排序；已由會計歸屬的退貨會扣在指定人員當月業績。';
   if(salesEl('salesRankingNote'))salesEl('salesRankingNote').textContent=note;
-  if(!rows.length){list.innerHTML='<div class="sales-empty">所選月份目前沒有可顯示的業績資料。</div>';if(pagination)pagination.innerHTML='';return}
+  if(type==='today'&&window.salesTodayExtra93&&window.salesTodayExtra93.complete===false){list.innerHTML='<div class="sales-empty">今日上傳尚未完整載入；請先更新 v93 line-api，避免只顯示前五名。</div>';if(pagination)pagination.innerHTML='';return}
+  if(!rows.length){list.innerHTML=(type==='today'?salesTodayOvernightHtml93():'')+'<div class="sales-empty">'+(type==='today'?'今日尚無一般業績上傳。':'所選月份目前沒有可顯示的業績資料。')+'</div>';if(pagination)pagination.innerHTML='';return}
   var pageCount=Math.max(1,Math.ceil(rows.length/SALES_RANKING_PAGE_SIZE));
   salesRankingPage=Math.min(Math.max(1,salesRankingPage),pageCount);
   var start=(salesRankingPage-1)*SALES_RANKING_PAGE_SIZE;
@@ -11190,7 +11237,7 @@ function renderSalesRanking(){
     var totalReturns=rows.reduce(function(sum,row){return sum+Number(row.returnAmount||0)},0);
     list.innerHTML='<div class="sales-store-daily-list"><div class="sales-store-daily-head"><span>日期</span><span>營業額</span><span>退貨另計</span></div>'+visible.map(function(row){
       var returnAmount=Number(row.returnAmount||0);
-      return '<div class="sales-store-daily-row"><time>'+salesEsc(String(row.businessDate||'').slice(5).replace('-','/'))+'</time><b class="gross">'+salesMoney(row.grossAmount)+'</b>'+(returnAmount>0?'<b class="return">'+salesMoney(returnAmount)+'</b>':'<span class="no-return">—</span>')+'</div>';
+      return '<div class="sales-store-daily-row"><time>'+salesEsc(String(row.businessDate||'').slice(5).replace('-','/'))+'</time><b class="gross">'+salesMoney(row.grossAmount)+(row.overnightParts&&row.overnightParts.length?'<small class="overnight93-row-note">含 '+salesEsc(salesOvernightPartsText93(row.overnightParts))+'</small>':'')+'</b>'+(returnAmount>0?'<b class="return">'+salesMoney(returnAmount)+'</b>':'<span class="no-return">—</span>')+'</div>';
     }).join('')+'<div class="sales-store-daily-total"><b>本月累計</b><strong class="gross">'+salesMoney(totalGross)+'</strong><strong class="return">'+salesMoney(totalReturns)+'</strong></div></div>';
     if(pagination)pagination.innerHTML=salesPaginationHtml('ranking',salesRankingPage,pageCount,rows.length);
     return;
@@ -11199,7 +11246,7 @@ function renderSalesRanking(){
     var rank=Number(row.rank||start+index+1);
     if(isStoreRanking){
       var area=(typeof areaText!=='undefined'&&areaText[row.area])||row.area||'未指定區域';
-      return '<div class="sales-rank-row sales-rank-store rank-'+String(rank)+'"><span class="sales-rank-number">'+String(rank)+'</span><div class="sales-rank-person"><b>'+salesEsc(salesStoreText(row))+'</b><span>'+salesEsc(area)+'・'+String(row.peopleCount||0)+' 位人員・'+String(row.recordCount||0)+' 筆回傳</span></div><div class="sales-rank-amount"><b>'+salesMoney(row.grossAmount)+'</b><small>退貨另計 '+salesMoney(row.returnAmount)+'</small></div></div>';
+      return '<div class="sales-rank-row sales-rank-store rank-'+String(rank)+'"><span class="sales-rank-number">'+String(rank)+'</span><div class="sales-rank-person"><b>'+salesEsc(salesStoreText(row))+'</b><span>'+salesEsc(area)+'・'+String(row.peopleCount||0)+' 位人員・'+String(row.recordCount||0)+' 筆回傳</span></div><div class="sales-rank-amount"><b>'+salesMoney(row.grossAmount)+'</b>'+(row.overnightParts&&row.overnightParts.length?'<small class="overnight93-row-note">含 '+salesEsc(salesOvernightPartsText93(row.overnightParts))+'</small>':'')+'<small>退貨另計 '+salesMoney(row.returnAmount)+'</small></div></div>';
     }
     var locationHtml='';
     if(type==='today'){
@@ -11210,12 +11257,13 @@ function renderSalesRanking(){
     var isMonthlyPerson=type==='month'||type==='all';
     var performanceAmount=isMonthlyPerson?Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)):Number(row.grossAmount||0);
     var amountNote=isMonthlyPerson?'營業 '+salesMoney(row.grossAmount)+'・退貨 -'+salesMoney(row.returnAmount):'退貨另計 '+salesMoney(row.returnAmount);
-    return '<div class="sales-rank-row rank-'+String(rank)+'">'+
+    return '<div class="sales-rank-row rank-'+String(rank)+(type==='today'?' today-upload93'+(rank<=5?' top-five93':''):'')+'">'+
       '<span class="sales-rank-number">'+String(rank)+'</span>'+
-      '<div class="sales-rank-person person-only"><b>'+salesEsc(row.name||'LINE 使用者')+'</b>'+locationHtml+'</div>'+
+      '<div class="sales-rank-person person-only"><b>'+salesEsc(row.name||'LINE 使用者')+(type==='today'&&rank<=5?'<em class="today93-mark">前五名</em>':'')+'</b>'+locationHtml+'</div>'+
       '<div class="sales-rank-amount"><b>'+salesMoney(performanceAmount)+'</b><small>'+amountNote+'</small></div>'+
       '</div>';
   }).join('');
+  if(type==='today')list.insertAdjacentHTML('afterbegin',salesTodayOvernightHtml93());
   if(pagination)pagination.innerHTML=salesPaginationHtml('ranking',salesRankingPage,pageCount,rows.length);
 }
 async function loadSalesData(){
@@ -11235,6 +11283,7 @@ async function loadSalesData(){
       if(salesRecordType(record)!=='return')record=Object.assign(record,{salespersonLineUserId:salesCreditedLineUserId(record),salespersonName:salesCreditedName(record)});
       return record;
     });
+    window.salesTodayExtra93={rows:Array.isArray(result.todayOvernight93)?result.todayOvernight93:[],total:Number(result.todayStoreTotal93||0),complete:result.todayUploadBuild93==='20261007-next-month-overnight-v93'||window.STARRED_SALES_TEST_MODE===true};
     salesRankings=result.rankings||{today:[],month:[],all:[],monthStoresTop10:[],monthStoresAll:[],storeDaily:[]};
     ['today','month','all'].forEach(function(key){salesRankings[key]=(salesRankings[key]||[]).map(function(row){return Object.assign({},row,{name:salesPersonName(row.lineUserId,row.name)})})});
     syncSalesRankingLocationOptions();
@@ -11520,6 +11569,7 @@ function salesApplyRealNames(){
     return record;
   }
   salesAdminData.records=(salesAdminData.records||[]).map(decorateRecord);
+  if(Array.isArray(salesAdminData.personRecords))salesAdminData.personRecords=salesAdminData.personRecords.map(decorateRecord);
   salesAdminData.performanceReturns=(salesAdminData.performanceReturns||[]).map(decorateRecord);
   salesAdminData.salespeople=(salesAdminData.salespeople||[]).map(function(person){return Object.assign({},person,{name:salesPersonName(person.lineUserId,person.name)})});
   salesAdminData.byPerson=(salesAdminData.byPerson||[]).map(function(person){return Object.assign({},person,{name:salesPersonName(person.lineUserId,person.name)})});
@@ -11546,10 +11596,13 @@ async function loadSalesAdminReport(){
       result=await starredApi('sales_admin_report',query781);
     }
     if(seq781!==salesAdminLoadSequence781||JSON.stringify(query781)!==JSON.stringify(salesAdminQuerySnapshot781()))return false;
+    if(!window.STARRED_SALES_TEST_MODE&&(result.personalSalesBuild93!=='20261007-next-month-overnight-v93'||!Array.isArray(result.personRecords)))throw new Error('請先部署 v93 line-api，再讀取次月隔夜帳報表；目前資料尚未完成核對。');
     window.StarredCompanyScope87.accept(result,query781,window.STARRED_SALES_TEST_MODE===true);
     salesAdminQuery781=Object.assign({},query781);
     salesAdminData={
       records:Array.isArray(result.records)?result.records:[],
+      personRecords:Array.isArray(result.personRecords)?result.personRecords:result.records||[],
+      personalSalesBuild93:result.personalSalesBuild93||'',
       performanceReturns:Array.isArray(result.performanceReturns)?result.performanceReturns:[],
       salespeople:Array.isArray(result.salespeople)?result.salespeople:[],
       totals:result.totals||{grossAmount:0,returnAmount:0,recordCount:0},
@@ -11567,7 +11620,8 @@ async function loadSalesAdminReport(){
     window.salesAdminData=salesAdminData;
     salesApplyRealNames();
     salesAdminData.records=salesAttachEditRequests(salesAdminData.records,salesAdminData.editRequests);
-    rebuildSalesAdminPersonOptions(salesAdminData.records.concat(salesAdminData.performanceReturns),salesAdminData.salespeople);
+    salesAdminData.personRecords=salesAttachEditRequests(salesAdminData.personRecords,salesAdminData.editRequests);
+    rebuildSalesAdminPersonOptions(salesAdminData.records.concat(salesAdminData.personRecords,salesAdminData.performanceReturns),salesAdminData.salespeople);
     renderSalesAdminReport();
     window.StarredSalesSchema90.accept(result);
     var compat90=result.salesSchema90&&result.salesSchema90.fieldsReady===false;
@@ -11619,7 +11673,7 @@ function salesStoreMissingModel(row){
   var storeId=String(row.storeId||'');
   var dates=salesMissingTrackingDates();
   if(!dates.length)return Object.assign({},empty,{enabled:true});
-  var salesDates=new Set((salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&salesStoreRecordMatches(record,row)&&record.businessDate}).map(function(record){return String(record.businessDate)}));
+  var salesDates=new Set((salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&!salesIsOvernight88(record)&&salesStoreRecordMatches(record,row)&&record.businessDate}).map(function(record){return String(record.businessDate)}));
   if(!salesDates.size)return Object.assign({},empty,{enabled:true});
   var periods=(salesAdminData.reportingPeriods||[]).filter(function(setting){return storeId&&String(setting.storeId||'')===storeId}).slice().sort(function(a,b){return String(a.monthKey||'').localeCompare(String(b.monthKey||''))});
   var periodByMonth=new Map(periods.map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),setting]}));
@@ -11721,7 +11775,7 @@ function salesAdminStatListHtml(kind,rows){
     var netAmount=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));
     var missing=isStore?salesStoreMissingModel(row):null;
     var missingBadge=missing&&missing.enabled&&missing.missingDates.length?'<span class="sales-store-missing-badge">漏傳 '+String(missing.missingDates.length)+' 天</span>':'';
-    return '<button type="button" class="sales-admin-list-row'+(missingBadge?' has-missing':'')+(expenseOnly?' expense-only':'')+'" data-stat-key="'+salesEsc(key)+'" onclick="openSalesStatDetail(\''+kind+'\',this.dataset.statKey)"><span class="rank">'+(expenseOnly?'—':String(index+1))+'</span><span class="identity"><span class="title">'+salesEsc(title)+'</span><small>'+salesEsc(sub)+'</small>'+missingBadge+'</span><span class="gross">'+salesMoney(row.grossAmount)+'</span><span class="return">'+salesMoney(row.returnAmount)+'</span>'+(isStore?'':'<span class="net">'+salesMoney(netAmount)+'</span>')+'<span class="count">'+String(row.recordCount||0)+' 筆</span><span class="open">查看 ›</span></button>';
+    return '<button type="button" class="sales-admin-list-row'+(missingBadge?' has-missing':'')+(expenseOnly?' expense-only':'')+'" data-stat-key="'+salesEsc(key)+'" onclick="openSalesStatDetail(\''+kind+'\',this.dataset.statKey)"><span class="rank">'+(expenseOnly?'—':String(index+1))+'</span><span class="identity"><span class="title">'+salesEsc(title)+'</span><small>'+salesEsc(sub)+'</small>'+missingBadge+'</span><span class="gross">'+salesMoney(row.grossAmount)+(isStore&&row.overnightParts&&row.overnightParts.length?'<small class="overnight93-row-note">含 '+salesEsc(salesOvernightPartsText93(row.overnightParts))+'</small>':'')+'</span><span class="return">'+salesMoney(row.returnAmount)+'</span>'+(isStore?'':'<span class="net">'+salesMoney(netAmount)+'</span>')+'<span class="count">'+String(row.recordCount||0)+' 筆</span><span class="open">查看 ›</span></button>';
   }).join('');
   return '<div class="sales-admin-compact-list '+kind+'">'+header+body+'</div>';
 }
@@ -12120,20 +12174,21 @@ function salesPersonDetailDates(){
     var start=new Date(from+'T00:00:00Z');var end=new Date(to+'T00:00:00Z');var days=Math.floor((end-start)/86400000)+1;
     if(days>0&&days<=370){for(var i=0;i<days;i+=1){var date=new Date(start.getTime()+i*86400000);dates.push(date.toISOString().slice(0,10))}}
   }
-  if(!dates.length){var set=new Set();(salesAdminData.records||[]).forEach(function(record){if(salesRecordType(record)!=='return'&&record.businessDate)set.add(String(record.businessDate))});dates=Array.from(set).sort()}
+  if(!dates.length){var set=new Set();salesPersonRecords93().forEach(function(record){if(salesRecordType(record)!=='return'&&record.businessDate)set.add(String(record.businessDate))});dates=Array.from(set).sort()}
   return dates;
 }
 function salesPersonDetailModel(){
   syncSalesPersonDetailSelection();
-  var people=salesPersonDetailPeople().filter(function(person){return salesPersonDetailSelection.has(person.lineUserId)});var dates=salesPersonDetailDates();var values=new Map();
-  (salesAdminData.records||[]).forEach(function(record){if(salesRecordType(record)==='return')return;var id=salesCreditedLineUserId(record);if(!salesPersonDetailSelection.has(id))return;var key=String(record.businessDate||'')+'|'+id;values.set(key,Number(values.get(key)||0)+Number(record.grossAmount||0))});
+  var people=salesPersonDetailPeople().filter(function(person){return salesPersonDetailSelection.has(person.lineUserId)});var dates=salesPersonDetailDates();var values=new Map();var carried93=new Map();
+  salesPersonRecords93().forEach(function(record){if(salesRecordType(record)==='return')return;var id=salesCreditedLineUserId(record);if(!salesPersonDetailSelection.has(id))return;if(salesNextMonthRecord93(record)){carried93.set(id,Number(carried93.get(id)||0)+Number(record.grossAmount||0));return}var key=String(record.businessDate||'')+'|'+id;values.set(key,Number(values.get(key)||0)+Number(record.grossAmount||0))});
   var totals=new Map();var externalTotals=new Map();people.forEach(function(person){totals.set(person.lineUserId,0);externalTotals.set(person.lineUserId,0)});
   (salesAdminData.externalAccounts||[]).forEach(function(item){var id=String(item.submitterLineUserId||'');if(String(item.status||'approved')!=='approved'||!salesPersonDetailSelection.has(id))return;externalTotals.set(id,Number(externalTotals.get(id)||0)+Number(item.customerAmount||0))});
   var rows=dates.map(function(date){var daily=0;var cells={};people.forEach(function(person){var amount=Number(values.get(date+'|'+person.lineUserId)||0);cells[person.lineUserId]=amount;totals.set(person.lineUserId,Number(totals.get(person.lineUserId)||0)+amount);daily+=amount});return {date:date,cells:cells,total:daily}});
+  if(carried93.size){var carriedCells={},carriedTotal=0;people.forEach(function(p){var a=Number(carried93.get(p.lineUserId)||0);carriedCells[p.lineUserId]=a;totals.set(p.lineUserId,Number(totals.get(p.lineUserId)||0)+a);carriedTotal+=a});rows.push({date:'隔夜帳（依歸屬月份）',cells:carriedCells,total:carriedTotal})}
   var grandTotal=rows.reduce(function(sum,row){return sum+row.total},0);var externalGrandTotal=Array.from(externalTotals.values()).reduce(function(sum,amount){return sum+Number(amount||0)},0);return {people:people,rows:rows,totals:totals,grandTotal:grandTotal,externalTotals:externalTotals,externalGrandTotal:externalGrandTotal,combinedGrandTotal:grandTotal+externalGrandTotal};
 }
 function salesAveragePerformanceModel(sourceRecords){
-  var records=Array.isArray(sourceRecords)?sourceRecords:(salesAdminData.records||[]);var map=new Map();
+  var records=Array.isArray(sourceRecords)?sourceRecords:salesPersonRecords93();if(Array.isArray(sourceRecords)){var scope93=new Set(sourceRecords.map(function(r){return String(r.storeId||'')}));records=salesPersonRecords93().filter(function(r){return scope93.has(String(r.storeId||''))})}var map=new Map();
   function ensure(id,name){id=String(id||'');name=salesPersonName(id,name||'LINE 使用者');var key=id||('name:'+name);var row=map.get(key);if(!row){row={key:key,lineUserId:id,name:name,grossAmount:0,recordCount:0,dailyDates:new Set(),hourlyDates:new Set(),confirmedDates:new Set(),pendingDates:new Set(),hourlyHoursByDate:new Map()};map.set(key,row)}else row.name=name;return row}
   records.forEach(function(record){
     if(salesRecordType(record)==='return')return;
@@ -12161,7 +12216,7 @@ function renderSalesStoreAverageSection(){
   var rows=salesAveragePerformanceModel(state.rows||[]);section.hidden=!rows.length;if(!rows.length){section.innerHTML='';return}
   var formatter=new Intl.NumberFormat('zh-TW');section.innerHTML='<h4>人員平均業績</h4><p>個人營業總額 ÷ 已確認上班日期；平均分母按不重複計薪日期；日薪天數另依核准門市加總。</p><table><thead><tr><th>人員</th><th>個人營業總額</th><th>計日薪</th><th>時薪日期／工時</th><th>平均計算天數</th><th>平均業績</th></tr></thead><tbody>'+rows.map(function(row){return '<tr><td>'+salesEsc(row.name)+'</td><td class="num">'+salesEsc(salesMoney(row.grossAmount))+'</td><td>'+String(row.dailyDays)+' 天</td><td>'+String(row.hourlyDays)+' 天'+(row.hourlyHours?'／'+salesEsc(salesWorkHoursNumberText(row.hourlyHours))+' 小時':'')+'</td><td>'+String(row.workDays)+' 天</td><td class="num">'+(row.averageAmount===null?'—':salesEsc('$'+formatter.format(Math.round(row.averageAmount))))+'</td></tr>'}).join('')+'</tbody></table>';
 }
-function salesPersonDetailDateLabel(date){var parts=String(date||'').split('-');return Number(parts[1]||0)+'月'+Number(parts[2]||0)+'日'}
+function salesPersonDetailDateLabel(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date)))return String(date);var parts=String(date||'').split('-');return Number(parts[1]||0)+'月'+Number(parts[2]||0)+'日'}
 function salesIsWeekend(date){var day=new Date(String(date)+'T00:00:00+08:00').getDay();return day===0||day===6}
 function renderSalesPersonDetailTable(){
   var box=salesEl('salesPersonDetailTable');if(!box)return;var model=salesPersonDetailModel();
@@ -12189,7 +12244,7 @@ function salesStoreMatrixDates(rows){
 function salesStoreMatrixModel(rows){
   var salesRows=(rows||[]).filter(function(record){return salesRecordType(record)!=='return'});var peopleMap=new Map();var values=new Map();
   salesRows.forEach(function(record){
-    var name=salesCreditedName(record)||'LINE 使用者';var id=salesCreditedLineUserId(record);var key=id||('name:'+name);
+    var name=salesCreditedName(record)||'LINE 使用者';var id=salesCreditedLineUserId(record);var key=id||('name:'+name);if(salesIsOvernight88(record)){name+='／隔夜帳（非當班）';key='overnight:'+key;id='';}
     if(!peopleMap.has(key))peopleMap.set(key,{key:key,lineUserId:id,name:name});
     var valueKey=String(record.businessDate||'')+'\u0001'+key;values.set(valueKey,Number(values.get(valueKey)||0)+Number(record.grossAmount||0));
   });
@@ -12299,7 +12354,7 @@ function salesPersonDailyModel782(records,personId){
     if(!storeId&&ids&&ids.size===1)storeId=Array.from(ids)[0];
     var storeKey=storeId?'id:'+storeId:'label:'+label(r);
     // A missing date is not guessed or combined with another undated record.
-    var key=JSON.stringify([owner(r),date||'undated:'+String(index),storeKey]);
+    var key=JSON.stringify([owner(r),date||'undated:'+String(index),storeKey,salesNextMonthRecord93(r)?'overnight:'+String(r.id):'daily']);
     var group=groups.get(key);
     if(!group){group={key:key,date:date,storeId:storeId,area:String(r.area||''),storeName:String(r.storeName||''),storeFloor:String(r.storeFloor||''),personId:owner(r),grossAmount:0,returnAmount:0,netAmount:0,sales:[],returns:[],records:[],invoiceDates:[],performanceMonths:[],lastUpdated:''};groups.set(key,group)}
     group.records.push(r);
@@ -12327,18 +12382,18 @@ function salesRenderPersonDaily782(records,personId){
     if(!hasReturn&&g.sales.length===1)amount=salesAdminAmountHtml(g.sales[0],'gross');
     else amount='<span class="return782-net-value'+netClass+'">'+salesEsc(salesMoney(g.netAmount))+'</span>'+(hasReturn?'<span class="return782-net-note">（已扣除退貨）</span>':'');
     var count=g.sales.length>1?'<small class="return782-meta">合併 '+g.sales.length+' 筆業績</small>':'';
-    var target=salesEsc(salesStoreText(g))+(g.sales.some(salesIsOvernight88)?'<small class="return782-meta">含隔夜帳・業績歸本人</small>':g.sales.some(function(r){return r.isProxySale})?'<small class="return782-meta">含代銷售</small>':'');
+    var target=salesEsc(salesStoreText(g))+(g.sales.some(salesIsOvernight88)?'<small class="return782-meta">含隔夜帳・業績歸本人</small>'+g.sales.filter(salesIsOvernight88).map(salesOvernightRowNote93).join(''):g.sales.some(function(r){return r.isProxySale})?'<small class="return782-meta">含代銷售</small>':'');
     var months=g.performanceMonths.filter(function(m){return m!==g.date.slice(0,7)});
-    return '<tr class="return782-daily-row'+(!g.sales.length?' return782-only':'')+'" data-return782-date="'+salesEsc(g.date)+'" data-return782-store="'+salesEsc(g.storeId)+'"><td data-label="日期">'+salesEsc(g.date||'—')+'</td><td data-label="類型"><span class="sales-stat-type '+(g.sales.length?'gross':'return')+'">'+(g.sales.length?'業績':'僅退貨')+'</span>'+count+'</td><td data-label="店點">'+target+(workNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workNote)+'</small>':'')+salesPersonDailyDetails782(g)+'</td><td class="amount gross return782-net-cell" data-label="營業額" title="'+salesEsc('原始營業額 '+salesMoney(g.grossAmount)+' − 退貨 '+salesMoney(g.returnAmount)+' ＝ '+salesMoney(g.netAmount))+'">'+amount+'</td><td class="amount return" data-label="退貨">'+(hasReturn?salesEsc(salesMoney(g.returnAmount)):'—')+'</td><td data-label="原發票日期">'+salesEsc(g.invoiceDates.join('、')||'—')+(months.length?'<small class="return782-meta">歸列 '+salesEsc(months.join('、'))+'</small>':'')+'</td><td data-label="最後更新">'+salesEsc(salesDateTime(g.lastUpdated))+'</td></tr>';
+    return '<tr class="return782-daily-row'+(!g.sales.length?' return782-only':'')+'" data-return782-date="'+salesEsc(g.date)+'" data-return782-store="'+salesEsc(g.storeId)+'"><td data-label="日期">'+salesEsc(salesPersonGroupDate93(g))+'</td><td data-label="類型"><span class="sales-stat-type '+(g.sales.length?'gross':'return')+'">'+(g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨')+'</span>'+count+'</td><td data-label="店點">'+target+(workNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workNote)+'</small>':'')+salesPersonDailyDetails782(g)+'</td><td class="amount gross return782-net-cell" data-label="營業額" title="'+salesEsc('原始營業額 '+salesMoney(g.grossAmount)+' − 退貨 '+salesMoney(g.returnAmount)+' ＝ '+salesMoney(g.netAmount))+'">'+amount+'</td><td class="amount return" data-label="退貨">'+(hasReturn?salesEsc(salesMoney(g.returnAmount)):'—')+'</td><td data-label="原發票日期">'+salesEsc(g.invoiceDates.join('、')||'—')+(months.length?'<small class="return782-meta">歸列 '+salesEsc(months.join('、'))+'</small>':'')+'</td><td data-label="最後更新">'+salesEsc(salesDateTime(g.lastUpdated))+'</td></tr>';
   }).join('');
 }
 function salesPersonDailyPrintRows782(records,personId){
-  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(salesIsOvernight88)?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','最後更新':salesDateTime(g.lastUpdated)}});
+  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':salesPersonGroupDate93(g),'門市入帳日':g.sales.filter(salesIsOvernight88).map(function(r){return r.postingDate93||r.businessDate}).join('；'),'類型':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(salesIsOvernight88)?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','隔夜帳說明':g.sales.filter(salesIsOvernight88).map(salesOvernightInfo88).join('；'),'最後更新':salesDateTime(g.lastUpdated)}});
 }
 function salesPersonDailyExportRows782(records,personId){
   function unique(values){return Array.from(new Set(values.filter(function(v){return v!==''&&v!==null&&v!==undefined}))).join('；')}
   return salesPersonDailyModel782(records,personId).map(function(g){
-    return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayMeta(salesWorkdayStatus(r),salesWorkHoursValue(r)).label})),'上班備註':salesPersonDailyNote782(g),'隔夜帳金額':g.sales.filter(salesIsOvernight88).reduce(function(sum,r){return sum+Number(r.grossAmount||0)},0),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
+    return {'日期':salesPersonGroupDate93(g),'門市入帳日':unique(g.sales.filter(salesIsOvernight88).map(function(r){return r.postingDate93||r.businessDate})),'類型':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayMeta(salesWorkdayStatus(r),salesWorkHoursValue(r)).label})),'上班備註':salesPersonDailyNote782(g),'隔夜帳說明':g.sales.filter(salesIsOvernight88).map(salesOvernightInfo88).join('；'),'隔夜帳金額':g.sales.filter(salesIsOvernight88).reduce(function(sum,r){return sum+Number(r.grossAmount||0)},0),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
   });
 }
 // Format the numeric/formula net column without losing Excel arithmetic.
@@ -12369,7 +12424,7 @@ function openSalesStatDetail(kind,key){
   if(kind==='store'){
     rows=salesAdminData.records.filter(function(record){return key.indexOf('label:')===0?salesStoreText(record)===key.slice(6):String(record.storeId||'')===key}).slice().sort(function(a,b){return String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
   }else{
-    var salesRows=salesAdminData.records.filter(function(record){return salesRecordType(record)!=='return'&&salesCreditedLineUserId(record)===key}).slice().sort(function(a,b){return String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
+    var salesRows=salesPersonRecords93().filter(function(record){return salesRecordType(record)!=='return'&&salesCreditedLineUserId(record)===key}).slice().sort(function(a,b){return String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
     var returnRows=salesAdminData.performanceReturns.filter(function(record){return String(record.assignedSalespersonLineUserId||'')===key}).slice().sort(function(a,b){return String(b.returnAssignedAt||'').localeCompare(String(a.returnAssignedAt||''))});
     rows=salesRows.concat(returnRows);
   }
@@ -12475,7 +12530,7 @@ function ensureSalesAuditModal(){
   return modal;
 }
 function openSalesAuditHistory(id,kind){
-  var record=(salesAdminData.records||[]).concat(salesAdminData.performanceReturns||[]).find(function(item){return String(item.id)===String(id)});
+  var record=(salesAdminData.records||[]).concat(salesAdminData.personRecords||[],salesAdminData.performanceReturns||[]).find(function(item){return String(item.id)===String(id)});
   if(!record){salesSetAdminStatus('找不到這筆業績的修改軌跡，請重新整理報表。','error');return}
   kind=kind==='return'?'return':kind==='gross'?'gross':'';
   var logs=salesAmountAuditLogs(record,kind);
@@ -12724,7 +12779,7 @@ function renderSalesAdminReport(){
   }
   var mobileDaily=salesEl('salesAdminDailyMobile');
   if(mobileDaily)mobileDaily.innerHTML=salesAdminDailyMobileHtml(salesAdminData.records);
-  renderSalesAdminProxy();
+  renderSalesAdminProxy();renderSalesStoreDaySummary93();renderSalesSettlementNote93();
   var missingModels=(salesAdminData.byStore||[]).map(function(row){return salesStoreMissingModel(row)}).filter(function(model){return model&&model.enabled&&model.missingDates.length});
   var missingDays=missingModels.reduce(function(sum,model){return sum+model.missingDates.length},0);
   var missingTab=salesEl('salesStoreMissingTabCount');
@@ -12756,7 +12811,7 @@ function renderSalesAdminProxy(){
   if(body)body.innerHTML=rows.length?rows.map(function(record){
     var meta=salesStatusMeta(salesRecordStatus(record)),on=salesIsOvernight88(record);
     var working='<span class="sales-proxy-work no">不計日薪</span>';
-    return '<tr><td>'+salesEsc(record.businessDate||'—')+'<br><span class="overnight88-badge">'+salesKindLabel88(record)+'</span>'+(on?'<small class="overnight88-row-note">原成交 '+salesEsc(record.overnightMeta.originalDate)+'</small>':'')+'</td><td><b>'+salesEsc((typeof areaText!=='undefined'&&areaText[record.area])||record.area||'—')+'</b><small>'+salesEsc(salesStoreText(record))+'</small></td><td>'+salesEsc(salesSubmitterName(record))+'</td><td>'+salesEsc(salesCreditedName(record))+(on?'<small class="overnight88-row-note">'+salesEsc(record.overnightMeta.mode==='included'?'原回傳已拆出':'另計門市入帳')+'</small>':'')+'</td><td>'+working+'</td><td class="amount">'+salesAdminAmountHtml(record,'gross')+'</td><td><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span></td><td>'+salesEsc(salesDateTime(record.updatedAt))+'</td><td>'+salesAdminActionsHtml(record)+'</td></tr>';
+    return '<tr><td>'+salesEsc(record.businessDate||'—')+'<br><span class="overnight88-badge">'+salesKindLabel88(record)+'</span>'+(on?'<small class="overnight88-row-note">原成交 '+salesEsc(record.overnightMeta.originalDate)+'；業績 '+salesEsc(record.overnightMeta.performanceMonth||record.businessDate.slice(0,7))+'</small>':'')+'</td><td><b>'+salesEsc((typeof areaText!=='undefined'&&areaText[record.area])||record.area||'—')+'</b><small>'+salesEsc(salesStoreText(record))+'</small></td><td>'+salesEsc(salesSubmitterName(record))+'</td><td>'+salesEsc(salesCreditedName(record))+(on?'<small class="overnight88-row-note">'+salesEsc(record.overnightMeta.mode==='included'?'原回傳已拆出':'另計門市入帳')+'</small>':'')+'</td><td>'+working+'</td><td class="amount">'+salesAdminAmountHtml(record,'gross')+'</td><td><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span></td><td>'+salesEsc(salesDateTime(record.updatedAt))+'</td><td>'+salesAdminActionsHtml(record)+'</td></tr>';
   }).join(''):'<tr><td colspan="9" class="sales-table-empty">目前篩選區間內沒有代銷售或隔夜帳資料。</td></tr>';
   var mobile=salesEl('salesAdminProxyMobile');
   if(mobile)mobile.innerHTML=rows.length?rows.map(function(record){var meta=salesStatusMeta(salesRecordStatus(record));return '<article class="sales-proxy-card"><header><div><time>'+salesEsc(record.businessDate||'—')+'</time><b>'+salesEsc(salesStoreText(record))+'</b><span class="overnight88-badge">'+salesKindLabel88(record)+'</span></div><strong>'+salesAdminAmountHtml(record,'gross')+'</strong></header><div class="sales-proxy-people"><span><small>建檔／回傳人員</small><b>'+salesEsc(salesSubmitterName(record))+'</b></span><i>→</i><span><small>業績歸屬</small><b>'+salesEsc(salesCreditedName(record))+'</b></span></div>'+(salesIsOvernight88(record)?'<p class="overnight88-row-note">'+salesEsc(salesOvernightInfo88(record))+'</p>':'')+'<footer><span class="sales-proxy-work no">不計日薪</span><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span><div>'+salesAdminActionsHtml(record)+'</div></footer></article>'}).join(''):'<div class="sales-empty">目前篩選區間內沒有代銷售或隔夜帳資料。</div>';
@@ -12939,7 +12994,7 @@ function salesPersonDetailExportRows(){
   var rows=model.rows.map(function(row){var result={'日期':row.date};model.people.forEach(function(person){result[person.name]=Number(row.cells[person.lineUserId]||0)});result['銷售總額']=Number(row.total||0);return result});var external={'日期':'核准公司帳'};var combined={'日期':'個人業績＋公司帳'};model.people.forEach(function(person){external[person.name]=Number(model.externalTotals.get(person.lineUserId)||0);combined[person.name]=Number(model.totals.get(person.lineUserId)||0)+Number(model.externalTotals.get(person.lineUserId)||0)});external['銷售總額']=Number(model.externalGrandTotal||0);combined['銷售總額']=Number(model.combinedGrandTotal||0);rows.push(external,combined);return rows;
 }
 function salesProxyReportRows(){
-  return (salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&record.isProxySale===true}).map(function(record){var m=record.overnightMeta||{};return {'類型':salesKindLabel88(record),'業績／入帳日':record.businessDate||'','原成交日':m.originalDate||'','區域／門市':[((typeof areaText!=='undefined'&&areaText[record.area])||record.area||''),salesStoreText(record)].filter(Boolean).join('・'),'建檔／回傳人員':salesSubmitterName(record),'業績歸屬':salesCreditedName(record),'日薪狀態':'不增加日薪','營業總額':Number(record.grossAmount||0),'金額來源':salesIsOvernight88(record)?(m.mode==='included'?'由 '+(m.sourcePersonName||'原人員')+' 原回傳拆出':'額外加入門市'):'代銷售','備註':record.note||'','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}});
+  return (salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&record.isProxySale===true}).map(function(record){var m=record.overnightMeta||{};return {'類型':salesKindLabel88(record),'業績／入帳日':record.businessDate||'','原成交日':m.originalDate||'','人員業績月份':m.performanceMonth||(salesIsOvernight88(record)?record.businessDate.slice(0,7):''),'區域／門市':[((typeof areaText!=='undefined'&&areaText[record.area])||record.area||''),salesStoreText(record)].filter(Boolean).join('・'),'建檔／回傳人員':salesSubmitterName(record),'業績歸屬':salesCreditedName(record),'日薪狀態':'不增加日薪','營業總額':Number(record.grossAmount||0),'金額來源':salesIsOvernight88(record)?(m.mode==='included'?'由 '+(m.sourcePersonName||'原人員')+' 原回傳拆出':'額外加入門市'):'代銷售','備註':[record.note||'',salesIsOvernight88(record)?salesOvernightInfo88(record):''].filter(Boolean).join('；'),'修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}});
 }
 function salesApprovedExpenseReportRows(){
   return (salesAdminData.expenses||[]).map(function(item){var expense=item.requestType==='expense',label=item.requestType==='move_out'?'撤櫃':item.requestType==='move_in'?'進櫃':item.requestType==='overtime'?'移櫃／加班':item.requestType==='other'?'其他':'費用';var pay=expense?{amount:Number(item.amount||0),hours:'',rate:'',formula:'費用金額'}:salesExpenseOperationPayModel(item);return {'日期':item.requestDate||'','人員':salesPersonName(item.submitterLineUserId,item.submitterName),'類型':label,'區域':(typeof areaText!=='undefined'&&areaText[item.area])||item.area||'','店點':expense?'':salesStoreText(item),'開始時間':item.overtimeStart||'','結束日期':item.requestType==='expense'?'':window.StarredExpenseTime81.endDate(item),'結束時間':item.overtimeEnd||'','時數':expense?'':(pay.hours===null?'':pay.hours),'時薪':expense?'':(pay.exact?pay.rate:''),'核准金額':expense?Number(item.amount||0):(pay.amount===null?'':pay.amount),'申請內容':expense?String(item.reason||''):[salesStoreText(item),item.overtimeStart&&item.overtimeEnd?window.StarredExpenseTime81.rangeText(item):''].filter(Boolean).join('・'),'申請人備註':item.note||'','後台備註':item.reviewNote||'','核准人':item.reviewerName||'','核准時間':salesDateTime(item.reviewedAt)}});
@@ -13249,7 +13304,7 @@ function salesExportReportExcelWithSheetJs(){
 }
 async function exportSalesReportExcel(){
   if(salesExcelExportBusy)return;
-  if((!Array.isArray(salesAdminData.records)||!salesAdminData.records.length)&&!(salesAdminData.expenses||[]).length&&!(salesAdminData.externalAccounts||[]).length){salesSetAdminStatus('目前沒有可匯出的報表資料。','error');return}
+  if((!Array.isArray(salesAdminData.records)||!salesAdminData.records.length)&&!salesPersonRecords93().length&&!(salesAdminData.expenses||[]).length&&!(salesAdminData.externalAccounts||[]).length){salesSetAdminStatus('目前沒有可匯出的報表資料。','error');return}
   var pendingWorkdayKeys=new Set(salesAdminData.records.filter(function(record){return salesRecordType(record)==='sales'&&record.isProxySale!==true&&salesWorkdayStatus(record)==='pending'}).map(function(record){return String(record.businessDate||'')+'|'+String(record.storeId||'')}));
   if(pendingWorkdayKeys.size){
     var workdayButton=document.querySelector('[data-sales-view="workdays"]');
@@ -13556,6 +13611,8 @@ window.STARRED_SALES_REPORT_BRIDGE_V55={
   statusMeta:salesStatusMeta,
   recordStatus:salesRecordStatus,
   workHoursNumberText:salesWorkHoursNumberText,
+  isOvernight93:salesIsOvernight88,
+  overnightInfo93:salesOvernightInfo88,
   proxyRows:salesProxyReportRows,
   averageExportRows:salesAveragePerformanceExportRows,
   comparisonExportRows:salesPersonDetailExportRows,
@@ -17432,6 +17489,8 @@ var salesCreditedName=reportBridge.creditedName;
 var salesStatusMeta=reportBridge.statusMeta;
 var salesRecordStatus=reportBridge.recordStatus;
 var salesWorkHoursNumberText=reportBridge.workHoursNumberText;
+var salesIsOvernight88=reportBridge.isOvernight93;
+var salesOvernightInfo88=reportBridge.overnightInfo93;
 var salesProxyReportRows=reportBridge.proxyRows;
 var salesAveragePerformanceExportRows=reportBridge.averageExportRows;
 var salesPersonDetailExportRows=reportBridge.comparisonExportRows;
@@ -17455,7 +17514,7 @@ var salesExpenseOperationPayModel=reportBridge.expensePayModel;
 var renderSalesAveragePerformance=reportBridge.renderAverage;
 var renderSalesPersonDetail=reportBridge.renderComparison;
 var salesAdminData={};
-['records','performanceReturns','salespeople','totals','byStore','byPerson','workDays','editRequests','auditLogs','reportingPeriods','expenses','externalAccounts','missingTrackingEnabled'].forEach(function(key){Object.defineProperty(salesAdminData,key,{enumerable:true,get:function(){var data=reportBridge.getData()||{};return data[key]}})});
+['records','personRecords','performanceReturns','salespeople','totals','byStore','byPerson','workDays','editRequests','auditLogs','reportingPeriods','expenses','externalAccounts','missingTrackingEnabled'].forEach(function(key){Object.defineProperty(salesAdminData,key,{enumerable:true,get:function(){var data=reportBridge.getData()||{};return data[key]}})});
 var salesStatDetailState={};
 ['kind','key','rows','view','summary'].forEach(function(key){Object.defineProperty(salesStatDetailState,key,{enumerable:true,get:function(){var state=reportBridge.getDetailState()||{};return state[key]}})});
 var comparisonView='detail';
@@ -17483,7 +17542,7 @@ function v54OpenPrint(title,content,options){
   var html='<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>　</title><style>@page{size:A4 '+orientation+';margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff;color:#243d49;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;font-size:12px;line-height:1.25}.print-actions{position:sticky;z-index:10;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;background:#294b5e;color:#fff}.print-actions span{font-size:12px}.print-actions button{padding:7px 15px;border:0;border-radius:6px;background:#fff;color:#294b5e;font-size:13px;font-weight:700;cursor:pointer}.print-sheet{width:100%;min-height:210mm;padding:6mm 7mm}.print-sheet.one-page{height:210mm;min-height:210mm;overflow:hidden;padding:4.5mm 5mm}.report-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:5px;padding-bottom:4px;border-bottom:2px solid #294b5e}.report-head h1{margin:0;font-size:14px;line-height:1.2}.report-head p{margin:2px 0 0;color:#667d88;font-size:12px}.report-head time{color:#667d88;font-size:12px;white-space:nowrap}.print-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:0 0 6px}.print-summary>div{padding:4px 6px;border:1px solid #c8d1d5;background:#f6f8f9;text-align:center}.print-summary span,.print-summary b{display:block}.print-summary span{font-size:12px;color:#617783}.print-summary b{margin-top:1px;font-size:13px;color:#294858;font-variant-numeric:tabular-nums}.high-value{color:#c62828!important;font-weight:700!important}section{margin:0 0 8px;break-inside:auto}h2{margin:0 0 3px;color:#294858;font-size:14px;line-height:1.2}.section-note{margin:0 0 4px;color:#667d88;font-size:12px}.table-wrap{width:100%;overflow:visible}table{width:100%;border-collapse:collapse;table-layout:auto;font-size:12px}th,td{padding:3px 4px;border:1px solid #aeb9be;vertical-align:middle;text-align:left;word-break:break-word}th{background:#dfe4e7;color:#243d49;font-size:12px;font-weight:700;white-space:nowrap}th.num,td.num{text-align:center;font-variant-numeric:tabular-nums}tbody tr:nth-child(even) td{background:#f0f2f3}tfoot th,tfoot td{background:#dfe4e7;font-weight:700}tr{break-inside:avoid;page-break-inside:avoid}.empty{padding:10px;border:1px dashed #aeb9be;color:#6f838d}.notice{margin:0 0 5px;padding:3px 6px;border-left:3px solid #9eafb7;background:#f4f6f7;color:#5c707a;font-size:12px}.average-table h2{font-size:14px;font-weight:800}.store-print-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,.85fr);gap:5px;align-items:start}.one-page section{margin-bottom:4px}.one-page .report-head{margin-bottom:3px}.one-page .print-summary{margin-bottom:4px}.one-page table{font-size:12px;line-height:1.05}.one-page th,.one-page td{padding:1px 2px}.one-page h2{margin-bottom:2px}.one-page .section-note{margin-bottom:2px;line-height:1.1}.one-page .matrix-table th,.one-page .matrix-table td{white-space:nowrap}.one-page .matrix-table th:first-child{width:58px}.one-page .average-table table{table-layout:fixed}.one-page .average-table th,.one-page .average-table td{white-space:normal}.person-print section{margin-bottom:8px}.person-print td small{display:block;color:#667d88}@media print{.print-actions{display:none!important}.print-sheet{padding:6mm 7mm}.print-sheet.one-page{padding:4.5mm 5mm}thead{display:table-header-group}tfoot{display:table-row-group}}</style></head><body><div class="print-actions"><span>列印內容已移除網址；若瀏覽器仍啟用頁首頁尾，請在列印設定取消「頁首與頁尾」。</span><button type="button" onclick="window.print()">開始列印／另存 PDF</button></div><main class="print-sheet'+onePage+compact+'"><header class="report-head"><div><h1>'+v54Esc(title)+'</h1><p>查詢區間：'+v54Esc(salesAdminPeriodLabel())+'</p></div><time>列印時間：'+v54Esc(salesDateTime(new Date().toISOString()))+'</time></header>'+content+'</main><script>document.title="　";setTimeout(function(){window.focus();window.print()},350)<\/script></body></html>';
   popup.document.open();popup.document.write(html);popup.document.close();return true;
 }
-function v54DailyRows(excel){return (salesAdminData.records||[]).map(function(record){return {'業績日期':record.businessDate||'','類型':record.isOvernightSale?'隔夜帳':record.isProxySale?'代銷售':salesRecordType(record)==='return'?'退貨':'業績','原成交日':record.overnightMeta&&record.overnightMeta.originalDate||'','區域':v54Area(record.area),'門市／樓層':salesStoreText(record),'銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),'營業總額':excel?Number(record.grossAmount||0):v54Money(record.grossAmount||0),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'—','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}})}
+function v54DailyRows(excel){return (salesAdminData.records||[]).map(function(record){return {'業績日期':record.businessDate||'','類型':record.isOvernightSale?'隔夜帳':record.isProxySale?'代銷售':salesRecordType(record)==='return'?'退貨':'業績','原成交日':record.overnightMeta&&record.overnightMeta.originalDate||'','人員業績月份':salesIsOvernight88(record)?record.overnightMeta.performanceMonth||record.businessDate.slice(0,7):'','隔夜帳註記':salesIsOvernight88(record)?salesOvernightInfo88(record):'','區域':v54Area(record.area),'門市／樓層':salesStoreText(record),'銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),'營業總額':excel?Number(record.grossAmount||0):v54Money(record.grossAmount||0),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'—','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}})}
 function v54ProxyRows(excel){return salesProxyReportRows().map(function(row){var copy=Object.assign({},row);if(!excel)copy['營業總額']=v54Money(copy['營業總額']);return copy})}
 function v54StoreRows(excel){return (salesAdminData.byStore||[]).map(function(row,index){return {'排名':index+1,'區域':v54Area(row.area),'門市／樓層':salesStoreText(row),'營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨另計':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'回傳筆數':Number(row.recordCount||0)}})}
 function v54PersonRows(excel){return (salesAdminData.byPerson||[]).map(function(row,index){var net=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));return {'排名':row.expenseOnly?'—':index+1,'銷售人員':salesPersonName(row.lineUserId,row.name),'店點':(row.locations||[]).map(salesStoreText).join('、')||'—','營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'當月業績':excel?net:v54Money(net),'筆數':Number(row.recordCount||0)}})}
@@ -17493,7 +17552,7 @@ function v54RequestRows(excel){var filter=String((v54El('salesAdminRequestFilter
 function v54AverageRows(excel,source){return salesAveragePerformanceExportRows(source).map(function(row){var copy=Object.assign({},row);copy['時薪工時']=salesWorkHoursNumberText(copy['時薪工時'])+(excel?'':' 小時');if(!excel){copy['個人營業總額']=v54Money(copy['個人營業總額']);copy['平均業績']=copy['平均業績']===''?'—':v54Money(copy['平均業績']);copy['計日薪天數']=String(copy['計日薪天數'])+' 天';copy['時薪日期數']=String(copy['時薪日期數'])+' 天';copy['平均計算天數']=String(copy['平均計算天數'])+' 天';copy['待確認天數']=String(copy['待確認天數'])+' 天'}return copy})}
 function v54ComparisonRows(excel){return salesPersonDetailExportRows().map(function(row){if(excel)return Object.assign({},row);var copy={};Object.keys(row).forEach(function(key){copy[key]=key==='日期'?row[key]:(row[key]===''?'':v54Money(row[key]))});return copy})}
 function v54PageSpec(view,excel){
-  if(view==='proxy')return {title:'代銷售／隔夜帳',rows:v54ProxyRows(excel),note:'隔夜帳依入帳日計入門市與指定人員；不增加日薪。已含原回傳者只拆分歸屬，門市總額不重複增加。',widths:[12,14,14,28,16,16,16,16,32,30,14,21],high:['營業總額']};
+  if(view==='proxy')return {title:'代銷售／隔夜帳',rows:v54ProxyRows(excel),note:'隔夜帳依隔天入帳日計門市金額，v93 人員業績按原成交日的下一個月份歸屬；不計當班業績或日薪，舊紀錄保留原規則。',widths:[12,14,14,28,16,16,16,16,32,30,14,21],high:['營業總額']};
   if(view==='store')return {title:'門市業績',rows:v54StoreRows(excel),widths:[8,12,28,16,16,12],high:['營業總額']};
   if(view==='person')return {title:'業績總覽',rows:v54PersonRows(excel),widths:[8,16,38,16,14,16,12],high:['營業總額','當月業績']};
   if(view==='workdays')return {title:'上班天數',rows:v54WorkdayRows(excel),note:'核准日薪依人員、日期、門市各計 1 天；同日跨店可加總；時薪日期另列工時。',widths:[16,20,16,14,14,16,14,16,16],high:['營業總額']};
@@ -21856,79 +21915,93 @@ window.StarredCompanyPrint82={open:open,close:close,print:print,build:'20261001-
 <script id="sales-overnight-v88-module">
 (function(){
 'use strict';
-var BUILD='20261006-posting-date-overnight-v88',state=null,lastFocus=null,optionsSeq=0;
+var BUILD='20261007-next-month-overnight-v93',state=null,epoch=0,lastFocus=null;
 function el(id){return document.getElementById(id)}
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function money(n){return '$'+Number(n||0).toLocaleString('zh-TW')}
-function bridge(){return window.STARRED_SALES_REPORT_BRIDGE_V55}
-function record(id){var b=bridge();return b&&(b.getData().records||[]).find(function(r){return String(r.id)===String(id)})}
-function today(){var out={};new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).forEach(function(p){out[p.type]=p.value});return out.year+'-'+out.month+'-'+out.day}
-function validDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||v.slice(0,4)==='0000')return false;var d=new Date(v+'T00:00:00Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===v}
-function previousDate(v){return new Date(Date.parse(v+'T00:00:00Z')-86400000).toISOString().slice(0,10)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function money(v){return '$'+Number(v||0).toLocaleString('zh-TW')}
+function today(){return typeof salesToday==='function'?salesToday():new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date())}
+function valid(v){return /^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v}
+function next(v,n){return new Date(Date.parse(v+'T00:00:00Z')+(n||1)*86400000).toISOString().slice(0,10)}
+function month(v){var a=v.split('-').map(Number);return (a[1]===12?a[0]+1:a[0])+'-'+String(a[1]===12?1:a[1]+1).padStart(2,'0')}
 function allowed(){return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(typeof normalizeCurrentAdminRole==='function'?normalizeCurrentAdminRole(currentUser.role):currentUser.role)}
 function auth(){return typeof currentUser!=='undefined'&&currentUser?String(currentUser.adminSessionToken||'')+'|'+String(currentUser.username||currentUser.name||''):''}
-async function api(action,payload){var r=await window.starredApi(action,payload);if(!r||r.success===false)throw new Error(r&&r.error||'未取得隔夜帳回應');if(r.overnightSalesBuild!==BUILD)throw new Error('請先更新 v88 SQL 與 line-api，再使用隔夜帳；目前尚未確認相容。');return r}
-function is(r){return !!(r&&(r.isOvernightSale===true||r.overnightMeta))}
+async function api(action,payload){var timer,r;try{r=await Promise.race([window.starredApi(action,Object.assign({policyVersion:93},payload)),new Promise(function(_,reject){timer=setTimeout(function(){reject(new Error(action==='sales_overnight_mutate'?'儲存連線逾時，結果尚未確認；請勿重複新增。':'讀取逾時，請重新讀取。'))},action==='sales_overnight_mutate'?60000:25000)})])}catch(e){if(e&&e.rawMessage93)e.message=e.rawMessage93;throw e}finally{clearTimeout(timer)}if(!r||r.success===false)throw new Error(r&&r.error||'未取得伺服器回應');if(r.overnightSalesBuild!==BUILD)throw new Error('隔夜帳後端不是 v93，請先更新 SQL 與 line-api，再重新整理網頁。');return r}
+function is(r){return !!(r&&(r.isOvernightSale||r.overnightMeta))}
 function label(r){return is(r)?'隔夜帳':r&&r.isProxySale?'代銷售':'業績'}
-function info(r){var m=r&&r.overnightMeta||{};return '原成交日：'+(m.originalDate||'—')+'；入帳日：'+(r.businessDate||'—')+'；'+(m.mode==='included'?'由 '+(m.sourcePersonName||'當日人員')+' 原回傳拆出，門市合計不變':'未含在當日回傳，另加入門市營業額')+(r.note?'；備註：'+r.note:'')}
-function error(text){var e=el('overnight88Message');if(e)e.textContent=text||''}
-function ensure(){var m=el('overnight88Modal');if(m)return m;m=document.createElement('div');m.id='overnight88Modal';m.className='overnight88-modal';m.hidden=true;m.innerHTML='<section class="overnight88-dialog" role="dialog" aria-modal="true" aria-labelledby="overnight88Title"><header class="overnight88-head"><div><small>OVERNIGHT SALES</small><h3 id="overnight88Title">新增隔夜帳</h3></div><button type="button" data-o88="close" aria-label="關閉">×</button></header><div class="overnight88-body"><div id="overnight88Content"></div><div id="overnight88Message" class="overnight88-message" role="status" aria-live="polite"></div></div><footer class="overnight88-footer" id="overnight88Footer"></footer></section>';m.addEventListener('click',function(e){var b=e.target.closest('[data-o88]');if(!b||b.disabled)return;var a=b.dataset.o88;if(a==='close')close();if(a==='save')save();if(a==='void')voidRecord();if(a==='sources')loadSources()});m.addEventListener('input',preview);m.addEventListener('change',function(e){var id=e.target.id;if(id==='overnight88Date'||id==='overnight88Store'){if(el('overnight88Original'))el('overnight88Original').max=validDate(el('overnight88Date').value)?previousDate(el('overnight88Date').value):today();loadSources()}if(id==='overnight88Mode'){el('overnight88SourceWrap').hidden=e.target.value!=='included'}if(id==='overnight88Consent'&&e.target.checked&&(el('overnight88Message')||{}).textContent==='請先勾選已核對金額來源。')error('');preview()});document.body.appendChild(m);return m}
-function show(title,html,footer){var m=ensure();lastFocus=document.activeElement;el('overnight88Title').textContent=title;el('overnight88Content').innerHTML=html;el('overnight88Footer').innerHTML=footer||'<button type="button" class="secondary" data-o88="close">關閉</button>';error('');m.hidden=false;setTimeout(function(){var first=m.querySelector('.overnight88-body input,.overnight88-body select,.overnight88-footer button');if(first)first.focus()},0)}
-function close(){if(state&&state.busy)return;ensure().hidden=true;state=null;optionsSeq++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
-function actions(label){return '<button type="button" class="secondary" data-o88="close">返回</button><button id="overnight88Save" type="button" class="primary" data-o88="save">'+label+'</button>'}
-async function open(){
- if(!allowed()){window.alert('只有已登入後台的會計或系統管理員可以新增隔夜帳。');return}
- var to=(el('salesAdminDateTo')||{}).value,from=(el('salesAdminDateFrom')||{}).value,d=from===to&&validDate(to)&&to<=today()?to:today();
- state={mode:'create',operationId:crypto.randomUUID(),auth:auth(),busy:false,sources:[],sourcesReady:false};var token=state;
- show('新增隔夜帳','<p>隔夜帳記入「入帳日」的門市營業額與指定人員業績；不算給隔天上班人員，也不增加任何人的日薪。</p><fieldset id="overnight88Fields" disabled><div class="overnight88-grid"><label>原成交日期 *<input id="overnight88Original" type="date" value="'+previousDate(d)+'" max="'+previousDate(d)+'"></label><label>入帳日期 *<input id="overnight88Date" type="date" value="'+d+'" max="'+today()+'"></label><label>入帳門市 *<select id="overnight88Store"><option value="">讀取門市中…</option></select></label><label>業績歸屬人員 *<select id="overnight88Person"><option value="">讀取人員中…</option></select></label><label>隔夜帳金額 *<input id="overnight88Amount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="請填隔夜帳金額"></label><label>金額是否已含在當日回傳？ *<select id="overnight88Mode"><option value="">請確認金額來源</option><option value="additional">尚未包含，額外加入</option><option value="included">已包含，從原回傳拆出</option></select></label><label id="overnight88SourceWrap" class="overnight88-wide" hidden>已包含這筆金額的原回傳 *<select id="overnight88Source"><option value="">請先選入帳日期與門市</option></select><button type="button" class="secondary" data-o88="sources">重新讀取原回傳</button></label><label class="overnight88-wide">備註（選填，最多 500 字）<textarea id="overnight88Note" maxlength="500" rows="2" placeholder="可填單號或商品，方便核對是否重複"></textarea></label></div><div id="overnight88Preview" class="overnight88-preview">請填寫日期、歸屬人員、金額與金額來源。</div><label class="overnight88-consent"><input id="overnight88Consent" type="checkbox">已核對金額來源；當日業績不會再次包含這筆隔夜帳。</label></fieldset>',actions('確認新增隔夜帳'));
- el('overnight88Save').disabled=true;error('正在讀取正式門市與人員…');
- try{var r=await api('sales_overnight_options',{});if(state!==token||auth()!==token.auth)return;
-   token.stores=r.stores||[];token.people=r.people||[];
-   el('overnight88Store').innerHTML='<option value="">請選擇門市</option>'+token.stores.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'zh-Hant')}).map(function(s){return '<option value="'+esc(s.id)+'">'+esc([s.name,s.floor].filter(Boolean).join('｜'))+'</option>'}).join('');
-   el('overnight88Person').innerHTML='<option value="">請選擇業績歸屬人員</option>'+token.people.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'zh-Hant')}).map(function(p){return '<option value="'+esc(p.lineUserId)+'">'+esc(p.name)+'</option>'}).join('');
-   var store=(el('salesAdminStore')||{}).value||'';if(token.stores.some(function(s){return s.id===store}))el('overnight88Store').value=store;
-   el('overnight88Fields').disabled=false;el('overnight88Save').disabled=false;error('');if(store)await loadSources();
- }catch(e){if(state===token)error('無法讀取：'+e.message+'\n請確認已完成 SQL 與 line-api 更新，再重新開啟。')}
+function info(r){var m=r&&r.overnightMeta||{},d=r.postingDate93||r.businessDate||'—';return '原成交日：'+(m.originalDate||'—')+'；門市入帳日：'+d+'；人員業績月份：'+(m.performanceMonth||d.slice(0,7))+(Number(m.policyVersion)===93?'（次月）':'（舊紀錄保留原規則）')+'；'+({from_original:'已從原成交日回傳移出',from_posting:'已從隔天回傳拆出',additional:'另加門市金額'}[m.amountSource]||(m.mode==='included'?'已從原回傳拆出':'另加門市金額'))+(r.note?'；備註：'+r.note:'')}
+function ensure(){var root=el('overnight88Modal');if(root)return root;root=document.createElement('div');root.id='overnight88Modal';root.className='overnight88-modal';root.hidden=true;
+root.innerHTML='<section class="overnight88-dialog" role="dialog" aria-modal="true" aria-labelledby="overnight88Title"><header class="overnight88-head"><div><small>OVERNIGHT SALES</small><h3 id="overnight88Title">新增隔夜帳</h3></div><button type="button" data-o88="close" aria-label="關閉">×</button></header><div class="overnight88-body"><div id="overnight88Content"></div></div><div id="overnight88Message" class="overnight88-message overnight93-message" role="alert" aria-live="polite" tabindex="-1"></div><footer class="overnight88-footer" id="overnight88Footer"></footer></section>';
+root.addEventListener('click',function(e){var b=e.target.closest('[data-o88]');if(!b||b.disabled)return;var a=b.dataset.o88;if(a==='close')close();if(a==='save')save();if(a==='void')voidRecord();if(a==='sources')loadSources()});
+root.addEventListener('input',function(e){if(state&&state.mode==='create'&&!state.busy){if(el('overnight88Consent')&&e.target.id!=='overnight88Consent')el('overnight88Consent').checked=false;preview()}});
+root.addEventListener('change',function(e){if(!state||state.busy||state.mode!=='create')return;var id=e.target.id;if(id!=='overnight88Consent'&&el('overnight88Consent'))el('overnight88Consent').checked=false;if(id==='overnight88Original'||id==='overnight88Store'){loadSources();return}if(id==='overnight88Person'||id==='overnight88Mode')fillSources();preview()});
+document.body.appendChild(root);return root}
+function error(text,focus){var e=el('overnight88Message');if(e){e.textContent=text||'';if(text&&focus){e.focus({preventScroll:true});e.scrollIntoView({block:'nearest'})}}}
+function show(title,html,footer){var root=ensure();el('overnight88Title').textContent=title;el('overnight88Content').innerHTML=html;el('overnight88Footer').innerHTML=footer||'<button type="button" class="secondary" data-o88="close">關閉</button>';error('');root.hidden=false}
+function close(){if(state&&state.busy)return;if(state&&state.uncertain&&!confirm('送出結果尚未確認。關閉後請先到隔夜帳明細核對，不要再新增相同交易。確定關閉？'))return;ensure().hidden=true;state=null;epoch++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
+function lock(value){if(state)state.busy=value;var f=el('overnight88Fields');if(f)f.disabled=value||(state&&state.uncertain);ensure().querySelectorAll('button').forEach(function(b){b.disabled=value});if(!value&&el('overnight88Save'))el('overnight88Save').disabled=!!(state&&state.mode==='create'&&!state.ready)}
+function normal(rows){return (rows||[]).filter(function(r){return !is(r)&&!r.isProxySale&&r.recordType!=='return'})}
+function table(rows,title){var total=(rows||[]).reduce(function(s,r){return s+Number(r.grossAmount||0)},0);return '<section class="overnight93-day"><div class="overnight93-day-heading"><span>'+esc(title)+'</span><strong>'+money(total)+'</strong></div>'+(rows.length?'<div class="overnight93-day-list">'+rows.map(function(r){return '<div><span>'+esc(r.salespersonName||r.submitterName||'未命名')+(is(r)?'〔隔夜帳〕':r.isProxySale?'〔代銷售〕':'')+'</span><span>'+money(r.grossAmount)+'</span></div>'}).join('')+'</div>':'<p>當日尚無業績回傳，並不是查詢失敗。</p>')+'</section>'}
+function dates(){var d=el('overnight88Original').value;if(valid(d)){el('overnight88Date').value=next(d);el('overnight93Month').value=month(d)}else{el('overnight88Date').value='';el('overnight93Month').value=''}}
+function fillPeople(previous){var selected=previous||'',ids=new Set(normal(state.original).map(function(r){return String(r.salespersonLineUserId||r.submitterLineUserId)})),all=state.people.slice(),first=all.filter(function(p){return ids.has(p.lineUserId)}),other=all.filter(function(p){return !ids.has(p.lineUserId)});function options(rows){return rows.map(function(p){return '<option value="'+esc(p.lineUserId)+'">'+esc(p.name)+'</option>'}).join('')}
+ el('overnight88Person').innerHTML='<option value="">請選擇原銷售人員</option>'+(first.length?'<optgroup label="原成交日有回傳的人員">'+options(first)+'</optgroup>':'')+'<optgroup label="其他人員（手動指定）">'+options(other)+'</optgroup>';
+ if(first.length===1)selected=first[0].lineUserId;
+ if(all.some(function(p){return p.lineUserId===selected}))el('overnight88Person').value=selected;
+ el('overnight93PersonHint').textContent=first.length===1?'已自動帶入當日唯一銷售人員，仍可人工更正。':first.length>1?'當日有多位人員，請選原銷售人員；不會自動平分業績。':'當日尚無一般業績，請人工指定原銷售人員。';
 }
-async function loadSources(){
- var token=state;if(!token||token.mode!=='create'||token.busy)return;var seq=++optionsSeq,select=el('overnight88Source');token.sourcesReady=false;token.sources=[];
- var d=el('overnight88Date').value,s=el('overnight88Store').value;select.innerHTML='<option value="">讀取原回傳中…</option>';
- if(!validDate(d)||d>today()||!s){select.innerHTML='<option value="">請先選擇正確入帳日期與門市</option>';preview();return}
- try{var r=await api('sales_overnight_options',{businessDate:d,storeId:s});if(state!==token||seq!==optionsSeq||token.auth!==auth())return;
-  token.sources=r.sourceRecords||[];token.sourceKey=d+'|'+s;token.sourcesReady=true;
-  select.innerHTML='<option value="">'+(token.sources.length?'請選擇原回傳':'該日該店尚無本人回傳')+'</option>'+token.sources.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.salespersonName||x.submitterName)+'｜可拆出 '+esc(money(x.grossAmount))+'</option>'}).join('');error('');preview();
- }catch(e){if(state===token&&seq===optionsSeq){error('原回傳讀取失敗：'+e.message);select.innerHTML='<option value="">讀取未完成，請按重新讀取</option>';preview()}}
+function fillSources(){if(!state||state.mode!=='create')return;var mode=el('overnight88Mode').value,p=el('overnight88Person').value,selected=el('overnight88Source').value;
+ var rows=mode==='from_original'?normal(state.original).filter(function(r){return String(r.salespersonLineUserId||r.submitterLineUserId)===p}):mode==='from_posting'?normal(state.posting):[];
+ state.sources=rows;el('overnight88SourceWrap').hidden=!['from_original','from_posting'].includes(mode);
+ el('overnight88Source').innerHTML='<option value="">'+(rows.length?'請選擇要扣出金額的回傳':'此來源沒有可拆出的回傳')+'</option>'+rows.map(function(r){return '<option value="'+esc(r.id)+'">'+esc(r.businessDate+'｜'+(r.salespersonName||r.submitterName)+'｜'+money(r.grossAmount))+'</option>'}).join('');
+ if(rows.some(function(r){return r.id===selected}))el('overnight88Source').value=selected;else if(rows.length===1)el('overnight88Source').value=rows[0].id;
 }
-function model(){
- if(!state||state.mode!=='create')throw new Error('請重新開啟隔夜帳表單。');
- var d=el('overnight88Date').value,o=el('overnight88Original').value,s=el('overnight88Store').value,p=el('overnight88Person').value,raw=el('overnight88Amount').value.trim(),a=Number(raw),m=el('overnight88Mode').value,n=el('overnight88Note').value.trim();
- if(!validDate(d)||!validDate(o)||o>=d||d>today())throw new Error('原成交日須早於入帳日，入帳日不可晚於今天。');
- if(!s||!p)throw new Error('請選擇入帳門市與業績歸屬人員。');if(!raw||!Number.isSafeInteger(a)||a<1||a>10000000)throw new Error('金額請填寫 1～10,000,000 元整數。');
- if(!['additional','included'].includes(m))throw new Error('請確認隔夜帳金額是否已包含在當日回傳。');
- if(n.length>500)throw new Error('備註最多 500 字。');
- var src=null;if(m==='included'){if(!state.sourcesReady||state.sourceKey!==d+'|'+s)throw new Error('原回傳尚未讀取完成，請重新讀取。');src=state.sources.find(function(r){return r.id===el('overnight88Source').value});if(!src)throw new Error('請選擇包含這筆隔夜帳的原回傳。');if(Number(src.grossAmount)<a)throw new Error('隔夜帳金額不可超過原回傳目前可拆出的金額。')}
- return {payload:{operation:'create',operationId:state.operationId,businessDate:d,originalDate:o,storeId:s,salespersonLineUserId:p,grossAmount:a,amountMode:m,note:n,sourceReportId:src?src.id:null,sourceGrossAmount:src?Number(src.grossAmount):null,sourceUpdatedAt:src?src.updatedAt:null},source:src,person:state.people.find(function(x){return x.lineUserId===p}),store:state.stores.find(function(x){return x.id===s})};
+async function open(){if(!allowed()){alert('只有已登入後台的會計或系統管理員可以新增隔夜帳。');return}lastFocus=document.activeElement;
+ var from=(el('salesAdminDateFrom')||{}).value,to=(el('salesAdminDateTo')||{}).value,d=from===to&&valid(from)&&from<=today()?from:next(today(),-1);
+ state={mode:'create',operationId:crypto.randomUUID(),auth:auth(),ready:false,busy:false,people:[],stores:[],original:[],posting:[],sources:[],uncertain:false};var token=state;
+ show('新增隔夜帳','<p class="overnight93-intro">先選原成交日與櫃點，系統帶出當日業績。隔夜帳顯示在隔天門市金額，業績歸原銷售人員的下一個月份；不增加當班人員業績或日薪。</p><fieldset id="overnight88Fields" disabled><div class="overnight88-grid"><label>原成交日期 *<input id="overnight88Original" type="date" value="'+d+'" max="'+today()+'"></label><label>櫃點／門市 *<select id="overnight88Store"><option value="">讀取正式門市中…</option></select></label><div id="overnight93Daily" class="overnight88-wide overnight93-two-days">請選日期與門市以讀取業績。</div><label>隔天入帳日期（自動）<input id="overnight88Date" type="date" readonly tabindex="-1"></label><label>原銷售人員業績月份（自動）<input id="overnight93Month" type="text" readonly tabindex="-1"></label><label>原銷售人員 *<select id="overnight88Person"><option value="">請先選日期與門市</option></select><small id="overnight93PersonHint"></small></label><label>隔夜帳金額 *<input id="overnight88Amount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="例如：1548"></label><label class="overnight88-wide">這筆金額目前記在哪裡？ *<select id="overnight88Mode"><option value="">請確認，避免重複加總</option><option value="additional">尚未包含在任何回傳，額外加入</option><option value="from_original">已含在原成交日回傳，移到隔天</option><option value="from_posting">已含在隔天回傳，只拆出業績歸屬</option></select></label><label id="overnight88SourceWrap" class="overnight88-wide" hidden>要扣出金額的原回傳 *<select id="overnight88Source"></select></label><label class="overnight88-wide">備註／單號（選填）<textarea id="overnight88Note" maxlength="500" rows="2" placeholder="不同交易建議填單號，方便核對重複"></textarea></label></div><div id="overnight88Preview" class="overnight88-preview"></div><label class="overnight88-consent"><input id="overnight88Consent" type="checkbox">已核對原人員、次月業績與金額來源，不會重複計入。</label></fieldset>', '<button type="button" class="secondary" data-o88="close">返回</button><button type="button" class="secondary" data-o88="sources">重新讀取</button><button id="overnight88Save" type="button" class="primary" data-o88="save" disabled>確認新增隔夜帳</button>');dates();error('正在讀取門市…');
+ try{var r=await api('sales_overnight_options',{});if(state!==token||auth()!==token.auth)return;token.people=r.people||[];token.stores=r.stores||[];
+ el('overnight88Store').innerHTML='<option value="">請選擇櫃點／門市</option>'+token.stores.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'zh-Hant')}).map(function(s){return '<option value="'+esc(s.id)+'">'+esc([s.name,s.floor].filter(Boolean).join('｜'))+'</option>'}).join('');
+ var selected=(el('salesAdminStore')||{}).value||'';if(token.stores.some(function(s){return s.id===selected}))el('overnight88Store').value=selected;
+ el('overnight88Fields').disabled=false;error('');if(el('overnight88Store').value)await loadSources();else preview();
+ }catch(e){if(state===token)error('無法開啟：'+e.message,true)}
 }
-function preview(){if(!state||state.mode!=='create'||!el('overnight88Preview'))return;try{var x=model(),p=x.payload;el('overnight88Preview').textContent='入帳日：'+p.businessDate+'｜業績歸 '+x.person.name+' '+money(p.grossAmount)+'\n'+(x.source?'原回傳 '+(x.source.salespersonName||x.source.submitterName)+'：'+money(x.source.grossAmount)+' → '+money(x.source.grossAmount-p.grossAmount)+'\n門市合計不變，只轉移這筆金額的業績歸屬。':'門市當日營業額增加 '+money(p.grossAmount)+'；當日人員回傳請排除此筆。')+'\n不增加任何人的日薪、工時或上班天數。'}catch(e){el('overnight88Preview').textContent=e.message}}
-function busy(value){if(state)state.busy=value;var f=el('overnight88Fields');if(f)f.disabled=value;ensure().querySelectorAll('button').forEach(function(b){b.disabled=value})}
-async function refresh(){var ok=false;try{ok=await window.loadSalesAdminReport();if(typeof window.showSalesReportView==='function')window.showSalesReportView('proxy',document.querySelector('[data-sales-view="proxy"]'));if(typeof window.loadSalesData==='function')await window.loadSalesData()}catch(_){}return ok}
-async function save(){var token=state;if(!token||token.busy||!allowed())return;var x;try{if(auth()!==token.auth)throw new Error('登入身分已變更，請重新開啟表單。');x=model();if(!el('overnight88Consent').checked)throw new Error('請先勾選已核對金額來源。')}catch(e){error(e.message);return}
- busy(true);error('正在儲存隔夜帳…');var acknowledged=false;
- try{var r=await api('sales_overnight_mutate',x.payload);acknowledged=true;if(state!==token||auth()!==token.auth)return;
-   var posted=r.record;if(!posted||posted.isOvernightSale!==true||posted.businessDate!==x.payload.businessDate||posted.salespersonLineUserId!==x.payload.salespersonLineUserId||Number(posted.grossAmount)!==x.payload.grossAmount)throw new Error('伺服器回應與本次輸入不一致，請先重新整理核對，勿重複新增。');
-   var ok=await refresh();if(state!==token||auth()!==token.auth)return;token.mode='done';
-   show('新增完成','<div class="overnight88-success"><h4>✓ 隔夜帳已新增</h4><p>'+esc(posted.businessDate+'｜'+x.store.name+'\n業績歸 '+x.person.name+'：'+money(posted.grossAmount))+'</p></div><div class="overnight88-preview">'+esc(info(posted)+'\n不增加日薪或上班天數。'+(ok?'\n已更新報表；請以入帳日期及歸屬人員查詢。':'\n已儲存，但報表未完成更新。請重新整理，不用再次新增。'))+'</div>');
- }catch(e){if(state===token)error((acknowledged?'已收到儲存回應；請先重新整理核對。\n':'未確認儲存成功，資料保留。請直接重試，勿重新輸入第二筆。\n')+e.message)}finally{if(state===token)busy(false)}
+async function loadSources(){var token=state;if(!token||token.mode!=='create'||token.busy||token.uncertain||!token.stores.length)return;var ticket=++epoch;
+ dates();var d=el('overnight88Original').value,s=el('overnight88Store').value;token.ready=false;token.original=[];token.posting=[];token.sources=[];el('overnight88Consent').checked=false;el('overnight88Save').disabled=true;
+ if(!valid(d)||d>today()||!s){el('overnight93Daily').textContent='請先選正確原成交日期與門市。';preview();return}
+ el('overnight93Daily').textContent='正在讀取原成交日及隔天的業績…';error('');
+ try{var r=await api('sales_overnight_options',{originalDate:d,storeId:s});if(state!==token||ticket!==epoch||auth()!==token.auth)return;
+ token.original=r.originalRecords||[];token.posting=r.postingRecords||[];token.sourceKey=d+'|'+s;token.ready=true;
+ el('overnight93Daily').innerHTML=table(token.original,d+' 原成交日業績')+table(token.posting,next(d)+' 隔天門市業績');fillPeople('');fillSources();el('overnight88Save').disabled=false;preview();
+ }catch(e){if(state===token&&ticket===epoch){el('overnight93Daily').textContent='業績未載入，不能當作 $0 使用。';error('當日業績讀取失敗：'+e.message,true);preview()}}
 }
-function view(id){if(!allowed())return;var r=record(id);if(!is(r)){window.alert('找不到隔夜帳，請重新整理報表。');return}state={mode:'view',row:r,auth:auth(),busy:false,operationId:crypto.randomUUID()};
- show('隔夜帳明細／作廢','<div class="overnight88-preview">'+esc(r.businessDate+'｜'+[r.storeName,r.storeFloor].filter(Boolean).join('｜')+'\n業績歸 '+r.salespersonName+'：'+money(r.grossAmount)+'\n'+info(r))+'</div><p>更正隔夜帳請先作廢後重新新增。'+(r.overnightMeta.mode==='included'?'作廢會將金額加回當日原回傳，門市合計不變。':'作廢會移除這筆金額，入帳日門市合計會減少。')+'作廢紀錄會保留。</p><label>作廢原因（要作廢時必填）<textarea id="overnight88VoidReason" maxlength="500" rows="2" placeholder="至少 2 個字"></textarea></label>', '<button type="button" class="secondary" data-o88="close">關閉</button><button type="button" class="danger" data-o88="void">確認作廢隔夜帳</button>');
+function model(){if(!state||state.mode!=='create')throw new Error('請重新開啟表單。');var d=el('overnight88Original').value,s=el('overnight88Store').value,p=el('overnight88Person').value,mode=el('overnight88Mode').value,raw=el('overnight88Amount').value.trim(),amt=Number(raw),note=el('overnight88Note').value.trim();
+ if(!valid(d)||d>today())throw new Error('原成交日不可晚於今天。');if(!state.ready||state.sourceKey!==d+'|'+s)throw new Error('請先選日期與櫃點，等待當日業績讀取完成。');
+ var person=state.people.find(function(x){return x.lineUserId===p}),store=state.stores.find(function(x){return x.id===s});if(!person||!store)throw new Error('請選原銷售人員與正式門市。');if(!raw||!Number.isSafeInteger(amt)||amt<1||amt>10000000)throw new Error('請填 1～10,000,000 元整數金額。');
+ if(!['additional','from_original','from_posting'].includes(mode))throw new Error('請選這筆金額目前記在哪裡。');if(note.length>500)throw new Error('備註最多 500 字。');
+ var source=null;if(mode!=='additional'){source=state.sources.find(function(x){return x.id===el('overnight88Source').value});if(!source)throw new Error('此模式需要選擇實際原回傳；沒有回傳請改選尚未包含。');if(amt>Number(source.grossAmount))throw new Error('金額不可超過原回傳的 '+money(source.grossAmount)+'。')}
+ var payload={operation:'create',policyVersion:93,operationId:state.operationId,originalDate:d,businessDate:next(d),performanceMonth:month(d),storeId:s,salespersonLineUserId:p,grossAmount:amt,amountSource:mode,note:note,sourceReportId:source?source.id:null,sourceUpdatedAt:source?source.updatedAt:null,sourceGrossAmount:source?Number(source.grossAmount):null};
+ return {payload:payload,person:person,store:store,source:source};
 }
-async function voidRecord(){var token=state;if(!token||token.mode!=='view'||token.busy||!allowed())return;var reason=el('overnight88VoidReason').value.trim();if(reason.length<2){error('請填寫至少 2 個字的作廢原因。');return}if(token.auth!==auth()){error('登入身分已變更，請重新開啟。');return}
- busy(true);error('正在作廢並核對金額…');try{var r=await api('sales_overnight_mutate',{operation:'void',operationId:token.operationId,recordId:token.row.id,expectedUpdatedAt:token.row.updatedAt,reason:reason});if(state!==token||auth()!==token.auth)return;var ok=await refresh();token.mode='done';show('作廢完成','<div class="overnight88-success"><h4>✓ 隔夜帳已作廢</h4><p>'+esc(token.row.overnightMeta.mode==='included'?'金額已加回原回傳；門市合計不變。':'已移除該筆隔夜帳金額。')+'</p></div><p>'+esc(ok?'報表已重新計算；原日薪與工時不變。':'已儲存；請重新整理核對，勿重複操作。')+'</p>')}catch(e){if(state===token)error('作廢未確認完成：'+e.message+'\n直接重試不會重複加回。')}finally{if(state===token)busy(false)}}
-document.addEventListener('keydown',function(e){var m=el('overnight88Modal');if(!m||m.hidden)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){var all=Array.from(m.querySelectorAll('button,input,select,textarea')).filter(function(x){return !x.disabled&&x.offsetParent!==null});if(!all.length){e.preventDefault();return}var first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
-window.StarredOvernight88={build:BUILD,open:open,view:view,is:is,label:label,info:info,close:close};
-window.openSalesAdminOvernightCreate=open;
+function preview(){if(!state||state.mode!=='create'||!el('overnight88Preview'))return;try{var x=model(),p=x.payload,total=state.posting.reduce(function(s,r){return s+Number(r.grossAmount||0)},0),delta=p.amountSource==='from_posting'?0:p.grossAmount;
+ el('overnight88Preview').textContent=p.businessDate+' 門市業績：'+money(total)+' → '+money(total+delta)+'\n業績（含 '+x.person.name+' '+money(p.grossAmount)+'／隔夜帳）\n'+x.person.name+'：計入 '+p.performanceMonth+' 的業績 '+money(p.grossAmount)+'；不是隔天上班人員的業績。'+(x.source?'\n來源 '+x.source.businessDate+' '+(x.source.salespersonName||x.source.submitterName)+'：'+money(x.source.grossAmount)+' → '+money(x.source.grossAmount-p.grossAmount):'\n原成交日及隔天已回傳的個人業績都不更動，當班回傳不要再包含此筆。')+'\n不增加日薪、工時與上班天數。';
+ }catch(e){el('overnight88Preview').textContent=e.message}}
+async function refresh(){try{var ok=await window.loadSalesAdminReport();if(typeof window.showSalesReportView==='function')window.showSalesReportView('proxy',document.querySelector('[data-sales-view="proxy"]'));if(typeof window.loadSalesData==='function')await window.loadSalesData();return ok}catch(_){return false}}
+async function save(){var token=state;if(!token||token.busy||!allowed())return;var x;
+ try{if(auth()!==token.auth)throw new Error('登入身分已變更，請重新登入。');x=token.uncertain?token.savedModel:model();if(!el('overnight88Consent').checked&&!token.uncertain)throw new Error('請勾選已核對金額與月份。')}catch(e){error(e.message,true);return}
+ token.savedModel=x;lock(true);error('正在儲存，請勿重複新增…');var ack=false;
+ try{var r=await api('sales_overnight_mutate',x.payload);ack=true;if(state!==token||auth()!==token.auth)return;var row=r.record;
+ if(!row||!is(row)||row.businessDate!==x.payload.businessDate||row.salespersonLineUserId!==x.payload.salespersonLineUserId||Number(row.grossAmount)!==x.payload.grossAmount||row.overnightMeta?.performanceMonth!==x.payload.performanceMonth)throw new Error('已收到回應但資料未完整核對，請先查詢紀錄，不要再新增。');
+ token.mode='done';var ok=await refresh();if(state!==token||auth()!==token.auth)return;show('新增完成','<div class="overnight88-success"><h4>✓ 隔夜帳已儲存</h4><p>'+esc(x.store.name+'｜'+row.businessDate+' 入帳\n'+x.person.name+' '+money(row.grossAmount)+' → '+x.payload.performanceMonth+' 業績')+'</p></div><div class="overnight88-preview">'+esc(info(row)+'\n隔天上班人員不增加業績或日薪。\n'+(ok?'已重新整理；門市請查入帳日，個人請查業績月份。':'已存入，但清單尚未重新整理。請重新查詢，不用再新增。'))+'</div>');
+ }catch(e){if(state===token){token.uncertain=ack||(!e.writeNotStarted&&(e.outcomeUnknown===true||Number(e.httpStatus||0)>=500||/fetch|network|timeout|逾時|連線|未取得|未確認|回應/i.test(e.message)));error((token.uncertain?'結果尚待核對；內容已鎖定，直接重試沿用同一識別碼，不會另建第二筆。\n':'尚未儲存，請修正原因後再送出。\n')+e.message,true)}}finally{if(state===token)lock(false)}
+}
+function record(id){var b=window.STARRED_SALES_REPORT_BRIDGE_V55,d=b?b.getData():window.salesAdminData;return ((d&&d.records)||[]).concat((d&&d.personRecords)||[]).find(function(r){return String(r.id)===String(id)})}
+function view(id){if(!allowed())return;var r=record(id);if(!is(r)){alert('找不到隔夜帳，請重新查詢入帳日或業績月份。');return}lastFocus=document.activeElement;state={mode:'view',row:r,auth:auth(),busy:false,operationId:crypto.randomUUID()};
+ show('隔夜帳明細／作廢','<div class="overnight88-preview">'+esc([r.storeName,r.storeFloor].filter(Boolean).join('｜')+'\n'+r.salespersonName+'：'+money(r.grossAmount)+'\n'+info(r))+'</div><p>更正請先作廢再新增。'+(r.overnightMeta.mode==='included'?'作廢會把金額加回當初扣出的回傳日期與人員。':'作廢會移除隔天門市金額與所屬月份的人員業績。')+'日薪及工時不變，歷程保留。</p><label>作廢原因<textarea id="overnight88VoidReason" maxlength="500" rows="2" placeholder="至少 2 個字"></textarea></label>','<button type="button" class="secondary" data-o88="close">關閉</button><button type="button" class="danger" data-o88="void">確認作廢</button>');
+}
+async function voidRecord(){var token=state;if(!token||token.mode!=='view'||token.busy||!allowed())return;var reason=el('overnight88VoidReason').value.trim();if(reason.length<2){error('請填寫至少 2 字的原因。',true);return}if(auth()!==token.auth){error('登入已變更，請重新開啟。',true);return}var payload=token.uncertain&&token.voidPayload?token.voidPayload:{operation:'void',operationId:token.operationId,recordId:token.row.id,expectedUpdatedAt:token.row.updatedAt,reason:reason};token.voidPayload=payload;lock(true);error('正在作廢並核對金額…');try{await api('sales_overnight_mutate',payload);if(state!==token)return;token.mode='done';var ok=await refresh();show('作廢完成','<div class="overnight88-success"><h4>✓ 已作廢並保留歷程</h4><p>門市金額與個人業績已同步調整，日薪及工時不變。</p></div><p>'+esc(ok?'報表已更新。':'請重新查詢報表，不用再次作廢。')+'</p>')}catch(e){if(state===token){token.uncertain=!e.writeNotStarted&&(e.outcomeUnknown===true||Number(e.httpStatus||0)>=500||/fetch|network|timeout|逾時|連線|未取得|未確認|回應/i.test(e.message));el('overnight88VoidReason').disabled=token.uncertain;error('未確認作廢完成：'+e.message+(token.uncertain?'；直接重試會使用原識別碼與原因。':''),true)}}finally{if(state===token)lock(false)}}
+document.addEventListener('keydown',function(e){var root=el('overnight88Modal');if(!root||root.hidden)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){var controls=Array.from(root.querySelectorAll('button,input,select,textarea')).filter(function(x){return !x.disabled&&x.offsetParent!==null});if(!controls.length)return;var first=controls[0],last=controls[controls.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+window.StarredOvernight88={build:BUILD,open:open,view:view,is:is,label:label,info:info,close:close};window.openSalesAdminOvernightCreate=open;
 })();
+
 </script>
 
 
