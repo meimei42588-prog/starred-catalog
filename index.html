@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH: 20261007-ranking-four-views-top-three-v94; base: overnight_nextmonth_v93/index.html; v93 API and SQL unchanged. -->
 <!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
 <!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
@@ -4127,6 +4128,24 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 }
 </style>
 <style id="order-upload-feedback-v89">#orderActionModal .success-dialog{max-height:calc(100dvh - 32px);overflow-y:auto}#orderActionText{white-space:pre-line;overflow-wrap:anywhere;font-size:15px;line-height:1.65}</style>
+<style id="ranking-monthly-top-three-v94-style">
+/* v94: only the two monthly ranking lists; today's top-five and all business calculations stay unchanged. */
+#salesRankingList .sales-rank-row.sales-rank-monthly94{
+  background:#fff!important;border-color:#dce5e9!important;box-shadow:none;
+  font-size:14px;font-weight:400
+}
+#salesRankingList .sales-rank-monthly94 .sales-rank-person b{font-size:15px!important;font-weight:500!important;line-height:1.5}
+#salesRankingList .sales-rank-monthly94 .sales-rank-person span{font-size:12px!important;font-weight:400!important;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+#salesRankingList .sales-rank-monthly94 .sales-rank-amount b{font-size:17px!important;font-weight:500!important;line-height:1.4;white-space:nowrap}
+#salesRankingList .sales-rank-monthly94 .sales-rank-amount small{font-size:12px!important;font-weight:400!important;line-height:1.5;color:#637981;white-space:normal}
+#salesRankingList .sales-rank-monthly94 .sales-rank-number{background:#edf2f5!important;color:#526b79!important;font-weight:500!important}
+#salesRankingList .sales-rank-monthly94.monthly-top-three94{border-color:var(--rank94-border)!important;background:var(--rank94-bg)!important;box-shadow:inset 4px 0 0 var(--rank94-accent)}
+#salesRankingList .sales-rank-monthly94.monthly-top-three94 .sales-rank-number{background:var(--rank94-accent)!important;color:#fff!important}
+#salesRankingList .sales-rank-monthly94.monthly-top-three94 .sales-rank-amount b{color:var(--rank94-accent)!important}
+#salesRankingList .sales-rank-monthly94.podium94-1{--rank94-bg:#fff7e5;--rank94-border:#d0a553;--rank94-accent:#80560b}
+#salesRankingList .sales-rank-monthly94.podium94-2{--rank94-bg:#eff4f8;--rank94-border:#a7b8c7;--rank94-accent:#47647a}
+#salesRankingList .sales-rank-monthly94.podium94-3{--rank94-bg:#fff1e8;--rank94-border:#c99779;--rank94-accent:#925130}
+</style>
 <style id="today-upload-nextmonth-v93-style">
 /* v93, scoped; existing expense/company/LINE UI is untouched. */
 .sales-ranking-controls.today-mode93{grid-template-columns:1fr!important}.sales-ranking-month[hidden]{display:none!important}
@@ -4363,11 +4382,9 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div class="sales-ranking-controls">
           <select id="salesRankingType" aria-label="排行項目" onchange="changeSalesRankingType()">
             <option value="today">今日上傳</option>
-            <option value="month">本月TOP10</option>
-            <option value="monthStoresTop10">店點TOP10</option>
+            <option value="month">本月銷售人員</option>
             <option value="monthStoresAll">店點營業額</option>
             <option value="storeDaily">店點銷售明細</option>
-            <option value="all">人員排行榜</option>
           </select>
           <label class="sales-ranking-month"><span>月份</span><input id="salesRankingMonth" type="month" aria-label="排行月份" onchange="changeSalesRankingMonth()"></label>
           <div id="salesRankingLocation" class="sales-ranking-location" hidden><select id="salesRankingArea" aria-label="區域查詢" onchange="changeSalesRankingArea()"><option value="">區域</option></select><select id="salesRankingStore" class="sales-ranking-store-filter" aria-label="門市查詢" onchange="changeSalesRankingStore()"><option value="">請先選擇區域</option></select></div>
@@ -11203,9 +11220,14 @@ function renderSalesRanking(){
   var type=(salesEl('salesRankingType')||{}).value||'today';
   var monthControl93=salesEl('salesRankingMonth')?.closest('label');if(monthControl93)monthControl93.hidden=type==='today';
   document.querySelector('.sales-ranking-controls')?.classList.toggle('today-mode93',type==='today');
-  var rows=salesRankings[type]||[];
+  // v94: the 'month' screen replaces both old monthly-person choices.
+  // rankings.all is the full selected-month list; rankings.month is limited to 10.
+  // Consume the full list as-is so existing net amounts and v93 overnight attribution remain unchanged.
+  var monthlyPeopleReady94=salesRankings.monthlyPeopleComplete94!==false&&Array.isArray(salesRankings.all);
+  var rows=type==='month'?(monthlyPeopleReady94?salesRankings.all:[]):(salesRankings[type]||[]);
   var isDaily=type==='storeDaily';
-  var isStoreRanking=type==='monthStoresTop10'||type==='monthStoresAll';
+  var isStoreRanking=type==='monthStoresAll';
+  var isMonthlyRanking94=type==='month'||isStoreRanking;
   var month=(salesEl('salesRankingMonth')||{}).value||salesMonth();
   var note='';
   if(type==='today')note='依今日業績日期列出全部已回傳人員，由高到低排序；前五名以金色區分，每頁 10 筆。隔夜帳另列門市金額，不算當班人員業績。';
@@ -11223,9 +11245,10 @@ function renderSalesRanking(){
     var selectedRow=rows[0];
     note=salesMonthLabel(month)+'・'+(selectedRow?salesStoreText(selectedRow):'所選門市')+'每日營業額；退貨另計。';
   }
-  else if(isStoreRanking)note=salesMonthLabel(month)+'店點依營業總額排序；退貨另計，不從店點營業額扣除。';
-  else note=salesMonthLabel(month)+'銷售人員依當月業績排序；已由會計歸屬的退貨會扣在指定人員當月業績。';
+  else if(isStoreRanking)note=salesMonthLabel(month)+'店點依營業總額排序；前三名以金、銀、銅色標示，每頁 10 筆。退貨另計，不從店點營業額扣除。';
+  else note=salesMonthLabel(month)+'銷售人員依當月業績排序，列出全部人員、每頁 10 筆；前三名以金、銀、銅色標示。已由會計歸屬的退貨會扣在指定人員當月業績。';
   if(salesEl('salesRankingNote'))salesEl('salesRankingNote').textContent=note;
+  if(type==='month'&&!monthlyPeopleReady94){list.innerHTML='<div class="sales-empty">本月銷售人員資料未完整載入，請重新整理；不以舊版前十名代替完整清單。</div>';if(pagination)pagination.innerHTML='';return}
   if(type==='today'&&window.salesTodayExtra93&&window.salesTodayExtra93.complete===false){list.innerHTML='<div class="sales-empty">今日上傳尚未完整載入；請先更新 v93 line-api，避免只顯示前五名。</div>';if(pagination)pagination.innerHTML='';return}
   if(!rows.length){list.innerHTML=(type==='today'?salesTodayOvernightHtml93():'')+'<div class="sales-empty">'+(type==='today'?'今日尚無一般業績上傳。':'所選月份目前沒有可顯示的業績資料。')+'</div>';if(pagination)pagination.innerHTML='';return}
   var pageCount=Math.max(1,Math.ceil(rows.length/SALES_RANKING_PAGE_SIZE));
@@ -11244,9 +11267,10 @@ function renderSalesRanking(){
   }
   list.innerHTML=visible.map(function(row,index){
     var rank=Number(row.rank||start+index+1);
+    var monthlyClass94=isMonthlyRanking94?' sales-rank-monthly94'+(rank>=1&&rank<=3?' monthly-top-three94 podium94-'+String(rank):''):'';
     if(isStoreRanking){
       var area=(typeof areaText!=='undefined'&&areaText[row.area])||row.area||'未指定區域';
-      return '<div class="sales-rank-row sales-rank-store rank-'+String(rank)+'"><span class="sales-rank-number">'+String(rank)+'</span><div class="sales-rank-person"><b>'+salesEsc(salesStoreText(row))+'</b><span>'+salesEsc(area)+'・'+String(row.peopleCount||0)+' 位人員・'+String(row.recordCount||0)+' 筆回傳</span></div><div class="sales-rank-amount"><b>'+salesMoney(row.grossAmount)+'</b>'+(row.overnightParts&&row.overnightParts.length?'<small class="overnight93-row-note">含 '+salesEsc(salesOvernightPartsText93(row.overnightParts))+'</small>':'')+'<small>退貨另計 '+salesMoney(row.returnAmount)+'</small></div></div>';
+      return '<div class="sales-rank-row sales-rank-store rank-'+String(rank)+monthlyClass94+'"><span class="sales-rank-number">'+String(rank)+'</span><div class="sales-rank-person"><b>'+salesEsc(salesStoreText(row))+'</b><span>'+salesEsc(area)+'・'+String(row.peopleCount||0)+' 位人員・'+String(row.recordCount||0)+' 筆回傳</span></div><div class="sales-rank-amount"><b>'+salesMoney(row.grossAmount)+'</b>'+(row.overnightParts&&row.overnightParts.length?'<small class="overnight93-row-note">含 '+salesEsc(salesOvernightPartsText93(row.overnightParts))+'</small>':'')+'<small>退貨另計 '+salesMoney(row.returnAmount)+'</small></div></div>';
     }
     var locationHtml='';
     if(type==='today'){
@@ -11254,10 +11278,10 @@ function renderSalesRanking(){
       var labels=locations.map(function(location){var area=(typeof areaText!=='undefined'&&areaText[location.area])||location.area||'';return [area,salesStoreText(location)].filter(Boolean).join('・')});
       if(labels.length)locationHtml='<span>'+salesEsc(labels.join('、'))+'</span>';
     }
-    var isMonthlyPerson=type==='month'||type==='all';
+    var isMonthlyPerson=type==='month';
     var performanceAmount=isMonthlyPerson?Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)):Number(row.grossAmount||0);
     var amountNote=isMonthlyPerson?'營業 '+salesMoney(row.grossAmount)+'・退貨 -'+salesMoney(row.returnAmount):'退貨另計 '+salesMoney(row.returnAmount);
-    return '<div class="sales-rank-row rank-'+String(rank)+(type==='today'?' today-upload93'+(rank<=5?' top-five93':''):'')+'">'+
+    return '<div class="sales-rank-row rank-'+String(rank)+monthlyClass94+(type==='today'?' today-upload93'+(rank<=5?' top-five93':''):'')+'">'+
       '<span class="sales-rank-number">'+String(rank)+'</span>'+
       '<div class="sales-rank-person person-only"><b>'+salesEsc(row.name||'LINE 使用者')+(type==='today'&&rank<=5?'<em class="today93-mark">前五名</em>':'')+'</b>'+locationHtml+'</div>'+
       '<div class="sales-rank-amount"><b>'+salesMoney(performanceAmount)+'</b><small>'+amountNote+'</small></div>'+
@@ -11285,6 +11309,7 @@ async function loadSalesData(){
     });
     window.salesTodayExtra93={rows:Array.isArray(result.todayOvernight93)?result.todayOvernight93:[],total:Number(result.todayStoreTotal93||0),complete:result.todayUploadBuild93==='20261007-next-month-overnight-v93'||window.STARRED_SALES_TEST_MODE===true};
     salesRankings=result.rankings||{today:[],month:[],all:[],monthStoresTop10:[],monthStoresAll:[],storeDaily:[]};
+    salesRankings.monthlyPeopleComplete94=!!(result.rankings&&Array.isArray(result.rankings.all));
     ['today','month','all'].forEach(function(key){salesRankings[key]=(salesRankings[key]||[]).map(function(row){return Object.assign({},row,{name:salesPersonName(row.lineUserId,row.name)})})});
     syncSalesRankingLocationOptions();
     renderSalesSummary();
