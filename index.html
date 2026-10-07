@@ -2,6 +2,49 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<!-- v90: report schema recovery; exact v89 base retained. -->
+<style id="sales-schema-v90-style">
+#salesReportTab[data-load90="loading"] .sales-report-view,
+#salesReportTab[data-load90="error"] .sales-report-view{display:none!important}
+.sales-schema90-notice{margin:10px 0 14px;padding:12px 14px;border:1px solid #e6c78e;border-radius:12px;background:#fff8e9;color:#77531f;font-size:15px;font-weight:400;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.sales-schema90-notice button{margin-top:8px;font-size:15px!important;font-weight:400!important}
+#salesReportTab[data-load90="error"] .sales-admin-summary b,
+#salesReportTab[data-load90="loading"] .sales-admin-summary b{font-size:20px!important;font-weight:400!important;color:#718590!important}
+</style>
+<script id="sales-schema-v90-core">
+(function(){
+'use strict';
+var phase='idle',schema=null;
+function el(id){return document.getElementById(id)}
+function hint(scope,text){
+ var id=scope==='admin'?'salesSchemaNotice90':'salesOwnSchemaNotice90',node=el(id);
+ var anchor=el(scope==='admin'?'salesAdminStatus':'salesFormStatus');
+ if(!node&&anchor){node=document.createElement('div');node.id=id;node.className='sales-schema90-notice';node.setAttribute('role','status');anchor.insertAdjacentElement('afterend',node)}
+ if(!node)return;
+ node.textContent=text||'';node.hidden=!text;
+ if(text&&scope==='admin'){var retry=document.createElement('button');retry.type='button';retry.className='secondary';retry.textContent='重新查詢報表';retry.dataset.salesSchemaRetry90='1';retry.addEventListener('click',function(){if(typeof window.loadSalesAdminReport==='function')window.loadSalesAdminReport()});node.appendChild(document.createElement('br'));node.appendChild(retry)}
+}
+function setPhase(value){phase=value;var root=el('salesReportTab');if(root)root.dataset.load90=value}
+function mask(text){['salesAdminGross','salesAdminReturns','salesAdminCount','salesAdminPending'].forEach(function(id){if(el(id))el(id).textContent=text})}
+function schemaError(message){var text=String(message||'');return /overnight_meta|overnight_allocated_amount|SALES_SCHEMA_NOT_READY/.test(text)?'隔夜帳資料欄位尚未完成更新。請在原訂單／業績／費用的 Supabase 執行「01_隔夜帳結構修復_v90.sql」，完成後重新查詢；不要重建資料表或重複回傳業績。':text}
+function begin(){schema=null;setPhase('loading');mask('載入中');hint('admin','')}
+function accept(result){schema=result&&result.salesSchema90||null;setPhase(schema&&schema.fieldsReady===false?'compat':'ready');hint('admin',schema&&schema.warning||'')}
+function failed(error){setPhase('error');mask('未載入');hint('admin',schemaError(error&&error.message||error)||'報表尚未載入，請重新查詢。')}
+function assertReady(){if(phase==='compat')throw new Error(schema&&schema.warning||'請先完成隔夜帳資料庫更新再輸出報表。');if(phase==='error'||phase==='loading')throw new Error('報表尚未完成載入，請重新查詢；不能把未載入的金額當成 0 元。')}
+function own(result){hint('own',result&&result.salesSchema90&&result.salesSchema90.warning||'')}
+// Block visible report outputs during failure/compatibility, including footer buttons in detail modals.
+// The server independently rejects all sales mutations while v88 columns are missing.
+document.addEventListener('click',function(event){
+ var button=event.target&&event.target.closest?event.target.closest('button'):null;if(!button)return;
+ var report=button.closest('#salesReportTab,#salesStatDetailModal,#salesWorkdayDetailModal');if(!report)return;
+ var handler=String(button.getAttribute('onclick')||'');
+ if(!/print|export/i.test(handler))return;
+ try{assertReady()}catch(error){event.preventDefault();event.stopImmediatePropagation();window.alert(error.message)}
+},true);
+window.StarredSalesSchema90={build:'20261007-sales-schema-recovery-v90',begin:begin,accept:accept,failed:failed,own:own,assertReady:assertReady,errorText:schemaError,state:function(){return phase}};
+})();
+</script>
+
 <!-- v89: browser-cache isolation + atomic order receipt/idempotency. Base v88; all existing business modules retained. -->
 <!-- v88: posting-day overnight attribution; base v87 retained; deploy v88 SQL then line-api before this UI. -->
 <!-- v87: personal company accounts survive sales region/store filters; base v86; v87 read-only backend, no SQL. -->
@@ -94,7 +137,7 @@ function notice(text,bad){var el=document.getElementById('salesCompanyScopeNote8
 function begin(){phase='loading';failure='';requestAuth=auth();blank();notice('正在重新讀取報表與公司帳，完成前暫不顯示合計。',false)}
 function accept(result,q,test){if(requestAuth!==auth())throw new Error('登入身分已變更，請重新登入並載入報表。');validate(result,q,test);loadedKey=key(q);loadedAuth=auth();phase='ready';failure=''}
 function failed(message){phase='failed';failure=String(message||'報表載入未完成');blank();notice('公司帳尚未完成核對：'+failure,true)}
-function assertReady(){if(phase!=='ready'||loadedAuth!==auth()||key(values())!==loadedKey)throw new Error(failure||'報表尚未完成載入，請等待或重新整理後再查看／輸出；避免使用上一次篩選的金額。')}
+function assertReady(){if(window.StarredSalesSchema90)window.StarredSalesSchema90.assertReady();if(phase!=='ready'||loadedAuth!==auth()||key(values())!==loadedKey)throw new Error(failure||'報表尚未完成載入，請等待或重新整理後再查看／輸出；避免使用上一次篩選的金額。')}
 function note(modal,isPerson){var el=document.getElementById('salesCompanyScopeNote87');if(!el){el=document.createElement('p');el.id='salesCompanyScopeNote87';el.className='sales-company-scope87';modal.querySelector('.sales-stat-detail-summary').insertAdjacentElement('beforebegin',el)}el.hidden=!isPerson;el.textContent=NOTE;el.classList.remove('is-error')}
 window.StarredCompanyScope87={build:BUILD,noteText:NOTE,validate:validate,begin:begin,accept:accept,failed:failed,assertReady:assertReady,note:note,values:values};
 })();
@@ -11071,6 +11114,7 @@ async function loadSalesData(){
     renderSalesSummary();
     renderSalesOwnRecords();
     renderSalesRanking();
+    window.StarredSalesSchema90.own(result);
     return result;
   }catch(error){
     console.error('載入業績資料失敗',error);
@@ -11362,6 +11406,7 @@ function salesApplyRealNames(){
 async function loadSalesAdminReport(){
   if(!salesEl('salesReportTab'))return false;
   var query781=salesAdminQuerySnapshot781(),seq781=++salesAdminLoadSequence781;
+  window.StarredSalesSchema90.begin();
   window.StarredCompanyScope87.begin();
   if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportLoading();
   salesSetAdminStatus('正在整理業績報表…','working');
@@ -11397,15 +11442,18 @@ async function loadSalesAdminReport(){
     salesAdminData.records=salesAttachEditRequests(salesAdminData.records,salesAdminData.editRequests);
     rebuildSalesAdminPersonOptions(salesAdminData.records.concat(salesAdminData.performanceReturns),salesAdminData.salespeople);
     renderSalesAdminReport();
-    salesSetAdminStatus('報表已更新，共 '+String(salesAdminData.records.length)+' 筆。','success');
+    window.StarredSalesSchema90.accept(result);
+    var compat90=result.salesSchema90&&result.salesSchema90.fieldsReady===false;
+    salesSetAdminStatus(compat90?'現有業績已載入（相容讀取），共 '+String(salesAdminData.records.length)+' 筆；請完成下方結構更新。':'報表已更新，共 '+String(salesAdminData.records.length)+' 筆。',compat90?'working':'success');
     if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportReady();
     return true;
   }catch(error){
     if(seq781!==salesAdminLoadSequence781)return false;
+    window.StarredSalesSchema90.failed(error);
     window.StarredCompanyScope87.failed(error&&error.message||error);
     if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportFailed();
     console.error('載入業績報表失敗',error);
-    salesSetAdminStatus('報表載入失敗：'+String(error&&error.message||error),'error');
+    salesSetAdminStatus('報表載入失敗；原因與處理方式請看下方說明。','error');
     return false;
   }
 }
