@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<!-- v89: browser-cache isolation + atomic order receipt/idempotency. Base v88; all existing business modules retained. -->
+<!-- v88: posting-day overnight attribution; base v87 retained; deploy v88 SQL then line-api before this UI. -->
 <!-- v87: personal company accounts survive sales region/store filters; base v86; v87 read-only backend, no SQL. -->
 <!-- v86: approved date/store daily units + server-verified duplicate expense review; base v85 UI / v84 API; data retained. -->
 <!-- UI PATCH v85: personal performance = net sales + company account; payroll expenses separate. Base v84; API/SQL unchanged. -->
@@ -22,8 +27,41 @@
 <!-- UI PATCH: 20260819-expense-admin-layout-v28 -->
 <!-- UI PATCH: 20260819-expense-admin-list-v29 -->
 <!-- UI PATCH: 20260819-mobile-fit-expense-only-person-v31 -->
-<html lang="zh-Hant">
-<head>
+
+<script id="browser-storage-safety-v89">
+/* v89: optional application cache. Native Storage/LIFF SDK and server authorization are NOT patched. */
+(function(){
+'use strict';
+var warning=false;
+function notify(){
+ warning=true;
+ if(!document.body)return;
+ var box=document.getElementById('browserStorageWarning89');
+ if(!box){box=document.createElement('div');box.id='browserStorageWarning89';box.setAttribute('role','status');box.style.cssText='margin:10px auto;padding:10px 14px;max-width:1380px;border:1px solid #ead3ac;border-radius:10px;background:#fff8ea;color:#725629;font-size:14px;line-height:1.6';document.body.insertBefore(box,document.body.firstChild)}
+ box.textContent='本機暫存空間不足或無法使用，目前改用本頁暫存；雲端資料不會因此刪除。尚未送出的內容請勿關閉；送出結果請以訂單確認訊息為準。';
+}
+function cache(name){
+ var shadow=new Map();
+ function native(){return window[name]}
+ return {
+  getItem:function(key){key=String(key);if(shadow.has(key))return shadow.get(key);try{return native().getItem(key)}catch(_){notify();return null}},
+  setItem:function(key,value){key=String(key);value=String(value);try{native().setItem(key,value);shadow.delete(key);return true}catch(_){shadow.set(key,value);notify();return false}},
+  removeItem:function(key){key=String(key);shadow.set(key,null);try{native().removeItem(key);shadow.delete(key);return true}catch(_){return false}},
+  /* Only use for a cache that has just been replaced from a successful cloud read. */
+  setCloudSnapshot:function(key,value){key=String(key);shadow.set(key,String(value));try{native().removeItem(key)}catch(_){notify()}},
+  isSessionOnly:function(key){return shadow.has(String(key))}
+ };
+}
+var api={local:cache('localStorage'),session:cache('sessionStorage'),warn:notify,
+ json:function(scope,key,fallback){try{var value=JSON.parse(api[scope].getItem(key)||'null');if(Array.isArray(fallback))return Array.isArray(value)?value:fallback;return value===null?fallback:value}catch(_){notify();return fallback}}
+};
+window.StarredStorage89=api;
+window.STARRED_ORDER_UPLOAD_UI_BUILD89='20261006-order-submit-safety-v89';
+document.addEventListener('DOMContentLoaded',function(){if(warning)notify()});
+})();
+
+</script>
+
 <script id="company-account-scope-v87-core">
 /* v87: one authoritative company-account source for cards, detail, deductions and exports.
  * Never recover the amount from a previous person's/page's UI or localStorage. */
@@ -111,7 +149,7 @@ window.STARRED_PERSON_PERFORMANCE_UI_BUILD='20261005-company-expense-separation-
 })();
 </script>
 
-<meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星紅織品｜門市營運管理系統</title>
 <script>
@@ -4040,6 +4078,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
   #homePage .store-group-count{gap:3px!important}
 }
 </style>
+<style id="order-upload-feedback-v89">#orderActionModal .success-dialog{max-height:calc(100dvh - 32px);overflow-y:auto}#orderActionText{white-space:pre-line;overflow-wrap:anywhere;font-size:15px;line-height:1.65}</style>
 </head>
 <body>
 <div class="topbar"><div class="topbar-inner">
@@ -4619,7 +4658,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         </div>
         <div class="sales-report-switcher" role="tablist" aria-label="業績報表檢視">
           <button type="button" class="active" data-sales-view="daily" onclick="showSalesReportView('daily',this)">每日明細</button>
-          <button type="button" data-sales-view="proxy" onclick="showSalesReportView('proxy',this)">代銷售</button>
+          <button type="button" data-sales-view="proxy" onclick="showSalesReportView('proxy',this)">代銷售／隔夜帳</button>
           <button type="button" data-sales-view="store" onclick="showSalesReportView('store',this)">門市業績 <b id="salesStoreMissingTabCount" class="sales-tab-count missing"></b></button>
           <button type="button" data-sales-view="person" onclick="showSalesReportView('person',this)">業績總覽</button>
           <button type="button" data-sales-view="personDetail" onclick="showSalesReportView('personDetail',this)">業績對比</button>
@@ -4628,7 +4667,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
           <button type="button" data-sales-view="requests" onclick="showSalesReportView('requests',this)">修改審核 <b id="salesRequestTabCount" class="sales-tab-count"></b></button>
         </div>
         <div id="salesReportDailyView" class="sales-report-view active"><div class="sales-table-wrap"><table class="sales-table"><thead><tr><th>業績日期</th><th>區域</th><th>門市／樓層</th><th>銷售人員</th><th>營業總額</th><th>退貨金額</th><th>原發票日期</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminDailyBody"></tbody></table></div><div id="salesAdminDailyMobile" class="sales-admin-daily-mobile"></div></div>
-        <div id="salesReportProxyView" class="sales-report-view"><div class="sales-proxy-toolbar"><div><b>代銷售明細</b><span>代銷售只調整業績歸屬，不會自動增加對方的日薪天數。</span></div><div class="sales-proxy-toolbar-actions"><strong id="salesProxySummary">共 0 筆</strong><button id="salesAdminCreateProxyBtn" type="button" class="secondary sales-admin-create-proxy" onclick="openSalesAdminProxyCreate()">＋ 新增代銷售</button></div></div><div class="sales-table-wrap sales-proxy-table-wrap"><table class="sales-table sales-proxy-table"><thead><tr><th>業績日期</th><th>區域／門市</th><th>回傳人員</th><th>業績歸屬</th><th>日薪狀態</th><th>營業總額</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminProxyBody"></tbody></table></div><div id="salesAdminProxyMobile" class="sales-admin-proxy-mobile"></div></div>
+        <div id="salesReportProxyView" class="sales-report-view"><div class="sales-proxy-toolbar"><div><b>代銷售／隔夜帳明細</b><span>隔夜帳依入帳日計入門市，業績歸指定人員；不計入當日其他人員業績，也不增加日薪。</span></div><div class="sales-proxy-toolbar-actions"><strong id="salesProxySummary">共 0 筆</strong><button id="salesAdminCreateProxyBtn" type="button" class="secondary sales-admin-create-proxy" onclick="openSalesAdminProxyCreate()">＋ 新增代銷售</button><button id="salesAdminCreateOvernightBtn88" type="button" class="secondary" onclick="openSalesAdminOvernightCreate()">＋ 新增隔夜帳</button></div></div><div class="sales-table-wrap sales-proxy-table-wrap"><table class="sales-table sales-proxy-table"><thead><tr><th>業績／入帳日</th><th>區域／門市</th><th>回傳人員</th><th>業績歸屬</th><th>日薪狀態</th><th>營業總額</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminProxyBody"></tbody></table></div><div id="salesAdminProxyMobile" class="sales-admin-proxy-mobile"></div></div>
         <div id="salesReportStoreView" class="sales-report-view"><div id="salesAdminStoreStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonView" class="sales-report-view"><div id="salesAdminPersonStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b id="salesComparisonHeading">業績對比</b><span id="salesComparisonDescription">可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesComparisonCurrent()">友善列印</button><button type="button" class="primary" onclick="exportSalesComparisonCurrentExcel()">匯出 Excel</button></div></div><div class="sales-comparison-switcher" role="tablist" aria-label="業績對比檢視"><button type="button" class="active" data-sales-comparison-view="detail" onclick="showSalesComparisonView('detail',this)">業績對比</button><button type="button" data-sales-comparison-view="average" onclick="showSalesComparisonView('average',this)">平均業績</button></div><div id="salesComparisonDetailPanel"><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div><div id="salesComparisonAveragePanel" hidden><div class="sales-average-inline-note">平均業績＝個人營業總額 ÷ 已確認上班日期；同一天只算 1 天，計日薪與時薪日期都納入，代銷售不增加上班天數。</div><div id="salesAveragePerformanceTable" class="sales-average-table-wrap"></div></div></div>
@@ -4922,28 +4961,28 @@ const CURRENT_USER_KEY="starred_current_user_v2";
 const STARRED_REQUIRED_ADMIN_API_BUILD="20260908-leave-settlement-contract-v76";
 const DELETED_STORES_KEY="starred_deleted_builtin_stores_v1";
 const ORDER_KEY="starred_store_orders_unified_v2";
-let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+let events=window.StarredStorage89.json("local",STORAGE_KEY,[]);
 let editingId=null;
 let selectedManageEventIds=new Set();
 let currentPhotos=[];
 let selectedStoreIds=new Set();
-let stores=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");
+let stores=window.StarredStorage89.json("local",STORE_KEY,[]);
 let editingStoreId=null;
-let accounts=JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||"[]");
-let lineUsers=JSON.parse(localStorage.getItem(LINE_USERS_KEY)||"[]");
+let accounts=window.StarredStorage89.json("local",ACCOUNTS_KEY,[]);
+let lineUsers=window.StarredStorage89.json("local",LINE_USERS_KEY,[]);
 let currentUser=(()=>{try{
- const expiry=Number(localStorage.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0);
+ const expiry=Number(window.StarredStorage89.local.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0);
  if(expiry>Date.now()){
-  const saved=JSON.parse(localStorage.getItem(CURRENT_USER_KEY)||sessionStorage.getItem(CURRENT_USER_KEY)||"null");
+  const saved=JSON.parse(window.StarredStorage89.local.getItem(CURRENT_USER_KEY)||window.StarredStorage89.session.getItem(CURRENT_USER_KEY)||"null");
   if(saved?.adminSessionToken)return saved;
  }
- localStorage.removeItem(CURRENT_USER_KEY);localStorage.removeItem(ADMIN_LOGIN_EXPIRY_KEY);sessionStorage.removeItem(CURRENT_USER_KEY);sessionStorage.removeItem(LOGIN_KEY);
+ window.StarredStorage89.local.removeItem(CURRENT_USER_KEY);window.StarredStorage89.local.removeItem(ADMIN_LOGIN_EXPIRY_KEY);window.StarredStorage89.session.removeItem(CURRENT_USER_KEY);window.StarredStorage89.session.removeItem(LOGIN_KEY);
  return null;
 }catch(e){return null}})();
 let editingAccountId=null;
 let storeFilter="all";
-let deletedStoreKeys=new Set(JSON.parse(localStorage.getItem(DELETED_STORES_KEY)||"[]"));
-let orders=JSON.parse(localStorage.getItem(ORDER_KEY)||"[]");let orderPhotoData=[];let selectedOrderIds=new Set();let orderPageCurrent=1;const ORDER_PAGE_SIZE=5;
+let deletedStoreKeys=new Set(window.StarredStorage89.json("local",DELETED_STORES_KEY,[]));
+let orders=window.StarredStorage89.json("local",ORDER_KEY,[]);let orderPhotoData=[];let selectedOrderIds=new Set();let orderPageCurrent=1;const ORDER_PAGE_SIZE=5;
 const areaText={north:"北部",central:"中部",south:"南部",east:"東部／離島"};
 const statusText={active:"活動中",upcoming:"即將開始",ended:"已結束"};
 
@@ -5016,26 +5055,26 @@ if(!accounts.length){
  persistAccounts();
 }
 function $(id){return document.getElementById(id)}
-function persist(){localStorage.setItem(STORAGE_KEY,JSON.stringify(events))}
-function persistStores(){localStorage.setItem(STORE_KEY,JSON.stringify(stores))}
-function persistAccounts(){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(accounts));if(typeof renderOrderHandlerOptions==="function")renderOrderHandlerOptions()}
-function persistLineUsers(){localStorage.setItem(LINE_USERS_KEY,JSON.stringify(lineUsers))}
-function persistOrders(){try{localStorage.setItem(ORDER_KEY,JSON.stringify(orders));return true}catch(e){alert("訂單文字儲存失敗，請重新整理後再試");return false}}
+function persist(){window.StarredStorage89.local.setItem(STORAGE_KEY,JSON.stringify(events))}
+function persistStores(){window.StarredStorage89.local.setItem(STORE_KEY,JSON.stringify(stores))}
+function persistAccounts(){window.StarredStorage89.local.setItem(ACCOUNTS_KEY,JSON.stringify(accounts));if(typeof renderOrderHandlerOptions==="function")renderOrderHandlerOptions()}
+function persistLineUsers(){window.StarredStorage89.local.setItem(LINE_USERS_KEY,JSON.stringify(lineUsers))}
+function persistOrders(){window.StarredStorage89.local.setCloudSnapshot(ORDER_KEY,JSON.stringify(orders));return true}
 function todayStr(){return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})}
 function taipeiEndOfDayTimestamp(){
  const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
  const get=t=>Number(parts.find(x=>x.type===t)?.value||0);
  return Date.UTC(get("year"),get("month")-1,get("day"),15,59,59,999);
 }
-function isAdminLoginValid(){return !!(currentUser&&Number(localStorage.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0)>Date.now())}
-function clearDailyOrderStore(){localStorage.removeItem(ORDER_DAILY_STORE_KEY)}
+function isAdminLoginValid(){return !!(currentUser&&Number(window.StarredStorage89.local.getItem(ADMIN_LOGIN_EXPIRY_KEY)||0)>Date.now())}
+function clearDailyOrderStore(){window.StarredStorage89.local.removeItem(ORDER_DAILY_STORE_KEY)}
 function saveDailyOrderStore(area,storeId){
  if(!area||!storeId)return;
- localStorage.setItem(ORDER_DAILY_STORE_KEY,JSON.stringify({date:todayStr(),area:String(area),storeId:String(storeId)}));
+ window.StarredStorage89.local.setItem(ORDER_DAILY_STORE_KEY,JSON.stringify({date:todayStr(),area:String(area),storeId:String(storeId)}));
 }
 function getDailyOrderStore(){
  try{
-  const x=JSON.parse(localStorage.getItem(ORDER_DAILY_STORE_KEY)||"null");
+  const x=JSON.parse(window.StarredStorage89.local.getItem(ORDER_DAILY_STORE_KEY)||"null");
   if(!x||x.date!==todayStr()){clearDailyOrderStore();return null}
   return x;
  }catch(e){clearDailyOrderStore();return null}
@@ -5079,7 +5118,7 @@ function showPage(page){if(!enforceLineUserAccess())return;if(page==="dashboard"
 setTimeout(()=>{const x=$("accountEnabled");if(x){x.addEventListener("change",updateEnabledLabel);updateEnabledLabel()}},0);
 }
 function escapeLineHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]))}
-function getCurrentLineUser(){try{return JSON.parse(localStorage.getItem(CURRENT_LINE_USER_KEY)||sessionStorage.getItem(CURRENT_LINE_USER_KEY)||"null")}catch(e){return null}}
+function getCurrentLineUser(){try{return JSON.parse(window.StarredStorage89.local.getItem(CURRENT_LINE_USER_KEY)||window.StarredStorage89.session.getItem(CURRENT_LINE_USER_KEY)||"null")}catch(e){return null}}
 function syncCurrentLineUser(profile){if(!profile||!profile.id)return null;const id=String(profile.id),now=new Date().toISOString();let user=lineUsers.find(x=>String(x.id)===id);if(!user){user={id,name:profile.name||profile.displayName||"LINE 使用者",displayName:profile.displayName||profile.name||"LINE 使用者",employeeName:"",pictureUrl:profile.pictureUrl||"",enabled:true,createdAt:now,lastLogin:now};lineUsers.unshift(user)}else{user.displayName=profile.displayName||profile.name||user.displayName||user.name||"LINE 使用者";user.name=user.employeeName||user.displayName;user.pictureUrl=profile.pictureUrl||user.pictureUrl||"";user.lastLogin=now}persistLineUsers();return user}
 function isCurrentLineUserEnabled(){const profile=getCurrentLineUser();if(!profile||!profile.id)return true;const user=lineUsers.find(x=>String(x.id)===String(profile.id));return !user||user.enabled!==false}
 function enforceLineUserAccess(){const block=$("lineAccessBlock");if(!block)return true;const enabled=isCurrentLineUserEnabled();block.classList.toggle("show",!enabled);document.body.style.overflow=enabled?"":"hidden";return enabled}
@@ -5110,7 +5149,7 @@ async function saveLineUserEmployeeName(button){
   if(!window.STARRED_SALES_TEST_MODE)await starredApi("update_line_user_employee_name",{lineUserId:id,employeeName});
   user.employeeName=employeeName;user.name=employeeName;persistLineUsers();renderLineUsers();
   const currentLineId=String(getCurrentLineUser()?.id||window.starredVerifiedLineUser?.lineUserId||"");
-  if(currentLineId===id){const profile=getCurrentLineUser()||{};profile.name=employeeName;localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(profile));sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(profile));if(window.starredVerifiedLineUser)window.starredVerifiedLineUser.employeeName=employeeName}
+  if(currentLineId===id){const profile=getCurrentLineUser()||{};profile.name=employeeName;window.StarredStorage89.local.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(profile));window.StarredStorage89.session.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(profile));if(window.starredVerifiedLineUser)window.starredVerifiedLineUser.employeeName=employeeName}
   if(!window.STARRED_SALES_TEST_MODE)await loadStarredCloudData();
   if(typeof window.loadSalesData==="function")await window.loadSalesData();
   if(typeof window.loadSalesAdminReport==="function"&&$("salesReportTab")?.classList.contains("active"))await window.loadSalesAdminReport();
@@ -5297,10 +5336,10 @@ async function login(){
    role:String(admin.role||"manager"),
    adminSessionToken:String(result.adminSessionToken)
   };
-  sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
-  sessionStorage.setItem(LOGIN_KEY,"1");
-  localStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
-  localStorage.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(Number(result.expiresAt)||taipeiEndOfDayTimestamp()));
+  window.StarredStorage89.session.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  window.StarredStorage89.session.setItem(LOGIN_KEY,"1");
+  window.StarredStorage89.local.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  window.StarredStorage89.local.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(Number(result.expiresAt)||taipeiEndOfDayTimestamp()));
   await loadCloudAccounts();
   checkLogin();
   showAdminTab("dashboard");
@@ -5311,10 +5350,10 @@ async function login(){
  }
 }
 function logout(){
- sessionStorage.removeItem(LOGIN_KEY);
- sessionStorage.removeItem(CURRENT_USER_KEY);
- localStorage.removeItem(CURRENT_USER_KEY);
- localStorage.removeItem(ADMIN_LOGIN_EXPIRY_KEY);
+ window.StarredStorage89.session.removeItem(LOGIN_KEY);
+ window.StarredStorage89.session.removeItem(CURRENT_USER_KEY);
+ window.StarredStorage89.local.removeItem(CURRENT_USER_KEY);
+ window.StarredStorage89.local.removeItem(ADMIN_LOGIN_EXPIRY_KEY);
  currentUser=null;
  showAdminTab("dashboard");
  checkLogin();
@@ -6093,7 +6132,7 @@ function renderManage(){
  }).join(""):`<div class="empty">目前沒有符合篩選條件的活動</div>`;
  updateManageBulkState();
 }
-function renderAll(){renderHome();if(sessionStorage.getItem(LOGIN_KEY)==="1"&&currentUser){updateManageStoreFilter();renderManage();checkLogin()}}
+function renderAll(){renderHome();if(window.StarredStorage89.session.getItem(LOGIN_KEY)==="1"&&currentUser){updateManageStoreFilter();renderManage();checkLogin()}}
 function clearFilters(){
  $("keyword").value="";
  $("areaFilter").value="";
@@ -6260,7 +6299,7 @@ window.addEventListener("drop",function(e){
 
 
 document.addEventListener("DOMContentLoaded",()=>{const profile=getCurrentLineUser();if(profile&&profile.id)syncCurrentLineUser(profile);renderLineUsers();enforceLineUserAccess()});
-window.registerLineLoginUser=function(profile){const user=syncCurrentLineUser(profile);if(profile&&profile.id)localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify({id:String(profile.id),name:profile.name||profile.displayName||user?.name||"LINE 使用者",pictureUrl:profile.pictureUrl||""}));enforceLineUserAccess();renderLineUsers();return user};
+window.registerLineLoginUser=function(profile){const user=syncCurrentLineUser(profile);if(profile&&profile.id)window.StarredStorage89.local.setItem(CURRENT_LINE_USER_KEY,JSON.stringify({id:String(profile.id),name:profile.name||profile.displayName||user?.name||"LINE 使用者",pictureUrl:profile.pictureUrl||""}));enforceLineUserAccess();renderLineUsers();return user};
 </script>
 
 <div id="globalDropOverlay" class="global-drop-overlay">
@@ -6655,7 +6694,7 @@ async function requestOrderCameraAccess(){
    orderCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
   }
   video.srcObject=orderCameraStream;await video.play();
-  localStorage.setItem(ORDER_CAMERA_PERMISSION_KEY,'1');
+  window.StarredStorage89.local.setItem(ORDER_CAMERA_PERMISSION_KEY,'1');
   status.textContent='';capture.dataset.mode='capture';capture.textContent='拍下照片';capture.disabled=false;fallback.dataset.mode='cancel';fallback.textContent='取消';
  }catch(error){
   console.error('Android camera failed:',error);stopOrderCameraStream();
@@ -6757,83 +6796,135 @@ function removeOrderEditPhoto(index){
  ['editOrderCameraPhoto','editOrderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});
  renderOrderEditPhotoPreview();updateOrderEditDirtyState();
 }
-function showOrderAction(t,x){
+function showOrderAction(t,x,tone){
  const title=$("orderActionTitle"),text=$("orderActionText"),modal=$("orderActionModal");
- if(title&&text&&modal){title.textContent=t;text.textContent=x;modal.classList.add('show');return}
+ if(title&&text&&modal){title.textContent=t;text.textContent=x;const icon=modal.querySelector(".success-icon");if(icon){icon.textContent=tone==="pending"||tone==="error"?"!":"✓";icon.style.background=tone==="pending"||tone==="error"?"#fff1df":"";icon.style.color=tone==="pending"||tone==="error"?"#8a592b":""}modal.classList.add('show');return}
  alert(`${t}\n\n${x}`);
 }
 function closeOrderActionModal(){const modal=$("orderActionModal");if(modal)modal.classList.remove('show')}
 function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function resetOrderForm(){['orderName','orderPhone','orderAddressDetail','orderItems'].forEach(id=>$(id).value='');$("orderCounty").value='';$("orderDistrict").innerHTML='<option value="">請先選縣市</option>';$("orderDelivery").value='總公司寄出';$("orderPickupArea").value='';$("orderPickupStore").innerHTML='<option value="">請先選擇區域</option>';toggleOrderDeliveryFields();['orderCameraPhoto','orderGalleryPhoto'].forEach(id=>{const input=$(id);if(input)input.value=''});orderPhotoData=[];renderOrderPhotoPreview();applyDailyOrderStore()}
-async function submitOrder(event){
- if(event?.preventDefault)event.preventDefault();
- const submitButton=$("orderSubmitButton")||event?.currentTarget;
- const originalText=submitButton?.textContent||"確認傳送";
- try{
-  if(submitButton){submitButton.disabled=true;submitButton.textContent="傳送中…";submitButton.setAttribute("aria-busy","true")}
-
-  const requiredIds=["orderArea","orderStore","orderName","orderPhone","orderItems","orderDelivery"];
-  const missingElement=requiredIds.find(id=>!$(id));
-  if(missingElement)throw new Error(`頁面欄位載入不完整（${missingElement}），請按 Ctrl+F5 重新整理後再試。`);
-
-  const miss=[];
-  [["orderArea","區域"],["orderStore","門市"],["orderName","姓名"],["orderPhone","電話"],["orderItems","商品"]]
-    .forEach(([id,name])=>{if(!String($(id)?.value||"").trim())miss.push(name)});
-
-  const delivery=$("orderDelivery").value;
-  const pickup=delivery==="門市自取";
-  if(pickup){
-   if(!$("orderPickupArea")?.value)miss.push("取件區域");
-   if(!$("orderPickupStore")?.value)miss.push("取件門市");
-  }else{
-   [["orderCounty","縣市"],["orderDistrict","行政區"],["orderAddressDetail","詳細地址"]]
-    .forEach(([id,name])=>{if(!String($(id)?.value||"").trim())miss.push(name)});
-  }
-  if(!orderPhotoData.length)miss.push("照片");
-  if(miss.length){showOrderAction("資料未完成","請補寫："+miss.join("、"));return}
-
-  if(typeof starredApi!=="function")throw new Error("雲端連線程式尚未載入，請按 Ctrl+F5 強制重新整理。");
-  if(!window.liff||!liff.isLoggedIn())throw new Error("LINE 登入狀態已失效，請關閉頁面後由 LIFF 連結重新進入。");
-
-  const st=stores.find(x=>String(x.id)===String($("orderStore").value));
-  if(!st){showOrderAction("門市資料錯誤","找不到選擇的門市，請重新選擇區域與門市。");return}
-  const pickupSt=pickup?stores.find(x=>String(x.id)===String($("orderPickupStore").value)):null;
-  if(pickup&&!pickupSt){showOrderAction("取件門市錯誤","找不到選擇的取件門市，請重新選擇。");return}
-
-  const address=pickup?`取件門市：${pickupSt.name}`:$("orderCounty").value+$("orderDistrict").value+$("orderAddressDetail").value.trim();
-  const lineProfile=getCurrentLineUser()||{};
-  const returnPerson=String(lineProfile.name||lineProfile.displayName||"（尚未取得 LINE 姓名）");
-  const payload={
-   order:{
-    storeId:String(st.id),storeName:String(st.name||""),returnPerson,orderDate:todayStr(),
-    customerName:$("orderName").value.trim(),customerPhone:$("orderPhone").value.trim(),
-    customerAddress:address,productContent:$("orderItems").value.trim(),
-    deliveryMethod:pickup?"store_pickup":"company_shipping",
-    pickupStoreId:pickup?String(pickupSt.id):null,
-    pickupStoreName:pickup?String(pickupSt.name||""):null
-   },
-   photoData:orderPhotoData[0],
-   photoDataList:orderPhotoData
-  };
-
-  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("傳送逾時，請確認網路後再試一次。")),90000));
-  const result=await Promise.race([starredApi("create_order",payload),timeout]);
-
-  // 只有訂單成功送到雲端後，才記住當天使用的區域與門市。
-  saveDailyOrderStore($("orderArea").value,$("orderStore").value);
-  try{await loadStarredCloudData()}catch(refreshError){console.warn("訂單已建立，但重新整理清單失敗：",refreshError)}
-  resetOrderForm();
-  const keyword=$("orderKeyword"),status=$("orderStatusFilter"),from=$("orderDateFrom"),to=$("orderDateTo");
-  if(keyword)keyword.value="";if(status)status.value="";if(from)from.value="";if(to)to.value="";
-  renderOrderCards();renderOrderAdmin();
-  showOrderAction("完成","客訂資料已成功傳送到雲端。");
- }catch(error){
-  console.error("submitOrder failed:",error);
-  showOrderAction("雲端傳送失敗",error?.message||String(error)||"請稍後再試");
- }finally{
-  if(submitButton){submitButton.disabled=false;submitButton.textContent=originalText;submitButton.removeAttribute("aria-busy")}
+/* v89: one order intent survives retries. No auto-resend on timers, focus, reconnect or reload. */
+var orderSubmitBusy89=false;
+var orderIntent89=null;
+var orderIntentKey89='starred_order_intent_v89';
+function orderUploadStatus89(text,bad){
+ var box=document.getElementById('orderSubmitStatus89');
+ if(!box){box=document.createElement('div');box.id='orderSubmitStatus89';box.setAttribute('role','status');box.setAttribute('aria-live','polite');var row=document.querySelector('#orderPage .order-submit-row');if(row)row.before(box)}
+ if(box){box.textContent=text||'';box.style.cssText='white-space:pre-line;line-height:1.6;font-size:15px;margin:10px 0;padding:12px;border-radius:10px;background:'+(bad?'#fff2e9':'#edf7f1')+';color:'+(bad?'#864923':'#2d674c');box.hidden=!text}
+}
+function saveOrderIntent89(intent){orderIntent89=intent;window.StarredStorage89.session.setItem(orderIntentKey89,JSON.stringify(intent))}
+function readOrderIntent89(){
+ if(orderIntent89)return orderIntent89;
+ var saved=window.StarredStorage89.json('session',orderIntentKey89,null);
+ if(saved&&/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(saved.id||'')&&/^[a-f0-9]{64}$/.test(saved.fingerprint||''))orderIntent89=saved;
+ return orderIntent89;
+}
+async function orderDigest89(text){
+ if(!window.crypto||!crypto.subtle)throw new Error('請從正式 HTTPS 網址重新開啟，才能安全確認訂單。');
+ var buffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+ return Array.from(new Uint8Array(buffer),function(x){return x.toString(16).padStart(2,'0')}).join('');
+}
+function orderDeadline89(promise,ms){var timer;return Promise.race([promise,new Promise(function(_,reject){timer=setTimeout(function(){var e=new Error('尚未取得雲端確認，可能已送達。請勿重新建立同一張；按「查詢送出結果」先核對。');e.unknownOrder89=true;reject(e)},ms)})]).finally(function(){clearTimeout(timer)})}
+function orderReceipt89(result){
+ if(!result||result.success!==true||result.orderSubmissionBuild!=='20261006-order-submit-safety-v89'||!result.order||!result.order.id)throw new Error('伺服器未回傳完整的訂單確認，請查詢送出結果，勿重複建立。');
+ return String(result.order.order_number||result.order.id);
+}
+function orderResultButtons89(intent){
+ var box=document.getElementById('orderSubmitTools89');if(!box){box=document.createElement('div');box.id='orderSubmitTools89';box.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:10px 0';var status=document.getElementById('orderSubmitStatus89');if(status)status.after(box)}
+ if(!box)return;box.innerHTML='';
+ if(intent&&intent.status==='unknown'){
+  var b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='查詢送出結果';b.onclick=checkOrderSubmission89;box.appendChild(b);
+ }
+ if(intent&&intent.status==='confirmed'&&intent.reused){
+  var repeat=document.createElement('button');repeat.type='button';repeat.className='secondary';repeat.textContent='確定是另一筆相同訂單';repeat.onclick=function(){
+   if(orderSubmitBusy89)return;
+   if(!window.confirm('已有相同內容的訂單 '+String(intent.receipt||'')+'。\n\n只有確定客人另外又下了一筆完全相同的新訂單，才按確定。此操作會建立第二筆訂單。'))return;
+   intent.newConfirmed=true;saveOrderIntent89(intent);submitOrder();
+  };box.appendChild(repeat);
  }
 }
+async function orderUploadCapabilities89(){
+ var result=await orderDeadline89(starredApi('order_submit_capabilities',{}),20000);
+ if(!result||result.orderSubmissionBuild!=='20261006-order-submit-safety-v89'||result.ready!==true)throw new Error('訂單防重複尚未更新完成，請先執行本次 SQL 並部署 line-api；目前未送出訂單。');
+}
+async function finishOrderReceipt89(result,intent,resetForm){
+ var receipt=orderReceipt89(result);
+ intent.status='confirmed';intent.receipt=receipt;intent.orderId=String(result.order.id);intent.reused=result.reused===true;intent.newConfirmed=false;saveOrderIntent89(intent);
+ // Acknowledgement is recorded BEFORE any rendering, cache writes or cloud refresh.
+ var message=(intent.reused?'這張訂單已經送出，沒有重複建立。':'客訂資料已成功傳送到雲端。')+'\n訂單編號：'+receipt;
+ orderUploadStatus89(message,false);orderResultButtons89(intent);
+ if(resetForm){try{saveDailyOrderStore($('orderArea').value,$('orderStore').value);if(!intent.reused)resetOrderForm()}catch(_){window.StarredStorage89.warn()}}
+ try{showOrderAction(intent.reused?'已送出，未重複新增':'傳送完成',message,'success')}catch(_){/* Receipt remains visible inline. */}
+ // Refresh is read-only and independent. It MUST NOT turn a committed order into "failed".
+ try{
+  await orderDeadline89(loadStarredCloudData({silent:true}),30000);
+  if(resetForm&&!intent.reused){['orderKeyword','orderStatusFilter','orderDateFrom','orderDateTo'].forEach(function(id){if($(id))$(id).value=''});renderOrderCards();renderOrderAdmin()}
+ }catch(_){orderUploadStatus89(message+'\n清單尚未更新，請稍後重新整理；不需要再傳一次。',false)}
+}
+async function checkOrderSubmission89(){
+ if(orderSubmitBusy89)return;var intent=readOrderIntent89();if(!intent)return;
+ var user=getCurrentLineUser()||{};if(String(user.id||'')!==intent.actor){orderUploadStatus89('請使用原送出人員的 LINE 帳號查詢。',true);return}
+ orderSubmitBusy89=true;orderUploadStatus89('正在查詢原送出識別碼；此操作不會新增訂單。');
+ try{var result=await orderDeadline89(starredApi('order_submission_status',{submissionId:intent.id,clientFingerprint:intent.fingerprint}),20000);
+  if(result.order)await finishOrderReceipt89(result,intent,false);
+  else {orderUploadStatus89('尚未找到已完成訂單。原請求仍可能處理中；確認網路後，可按「確認傳送」使用同一識別碼重試，系統不會自動重送。',true);orderResultButtons89(intent)}
+ }catch(e){orderUploadStatus89('尚未確認送出結果：'+String(e&&e.message||e)+'\n請保留畫面與送出識別碼：'+intent.id,true)}
+ finally{orderSubmitBusy89=false}
+}
+async function submitOrder(event){
+ if(event&&event.preventDefault)event.preventDefault();
+ if(orderSubmitBusy89)return;
+ orderSubmitBusy89=true;
+ var submitButton=$('orderSubmitButton'),controls=Array.from(document.querySelectorAll('#orderPage .order-entry-panel input,#orderPage .order-entry-panel select,#orderPage .order-entry-panel textarea,#orderPage .order-entry-panel button'));
+ var disabledBefore=controls.map(function(x){return x.disabled}),originalText=submitButton&&submitButton.textContent||'確認傳送',intent=null,dispatched=false,wasUncertain=false;
+ controls.forEach(function(x){x.disabled=true});if(submitButton){submitButton.textContent='檢查並傳送中…';submitButton.setAttribute('aria-busy','true')}
+ try{
+  var required=['orderArea','orderStore','orderName','orderPhone','orderItems','orderDelivery'],missing=required.find(function(id){return !$(id)});if(missing)throw new Error('頁面欄位尚未載入完成，請重新整理。');
+  var miss=[];[['orderArea','區域'],['orderStore','門市'],['orderName','姓名'],['orderPhone','電話'],['orderItems','商品']].forEach(function(pair){if(!String($(pair[0]).value||'').trim())miss.push(pair[1])});
+  var pickup=$('orderDelivery').value==='門市自取';
+  (pickup?[['orderPickupArea','取件區域'],['orderPickupStore','取件門市']]:[['orderCounty','縣市'],['orderDistrict','行政區'],['orderAddressDetail','詳細地址']]).forEach(function(pair){if(!$(pair[0])||!String($(pair[0]).value||'').trim())miss.push(pair[1])});
+  if(!orderPhotoData.length)miss.push('照片');if(miss.length)throw new Error('請補寫：'+miss.join('、'));
+  if(!window.liff||!liff.isLoggedIn())throw new Error('LINE 登入尚未完成，請先重新登入。');
+  var profile=getCurrentLineUser()||{},actor=String(profile.id||'');if(!actor)throw new Error('尚未取得 LINE 身分，請重新登入。');
+  var st=stores.find(function(s){return String(s.id)===String($('orderStore').value)}),pickupSt=pickup?stores.find(function(s){return String(s.id)===String($('orderPickupStore').value)}):null;
+  if(!st||(pickup&&!pickupSt))throw new Error('找不到選擇的門市，請重新選擇區域及門市。');
+  var payload={order:{storeId:String(st.id),storeName:String(st.name||''),storeFloor:String(st.floor||''),storeArea:String(st.area||''),returnPerson:String(profile.name||profile.displayName||''),orderDate:todayStr(),customerName:$('orderName').value.trim(),customerPhone:$('orderPhone').value.trim(),customerAddress:pickup?'取件門市：'+pickupSt.name:$('orderCounty').value+$('orderDistrict').value+$('orderAddressDetail').value.trim(),productContent:$('orderItems').value.trim(),deliveryMethod:pickup?'store_pickup':'company_shipping',pickupStoreId:pickup?String(pickupSt.id):null,pickupStoreName:pickup?String(pickupSt.name||''):null,pickupStoreFloor:pickup?String(pickupSt.floor||''):null},photoDataList:orderPhotoData.slice()};
+  var previous=readOrderIntent89();
+  // Retries that cross midnight retain the original submission date.
+  if(previous&&previous.actor===actor&&previous.status==='unknown'&&previous.orderDate)payload.order.orderDate=previous.orderDate;
+  var fingerprint=await orderDigest89(JSON.stringify({actor:actor,order:payload.order,photos:payload.photoDataList}));
+  if(previous&&previous.actor===actor&&previous.status==='unknown'&&previous.fingerprint!==fingerprint){orderResultButtons89(previous);throw new Error('上一筆尚未取得雲端結果。請先按「查詢送出結果」核對，再修改內容或建立另一筆。\n原送出識別碼：'+previous.id)}
+  var intentional=!!(previous&&previous.actor===actor&&previous.fingerprint===fingerprint&&previous.status==='confirmed'&&previous.newConfirmed);
+  if(previous&&previous.actor===actor&&previous.fingerprint===fingerprint&&!intentional){
+   wasUncertain=previous.status==='unknown';
+   intent=previous;
+   if(intent.status==='confirmed'){intent.reused=true;saveOrderIntent89(intent);orderUploadStatus89('這張訂單已送出，沒有重複建立。\n訂單編號：'+String(intent.receipt||intent.orderId));orderResultButtons89(intent);showOrderAction('已送出，未重複新增','訂單編號：'+String(intent.receipt||intent.orderId));return}
+  }else intent={id:crypto.randomUUID(),actor:actor,fingerprint:fingerprint,status:'prepared',orderDate:payload.order.orderDate,createdAt:new Date().toISOString(),allowIdentical:intentional};
+  saveOrderIntent89(intent);
+  orderUploadStatus89('正在檢查雲端防重複功能…');await orderUploadCapabilities89();
+  payload.submissionId=intent.id;payload.clientFingerprint=intent.fingerprint;payload.allowIdentical=intent.allowIdentical===true;
+  intent.status='unknown';saveOrderIntent89(intent);dispatched=true;orderUploadStatus89('正在傳送訂單與照片…請勿關閉頁面。');
+  var result=await orderDeadline89(starredApi('create_order',payload),90000);
+  await finishOrderReceipt89(result,intent,true);
+ }catch(e){
+  // Never describe an acknowledged order as a failed upload, including UI exceptions.
+  if(intent&&intent.status==='confirmed')orderUploadStatus89('訂單已送出。訂單編號：'+String(intent.receipt||intent.orderId)+'\n畫面尚未完整更新，請勿再傳一次。',false);
+  else {
+   var message=String(e&&e.message||e);
+   if(intent&&e&&e.writeNotStarted&&!wasUncertain){intent.status='prepared';saveOrderIntent89(intent);dispatched=false}
+   if(dispatched&&intent){intent.status='unknown';saveOrderIntent89(intent);message='尚未確認是否送出完成：'+message+'\n請保留畫面，按「查詢送出結果」；不要重新開一張相同訂單。\n送出識別碼：'+intent.id}
+   orderUploadStatus89(message,true);orderResultButtons89(intent||readOrderIntent89());showOrderAction(dispatched?'請核對送出結果':'尚未送出',message,dispatched?'pending':'error');
+  }
+ }finally{controls.forEach(function(x,i){x.disabled=disabledBefore[i]});if(submitButton){submitButton.disabled=false;submitButton.textContent=originalText;submitButton.removeAttribute('aria-busy')}orderSubmitBusy89=false}
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+ var intent=readOrderIntent89();if(intent&&intent.status==='unknown'){
+  orderUploadStatus89('上一筆尚未取得雲端確認，請先登入原帳號並按「查詢送出結果」。系統不會自動重送。\n送出識別碼：'+intent.id,true);orderResultButtons89(intent);
+ }
+});
+
 function orderDateValue(o){
  if(o?.createdDate)return String(o.createdDate).slice(0,10);
  const raw=String(o?.createdAt||'').trim();
@@ -8097,7 +8188,7 @@ window.deleteStore=async function(id){
 
     const key=storeKey(s);
     deletedStoreKeys.add(key);
-    localStorage.setItem(DELETED_STORES_KEY,JSON.stringify([...deletedStoreKeys]));
+    window.StarredStorage89.local.setItem(DELETED_STORES_KEY,JSON.stringify([...deletedStoreKeys]));
 
     const status=document.getElementById("storeDeleteStatus");
     if(status){
@@ -8339,10 +8430,10 @@ function getStarredLiffSalesUrl(){
   return `${STARRED_LIFF_BASE_URL}/?page=sales`;
 }
 function hasStarredLiffEntrySession(){
-  try{return sessionStorage.getItem(STARRED_LIFF_ENTRY_SESSION_KEY)==="1"}catch(_){return false}
+  try{return window.StarredStorage89.session.getItem(STARRED_LIFF_ENTRY_SESSION_KEY)==="1"}catch(_){return false}
 }
 function markStarredLiffEntrySession(){
-  try{sessionStorage.setItem(STARRED_LIFF_ENTRY_SESSION_KEY,"1")}catch(_){}
+  try{window.StarredStorage89.session.setItem(STARRED_LIFF_ENTRY_SESSION_KEY,"1")}catch(_){}
 }
 function redirectDirectLineSalesToLiff(){
   const params=getStarredSearchParams();
@@ -8406,8 +8497,8 @@ function getStarredLineErrorText(error){
 }
 function forceLineRelogin(){
   if(!window.liff)return false;
-  if(sessionStorage.getItem(STARRED_LINE_RELOGIN_KEY)==="1")return true;
-  sessionStorage.setItem(STARRED_LINE_RELOGIN_KEY,"1");
+  if(window.StarredStorage89.session.getItem(STARRED_LINE_RELOGIN_KEY)==="1")return true;
+  window.StarredStorage89.session.setItem(STARRED_LINE_RELOGIN_KEY,"1");
   try{if(liff.isLoggedIn())liff.logout()}catch(_){}
 
   /* 先回到乾淨頁面，再交給 liff.init 的官方外部瀏覽器登入流程。 */
@@ -8450,7 +8541,7 @@ async function starredApi(action,payload={}){
       expiredError.relogin=true;
       throw expiredError;
     }
-    const e=new Error(message);e.blocked=!!result.blocked;throw e;
+    const e=new Error(message);e.blocked=!!result.blocked;e.errorCode=result.errorCode||"";e.outcomeUnknown=result.outcomeUnknown===true;e.writeNotStarted=result.writeNotStarted===true;e.httpStatus=response.status;throw e;
   }
   return result;
 }
@@ -8463,18 +8554,18 @@ const STARRED_RETURN_RECEIVED_MARKER="__STARRED_RETURN_RECEIVED__::";
 const STARRED_RETURNED_ORDER_IDS_KEY="starred_returned_order_ids_v1";
 const STARRED_RETURN_RECEIVED_IDS_KEY="starred_return_received_order_ids_v1";
 function getLocalReturnReceivedOrderIds(){
- try{return new Set((JSON.parse(localStorage.getItem(STARRED_RETURN_RECEIVED_IDS_KEY)||"[]")||[]).map(String))}catch(_){return new Set()}
+ try{return new Set((JSON.parse(window.StarredStorage89.local.getItem(STARRED_RETURN_RECEIVED_IDS_KEY)||"[]")||[]).map(String))}catch(_){return new Set()}
 }
 function saveLocalReturnReceivedOrderIds(set){
- try{localStorage.setItem(STARRED_RETURN_RECEIVED_IDS_KEY,JSON.stringify([...set].map(String)))}catch(_){}
+ try{window.StarredStorage89.local.setItem(STARRED_RETURN_RECEIVED_IDS_KEY,JSON.stringify([...set].map(String)))}catch(_){}
 }
 function addLocalReturnReceivedOrderIds(ids){const set=getLocalReturnReceivedOrderIds();(ids||[]).forEach(id=>set.add(String(id)));saveLocalReturnReceivedOrderIds(set)}
 function removeLocalReturnReceivedOrderIds(ids){const set=getLocalReturnReceivedOrderIds();(ids||[]).forEach(id=>set.delete(String(id)));saveLocalReturnReceivedOrderIds(set)}
 function getLocalReturnedOrderIds(){
- try{return new Set((JSON.parse(localStorage.getItem(STARRED_RETURNED_ORDER_IDS_KEY)||"[]")||[]).map(String))}catch(_){return new Set()}
+ try{return new Set((JSON.parse(window.StarredStorage89.local.getItem(STARRED_RETURNED_ORDER_IDS_KEY)||"[]")||[]).map(String))}catch(_){return new Set()}
 }
 function saveLocalReturnedOrderIds(set){
- try{localStorage.setItem(STARRED_RETURNED_ORDER_IDS_KEY,JSON.stringify([...set].map(String)))}catch(_){}
+ try{window.StarredStorage89.local.setItem(STARRED_RETURNED_ORDER_IDS_KEY,JSON.stringify([...set].map(String)))}catch(_){}
 }
 function addLocalReturnedOrderIds(ids){
  const set=getLocalReturnedOrderIds();(ids||[]).forEach(id=>set.add(String(id)));saveLocalReturnedOrderIds(set)
@@ -8483,17 +8574,17 @@ function removeLocalReturnedOrderIds(ids){
  const set=getLocalReturnedOrderIds();(ids||[]).forEach(id=>set.delete(String(id)));saveLocalReturnedOrderIds(set)
 }
 function getLocalCancelHandlerMap(){
- try{return JSON.parse(localStorage.getItem(STARRED_CANCEL_HANDLER_KEY)||"{}")||{}}catch(_){return {}}
+ try{return JSON.parse(window.StarredStorage89.local.getItem(STARRED_CANCEL_HANDLER_KEY)||"{}")||{}}catch(_){return {}}
 }
-function saveLocalCancelHandlerMap(map){try{localStorage.setItem(STARRED_CANCEL_HANDLER_KEY,JSON.stringify(map||{}))}catch(_){}}
+function saveLocalCancelHandlerMap(map){try{window.StarredStorage89.local.setItem(STARRED_CANCEL_HANDLER_KEY,JSON.stringify(map||{}))}catch(_){}}
 function setLocalCancelHandlers(ids,name){const map=getLocalCancelHandlerMap();ids.forEach(id=>map[String(id)]=String(name||''));saveLocalCancelHandlerMap(map)}
 function removeLocalCancelHandlers(ids){const map=getLocalCancelHandlerMap();ids.forEach(id=>delete map[String(id)]);saveLocalCancelHandlerMap(map)}
 function getLocalCancelHandler(id){return String(getLocalCancelHandlerMap()[String(id)]||'')}
 function getLocalProcessingOrderIds(){
- try{return new Set(JSON.parse(localStorage.getItem(STARRED_LOCAL_PROCESSING_KEY)||"[]").map(String))}catch(_){return new Set()}
+ try{return new Set(JSON.parse(window.StarredStorage89.local.getItem(STARRED_LOCAL_PROCESSING_KEY)||"[]").map(String))}catch(_){return new Set()}
 }
 function saveLocalProcessingOrderIds(ids){
- try{localStorage.setItem(STARRED_LOCAL_PROCESSING_KEY,JSON.stringify([...new Set([...ids].map(String))]))}catch(_){}
+ try{window.StarredStorage89.local.setItem(STARRED_LOCAL_PROCESSING_KEY,JSON.stringify([...new Set([...ids].map(String))]))}catch(_){}
 }
 function addLocalProcessingOrderIds(ids){const set=getLocalProcessingOrderIds();ids.forEach(id=>set.add(String(id)));saveLocalProcessingOrderIds(set)}
 function removeLocalProcessingOrderIds(ids){const set=getLocalProcessingOrderIds();ids.forEach(id=>set.delete(String(id)));saveLocalProcessingOrderIds(set)}
@@ -8555,10 +8646,10 @@ async function loadStarredCloudData(options={}){
 
 function clearLegacyLocalOrderState(){
  try{
-  localStorage.removeItem(STARRED_LOCAL_PROCESSING_KEY);
-  localStorage.removeItem(STARRED_RETURNED_ORDER_IDS_KEY);
-  localStorage.removeItem(STARRED_RETURN_RECEIVED_IDS_KEY);
-  localStorage.removeItem(STARRED_CANCEL_HANDLER_KEY);
+  window.StarredStorage89.local.removeItem(STARRED_LOCAL_PROCESSING_KEY);
+  window.StarredStorage89.local.removeItem(STARRED_RETURNED_ORDER_IDS_KEY);
+  window.StarredStorage89.local.removeItem(STARRED_RETURN_RECEIVED_IDS_KEY);
+  window.StarredStorage89.local.removeItem(STARRED_CANCEL_HANDLER_KEY);
  }catch(_){}
 }
 async function migrateLegacyLocalOrderState(){
@@ -8696,8 +8787,8 @@ async function runStarredLiffInitialization(){
     if(window.STARRED_SALES_TEST_MODE){
       const normalized={id:"line-test-current",name:"陳鈺婷（測試）",displayName:"陳鈺婷（測試）",pictureUrl:"",role:"system_admin",storeId:"",enabled:true,verified:true};
       window.starredVerifiedLineUser={lineUserId:normalized.id,employeeName:normalized.name,lineDisplayName:normalized.displayName,role:normalized.role,isEnabled:true};
-      localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
-      sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
+      window.StarredStorage89.local.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
+      window.StarredStorage89.session.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
       if(typeof window.registerLineLoginUser==="function")window.registerLineLoginUser(normalized);
       setLineReturnPerson(normalized);
       hideSystemLoading();
@@ -8724,7 +8815,7 @@ async function runStarredLiffInitialization(){
 
     if(isLineTransition)showSystemLoading("LINE 登入確認中…","正在確認 LINE 登入狀態，請稍候。");
 
-    sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+    window.StarredStorage89.session.removeItem(STARRED_LINE_RELOGIN_KEY);
     currentStage="取得 LINE 身分資料";
     const idToken=liff.getIDToken();
     if(!idToken){
@@ -8750,9 +8841,10 @@ async function runStarredLiffInitialization(){
       verified:true
     };
 
+    currentStage="套用已驗證登入資料";
     window.starredVerifiedLineUser=verified;
-    localStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
-    sessionStorage.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
+    window.StarredStorage89.local.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
+    window.StarredStorage89.session.setItem(CURRENT_LINE_USER_KEY,JSON.stringify(normalized));
     if(typeof window.registerLineLoginUser==="function")window.registerLineLoginUser(normalized);
     setLineReturnPerson(normalized);
     currentStage="同步系統資料";
@@ -8845,7 +8937,7 @@ function showSystemLoadingError(title="資料載入失敗",text="資料載入失
 function retrySystemLoading(){
  const overlay=document.getElementById("systemLoadingOverlay");
  if(overlay){overlay.classList.remove("error");}
- sessionStorage.removeItem(STARRED_LINE_RELOGIN_KEY);
+ window.StarredStorage89.session.removeItem(STARRED_LINE_RELOGIN_KEY);
  const retry=document.getElementById("systemLoadingRetry");
  if(retry&&retry.dataset.retryMode==="reconnect"&&window.liff&&typeof initializeStarredLiff==="function"){
   showSystemLoading("LINE 重新連線中…","正在重新連接 LINE，請稍候。");
@@ -9090,7 +9182,7 @@ function getDashboardNotifications(){
 function notificationSignature(items){return items.map(x=>x.key).sort().join("|")}
 function renderNotifications(){
  const items=getDashboardNotifications(),list=$("notificationList"),badge=$("notificationBadge");if(!list||!badge)return;
- const readSignature=localStorage.getItem(DASHBOARD_NOTIFICATION_READ_KEY)||"",currentSignature=notificationSignature(items),unread=currentSignature&&currentSignature!==readSignature?items.length:0;
+ const readSignature=window.StarredStorage89.local.getItem(DASHBOARD_NOTIFICATION_READ_KEY)||"",currentSignature=notificationSignature(items),unread=currentSignature&&currentSignature!==readSignature?items.length:0;
  badge.textContent=unread>99?"99+":String(unread);badge.classList.toggle("show",unread>0);
  list.innerHTML=items.length?items.map(x=>`<button type="button" class="notification-item ${x.type||""}" onclick="${x.action?`openNotificationOrders('${x.action}')`:`openNotificationEvent('${encodeURIComponent(x.eventId||"")}')`}"><span class="notification-icon">${x.icon}</span><span class="notification-copy"><b>${escapeHtml(x.title)}</b><span>${escapeHtml(x.text)}</span></span></button>`).join(""):'<div class="notification-empty">目前沒有需要處理的通知</div>';
 }
@@ -9098,7 +9190,7 @@ function toggleNotificationPanel(event){
  event?.stopPropagation();const panel=$("notificationPanel"),button=$("notificationButton"),show=!panel?.classList.contains("show");panel?.classList.toggle("show",show);button?.classList.toggle("active",show);button?.setAttribute("aria-expanded",String(show));if(show)renderNotifications();
 }
 function closeNotificationPanel(){const panel=$("notificationPanel"),button=$("notificationButton");panel?.classList.remove("show");button?.classList.remove("active");button?.setAttribute("aria-expanded","false")}
-function markNotificationsRead(){localStorage.setItem(DASHBOARD_NOTIFICATION_READ_KEY,notificationSignature(getDashboardNotifications()));renderNotifications()}
+function markNotificationsRead(){window.StarredStorage89.local.setItem(DASHBOARD_NOTIFICATION_READ_KEY,notificationSignature(getDashboardNotifications()));renderNotifications()}
 function openNotificationOrders(status){closeNotificationPanel();markNotificationsRead();openDashboardOrders(status)}
 function openNotificationEvent(id){closeNotificationPanel();markNotificationsRead();openDashboardActivity(id)}
 document.addEventListener("click",event=>{if(!event.target.closest?.(".notification-wrap"))closeNotificationPanel()});
@@ -9738,6 +9830,9 @@ function salesStoreById(id){
 function salesStoreText(record){
   return [record.storeName,record.storeFloor].filter(Boolean).join('｜') || '未指定門市';
 }
+function salesIsOvernight88(record){return !!(record&&(record.isOvernightSale===true||record.overnightMeta))}
+function salesKindLabel88(record){return salesRecordType(record)==='return'?'退貨':salesIsOvernight88(record)?'隔夜帳':record&&record.isProxySale?'代銷售':'業績'}
+function salesOvernightInfo88(record){var m=record.overnightMeta||{};return '原成交 '+(m.originalDate||'—')+'；入帳 '+(record.businessDate||'—')+'；'+(m.mode==='included'?'由 '+(m.sourcePersonName||'原人員')+' 原回傳拆出':'額外加入門市')+(record.note?'；'+record.note:'')}
 function salesRecordType(record){
   if(record&&record.recordType==='return')return 'return';
   if(record&&record.recordType==='sales')return 'sales';
@@ -9806,39 +9901,39 @@ function salesSetAdminStatus(message,type){
   box.className='sales-form-status'+(message?' show '+(type||'working'):'');
 }
 function salesReadTestRecords(){
-  try{return JSON.parse(localStorage.getItem(SALES_TEST_KEY)||'[]')||[]}
+  try{return JSON.parse(window.StarredStorage89.local.getItem(SALES_TEST_KEY)||'[]')||[]}
   catch(_){return []}
 }
 function salesWriteTestRecords(records){
-  localStorage.setItem(SALES_TEST_KEY,JSON.stringify(records||[]));
+  window.StarredStorage89.local.setItem(SALES_TEST_KEY,JSON.stringify(records||[]));
 }
 function salesReadTestRequests(){
-  try{return JSON.parse(localStorage.getItem(SALES_TEST_REQUEST_KEY)||'[]')||[]}
+  try{return JSON.parse(window.StarredStorage89.local.getItem(SALES_TEST_REQUEST_KEY)||'[]')||[]}
   catch(_){return []}
 }
 function salesWriteTestRequests(requests){
-  localStorage.setItem(SALES_TEST_REQUEST_KEY,JSON.stringify(requests||[]));
+  window.StarredStorage89.local.setItem(SALES_TEST_REQUEST_KEY,JSON.stringify(requests||[]));
 }
 function salesReadTestAudits(){
-  try{return JSON.parse(localStorage.getItem(SALES_TEST_AUDIT_KEY)||'[]')||[]}
+  try{return JSON.parse(window.StarredStorage89.local.getItem(SALES_TEST_AUDIT_KEY)||'[]')||[]}
   catch(_){return []}
 }
 function salesWriteTestAudits(logs){
-  localStorage.setItem(SALES_TEST_AUDIT_KEY,JSON.stringify(logs||[]));
+  window.StarredStorage89.local.setItem(SALES_TEST_AUDIT_KEY,JSON.stringify(logs||[]));
 }
 function salesReadTestArchives(){
-  try{return JSON.parse(localStorage.getItem(SALES_TEST_ARCHIVE_KEY)||'[]')||[]}
+  try{return JSON.parse(window.StarredStorage89.local.getItem(SALES_TEST_ARCHIVE_KEY)||'[]')||[]}
   catch(_){return []}
 }
 function salesWriteTestArchives(archives){
-  localStorage.setItem(SALES_TEST_ARCHIVE_KEY,JSON.stringify(archives||[]));
+  window.StarredStorage89.local.setItem(SALES_TEST_ARCHIVE_KEY,JSON.stringify(archives||[]));
 }
 function salesReadTestReportingPeriods(){
-  try{return JSON.parse(localStorage.getItem(SALES_TEST_REPORTING_PERIODS_KEY)||'[]')||[]}
+  try{return JSON.parse(window.StarredStorage89.local.getItem(SALES_TEST_REPORTING_PERIODS_KEY)||'[]')||[]}
   catch(_){return []}
 }
 function salesWriteTestReportingPeriods(rows){
-  localStorage.setItem(SALES_TEST_REPORTING_PERIODS_KEY,JSON.stringify(rows||[]));
+  window.StarredStorage89.local.setItem(SALES_TEST_REPORTING_PERIODS_KEY,JSON.stringify(rows||[]));
 }
 function salesAddTestAudit(record,beforeData,afterData,action,reason,actorName){
   var logs=salesReadTestAudits();
@@ -9865,6 +9960,7 @@ function salesSnapshot(record){
     salespersonLineUserId:String(record.salespersonLineUserId||record.submitterLineUserId||''),
     salespersonName:String(record.salespersonName||record.submitterName||''),
     isProxySale:record.isProxySale===true,
+    isOvernightSale:salesIsOvernight88(record),overnightMeta:record.overnightMeta||null,overnightAllocatedAmount:Number(record.overnightAllocatedAmount||0),
     salespersonWasWorking:record.salespersonWasWorking!==false,
     workdayStatus:salesWorkdayStatus(record),
     workHours:record&&record.workHours!==null&&record.workHours!==undefined&&record.workHours!==''?Number(record.workHours):null,
@@ -9977,7 +10073,7 @@ function salesEnsureTestData(){
     }
   });
   salesWriteTestRecords(records);
-  if(localStorage.getItem(SALES_TEST_AUDIT_KEY)===null&&records[0]){
+  if(window.StarredStorage89.local.getItem(SALES_TEST_AUDIT_KEY)===null&&records[0]){
     var sample=records[0];
     var sampleBefore=salesSnapshot(sample);
     sampleBefore.grossAmount=Math.max(0,Number(sampleBefore.grossAmount||0)-500);
@@ -10045,7 +10141,7 @@ function salesReconcileTestWorkdayGroup(businessDate,storeId){
   return {reviewRequired:reviewRequired,candidateCount:group.length};
 }
 function salesEnsureTestRequests(){
-  if(!window.STARRED_SALES_TEST_MODE||localStorage.getItem(SALES_TEST_REQUEST_KEY)!==null)return;
+  if(!window.STARRED_SALES_TEST_MODE||window.StarredStorage89.local.getItem(SALES_TEST_REQUEST_KEY)!==null)return;
   var identity=salesIdentity();
   var record=salesReadTestRecords().filter(function(item){return String(item.submitterLineUserId)===identity.id}).sort(function(a,b){return String(a.businessDate).localeCompare(String(b.businessDate))})[0];
   if(!record){salesWriteTestRequests([]);return}
@@ -10062,7 +10158,7 @@ function salesEnsureTestRequests(){
   }]);
 }
 function salesEnsureTestArchives(){
-  if(!window.STARRED_SALES_TEST_MODE||localStorage.getItem(SALES_TEST_ARCHIVE_KEY)!==null)return;
+  if(!window.STARRED_SALES_TEST_MODE||window.StarredStorage89.local.getItem(SALES_TEST_ARCHIVE_KEY)!==null)return;
   var currentYear=Number(salesToday().slice(0,4));
   var year=currentYear-1;
   var created=new Date(Date.now()-14*24*60*60*1000);
@@ -10540,6 +10636,8 @@ function salesRequestHistoryHtml(record){
   return requestHtml+'<div class="sales-history-item submitted"><span class="sales-history-dot"></span><div><div class="sales-history-head"><b>初次回傳</b><time>'+salesEsc(salesDateTime(record.createdAt))+'</time></div><small>'+salesEsc(salesStoreText(record))+'</small></div></div>';
 }
 function salesRecordActionHtml(record,status){
+  if(salesIsOvernight88(record))return '<span class="overnight88-row-note">隔夜帳由後台管理</span>';
+  if(Number(record.overnightAllocatedAmount||0)>0)return '<span class="overnight88-row-note">已拆出隔夜帳，原金額變更請洽後台核對</span>';
   var noun=salesRecordType(record)==='return'?'退貨':'業績';
   if(status==='approved')return '<button type="button" class="primary sales-record-action" onclick="editSalesRecord(\''+salesEsc(record.id)+'\')">開始修改'+noun+'</button>';
   if(status==='pending')return '<button type="button" class="sales-record-action waiting" disabled>等待後台審核</button>';
@@ -10606,7 +10704,7 @@ function salesPaginationHtml(scope,page,pageCount,total){
 function salesGroupOwnRecords(records){
   var groups=new Map();
   (records||[]).forEach(function(record){
-    var key=String(record.businessDate||'')+'|'+String(record.storeId||salesStoreText(record));
+    var key=String(record.businessDate||'')+'|'+String(record.storeId||salesStoreText(record))+(salesIsOvernight88(record)?'|overnight:'+record.id:'');
     var group=groups.get(key);
     if(!group){
       group={
@@ -10653,7 +10751,7 @@ function salesGroupAdminDailyRecords(records){
 function salesAdminPersonCellHtml(record){
   if(salesRecordType(record)==='return')return '<span class="sales-person-cell"><b>'+salesEsc(salesSubmitterName(record))+'</b><small>退貨處理人</small></span>';
   var credited=salesCreditedName(record);
-  if(record&&record.isProxySale===true)return '<span class="sales-person-cell proxy"><b>'+salesEsc(credited)+'</b><small>代銷售・'+salesEsc(salesSubmitterName(record))+' 回傳</small></span>';
+  if(record&&record.isProxySale===true)return '<span class="sales-person-cell proxy"><b>'+salesEsc(credited)+'</b><small>'+salesKindLabel88(record)+'・'+salesEsc(salesSubmitterName(record))+' 回傳</small></span>';
   return '<span class="sales-person-cell"><b>'+salesEsc(credited)+'</b><small>本人回傳</small></span>';
 }
 function salesGroupStatus(group){
@@ -10698,7 +10796,7 @@ function renderSalesOwnRecords(){
     var workdayStatus=group.salesRecord?salesWorkdayStatus(group.salesRecord):'';
     var workHours=group.salesRecord?salesWorkHoursValue(group.salesRecord):null;
     var pendingWorkdayText=group.salesRecord&&['dual_store','mixed'].includes(String(group.salesRecord.workdayReviewReason||''))?'一日雙門市上傳・確認中':'工時與薪資待後台確認';
-    var proxyBadge=group.salesRecord&&group.salesRecord.isProxySale===true?'<small class="sales-own-proxy-note">代銷售給 '+salesEsc(salesCreditedName(group.salesRecord))+'・不自動計日薪</small>':workdayStatus==='pending'?'<small class="sales-own-proxy-note workday-pending">'+salesEsc(pendingWorkdayText)+'</small>':workdayStatus==='excluded'?'<small class="sales-own-proxy-note '+(salesWorkdayIsHourly(workHours)?'workday-hourly':'workday-excluded')+'">'+salesEsc(salesWorkdayPayText(workHours,workdayStatus))+'</small>':'';
+    var proxyBadge=group.salesRecord&&group.salesRecord.isProxySale===true?'<small class="sales-own-proxy-note">'+salesKindLabel88(group.salesRecord)+'給 '+salesEsc(salesCreditedName(group.salesRecord))+'・不自動計日薪</small>':workdayStatus==='pending'?'<small class="sales-own-proxy-note workday-pending">'+salesEsc(pendingWorkdayText)+'</small>':workdayStatus==='excluded'?'<small class="sales-own-proxy-note '+(salesWorkdayIsHourly(workHours)?'workday-hourly':'workday-excluded')+'">'+salesEsc(salesWorkdayPayText(workHours,workdayStatus))+'</small>':'';
     return '<details class="sales-record-row grouped-record '+(!group.salesRecord?'return-record':'sales-record')+'">'+
       '<summary><div class="sales-record-primary"><time title="'+salesEsc(group.businessDate||'')+'">'+salesEsc(shortDate)+'</time><div class="sales-record-store"><b>'+salesEsc(salesStoreText(group))+'</b>'+proxyBadge+'</div></div>'+
       '<div class="sales-record-secondary"><div class="sales-record-toggle"><span class="sales-record-status '+meta.className+'">'+meta.label+'</span><span class="sales-record-chevron">⌄</span></div><div class="sales-record-amounts">'+amountHtml+'</div></div></summary>'+
@@ -12039,12 +12137,12 @@ function salesPersonDailyModel782(records,personId){
   });
   return Array.from(groups.values()).map(function(g){g.netAmount=g.grossAmount-g.returnAmount;g.invoiceDates.sort();g.performanceMonths.sort();return g}).sort(function(a,b){return b.date.localeCompare(a.date)||salesStoreText(a).localeCompare(salesStoreText(b),'zh-Hant')||a.key.localeCompare(b.key)});
 }
-function salesPersonDailyNote782(group){return salesWorkdayNoteForRecordIds(group.sales.map(function(r){return r.id}).filter(Boolean))}
+function salesPersonDailyNote782(group){return [salesWorkdayNoteForRecordIds(group.sales.map(function(r){return r.id}).filter(Boolean)),group.sales.filter(salesIsOvernight88).map(function(r){return '隔夜帳 '+salesMoney(r.grossAmount)+'｜'+salesOvernightInfo88(r)}).join('；')].filter(Boolean).join('；')}
 function salesPersonDailyDetails782(group){
   var hasReturn=group.returns.length>0,hasAudit=group.records.some(function(r){return salesAmountAuditLogs(r,'').length>0});
-  if(!hasReturn&&group.sales.length<2&&!hasAudit)return '';
+  if(!hasReturn&&group.sales.length<2&&!hasAudit&&!group.sales.some(salesIsOvernight88))return '';
   var title=hasReturn?'查看退貨／原始明細':group.sales.length>1?'查看原始 '+group.sales.length+' 筆':'查看修改紀錄';
-  return '<details class="return782-source"><summary>'+title+'</summary><div>'+group.records.map(function(r){var returned=salesRecordType(r)==='return',logs=salesAmountAuditLogs(r,'');var text=returned?'退貨 '+salesMoney(r.returnAmount||0):'原始業績 '+salesMoney(r.grossAmount||0);if(!returned&&Number(r.returnAmount||0)>0)text+='；退貨 '+salesMoney(r.returnAmount);var history=logs.length?'<button type="button" class="secondary return782-audit" onclick="openSalesAuditHistory(\''+salesEsc(r.id)+'\',\'\')">修改紀錄</button>':'';return '<div class="return782-source-row"><span>'+salesEsc(text)+'</span><small>'+salesEsc((returned?'處理人：':'回傳人：')+salesSubmitterName(r)+(r.isProxySale?'（代銷售）':'')+(r.originalInvoiceDate?'｜原發票：'+r.originalInvoiceDate:'')+(r.returnPerformanceMonth?'｜歸列月份：'+String(r.returnPerformanceMonth).slice(0,7):''))+'</small>'+history+'</div>'}).join('')+'</div></details>';
+  return '<details class="return782-source"><summary>'+title+'</summary><div>'+group.records.map(function(r){var returned=salesRecordType(r)==='return',logs=salesAmountAuditLogs(r,'');var text=returned?'退貨 '+salesMoney(r.returnAmount||0):'原始業績 '+salesMoney(r.grossAmount||0);if(!returned&&Number(r.returnAmount||0)>0)text+='；退貨 '+salesMoney(r.returnAmount);var history=logs.length?'<button type="button" class="secondary return782-audit" onclick="openSalesAuditHistory(\''+salesEsc(r.id)+'\',\'\')">修改紀錄</button>':'';return '<div class="return782-source-row"><span>'+salesEsc(text)+'</span><small>'+salesEsc((returned?'處理人：':'回傳人：')+salesSubmitterName(r)+(r.isProxySale?'（'+salesKindLabel88(r)+'）':'')+(salesIsOvernight88(r)?'｜'+salesOvernightInfo88(r):'')+(r.originalInvoiceDate?'｜原發票：'+r.originalInvoiceDate:'')+(r.returnPerformanceMonth?'｜歸列月份：'+String(r.returnPerformanceMonth).slice(0,7):''))+'</small>'+history+'</div>'}).join('')+'</div></details>';
 }
 function salesRenderPersonDaily782(records,personId){
   var groups=salesPersonDailyModel782(records,personId);
@@ -12054,18 +12152,18 @@ function salesRenderPersonDaily782(records,personId){
     if(!hasReturn&&g.sales.length===1)amount=salesAdminAmountHtml(g.sales[0],'gross');
     else amount='<span class="return782-net-value'+netClass+'">'+salesEsc(salesMoney(g.netAmount))+'</span>'+(hasReturn?'<span class="return782-net-note">（已扣除退貨）</span>':'');
     var count=g.sales.length>1?'<small class="return782-meta">合併 '+g.sales.length+' 筆業績</small>':'';
-    var target=salesEsc(salesStoreText(g))+(g.sales.some(function(r){return r.isProxySale})?'<small class="return782-meta">含代銷售</small>':'');
+    var target=salesEsc(salesStoreText(g))+(g.sales.some(salesIsOvernight88)?'<small class="return782-meta">含隔夜帳・業績歸本人</small>':g.sales.some(function(r){return r.isProxySale})?'<small class="return782-meta">含代銷售</small>':'');
     var months=g.performanceMonths.filter(function(m){return m!==g.date.slice(0,7)});
     return '<tr class="return782-daily-row'+(!g.sales.length?' return782-only':'')+'" data-return782-date="'+salesEsc(g.date)+'" data-return782-store="'+salesEsc(g.storeId)+'"><td data-label="日期">'+salesEsc(g.date||'—')+'</td><td data-label="類型"><span class="sales-stat-type '+(g.sales.length?'gross':'return')+'">'+(g.sales.length?'業績':'僅退貨')+'</span>'+count+'</td><td data-label="店點">'+target+(workNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workNote)+'</small>':'')+salesPersonDailyDetails782(g)+'</td><td class="amount gross return782-net-cell" data-label="營業額" title="'+salesEsc('原始營業額 '+salesMoney(g.grossAmount)+' − 退貨 '+salesMoney(g.returnAmount)+' ＝ '+salesMoney(g.netAmount))+'">'+amount+'</td><td class="amount return" data-label="退貨">'+(hasReturn?salesEsc(salesMoney(g.returnAmount)):'—')+'</td><td data-label="原發票日期">'+salesEsc(g.invoiceDates.join('、')||'—')+(months.length?'<small class="return782-meta">歸列 '+salesEsc(months.join('、'))+'</small>':'')+'</td><td data-label="最後更新">'+salesEsc(salesDateTime(g.lastUpdated))+'</td></tr>';
   }).join('');
 }
 function salesPersonDailyPrintRows782(records,personId){
-  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','最後更新':salesDateTime(g.lastUpdated)}});
+  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(salesIsOvernight88)?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','最後更新':salesDateTime(g.lastUpdated)}});
 }
 function salesPersonDailyExportRows782(records,personId){
   function unique(values){return Array.from(new Set(values.filter(function(v){return v!==''&&v!==null&&v!==undefined}))).join('；')}
   return salesPersonDailyModel782(records,personId).map(function(g){
-    return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayMeta(salesWorkdayStatus(r),salesWorkHoursValue(r)).label})),'上班備註':salesPersonDailyNote782(g),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
+    return {'日期':g.date,'類型':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayMeta(salesWorkdayStatus(r),salesWorkHoursValue(r)).label})),'上班備註':salesPersonDailyNote782(g),'隔夜帳金額':g.sales.filter(salesIsOvernight88).reduce(function(sum,r){return sum+Number(r.grossAmount||0)},0),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
   });
 }
 // Format the numeric/formula net column without losing Excel arithmetic.
@@ -12137,7 +12235,7 @@ function openSalesStatDetail(kind,key){
   var body=salesEl('salesStatDetailBody');
   if(body)body.innerHTML=kind==='person'?salesRenderPersonDaily782(rows,key):rows.length?rows.map(function(record){
     var isReturn=salesRecordType(record)==='return';
-    var target=kind==='store'?(isReturn?salesSubmitterName(record):salesCreditedName(record)+(record.isProxySale?'（代銷售）':'')):(salesStoreText(record)+(isReturn?' ・ 處理：'+salesSubmitterName(record):record.isProxySale?' ・ 代填：'+salesSubmitterName(record):''));
+    var target=kind==='store'?(isReturn?salesSubmitterName(record):salesCreditedName(record)+(record.isProxySale?'（'+salesKindLabel88(record)+'）':'')):(salesStoreText(record)+(isReturn?' ・ 處理：'+salesSubmitterName(record):record.isProxySale?' ・ 代填：'+salesSubmitterName(record):''));
     var workdayNote=isReturn?'':salesWorkdayNoteForRecordIds([record.id]);return '<tr class="'+(isReturn&&kind==='person'?'sales-stat-return-deduction':'')+'"><td>'+salesEsc(record.businessDate||'—')+'</td><td><span class="sales-stat-type '+(isReturn?'return':'gross')+'">'+(isReturn&&kind==='person'?'退貨扣除':(isReturn?'退貨':'業績'))+'</span></td><td><span>'+salesEsc(target)+'</span>'+(workdayNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workdayNote)+'</small>':'')+'</td><td class="amount gross">'+(isReturn?'—':salesAdminAmountHtml(record,'gross'))+'</td><td class="amount return">'+(isReturn?salesAdminAmountHtml(record,'return'):'—')+'</td><td>'+salesEsc(record.originalInvoiceDate||'—')+'</td><td>'+salesEsc(salesDateTime(isReturn&&kind==='person'?record.returnAssignedAt:record.updatedAt))+'</td></tr>';
   }).join(''):'<tr><td colspan="7" class="sales-table-empty">'+(kind==='person'&&summary.expenseOnly?'本月沒有門市業績；下方另列核准費用或公司帳。':'此區間沒有明細。')+'</td></tr>';
   if(kind==='person'){renderSalesPersonExpenseSection(key);renderSalesPersonExternalAccountSection(key)}else{var expenseSection=salesEl('salesStatDetailExpenseSection');if(expenseSection){expenseSection.hidden=true;expenseSection.innerHTML=''}var externalSection=salesEl('salesStatDetailExternalAccountSection');if(externalSection){externalSection.hidden=true;externalSection.innerHTML=''}}
@@ -12226,6 +12324,7 @@ function closeSalesAuditHistory(){
   document.body.classList.remove('sales-audit-open');
 }
 function salesAdminActionsHtml(record){
+  if(salesIsOvernight88(record)){var oid88=salesEsc(String(record.id||''));return '<span class="sales-admin-row-actions"><button type="button" class="sales-admin-action" onclick="StarredOvernight88.view(\''+oid88+'\')">查看／作廢</button></span>'} 
   var id=salesEsc(String(record&&record.id||''));
   var history=salesAmountAuditLogs(record,'').length?'<button type="button" class="sales-admin-action" onclick="openSalesAuditHistory(\''+id+'\',\'\')">紀錄</button>':'';
   return '<span class="sales-admin-row-actions"><button type="button" class="sales-admin-action" onclick="openSalesAdminEdit(\''+id+'\')">修改</button>'+history+'<button type="button" class="sales-admin-action danger" onclick="deleteSalesAdminRecord(\''+id+'\')">刪除</button></span>';
@@ -12270,6 +12369,7 @@ function syncSalesAdminEditDateLimits(){
 function openSalesAdminEdit(id){
   var record=salesAdminData.records.find(function(item){return String(item.id)===String(id)});
   if(!record){salesSetAdminStatus('找不到要修改的業績資料，請重新整理報表。','error');return}
+  if(salesIsOvernight88(record)){window.StarredOvernight88.view(record.id);return}
   salesAdminEditRecordId=String(record.id||'');
   var isReturn=salesRecordType(record)==='return';
   var modal=ensureSalesAdminEditModal();
@@ -12380,6 +12480,7 @@ async function deleteSalesAdminRecord(id){
   id=String(id||'');
   var record=salesAdminData.records.find(function(item){return String(item.id)===id});
   if(!record){salesSetAdminStatus('找不到要刪除的業績資料，請重新整理報表。','error');return}
+  if(salesIsOvernight88(record)){window.StarredOvernight88.view(record.id);return}
   var isReturn=salesRecordType(record)==='return';
   var amount=salesMoney(isReturn?record.returnAmount:record.grossAmount);
   var message='確定刪除 '+String(record.businessDate||'')+'・'+salesStoreText(record)+' 的'+(isReturn?'退貨':'業績')+' '+amount+'？\n刪除後無法復原。';
@@ -12473,25 +12574,17 @@ function renderSalesAdminReport(){
 }
 function renderSalesAdminProxy(){
   var rows=(salesAdminData.records||[]).filter(function(record){return salesRecordType(record)==='sales'&&record.isProxySale===true}).slice().sort(function(a,b){return String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
-  var total=rows.reduce(function(sum,record){return sum+Number(record.grossAmount||0)},0);
+  var total=rows.reduce(function(sum,record){return sum+Number(record.grossAmount||0)},0),overnight=rows.filter(salesIsOvernight88).length;
   if(salesEl('salesProxyTabCount'))salesEl('salesProxyTabCount').textContent=rows.length?String(rows.length):'';
-  if(salesEl('salesProxySummary'))salesEl('salesProxySummary').textContent='共 '+String(rows.length)+' 筆・'+salesMoney(total);
+  if(salesEl('salesProxySummary'))salesEl('salesProxySummary').textContent='代銷售 '+(rows.length-overnight)+' 筆｜隔夜帳 '+overnight+' 筆・'+salesMoney(total);
   var body=salesEl('salesAdminProxyBody');
-  if(body){
-    body.innerHTML=rows.length?rows.map(function(record){
-      var meta=salesStatusMeta(salesRecordStatus(record));
-      var working='<span class="sales-proxy-work no">不自動計日薪</span>';
-      return '<tr><td>'+salesEsc(record.businessDate||'—')+'</td><td><b>'+salesEsc((typeof areaText!=='undefined'&&areaText[record.area])||record.area||'—')+'</b><small>'+salesEsc(salesStoreText(record))+'</small></td><td>'+salesEsc(salesSubmitterName(record))+'</td><td>'+salesEsc(salesCreditedName(record))+'</td><td>'+working+'</td><td class="amount">'+salesAdminAmountHtml(record,'gross')+'</td><td><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span></td><td>'+salesEsc(salesDateTime(record.updatedAt))+'</td><td>'+salesAdminActionsHtml(record)+'</td></tr>';
-    }).join(''):'<tr><td colspan="9" class="sales-table-empty">目前篩選區間內沒有代銷售資料。</td></tr>';
-  }
+  if(body)body.innerHTML=rows.length?rows.map(function(record){
+    var meta=salesStatusMeta(salesRecordStatus(record)),on=salesIsOvernight88(record);
+    var working='<span class="sales-proxy-work no">不計日薪</span>';
+    return '<tr><td>'+salesEsc(record.businessDate||'—')+'<br><span class="overnight88-badge">'+salesKindLabel88(record)+'</span>'+(on?'<small class="overnight88-row-note">原成交 '+salesEsc(record.overnightMeta.originalDate)+'</small>':'')+'</td><td><b>'+salesEsc((typeof areaText!=='undefined'&&areaText[record.area])||record.area||'—')+'</b><small>'+salesEsc(salesStoreText(record))+'</small></td><td>'+salesEsc(salesSubmitterName(record))+'</td><td>'+salesEsc(salesCreditedName(record))+(on?'<small class="overnight88-row-note">'+salesEsc(record.overnightMeta.mode==='included'?'原回傳已拆出':'另計門市入帳')+'</small>':'')+'</td><td>'+working+'</td><td class="amount">'+salesAdminAmountHtml(record,'gross')+'</td><td><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span></td><td>'+salesEsc(salesDateTime(record.updatedAt))+'</td><td>'+salesAdminActionsHtml(record)+'</td></tr>';
+  }).join(''):'<tr><td colspan="9" class="sales-table-empty">目前篩選區間內沒有代銷售或隔夜帳資料。</td></tr>';
   var mobile=salesEl('salesAdminProxyMobile');
-  if(mobile){
-    mobile.innerHTML=rows.length?rows.map(function(record){
-      var meta=salesStatusMeta(salesRecordStatus(record));
-      var working='不自動計日薪';
-      return '<article class="sales-proxy-card"><header><div><time>'+salesEsc(record.businessDate||'—')+'</time><b>'+salesEsc(salesStoreText(record))+'</b></div><strong>'+salesAdminAmountHtml(record,'gross')+'</strong></header><div class="sales-proxy-people"><span><small>回傳人員</small><b>'+salesEsc(salesSubmitterName(record))+'</b></span><i>→</i><span><small>業績歸屬</small><b>'+salesEsc(salesCreditedName(record))+'</b></span></div><footer><span class="sales-proxy-work no">'+working+'</span><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span><div>'+salesAdminActionsHtml(record)+'</div></footer></article>';
-    }).join(''):'<div class="sales-empty">目前篩選區間內沒有代銷售資料。</div>';
-  }
+  if(mobile)mobile.innerHTML=rows.length?rows.map(function(record){var meta=salesStatusMeta(salesRecordStatus(record));return '<article class="sales-proxy-card"><header><div><time>'+salesEsc(record.businessDate||'—')+'</time><b>'+salesEsc(salesStoreText(record))+'</b><span class="overnight88-badge">'+salesKindLabel88(record)+'</span></div><strong>'+salesAdminAmountHtml(record,'gross')+'</strong></header><div class="sales-proxy-people"><span><small>建檔／回傳人員</small><b>'+salesEsc(salesSubmitterName(record))+'</b></span><i>→</i><span><small>業績歸屬</small><b>'+salesEsc(salesCreditedName(record))+'</b></span></div>'+(salesIsOvernight88(record)?'<p class="overnight88-row-note">'+salesEsc(salesOvernightInfo88(record))+'</p>':'')+'<footer><span class="sales-proxy-work no">不計日薪</span><span class="sales-record-status '+meta.className+'">'+salesEsc(meta.label)+'</span><div>'+salesAdminActionsHtml(record)+'</div></footer></article>'}).join(''):'<div class="sales-empty">目前篩選區間內沒有代銷售或隔夜帳資料。</div>';
 }
 function renderSalesAdminReturns(){
   var list=salesEl('salesAdminReturnList');
@@ -12671,7 +12764,7 @@ function salesPersonDetailExportRows(){
   var rows=model.rows.map(function(row){var result={'日期':row.date};model.people.forEach(function(person){result[person.name]=Number(row.cells[person.lineUserId]||0)});result['銷售總額']=Number(row.total||0);return result});var external={'日期':'核准公司帳'};var combined={'日期':'個人業績＋公司帳'};model.people.forEach(function(person){external[person.name]=Number(model.externalTotals.get(person.lineUserId)||0);combined[person.name]=Number(model.totals.get(person.lineUserId)||0)+Number(model.externalTotals.get(person.lineUserId)||0)});external['銷售總額']=Number(model.externalGrandTotal||0);combined['銷售總額']=Number(model.combinedGrandTotal||0);rows.push(external,combined);return rows;
 }
 function salesProxyReportRows(){
-  return (salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&record.isProxySale===true}).map(function(record){return {'日期':record.businessDate||'','區域／門市':[((typeof areaText!=='undefined'&&areaText[record.area])||record.area||''),salesStoreText(record)].filter(Boolean).join('・'),'回傳人員':salesSubmitterName(record),'業績歸屬':salesCreditedName(record),'日薪狀態':'代銷售不增加日薪','營業總額':Number(record.grossAmount||0),'修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}});
+  return (salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&record.isProxySale===true}).map(function(record){var m=record.overnightMeta||{};return {'類型':salesKindLabel88(record),'業績／入帳日':record.businessDate||'','原成交日':m.originalDate||'','區域／門市':[((typeof areaText!=='undefined'&&areaText[record.area])||record.area||''),salesStoreText(record)].filter(Boolean).join('・'),'建檔／回傳人員':salesSubmitterName(record),'業績歸屬':salesCreditedName(record),'日薪狀態':'不增加日薪','營業總額':Number(record.grossAmount||0),'金額來源':salesIsOvernight88(record)?(m.mode==='included'?'由 '+(m.sourcePersonName||'原人員')+' 原回傳拆出':'額外加入門市'):'代銷售','備註':record.note||'','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}});
 }
 function salesApprovedExpenseReportRows(){
   return (salesAdminData.expenses||[]).map(function(item){var expense=item.requestType==='expense',label=item.requestType==='move_out'?'撤櫃':item.requestType==='move_in'?'進櫃':item.requestType==='overtime'?'移櫃／加班':item.requestType==='other'?'其他':'費用';var pay=expense?{amount:Number(item.amount||0),hours:'',rate:'',formula:'費用金額'}:salesExpenseOperationPayModel(item);return {'日期':item.requestDate||'','人員':salesPersonName(item.submitterLineUserId,item.submitterName),'類型':label,'區域':(typeof areaText!=='undefined'&&areaText[item.area])||item.area||'','店點':expense?'':salesStoreText(item),'開始時間':item.overtimeStart||'','結束日期':item.requestType==='expense'?'':window.StarredExpenseTime81.endDate(item),'結束時間':item.overtimeEnd||'','時數':expense?'':(pay.hours===null?'':pay.hours),'時薪':expense?'':(pay.exact?pay.rate:''),'核准金額':expense?Number(item.amount||0):(pay.amount===null?'':pay.amount),'申請內容':expense?String(item.reason||''):[salesStoreText(item),item.overtimeStart&&item.overtimeEnd?window.StarredExpenseTime81.rangeText(item):''].filter(Boolean).join('・'),'申請人備註':item.note||'','後台備註':item.reviewNote||'','核准人':item.reviewerName||'','核准時間':salesDateTime(item.reviewedAt)}});
@@ -12692,8 +12785,8 @@ function salesOpenFriendlyPrint(title,sections){
 function printSalesReport(){
   var records=salesAdminData.records||[],pending=(salesAdminData.editRequests||[]).filter(function(item){return item.status==='pending'}).length;var sections=[];
   sections.push(salesFriendlyPrintTable('統計摘要',[{'營業總額':salesMoney((salesAdminData.totals||{}).grossAmount||0),'退貨總額（另計）':salesMoney((salesAdminData.totals||{}).returnAmount||0),'回傳筆數':Number((salesAdminData.totals||{}).recordCount||records.length),'待審核修改':pending+' 筆'}]));
-  sections.push(salesFriendlyPrintTable('每日業績明細',records.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':isReturn?'退貨':'業績','區域／門市':[((typeof areaText!=='undefined'&&areaText[record.area])||record.area||''),salesStoreText(record)].filter(Boolean).join('・'),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'營業總額':isReturn?'':salesMoney(record.grossAmount||0),'退貨':isReturn?salesMoney(record.returnAmount||0):'','上班／薪資':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'最後更新':salesDateTime(record.updatedAt)}})));
-  sections.push(salesFriendlyPrintTable('代銷售',salesProxyReportRows().map(function(row){return Object.assign({},row,{'營業總額':salesMoney(row['營業總額'])})})));
+  sections.push(salesFriendlyPrintTable('每日業績明細',records.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':salesKindLabel88(record),'區域／門市':[((typeof areaText!=='undefined'&&areaText[record.area])||record.area||''),salesStoreText(record)].filter(Boolean).join('・'),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'營業總額':isReturn?'':salesMoney(record.grossAmount||0),'退貨':isReturn?salesMoney(record.returnAmount||0):'','上班／薪資':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'最後更新':salesDateTime(record.updatedAt)}})));
+  sections.push(salesFriendlyPrintTable('代銷售／隔夜帳',salesProxyReportRows().map(function(row){return Object.assign({},row,{'營業總額':salesMoney(row['營業總額'])})})));
   sections.push(salesFriendlyPrintTable('門市業績',(salesAdminData.byStore||[]).map(function(row,index){return {'排名':index+1,'區域':(typeof areaText!=='undefined'&&areaText[row.area])||row.area||'','門市':salesStoreText(row),'營業總額':salesMoney(row.grossAmount||0),'退貨另計':salesMoney(row.returnAmount||0),'回傳筆數':Number(row.recordCount||0)}})));
   sections.push(salesFriendlyPrintTable('業績總覽',(salesAdminData.byPerson||[]).map(function(row,index){return {'排名':row.expenseOnly?'—':index+1,'人員':salesPersonName(row.lineUserId,row.name),'店點':(row.locations||[]).map(salesStoreText).join('、'),'營業總額':salesMoney(row.grossAmount||0),'退貨':salesMoney(row.returnAmount||0),'當月業績':salesMoney(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0)),'核准費用':salesMoney(row.approvedExpenseAmount||0),'核准公司帳':salesMoney(row.approvedExternalAmount||0)}})));
   sections.push(salesFriendlyPrintTable('平均業績',salesAveragePerformanceExportRows().map(function(row){var copy=Object.assign({},row);copy['個人營業總額']=salesMoney(copy['個人營業總額']);copy['平均業績']=copy['平均業績']===''?'—':salesMoney(copy['平均業績']);return copy}),'平均業績＝個人營業總額 ÷ 平均計算天數；計日薪與時薪日期皆納入，同一天只算 1 天。'));
@@ -12727,7 +12820,7 @@ async function exportSalesStatDetailExcel(){
     var matrixHeaders=matrix.model.people.map(function(person){return person.name}).concat(['銷售總額']);var matrixWidths=[13].concat(matrix.model.people.map(function(){return 14})).concat([16]);
     try{salesSetAdminStatus('正在匯出門市人員月表…','working');await salesExportSingleSheetExcel('門市人員月表',matrix.rows,matrixWidths,title+'_人員月表_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',matrixHeaders);salesSetAdminStatus('門市人員月表已匯出。','success')}catch(error){salesSetAdminStatus('月表匯出失敗：'+String(error&&error.message||error),'error')}return;
   }
-  var exportRows=state.kind==='person'?salesPersonDailyExportRows782(rows,state.key):rows.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':isReturn?'退貨':'業績','區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':salesStoreText(record),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'是否代銷售':record.isProxySale?'是':'否','上班時數':isReturn?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursNumberText(salesWorkHoursValue(record))),'薪資狀態':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'上班備註':isReturn?'':salesWorkdayNoteForRecordIds([record.id]),'營業額':Number(record.grossAmount||0),'退貨':Number(record.returnAmount||0),'核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':record.originalInvoiceDate||'','最後更新':salesDateTime(isReturn&&state.kind==='person'?record.returnAssignedAt:record.updatedAt)}});
+  var exportRows=state.kind==='person'?salesPersonDailyExportRows782(rows,state.key):rows.map(function(record){var isReturn=salesRecordType(record)==='return';return {'日期':record.businessDate||'','類型':salesKindLabel88(record),'區域':(typeof areaText!=='undefined'&&areaText[record.area])||record.area||'','門市':salesStoreText(record),'銷售／處理人員':isReturn?salesSubmitterName(record):salesCreditedName(record),'回傳人員':salesSubmitterName(record),'是否代銷售':record.isProxySale?'是':'否','上班時數':isReturn?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursNumberText(salesWorkHoursValue(record))),'薪資狀態':isReturn?'':salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record)).label,'上班備註':isReturn?'':salesWorkdayNoteForRecordIds([record.id]),'營業額':Number(record.grossAmount||0),'退貨':Number(record.returnAmount||0),'核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':record.originalInvoiceDate||'','最後更新':salesDateTime(isReturn&&state.kind==='person'?record.returnAssignedAt:record.updatedAt)}});
   if(state.kind==='person'){
     window.StarredPerformance85.approvedFor(salesAdminData.expenses,state.key).forEach(function(item){var isExpense=item.requestType==='expense',requestLabel=item.requestType==='move_out'?'撤櫃':item.requestType==='move_in'?'進櫃':item.requestType==='overtime'?'移櫃／加班':item.requestType==='other'?'其他':'費用';exportRows.push({'日期':item.requestDate||'','類型':item.isDeletionAdjustment?'費用刪除沖減':'核准'+requestLabel,'區域':(typeof areaText!=='undefined'&&areaText[item.area])||item.area||'','門市':isExpense?'':salesStoreText(item),'銷售／處理人員':salesPersonName(item.submitterLineUserId,item.submitterName),'回傳人員':salesPersonName(item.submitterLineUserId,item.submitterName),'是否代銷售':'','上班時數':isExpense?'':salesExpenseDuration(item).replace(' 小時',''),'薪資狀態':'其他費用：會計另計薪資，不納入業績總額','上班備註':'','營業額':0,'退貨':0,'核准費用':window.StarredPerformance85.expenseAmount(item,salesExpenseOperationPayModel)===null?'':window.StarredPerformance85.expenseAmount(item,salesExpenseOperationPayModel),'核准公司帳':0,'撤櫃／進櫃／其他／費用說明':(isExpense?String(item.reason||''):[salesStoreText(item),window.StarredExpenseTime81.rangeText(item)].filter(Boolean).join('・'))+(item.note?'；申請人備註：'+item.note:'')+(item.reviewNote?'；後台備註：'+item.reviewNote:''),'原發票日期':'','最後更新':salesDateTime(item.reviewedAt||item.updatedAt)})});
     window.StarredPerformance85.approvedFor(salesAdminData.externalAccounts,state.key).forEach(function(item){exportRows.push({'日期':item.transactionDate||'','類型':item.isDeletionAdjustment?'公司帳刪除沖減':'核准公司帳','區域':'','門市':'','銷售／處理人員':salesPersonName(item.submitterLineUserId,item.submitterName),'回傳人員':salesPersonName(item.submitterLineUserId,item.submitterName),'是否代銷售':'','上班時數':'','薪資狀態':'公司帳：計入業績總額','上班備註':'','營業額':0,'退貨':0,'核准費用':0,'核准公司帳':Number(item.customerAmount||0),'撤櫃／進櫃／費用說明':[item.isDeletionAdjustment?item.deletionNote:'公司帳客戶交易',item.note,item.reviewNote].filter(Boolean).join('；'),'原發票日期':'','最後更新':salesDateTime(item.reviewedAt||item.updatedAt)})});
@@ -12900,7 +12993,7 @@ async function salesExportReportExcelWithExcelJs(){
   var requestSheet=salesCreateStyledExcelSheet(workbook,'修改申請紀錄',requestsSheet,[16,16,21,14,13,24,14,14,14,18,18,20,28,12,14,21,21,18,18,20]);
   var workdaySheet=salesCreateStyledExcelSheet(workbook,'上班天數',workdaysRows,[16,16,16,14,14,14,14,14,14,14,14,14,16,12]);
   var personDetailSheet=salesCreateStyledExcelSheet(workbook,'業績對比',personDetailRows,[16,16,13].concat(personDetailModel.people.map(function(){return 14})).concat([16]));
-  var proxySheet=salesCreateStyledExcelSheet(workbook,'代銷售',proxyRows,[16,16,13,28,16,16,20,16,14,21]);
+  var proxySheet=salesCreateStyledExcelSheet(workbook,'代銷售／隔夜帳',proxyRows,[16,16,12,14,14,28,16,16,16,16,32,30,14,21]);
   var averageSheet=salesCreateStyledExcelSheet(workbook,'平均業績',averageRows,[16,16,8,16,16,14,14,14,16,16,14,12]);
   var expenseSheet=salesCreateStyledExcelSheet(workbook,'核准作業與費用',expenseRows,[16,16,13,14,14,10,24,10,10,10,10,14,34,28,28,14,21]);
   var externalSheet=salesCreateStyledExcelSheet(workbook,'核准公司帳',externalRows,[16,16,13,16,16,28,14,21]);
@@ -12969,7 +13062,7 @@ function salesExportReportExcelWithSheetJs(){
   append('修改申請紀錄',requestsSheet,[16,16,21,14,13,24,14,14,14,18,18,20,28,12,14,21,21,18,18,20],[]);
   append('上班天數',workdaysRows,[16,16,16,14,14,14,14,14,14,14,14,14,16,12],['營業總額']);
   append('業績對比',personDetailRows,[16,16,13].concat(personDetailModel.people.map(function(){return 14})).concat([16]),personDetailModel.people.map(function(person){return person.name}).concat(['銷售總額']));
-  append('代銷售',proxyRows,[16,16,13,28,16,16,20,16,14,21],['營業總額']);
+  append('代銷售／隔夜帳',proxyRows,[16,16,12,14,14,28,16,16,16,16,32,30,14,21],['營業總額']);
   append('平均業績',averageRows,[16,16,8,16,16,14,14,14,16,16,14,12],['個人營業總額','平均業績']);
   append('核准作業與費用',expenseRows,[16,16,13,14,14,10,24,10,10,10,10,14,34,28,28,14,21],['核准金額']);
   append('核准公司帳',externalRows,[16,16,13,16,16,28,14,21],['核准公司帳']);
@@ -13151,9 +13244,9 @@ function salesEnsureTestAdmin(){
   if(!window.STARRED_SALES_TEST_MODE)return;
   var expiry=Date.now()+24*60*60*1000;
   currentUser={id:'sales-test-admin',name:'測試管理員',username:'sales-test',role:'admin',enabled:true,adminSessionToken:'sales-test-session'};
-  localStorage.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(expiry));
-  localStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
-  sessionStorage.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  window.StarredStorage89.local.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(expiry));
+  window.StarredStorage89.local.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
+  window.StarredStorage89.session.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
 }
 function startSalesAutoRefresh(){
   if(salesAutoRefreshTimer)return;
@@ -13610,10 +13703,10 @@ body.sales-stat-modal-open{overflow:hidden}
 
   function rememberedDirectPage(){
     try{
-      const saved=JSON.parse(sessionStorage.getItem(DIRECT_PAGE_MEMORY_KEY)||"null");
+      const saved=JSON.parse(window.StarredStorage89.session.getItem(DIRECT_PAGE_MEMORY_KEY)||"null");
       if(!saved||normalizeDirectPage(saved.page)!=="sales")return "";
       if(Date.now()-Number(saved.savedAt||0)>10*60*1000){
-        sessionStorage.removeItem(DIRECT_PAGE_MEMORY_KEY);
+        window.StarredStorage89.session.removeItem(DIRECT_PAGE_MEMORY_KEY);
         return "";
       }
       return "sales";
@@ -13622,14 +13715,14 @@ body.sales-stat-modal-open{overflow:hidden}
 
   const initialRequestedPage=pageFromSearch(location.search)||rememberedDirectPage();
   if(initialRequestedPage==="sales"){
-    try{sessionStorage.setItem(DIRECT_PAGE_MEMORY_KEY,JSON.stringify({page:"sales",savedAt:Date.now()}))}catch(_){}
+    try{window.StarredStorage89.session.setItem(DIRECT_PAGE_MEMORY_KEY,JSON.stringify({page:"sales",savedAt:Date.now()}))}catch(_){}
   }
 
   window.getStarredRequestedPage=function(){
     return pageFromSearch(location.search)||initialRequestedPage||rememberedDirectPage();
   };
   window.clearStarredRequestedPageMemory=function(){
-    try{sessionStorage.removeItem(DIRECT_PAGE_MEMORY_KEY)}catch(_){}
+    try{window.StarredStorage89.session.removeItem(DIRECT_PAGE_MEMORY_KEY)}catch(_){}
   };
   window.applyStarredDirectPage=function(){
     if(window.getStarredRequestedPage()!=="sales")return false;
@@ -13992,7 +14085,7 @@ var capacityBucketLabels={'order-images':'訂單照片','activity-images':'活�
 function capacityEsc(value){return typeof escapeHtml==='function'?escapeHtml(value):String(value==null?'':value)}
 function capacityFormatBytes(value){var bytes=Math.max(0,Number(value||0));if(bytes<1024)return Math.round(bytes)+' B';var units=['KB','MB','GB','TB'];var size=bytes;var unit='B';for(var i=0;i<units.length&&size>=1024;i++){size/=1024;unit=units[i]}return size.toLocaleString('zh-TW',{minimumFractionDigits:size<10?2:size<100?1:0,maximumFractionDigits:size<10?2:size<100?1:0})+' '+unit}
 function capacityNumber(value){return Math.max(0,Number(value||0)).toLocaleString('zh-TW')}
-function capacityPlan(){var value=String(localStorage.getItem(CAPACITY_PLAN_KEY)||'free');return value==='pro'?'pro':'free'}
+function capacityPlan(){var value=String(window.StarredStorage89.local.getItem(CAPACITY_PLAN_KEY)||'free');return value==='pro'?'pro':'free'}
 function capacityLimits(){var fallback={free:{databaseBytes:500*1024*1024,storageBytes:1024*1024*1024},pro:{databaseBytes:8*1024*1024*1024,storageBytes:100*1024*1024*1024}};return capacityUsageData&&capacityUsageData.referenceLimits&&capacityUsageData.referenceLimits[capacityPlan()]||fallback[capacityPlan()]}
 function capacityPercent(used,limit){return limit>0?Math.max(0,Number(used||0))/Number(limit)*100:0}
 function capacityLevel(percent){return percent>=85?'danger':percent>=70?'warn':''}
@@ -14002,7 +14095,7 @@ function capacityRenderWarnings(data,limits){var rows=(Array.isArray(data.warnin
 function capacityRenderBuckets(projects){var rows=[];(projects||[]).forEach(function(project){(project.buckets||[]).forEach(function(bucket){rows.push({project:project.label,bucketId:String(bucket.bucketId||bucket.bucket_id||'未命名'),bytes:Number(bucket.bytes||0),count:Number(bucket.objectCount||bucket.object_count||0)})})});rows.sort(function(a,b){return b.bytes-a.bytes});var box=document.getElementById('capacityBucketList');if(!box)return;if(!rows.length){box.innerHTML='<div class="capacity-empty">目前沒有已儲存的圖片／檔案</div>';return}box.innerHTML='<table class="capacity-table"><thead><tr><th>類別</th><th>所屬資料</th><th>檔案數</th><th>容量</th></tr></thead><tbody>'+rows.map(function(row){return '<tr><td>'+capacityEsc(capacityBucketLabels[row.bucketId]||row.bucketId)+'<small>'+capacityEsc(row.bucketId)+'</small></td><td>'+capacityEsc(row.project)+'</td><td>'+capacityNumber(row.count)+'</td><td class="amount">'+capacityFormatBytes(row.bytes)+'</td></tr>'}).join('')+'</tbody></table>'}
 function capacityRenderTables(projects){var rows=[];(projects||[]).forEach(function(project){(project.tables||[]).forEach(function(table){rows.push({project:project.label,tableName:String(table.tableName||table.table_name||'未命名'),bytes:Number(table.bytes||0)})})});rows.sort(function(a,b){return b.bytes-a.bytes});var box=document.getElementById('capacityTableList');if(!box)return;if(!rows.length){box.innerHTML='<div class="capacity-empty">目前沒有可顯示的文字資料表</div>';return}box.innerHTML='<table class="capacity-table"><thead><tr><th>資料類別</th><th>所屬資料</th><th>容量</th></tr></thead><tbody>'+rows.slice(0,30).map(function(row){return '<tr><td>'+capacityEsc(capacityTableLabels[row.tableName]||row.tableName)+'<small>'+capacityEsc(row.tableName)+'</small></td><td>'+capacityEsc(row.project)+'</td><td class="amount">'+capacityFormatBytes(row.bytes)+'</td></tr>'}).join('')+'</tbody></table>'}
 function renderCapacityUsage(){var data=capacityUsageData;if(!data)return;var limits=capacityLimits();var set=function(id,text){var el=document.getElementById(id);if(el)el.textContent=text};set('capacityTotalBytes',capacityFormatBytes(data.totalBytes));set('capacityDatabaseBytes',capacityFormatBytes(data.databaseBytes));set('capacityStorageBytes',capacityFormatBytes(data.storageBytes));set('capacityObjectCount',capacityNumber(data.storageObjectCount)+' 個');var measured=data.measuredAt?new Date(data.measuredAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'剛剛';set('capacityMeasuredAt','最後更新：'+measured);var projectList=document.getElementById('capacityProjectList');if(projectList)projectList.innerHTML=(data.projects||[]).map(function(project){return capacityProjectHtml(project,limits)}).join('')||'<div class="capacity-empty">沒有可顯示的專案容量</div>';capacityRenderWarnings(data,limits);capacityRenderBuckets(data.projects);capacityRenderTables(data.projects)}
-window.changeCapacityPlanReference=function(value){localStorage.setItem(CAPACITY_PLAN_KEY,value==='pro'?'pro':'free');renderCapacityUsage()};
+window.changeCapacityPlanReference=function(value){window.StarredStorage89.local.setItem(CAPACITY_PLAN_KEY,value==='pro'?'pro':'free');renderCapacityUsage()};
 window.loadCapacityUsage=async function(silent){if(capacityLoading)return;if(!currentUser||normalizeCurrentAdminRole(currentUser.role)!=='admin')return;capacityLoading=true;var button=document.getElementById('capacityRefreshBtn'),status=document.getElementById('capacityStatus');if(button)button.disabled=true;if(status&&!silent){status.className='capacity-status working';status.textContent='正在讀取兩個資料專案的最新容量…'}try{capacityUsageData=await starredApi('capacity_usage',{});renderCapacityUsage();if(status){status.className='capacity-status success';status.textContent=capacityUsageData.complete?'容量已完整更新。':'容量已更新，但仍有一部分尚未納入，請查看下方提醒。'}}catch(error){if(status){status.className='capacity-status error';status.textContent='容量讀取失敗：'+String(error&&error.message||error)}}finally{capacityLoading=false;if(button)button.disabled=false}};
 document.addEventListener('DOMContentLoaded',function(){var select=document.getElementById('capacityPlanReference');if(select)select.value=capacityPlan();setInterval(function(){var panel=document.getElementById('capacityTab');if(panel&&panel.classList.contains('active'))window.loadCapacityUsage(true)},60000)});
 })();
@@ -14981,7 +15074,7 @@ function syncExpenseV30Type(){
 function calculateExpenseV30Amount(){
  var check=v30El('expenseV30AutoAmount'),amount=v30El('expenseV30Amount');if(!check||!amount)return;amount.readOnly=!!check.checked;if(!check.checked)return;
  var item=window.StarredExpenseTime81.formItem('edit'),hours=window.StarredExpenseTime81.hours(item.overtimeStart,item.overtimeEnd,item),type=String((v30El('expenseV30Type')||{}).value||''),rateType=type==='overtime'?'other':type,rates={};
- if(typeof window.getExpenseOperationRates==='function')rates=window.getExpenseOperationRates();else try{rates=JSON.parse(localStorage.getItem('starred_expense_operation_rates_v47')||'{}')}catch(_){}
+ if(typeof window.getExpenseOperationRates==='function')rates=window.getExpenseOperationRates();else try{rates=JSON.parse(window.StarredStorage89.local.getItem('starred_expense_operation_rates_v47')||'{}')}catch(_){}
  amount.value=hours===null?'':String(Math.round(hours*Number(rates[rateType]||0)));
 }
 async function saveExpenseV30Edit(){
@@ -16890,9 +16983,9 @@ window.printExpenseAdminReport=function(){var list=rows();if(!list.length){alert
 (function(){'use strict';
 var RATE_KEY='starred_expense_operation_rates_v47';window.expenseV47SelectedIds=window.expenseV47SelectedIds||new Set();
 var salesWorkHoursNumberText=window.starredHoursMinutesNumberText;
-function el(id){return document.getElementById(id)}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}function money(v){return '$'+Math.round(Number(v||0)).toLocaleString('zh-TW')}function hours(start,end,item){return window.StarredExpenseTime81.hours(start,end,item)}function rates(){try{var v=JSON.parse(localStorage.getItem(RATE_KEY)||'{}');return {move_out:Math.max(0,Number(v.move_out||0)),move_in:Math.max(0,Number(v.move_in||0)),other:Math.max(0,Number(v.other||0))}}catch(_){return {move_out:0,move_in:0,other:0}}}function typeLabel(v){return v==='move_out'?'撤櫃':v==='move_in'?'進櫃':v==='overtime'?'移櫃／加班':v==='other'?'其他':'費用'}function statusLabel(v){return v==='approved'?'已核准':v==='rejected'?'未通過':v==='cancelled'?'已取消':'待審核'}function duration(start,end,item){return window.StarredExpenseTime81.duration(start,end,item)}function store(i){return [i.storeName,i.storeFloor].filter(Boolean).join('｜')}function detail(i){return i.requestType==='expense'?String(i.reason||''):[store(i),window.StarredExpenseTime81.rangeText(i),duration(i.overtimeStart,i.overtimeEnd,i)].filter(Boolean).join('・')}function dateTime(v){if(!v)return '';try{return new Date(v).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(v)}}function filtered(){return window.StarredAdminReview83.filterExpenses(window.expenseV30AdminData)} function outputRows(){var rows=filtered(),chosen=rows.filter(function(i){return window.expenseV47SelectedIds.has(String(i.id||''))});return chosen.length?chosen:rows}function filePeriod(){return String((el('expenseAdminDateFrom')||{}).value||'全部')+'_至_'+String((el('expenseAdminDateTo')||{}).value||'全部')}
+function el(id){return document.getElementById(id)}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}function money(v){return '$'+Math.round(Number(v||0)).toLocaleString('zh-TW')}function hours(start,end,item){return window.StarredExpenseTime81.hours(start,end,item)}function rates(){try{var v=JSON.parse(window.StarredStorage89.local.getItem(RATE_KEY)||'{}');return {move_out:Math.max(0,Number(v.move_out||0)),move_in:Math.max(0,Number(v.move_in||0)),other:Math.max(0,Number(v.other||0))}}catch(_){return {move_out:0,move_in:0,other:0}}}function typeLabel(v){return v==='move_out'?'撤櫃':v==='move_in'?'進櫃':v==='overtime'?'移櫃／加班':v==='other'?'其他':'費用'}function statusLabel(v){return v==='approved'?'已核准':v==='rejected'?'未通過':v==='cancelled'?'已取消':'待審核'}function duration(start,end,item){return window.StarredExpenseTime81.duration(start,end,item)}function store(i){return [i.storeName,i.storeFloor].filter(Boolean).join('｜')}function detail(i){return i.requestType==='expense'?String(i.reason||''):[store(i),window.StarredExpenseTime81.rangeText(i),duration(i.overtimeStart,i.overtimeEnd,i)].filter(Boolean).join('・')}function dateTime(v){if(!v)return '';try{return new Date(v).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(v)}}function filtered(){return window.StarredAdminReview83.filterExpenses(window.expenseV30AdminData)} function outputRows(){var rows=filtered(),chosen=rows.filter(function(i){return window.expenseV47SelectedIds.has(String(i.id||''))});return chosen.length?chosen:rows}function filePeriod(){return String((el('expenseAdminDateFrom')||{}).value||'全部')+'_至_'+String((el('expenseAdminDateTo')||{}).value||'全部')}
 window.expenseV47Amount=function(item){item=item||{};if(item.recordOnly===true)return 0;if(item.requestType==='expense'||Number(item.amount||0)>0)return Number(item.amount||0);var type=String(item.requestType||'');if(!['move_out','move_in','overtime','other'].includes(type))return null;var h=hours(item.overtimeStart,item.overtimeEnd,item),rateType=type==='overtime'?'other':type;return h===null?null:h*rates()[rateType]};window.expenseV47AmountText=function(item){var amount=window.expenseV47Amount(item);return amount===null?'—':money(amount)};
-window.saveExpenseOperationRates=function(){var value={move_out:Math.max(0,Number((el('expenseMoveOutRate')||{}).value||0)),move_in:Math.max(0,Number((el('expenseMoveInRate')||{}).value||0)),other:Math.max(0,Number((el('expenseOtherRate')||{}).value||0))};localStorage.setItem(RATE_KEY,JSON.stringify(value));if(window.renderExpenseAdminList)window.renderExpenseAdminList();var msg=el('expenseAdminMessage');if(msg){msg.className='expense-form-status show success';msg.textContent='撤櫃、進櫃、其他與既有移櫃／加班時薪已套用，金額已重新換算。'}};
+window.saveExpenseOperationRates=function(){var value={move_out:Math.max(0,Number((el('expenseMoveOutRate')||{}).value||0)),move_in:Math.max(0,Number((el('expenseMoveInRate')||{}).value||0)),other:Math.max(0,Number((el('expenseOtherRate')||{}).value||0))};window.StarredStorage89.local.setItem(RATE_KEY,JSON.stringify(value));if(window.renderExpenseAdminList)window.renderExpenseAdminList();var msg=el('expenseAdminMessage');if(msg){msg.className='expense-form-status show success';msg.textContent='撤櫃、進櫃、其他與既有移櫃／加班時薪已套用，金額已重新換算。'}};
 window.syncExpenseAdminSelectionControls=function(){var rows=filtered(),ids=rows.map(function(i){return String(i.id||'')}),count=ids.filter(function(id){return window.expenseV47SelectedIds.has(id)}).length;['expenseAdminSelectAllTop','expenseAdminSelectAllTable'].forEach(function(id){var box=el(id);if(box){box.checked=!!rows.length&&count===rows.length;box.indeterminate=count>0&&count<rows.length}});var label=el('expenseAdminSelectedCount');if(label)label.textContent='已選 '+count+' 筆'};window.toggleExpenseAdminSelection=function(id,checked){id=String(id||'');if(checked)window.expenseV47SelectedIds.add(id);else window.expenseV47SelectedIds.delete(id);document.querySelectorAll('[data-expense-id="'+CSS.escape(id)+'"]').forEach(function(box){box.checked=checked});window.syncExpenseAdminSelectionControls()};window.toggleExpenseAdminSelectAll=function(checked){filtered().forEach(function(i){var id=String(i.id||'');if(checked)window.expenseV47SelectedIds.add(id);else window.expenseV47SelectedIds.delete(id)});if(window.renderExpenseAdminList)window.renderExpenseAdminList()};window.clearExpenseAdminSelection=function(){window.expenseV47SelectedIds.clear();if(window.renderExpenseAdminList)window.renderExpenseAdminList()};
 window.exportExpenseAdminExcel=function(){if(!window.StarredAdminReview83.requireReady())return;var list=outputRows();if(!list.length){alert('目前沒有可匯出的費用明細。');return}if(!window.XLSX||!window.XLSX.utils){alert('Excel 元件尚未載入，請重新整理後再試。');return}var data=list.map(function(i){return {'申請日期':i.requestDate||'','申請人':i.submitterName||'','類型':typeLabel(i.requestType),'店點':store(i),'開始時間':i.overtimeStart||'','結束日期':i.requestType==='expense'?'':window.StarredExpenseTime81.endDate(i),'結束時間':i.overtimeEnd||'','時數':duration(i.overtimeStart,i.overtimeEnd,i).replace(' 小時',''),'金額':window.expenseV47Amount(i)===null?'':Math.round(window.expenseV47Amount(i)),'申請內容':detail(i),'申請人備註':i.note||'','後台備註':i.reviewNote||'','狀態':statusLabel(i.status),'審核人':i.reviewerName||'','審核時間':dateTime(i.reviewedAt),'重複檢查':window.StarredExpenseDuplicate86.printNote(i)} });var sheet=XLSX.utils.json_to_sheet(data);sheet['!cols']=[{wch:12},{wch:14},{wch:14},{wch:24},{wch:10},{wch:12},{wch:10},{wch:9},{wch:12},{wch:34},{wch:28},{wch:28},{wch:11},{wch:14},{wch:20},{wch:32}];var book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,sheet,'費用明細');XLSX.writeFile(book,'星紅織品_費用明細_'+filePeriod()+'.xlsx')};
 window.printExpenseAdminReport=function(){if(!window.StarredAdminReview83.requireReady())return;var list=outputRows();if(!list.length){alert('目前沒有可列印的費用明細。');return}var popup=window.open('','_blank','width=1200,height=850');if(!popup){alert('請允許網站開啟列印視窗。');return}var body=list.map(function(i){return '<tr><td>'+esc(i.requestDate||'')+'</td><td>'+esc(i.submitterName||'')+'</td><td>'+esc(typeLabel(i.requestType))+'</td><td><b>'+esc(detail(i)||'—')+'</b>'+(i.note?'<div>申請人備註：'+esc(i.note)+'</div>':'')+(i.reviewNote?'<div class="red">後台備註：'+esc(i.reviewNote)+'</div>':'')+'</td><td class="num">'+esc(window.expenseV47AmountText(i))+'</td><td>'+esc(statusLabel(i.status))+(i.duplicateCount?'<div class="red">'+esc(window.StarredExpenseDuplicate86.printNote(i))+'</div>':'')+'</td></tr>'}).join('');popup.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>費用明細</title><style>@page{size:A4 landscape;margin:10mm}body{font:11px "Microsoft JhengHei",sans-serif;color:#284655}h1{margin:0 0 4px}p{color:#6b7f89}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:7px;border:1px solid #afbdc4;vertical-align:top;word-break:break-word}th{background:#2d4b5b;color:#fff}th:nth-child(4){width:43%}.num{text-align:right}.red{margin-top:4px;color:#c62828;font-weight:700}.actions{position:sticky;top:0;text-align:right;padding:8px;background:#294b5e}.actions button{padding:7px 14px}@media print{.actions{display:none}tr{break-inside:avoid}}</style></head><body><div class="actions"><button onclick="print()">開始列印</button></div><h1>費用明細</h1><p>'+esc(window.StarredAdminReview83.expensePrintScope())+'・共 '+list.length+' 筆</p><table><thead><tr><th>申請日期</th><th>申請人</th><th>類型</th><th>申請內容</th><th>金額</th><th>狀態</th></tr></thead><tbody>'+body+'</tbody></table><script>setTimeout(function(){focus();print()},250)<\/script></body></html>');popup.document.close()};
@@ -16974,8 +17067,8 @@ var PAGE_KEY='starred_active_page_v49',ADMIN_KEY='starred_active_admin_tab_v49',
 var allowedPages=['home','order','sales','expense','externalAccount','employeeRules','admin'];
 var allowedAdminTabs=['dashboard','activity','store','capacity','account','lineUser','orderAdmin','expenseAdmin','externalAccountAdmin','salesReport','employeeRulesAdmin','lineGroupMessages','leaveAdmin'];
 var allowedSalesViews=['daily','proxy','store','person','personDetail','workdays','returns','requests'];
-function read(key){try{return String(sessionStorage.getItem(key)||'')}catch(_){return ''}}
-function write(key,value){try{sessionStorage.setItem(key,String(value||''))}catch(_){}}
+function read(key){try{return String(window.StarredStorage89.session.getItem(key)||'')}catch(_){return ''}}
+function write(key,value){try{window.StarredStorage89.session.setItem(key,String(value||''))}catch(_){}}
 var savedPage=read(PAGE_KEY),savedAdmin=read(ADMIN_KEY),savedSales=read(SALES_KEY),ready=false;
 var previousShowPage=window.showPage;
 if(typeof previousShowPage==='function')window.showPage=function(page){page=String(page||'');if(ready&&allowedPages.includes(page))write(PAGE_KEY,page);return previousShowPage.apply(this,arguments)};
@@ -17011,9 +17104,9 @@ var operationRates={move_out:0,move_in:0,other:0};
 var migrationStarted=false;
 function v51El(id){return document.getElementById(id)}
 function normalizeRates(value){value=value&&typeof value==='object'?value:{};function rate(key){var number=Number(value[key]||0);return Number.isFinite(number)?Math.min(100000,Math.max(0,Math.round(number))):0}return {move_out:rate('move_out'),move_in:rate('move_in'),other:rate('other')}}
-function legacyRates(){try{return normalizeRates(JSON.parse(localStorage.getItem(LEGACY_RATE_KEY)||'{}'))}catch(_){return normalizeRates({})}}
+function legacyRates(){try{return normalizeRates(JSON.parse(window.StarredStorage89.local.getItem(LEGACY_RATE_KEY)||'{}'))}catch(_){return normalizeRates({})}}
 function hasRates(value){return Number(value.move_out||0)>0||Number(value.move_in||0)>0||Number(value.other||0)>0}
-function persistFallback(){try{localStorage.setItem(LEGACY_RATE_KEY,JSON.stringify(operationRates))}catch(_){}}
+function persistFallback(){try{window.StarredStorage89.local.setItem(LEGACY_RATE_KEY,JSON.stringify(operationRates))}catch(_){}}
 function applyRateInputs(){if(v51El('expenseMoveOutRate'))v51El('expenseMoveOutRate').value=operationRates.move_out||'';if(v51El('expenseMoveInRate'))v51El('expenseMoveInRate').value=operationRates.move_in||'';if(v51El('expenseOtherRate'))v51El('expenseOtherRate').value=operationRates.other||''}
 function setRateMessage(text,type){var box=v51El('expenseAdminMessage');if(!box)return;box.className='expense-form-status'+(text?' show '+(type||'working'):'');box.textContent=text||''}
 function rerenderRates(){if(typeof window.renderExpenseAdminList==='function')window.renderExpenseAdminList()}
@@ -17194,7 +17287,7 @@ function v54OpenPrint(title,content,options){
   var html='<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>　</title><style>@page{size:A4 '+orientation+';margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff;color:#243d49;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;font-size:12px;line-height:1.25}.print-actions{position:sticky;z-index:10;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;background:#294b5e;color:#fff}.print-actions span{font-size:12px}.print-actions button{padding:7px 15px;border:0;border-radius:6px;background:#fff;color:#294b5e;font-size:13px;font-weight:700;cursor:pointer}.print-sheet{width:100%;min-height:210mm;padding:6mm 7mm}.print-sheet.one-page{height:210mm;min-height:210mm;overflow:hidden;padding:4.5mm 5mm}.report-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:5px;padding-bottom:4px;border-bottom:2px solid #294b5e}.report-head h1{margin:0;font-size:14px;line-height:1.2}.report-head p{margin:2px 0 0;color:#667d88;font-size:12px}.report-head time{color:#667d88;font-size:12px;white-space:nowrap}.print-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:0 0 6px}.print-summary>div{padding:4px 6px;border:1px solid #c8d1d5;background:#f6f8f9;text-align:center}.print-summary span,.print-summary b{display:block}.print-summary span{font-size:12px;color:#617783}.print-summary b{margin-top:1px;font-size:13px;color:#294858;font-variant-numeric:tabular-nums}.high-value{color:#c62828!important;font-weight:700!important}section{margin:0 0 8px;break-inside:auto}h2{margin:0 0 3px;color:#294858;font-size:14px;line-height:1.2}.section-note{margin:0 0 4px;color:#667d88;font-size:12px}.table-wrap{width:100%;overflow:visible}table{width:100%;border-collapse:collapse;table-layout:auto;font-size:12px}th,td{padding:3px 4px;border:1px solid #aeb9be;vertical-align:middle;text-align:left;word-break:break-word}th{background:#dfe4e7;color:#243d49;font-size:12px;font-weight:700;white-space:nowrap}th.num,td.num{text-align:center;font-variant-numeric:tabular-nums}tbody tr:nth-child(even) td{background:#f0f2f3}tfoot th,tfoot td{background:#dfe4e7;font-weight:700}tr{break-inside:avoid;page-break-inside:avoid}.empty{padding:10px;border:1px dashed #aeb9be;color:#6f838d}.notice{margin:0 0 5px;padding:3px 6px;border-left:3px solid #9eafb7;background:#f4f6f7;color:#5c707a;font-size:12px}.average-table h2{font-size:14px;font-weight:800}.store-print-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,.85fr);gap:5px;align-items:start}.one-page section{margin-bottom:4px}.one-page .report-head{margin-bottom:3px}.one-page .print-summary{margin-bottom:4px}.one-page table{font-size:12px;line-height:1.05}.one-page th,.one-page td{padding:1px 2px}.one-page h2{margin-bottom:2px}.one-page .section-note{margin-bottom:2px;line-height:1.1}.one-page .matrix-table th,.one-page .matrix-table td{white-space:nowrap}.one-page .matrix-table th:first-child{width:58px}.one-page .average-table table{table-layout:fixed}.one-page .average-table th,.one-page .average-table td{white-space:normal}.person-print section{margin-bottom:8px}.person-print td small{display:block;color:#667d88}@media print{.print-actions{display:none!important}.print-sheet{padding:6mm 7mm}.print-sheet.one-page{padding:4.5mm 5mm}thead{display:table-header-group}tfoot{display:table-row-group}}</style></head><body><div class="print-actions"><span>列印內容已移除網址；若瀏覽器仍啟用頁首頁尾，請在列印設定取消「頁首與頁尾」。</span><button type="button" onclick="window.print()">開始列印／另存 PDF</button></div><main class="print-sheet'+onePage+compact+'"><header class="report-head"><div><h1>'+v54Esc(title)+'</h1><p>查詢區間：'+v54Esc(salesAdminPeriodLabel())+'</p></div><time>列印時間：'+v54Esc(salesDateTime(new Date().toISOString()))+'</time></header>'+content+'</main><script>document.title="　";setTimeout(function(){window.focus();window.print()},350)<\/script></body></html>';
   popup.document.open();popup.document.write(html);popup.document.close();return true;
 }
-function v54DailyRows(excel){return (salesAdminData.records||[]).map(function(record){return {'業績日期':record.businessDate||'','區域':v54Area(record.area),'門市／樓層':salesStoreText(record),'銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),'營業總額':excel?Number(record.grossAmount||0):v54Money(record.grossAmount||0),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'—','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}})}
+function v54DailyRows(excel){return (salesAdminData.records||[]).map(function(record){return {'業績日期':record.businessDate||'','類型':record.isOvernightSale?'隔夜帳':record.isProxySale?'代銷售':salesRecordType(record)==='return'?'退貨':'業績','原成交日':record.overnightMeta&&record.overnightMeta.originalDate||'','區域':v54Area(record.area),'門市／樓層':salesStoreText(record),'銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),'營業總額':excel?Number(record.grossAmount||0):v54Money(record.grossAmount||0),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'—','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}})}
 function v54ProxyRows(excel){return salesProxyReportRows().map(function(row){var copy=Object.assign({},row);if(!excel)copy['營業總額']=v54Money(copy['營業總額']);return copy})}
 function v54StoreRows(excel){return (salesAdminData.byStore||[]).map(function(row,index){return {'排名':index+1,'區域':v54Area(row.area),'門市／樓層':salesStoreText(row),'營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨另計':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'回傳筆數':Number(row.recordCount||0)}})}
 function v54PersonRows(excel){return (salesAdminData.byPerson||[]).map(function(row,index){var net=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));return {'排名':row.expenseOnly?'—':index+1,'銷售人員':salesPersonName(row.lineUserId,row.name),'店點':(row.locations||[]).map(salesStoreText).join('、')||'—','營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'當月業績':excel?net:v54Money(net),'筆數':Number(row.recordCount||0)}})}
@@ -17204,7 +17297,7 @@ function v54RequestRows(excel){var filter=String((v54El('salesAdminRequestFilter
 function v54AverageRows(excel,source){return salesAveragePerformanceExportRows(source).map(function(row){var copy=Object.assign({},row);copy['時薪工時']=salesWorkHoursNumberText(copy['時薪工時'])+(excel?'':' 小時');if(!excel){copy['個人營業總額']=v54Money(copy['個人營業總額']);copy['平均業績']=copy['平均業績']===''?'—':v54Money(copy['平均業績']);copy['計日薪天數']=String(copy['計日薪天數'])+' 天';copy['時薪日期數']=String(copy['時薪日期數'])+' 天';copy['平均計算天數']=String(copy['平均計算天數'])+' 天';copy['待確認天數']=String(copy['待確認天數'])+' 天'}return copy})}
 function v54ComparisonRows(excel){return salesPersonDetailExportRows().map(function(row){if(excel)return Object.assign({},row);var copy={};Object.keys(row).forEach(function(key){copy[key]=key==='日期'?row[key]:(row[key]===''?'':v54Money(row[key]))});return copy})}
 function v54PageSpec(view,excel){
-  if(view==='proxy')return {title:'代銷售',rows:v54ProxyRows(excel),note:'本頁只列出代銷售；切換到其他報表時不會帶入代銷售資料。',widths:[13,28,16,16,20,16,14,21],high:['營業總額']};
+  if(view==='proxy')return {title:'代銷售／隔夜帳',rows:v54ProxyRows(excel),note:'隔夜帳依入帳日計入門市與指定人員；不增加日薪。已含原回傳者只拆分歸屬，門市總額不重複增加。',widths:[12,14,14,28,16,16,16,16,32,30,14,21],high:['營業總額']};
   if(view==='store')return {title:'門市業績',rows:v54StoreRows(excel),widths:[8,12,28,16,16,12],high:['營業總額']};
   if(view==='person')return {title:'業績總覽',rows:v54PersonRows(excel),widths:[8,16,38,16,14,16,12],high:['營業總額','當月業績']};
   if(view==='workdays')return {title:'上班天數',rows:v54WorkdayRows(excel),note:'核准日薪依人員、日期、門市各計 1 天；同日跨店可加總；時薪日期另列工時。',widths:[16,20,16,14,14,16,14,16,16],high:['營業總額']};
@@ -17212,7 +17305,7 @@ function v54PageSpec(view,excel){
   if(view==='requests')return {title:'修改審核',rows:v54RequestRows(excel),widths:[21,16,13,13,28,16,16,34,14,16],high:[]};
   if(view==='personDetail'&&comparisonView==='average')return {title:'平均業績',rows:v54AverageRows(excel),note:'平均業績＝個人營業總額 ÷ 平均計算天數；計日薪與時薪日期皆納入，同一天只算 1 天。',widths:[8,16,16,14,14,14,16,16,14,12],high:['個人營業總額','平均業績']};
   if(view==='personDetail')return {title:'業績對比',rows:v54ComparisonRows(excel),note:'目前勾選人員的每日營業額對比。',widths:[13].concat(salesPersonDetailModel().people.map(function(){return 14})).concat([16]),high:salesPersonDetailModel().people.map(function(person){return person.name}).concat(['銷售總額'])};
-  return {title:'每日明細',rows:v54DailyRows(excel),widths:[13,10,28,16,16,16,13,14,21],high:['營業總額']};
+  return {title:'每日明細',rows:v54DailyRows(excel),widths:[13,12,13,10,28,16,16,16,13,14,21],high:['營業總額']};
 }
 function v54FilePart(value){return String(value||'').replace(/[\\/:*?\"<>|\s]+/g,'_')}
 async function v54ExportWorkbook(spec){
@@ -17549,7 +17642,7 @@ function openModal(id){e(id)?.classList.add('show')}
 
 function removeFrontLeave(){
   var nav=e('leaveNav'),page=e('leavePage');if(nav)nav.remove();if(page)page.remove();
-  try{if(sessionStorage.getItem('starred_active_page_v49')==='leave')sessionStorage.setItem('starred_active_page_v49','home')}catch(_){}
+  try{if(window.StarredStorage89.session.getItem('starred_active_page_v49')==='leave')window.StarredStorage89.session.setItem('starred_active_page_v49','home')}catch(_){}
 }
 function normalizeTopbarDom(){
   var right=document.querySelector('.topbar .topbar-right'),nav=document.querySelector('.topbar .nav'),notify=document.querySelector('.topbar .notification-wrap'),session=document.querySelector('.topbar .topbar-session');
@@ -17643,7 +17736,7 @@ window.leave66ToggleAccess=toggleAccess;
 async function loadDashboardSummary(force){ensureUI();if(!canAccessLocal())return;var now=Date.now();if(!force&&state.dashboardLoadedAt&&now-state.dashboardLoadedAt<60000){updateDashboardFromData();return}state.dashboardLoadedAt=now;try{var r=await api('leave_admin_summary',{});state.summary=Object.assign({},state.summary,{activeEmployees:r.activeEmployees,expiringSoon:r.expiringSoon,overused:r.overused,pendingAnnualSettlements:r.pendingAnnualSettlements,expiringContracts:r.expiringContracts});state.warnings=Array.isArray(r.warnings)?r.warnings:state.warnings;updateDashboardFromData()}catch(error){console.warn('休假提醒載入失敗',error)}}
 
 var previousShowPage=window.showPage;window.showPage=function(page){if(String(page)==='leave')page='home';var result=typeof previousShowPage==='function'?previousShowPage.call(this,page):undefined;removeFrontLeave();normalizeTopbarDom();return result};
-var previousShowAdmin=window.showAdminTab;window.showAdminTab=function(tab){tab=String(tab||'');if(tab==='leaveAdmin'){ensureUI();if(!canAccessLocal()){alert('目前帳號沒有員工資料／休假管理權限。請由系統管理員在本頁的「頁面權限」開放。');return}if(typeof previousShowAdmin==='function')previousShowAdmin.call(this,'dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(node){node.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs>button').forEach(function(node){node.classList.remove('active')});e('leaveAdminTab')?.classList.add('active');e('leaveAdminTabBtn')?.classList.add('active');try{sessionStorage.setItem('starred_active_admin_tab_v49','leaveAdmin')}catch(_){}load(false);window.scrollTo({top:0,behavior:'smooth'});return}var result=typeof previousShowAdmin==='function'?previousShowAdmin.apply(this,arguments):undefined;e('leaveAdminTab')?.classList.remove('active');e('leaveAdminTabBtn')?.classList.remove('active');return result};
+var previousShowAdmin=window.showAdminTab;window.showAdminTab=function(tab){tab=String(tab||'');if(tab==='leaveAdmin'){ensureUI();if(!canAccessLocal()){alert('目前帳號沒有員工資料／休假管理權限。請由系統管理員在本頁的「頁面權限」開放。');return}if(typeof previousShowAdmin==='function')previousShowAdmin.call(this,'dashboard');document.querySelectorAll('#adminContent .admin-tab-panel').forEach(function(node){node.classList.remove('active')});document.querySelectorAll('#adminContent>.admin-tabs>button').forEach(function(node){node.classList.remove('active')});e('leaveAdminTab')?.classList.add('active');e('leaveAdminTabBtn')?.classList.add('active');try{window.StarredStorage89.session.setItem('starred_active_admin_tab_v49','leaveAdmin')}catch(_){}load(false);window.scrollTo({top:0,behavior:'smooth'});return}var result=typeof previousShowAdmin==='function'?previousShowAdmin.apply(this,arguments):undefined;e('leaveAdminTab')?.classList.remove('active');e('leaveAdminTabBtn')?.classList.remove('active');return result};
 var previousCheckLogin=window.checkLogin;if(typeof previousCheckLogin==='function')window.checkLogin=function(){var r=previousCheckLogin.apply(this,arguments);setTimeout(function(){ensureUI();syncVisibility();loadDashboardSummary(false)},20);return r};
 var previousApplyRole=window.applyAdminRoleUI;if(typeof previousApplyRole==='function')window.applyAdminRoleUI=function(){var r=previousApplyRole.apply(this,arguments);setTimeout(syncVisibility,0);return r};
 var previousRenderDashboard=window.renderDashboard;if(typeof previousRenderDashboard==='function')window.renderDashboard=function(){var r=previousRenderDashboard.apply(this,arguments);setTimeout(function(){ensureDashboardCard();loadDashboardSummary(false)},0);return r};
@@ -20305,12 +20398,12 @@ async function intentId(scope,payload){
   var text=JSON.stringify(payload),digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
   var fingerprint=Array.from(new Uint8Array(digest)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');
   var key='starred_deduction_v78_intent_'+scope+'_'+identity();
-  var saved=null;try{saved=JSON.parse(sessionStorage.getItem(key)||'null')}catch(_){}
+  var saved=null;try{saved=JSON.parse(window.StarredStorage89.session.getItem(key)||'null')}catch(_){}
   if(saved&&saved.fingerprint===fingerprint)return saved.id;
-  var id=crypto.randomUUID();try{sessionStorage.setItem(key,JSON.stringify({fingerprint:fingerprint,id:id}))}catch(_){}
+  var id=crypto.randomUUID();try{window.StarredStorage89.session.setItem(key,JSON.stringify({fingerprint:fingerprint,id:id}))}catch(_){}
   return id;
 }
-function clearIntent(scope){try{sessionStorage.removeItem('starred_deduction_v78_intent_'+scope+'_'+identity())}catch(_){}}
+function clearIntent(scope){try{window.StarredStorage89.session.removeItem('starred_deduction_v78_intent_'+scope+'_'+identity())}catch(_){}}
 function inputPayload(prefix){var raw=String(el(prefix+'Amount').value).trim(),amount=Number(raw),reason=String(el(prefix+'Reason').value).trim(),note=String(el(prefix+'Note').value).trim();if(!raw||!Number.isSafeInteger(amount)||amount<1||amount>10000000)throw new Error('扣款金額請填寫 1～10,000,000 元整數。');if(reason.length<2||reason.length>500)throw new Error('扣款原因請填寫 2～500 個字。');if(note.length>500)throw new Error('備註最多 500 個字。');return {amount:amount,reason:reason,note:note}}
 function ownFormMessage(text,bad){var box=el('expenseFormStatus');if(box){box.className='expense-form-status show '+(bad?'error':'success');box.textContent=text}}
 async function submitOwn(){
@@ -20959,7 +21052,7 @@ function table(title,headers,rows,note,cls){
 function cards(items){return '<div class="print-summary">'+items.map(function(i){return '<div><span>'+esc(i[0])+'</span><b class="'+(i[2]?'high-value':'')+'">'+esc(money(i[1]))+'</b></div>'}).join('')+'</div>'}
 function reportHtml(data,seq){
  var s=data.summary,groups=bridge.personDailyModel782(data.records.concat(data.performanceReturns),data.person.lineUserId),notes=data.workdayNotes||{},rates=data.operationRates||{};
- var detail=groups.map(function(g){var work=g.sales.map(function(r){return notes[r.id]}).filter(Boolean).sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))})[0];return [cell(g.date),cell(g.sales.length?'業績':'僅退貨'),cell(bridge.storeText(g)+(g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':'')),cell(money(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'money',g.netAmount),cell(g.returnAmount!==0?money(g.returnAmount):'—'),cell(g.invoiceDates.join('、')||'—'),cell(work?.text||'—'),cell(stamp(g.lastUpdated))]});
+ var detail=groups.map(function(g){var work=g.sales.map(function(r){return notes[r.id]}).filter(Boolean).sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))})[0];return [cell(g.date),cell(g.sales.length?'業績':'僅退貨'),cell(bridge.storeText(g)+(g.sales.some(function(r){return r.isOvernightSale===true||!!r.overnightMeta})?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':'')),cell(money(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'money',g.netAmount),cell(g.returnAmount!==0?money(g.returnAmount):'—'),cell(g.invoiceDates.join('、')||'—'),cell([work?.text,g.sales.filter(function(r){return r.isOvernightSale===true||!!r.overnightMeta}).map(function(r){return '隔夜帳 '+money(r.grossAmount)+'｜原成交 '+(r.overnightMeta?.originalDate||'—')+'；入帳 '+r.businessDate+(r.note?'；'+r.note:'')}).join('；')].filter(Boolean).join('；')||'—'),cell(stamp(g.lastUpdated))]});
  var type=function(v){return {move_out:'撤櫃',move_in:'進櫃',other:'其他',overtime:'移櫃／加班',expense:'費用'}[v]||v};
  var expenses=data.expenses.slice().sort(function(a,b){return String(b.requestDate).localeCompare(String(a.requestDate))}).map(function(i){var p=pay(i,rates),adjust=i.isDeletionAdjustment,description=adjust?i.deletionNote:i.requestType==='expense'?i.reason:[bridge.storeText(i),window.StarredExpenseTime81.rangeText(i)].filter(Boolean).join('・'),review=[adjust?'刪除人：'+(i.deletedByName||'—'):'核准人：'+(i.reviewerName||'—'),i.note?'申請：'+i.note:'',i.reviewNote?'後台：'+i.reviewNote:''].filter(Boolean).join('；');return [cell(i.requestDate),cell(adjust?'刪除沖減':type(i.requestType)),cell(description),cell(p.hours),cell(p.rate?money(p.rate):'—'),cell(p.amount===null?'—':money(p.amount)),cell(p.formula),cell(review)]});
  var external=data.externalAccounts.slice().sort(function(a,b){return String(b.transactionDate).localeCompare(String(a.transactionDate))}).map(function(i){return [cell(i.transactionDate),cell(money(i.customerAmount)),cell([i.isDeletionAdjustment?i.deletionNote:'',i.note||''].filter(Boolean).join('；')||'—'),cell(i.isDeletionAdjustment?'刪除人：'+(i.deletedByName||'—'):i.reviewerName||'—'),cell(stamp(i.isDeletionAdjustment?i.deletedAt:i.reviewedAt))]});
@@ -21497,3 +21590,108 @@ window.StarredCompanyPrint82={open:open,close:close,print:print,build:'20261001-
 });
 })();
 </script>
+
+<style id="sales-overnight-v88-style">
+#salesReportProxyView .sales-proxy-toolbar{gap:14px;align-items:center}
+#salesReportProxyView .sales-proxy-toolbar-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+#salesReportProxyView .sales-proxy-toolbar-actions>button{font-size:14px!important;font-weight:400!important;white-space:nowrap!important}
+#salesReportProxyView .sales-proxy-toolbar>div:first-child>span{font-size:14px!important;line-height:1.6}
+.overnight88-badge{display:inline-block;margin-top:5px;padding:3px 8px;border-radius:7px;border:1px solid #bdcde0;background:#edf3fb;color:#355777;font-size:14px;font-weight:400}
+.overnight88-row-note{display:block;color:#647d8b;font-size:13px!important;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.overnight88-modal{position:fixed;inset:0;z-index:1900000;background:rgba(24,43,54,.55);display:flex;align-items:center;justify-content:center;padding:18px}
+.overnight88-dialog{width:min(760px,100%);max-height:calc(100dvh - 36px);display:flex;flex-direction:column;background:white;border:1px solid #d5e0e7;border-radius:18px;box-shadow:0 20px 60px #20344140;overflow:hidden;color:#294858;font-size:16px;font-weight:400}
+.overnight88-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid #dbe5ea;flex:none}
+.overnight88-head h3{font-size:22px;font-weight:400;margin:0}.overnight88-head small{font-size:12px;color:#7b8f99;letter-spacing:.08em}
+.overnight88-head button{border:1px solid #d4e1e7;border-radius:50%;width:40px;min-height:40px!important;padding:0!important;font-size:26px;font-weight:400;background:#f3f7f9;color:#496676}
+.overnight88-body{padding:18px 22px;overflow:auto;overscroll-behavior:contain;min-height:0}
+.overnight88-body p{font-size:14px;line-height:1.65;margin:0 0 12px}
+.overnight88-body fieldset{padding:0;margin:0;border:0;min-width:0}
+.overnight88-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px;align-items:start}
+.overnight88-grid label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:400;min-width:0}
+.overnight88-grid input,.overnight88-grid select,.overnight88-grid textarea{font-size:16px!important;width:100%;min-width:0;font-weight:400}
+.overnight88-wide{grid-column:1/-1}.overnight88-grid textarea{min-height:72px;resize:vertical}
+.overnight88-preview{background:#f0f6fa;border:1px solid #cfdee8;border-radius:12px;padding:12px 14px;margin:14px 0;line-height:1.75;font-size:14px;white-space:pre-line}
+.overnight88-consent{display:flex;align-items:flex-start;gap:9px;font-size:14px;line-height:1.6}.overnight88-consent input{width:20px!important;min-height:20px!important;height:20px!important;margin-top:2px;flex:none}
+.overnight88-message{font-size:14px;line-height:1.65;color:#9b3c35;background:#fff0ee;border-radius:9px;padding:10px;margin-top:12px;white-space:pre-line}.overnight88-message:empty{display:none}
+.overnight88-footer{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px;border-top:1px solid #dbe5ea;flex:none}.overnight88-footer button{font-weight:400!important;font-size:16px!important;min-width:100px}
+.overnight88-success{text-align:center;padding:12px}.overnight88-success h4{font-size:24px;font-weight:400;color:#287653;margin:8px}.overnight88-success p{font-size:16px;white-space:pre-line}
+@media(max-width:760px){#salesReportProxyView .sales-proxy-toolbar-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}#salesReportProxyView .sales-proxy-toolbar-actions>strong{grid-column:1/-1;text-align:left}.overnight88-modal{padding:8px}.overnight88-dialog{max-height:calc(100dvh - 16px);border-radius:14px}.overnight88-head{padding:14px}.overnight88-body{padding:14px}.overnight88-grid{grid-template-columns:1fr;gap:12px}.overnight88-wide{grid-column:auto}.overnight88-footer{padding:12px 14px max(12px,env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr}.overnight88-footer button{min-width:0}.overnight88-body input[type=date]{appearance:none;-webkit-appearance:none;text-align:left}}
+</style>
+<script id="sales-overnight-v88-module">
+(function(){
+'use strict';
+var BUILD='20261006-posting-date-overnight-v88',state=null,lastFocus=null,optionsSeq=0;
+function el(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function money(n){return '$'+Number(n||0).toLocaleString('zh-TW')}
+function bridge(){return window.STARRED_SALES_REPORT_BRIDGE_V55}
+function record(id){var b=bridge();return b&&(b.getData().records||[]).find(function(r){return String(r.id)===String(id)})}
+function today(){var out={};new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).forEach(function(p){out[p.type]=p.value});return out.year+'-'+out.month+'-'+out.day}
+function validDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||v.slice(0,4)==='0000')return false;var d=new Date(v+'T00:00:00Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===v}
+function previousDate(v){return new Date(Date.parse(v+'T00:00:00Z')-86400000).toISOString().slice(0,10)}
+function allowed(){return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(typeof normalizeCurrentAdminRole==='function'?normalizeCurrentAdminRole(currentUser.role):currentUser.role)}
+function auth(){return typeof currentUser!=='undefined'&&currentUser?String(currentUser.adminSessionToken||'')+'|'+String(currentUser.username||currentUser.name||''):''}
+async function api(action,payload){var r=await window.starredApi(action,payload);if(!r||r.success===false)throw new Error(r&&r.error||'未取得隔夜帳回應');if(r.overnightSalesBuild!==BUILD)throw new Error('請先更新 v88 SQL 與 line-api，再使用隔夜帳；目前尚未確認相容。');return r}
+function is(r){return !!(r&&(r.isOvernightSale===true||r.overnightMeta))}
+function label(r){return is(r)?'隔夜帳':r&&r.isProxySale?'代銷售':'業績'}
+function info(r){var m=r&&r.overnightMeta||{};return '原成交日：'+(m.originalDate||'—')+'；入帳日：'+(r.businessDate||'—')+'；'+(m.mode==='included'?'由 '+(m.sourcePersonName||'當日人員')+' 原回傳拆出，門市合計不變':'未含在當日回傳，另加入門市營業額')+(r.note?'；備註：'+r.note:'')}
+function error(text){var e=el('overnight88Message');if(e)e.textContent=text||''}
+function ensure(){var m=el('overnight88Modal');if(m)return m;m=document.createElement('div');m.id='overnight88Modal';m.className='overnight88-modal';m.hidden=true;m.innerHTML='<section class="overnight88-dialog" role="dialog" aria-modal="true" aria-labelledby="overnight88Title"><header class="overnight88-head"><div><small>OVERNIGHT SALES</small><h3 id="overnight88Title">新增隔夜帳</h3></div><button type="button" data-o88="close" aria-label="關閉">×</button></header><div class="overnight88-body"><div id="overnight88Content"></div><div id="overnight88Message" class="overnight88-message" role="status" aria-live="polite"></div></div><footer class="overnight88-footer" id="overnight88Footer"></footer></section>';m.addEventListener('click',function(e){var b=e.target.closest('[data-o88]');if(!b||b.disabled)return;var a=b.dataset.o88;if(a==='close')close();if(a==='save')save();if(a==='void')voidRecord();if(a==='sources')loadSources()});m.addEventListener('input',preview);m.addEventListener('change',function(e){var id=e.target.id;if(id==='overnight88Date'||id==='overnight88Store'){if(el('overnight88Original'))el('overnight88Original').max=validDate(el('overnight88Date').value)?previousDate(el('overnight88Date').value):today();loadSources()}if(id==='overnight88Mode'){el('overnight88SourceWrap').hidden=e.target.value!=='included'}if(id==='overnight88Consent'&&e.target.checked&&(el('overnight88Message')||{}).textContent==='請先勾選已核對金額來源。')error('');preview()});document.body.appendChild(m);return m}
+function show(title,html,footer){var m=ensure();lastFocus=document.activeElement;el('overnight88Title').textContent=title;el('overnight88Content').innerHTML=html;el('overnight88Footer').innerHTML=footer||'<button type="button" class="secondary" data-o88="close">關閉</button>';error('');m.hidden=false;setTimeout(function(){var first=m.querySelector('.overnight88-body input,.overnight88-body select,.overnight88-footer button');if(first)first.focus()},0)}
+function close(){if(state&&state.busy)return;ensure().hidden=true;state=null;optionsSeq++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
+function actions(label){return '<button type="button" class="secondary" data-o88="close">返回</button><button id="overnight88Save" type="button" class="primary" data-o88="save">'+label+'</button>'}
+async function open(){
+ if(!allowed()){window.alert('只有已登入後台的會計或系統管理員可以新增隔夜帳。');return}
+ var to=(el('salesAdminDateTo')||{}).value,from=(el('salesAdminDateFrom')||{}).value,d=from===to&&validDate(to)&&to<=today()?to:today();
+ state={mode:'create',operationId:crypto.randomUUID(),auth:auth(),busy:false,sources:[],sourcesReady:false};var token=state;
+ show('新增隔夜帳','<p>隔夜帳記入「入帳日」的門市營業額與指定人員業績；不算給隔天上班人員，也不增加任何人的日薪。</p><fieldset id="overnight88Fields" disabled><div class="overnight88-grid"><label>原成交日期 *<input id="overnight88Original" type="date" value="'+previousDate(d)+'" max="'+previousDate(d)+'"></label><label>入帳日期 *<input id="overnight88Date" type="date" value="'+d+'" max="'+today()+'"></label><label>入帳門市 *<select id="overnight88Store"><option value="">讀取門市中…</option></select></label><label>業績歸屬人員 *<select id="overnight88Person"><option value="">讀取人員中…</option></select></label><label>隔夜帳金額 *<input id="overnight88Amount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="請填隔夜帳金額"></label><label>金額是否已含在當日回傳？ *<select id="overnight88Mode"><option value="">請確認金額來源</option><option value="additional">尚未包含，額外加入</option><option value="included">已包含，從原回傳拆出</option></select></label><label id="overnight88SourceWrap" class="overnight88-wide" hidden>已包含這筆金額的原回傳 *<select id="overnight88Source"><option value="">請先選入帳日期與門市</option></select><button type="button" class="secondary" data-o88="sources">重新讀取原回傳</button></label><label class="overnight88-wide">備註（選填，最多 500 字）<textarea id="overnight88Note" maxlength="500" rows="2" placeholder="可填單號或商品，方便核對是否重複"></textarea></label></div><div id="overnight88Preview" class="overnight88-preview">請填寫日期、歸屬人員、金額與金額來源。</div><label class="overnight88-consent"><input id="overnight88Consent" type="checkbox">已核對金額來源；當日業績不會再次包含這筆隔夜帳。</label></fieldset>',actions('確認新增隔夜帳'));
+ el('overnight88Save').disabled=true;error('正在讀取正式門市與人員…');
+ try{var r=await api('sales_overnight_options',{});if(state!==token||auth()!==token.auth)return;
+   token.stores=r.stores||[];token.people=r.people||[];
+   el('overnight88Store').innerHTML='<option value="">請選擇門市</option>'+token.stores.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'zh-Hant')}).map(function(s){return '<option value="'+esc(s.id)+'">'+esc([s.name,s.floor].filter(Boolean).join('｜'))+'</option>'}).join('');
+   el('overnight88Person').innerHTML='<option value="">請選擇業績歸屬人員</option>'+token.people.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'zh-Hant')}).map(function(p){return '<option value="'+esc(p.lineUserId)+'">'+esc(p.name)+'</option>'}).join('');
+   var store=(el('salesAdminStore')||{}).value||'';if(token.stores.some(function(s){return s.id===store}))el('overnight88Store').value=store;
+   el('overnight88Fields').disabled=false;el('overnight88Save').disabled=false;error('');if(store)await loadSources();
+ }catch(e){if(state===token)error('無法讀取：'+e.message+'\n請確認已完成 SQL 與 line-api 更新，再重新開啟。')}
+}
+async function loadSources(){
+ var token=state;if(!token||token.mode!=='create'||token.busy)return;var seq=++optionsSeq,select=el('overnight88Source');token.sourcesReady=false;token.sources=[];
+ var d=el('overnight88Date').value,s=el('overnight88Store').value;select.innerHTML='<option value="">讀取原回傳中…</option>';
+ if(!validDate(d)||d>today()||!s){select.innerHTML='<option value="">請先選擇正確入帳日期與門市</option>';preview();return}
+ try{var r=await api('sales_overnight_options',{businessDate:d,storeId:s});if(state!==token||seq!==optionsSeq||token.auth!==auth())return;
+  token.sources=r.sourceRecords||[];token.sourceKey=d+'|'+s;token.sourcesReady=true;
+  select.innerHTML='<option value="">'+(token.sources.length?'請選擇原回傳':'該日該店尚無本人回傳')+'</option>'+token.sources.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.salespersonName||x.submitterName)+'｜可拆出 '+esc(money(x.grossAmount))+'</option>'}).join('');error('');preview();
+ }catch(e){if(state===token&&seq===optionsSeq){error('原回傳讀取失敗：'+e.message);select.innerHTML='<option value="">讀取未完成，請按重新讀取</option>';preview()}}
+}
+function model(){
+ if(!state||state.mode!=='create')throw new Error('請重新開啟隔夜帳表單。');
+ var d=el('overnight88Date').value,o=el('overnight88Original').value,s=el('overnight88Store').value,p=el('overnight88Person').value,raw=el('overnight88Amount').value.trim(),a=Number(raw),m=el('overnight88Mode').value,n=el('overnight88Note').value.trim();
+ if(!validDate(d)||!validDate(o)||o>=d||d>today())throw new Error('原成交日須早於入帳日，入帳日不可晚於今天。');
+ if(!s||!p)throw new Error('請選擇入帳門市與業績歸屬人員。');if(!raw||!Number.isSafeInteger(a)||a<1||a>10000000)throw new Error('金額請填寫 1～10,000,000 元整數。');
+ if(!['additional','included'].includes(m))throw new Error('請確認隔夜帳金額是否已包含在當日回傳。');
+ if(n.length>500)throw new Error('備註最多 500 字。');
+ var src=null;if(m==='included'){if(!state.sourcesReady||state.sourceKey!==d+'|'+s)throw new Error('原回傳尚未讀取完成，請重新讀取。');src=state.sources.find(function(r){return r.id===el('overnight88Source').value});if(!src)throw new Error('請選擇包含這筆隔夜帳的原回傳。');if(Number(src.grossAmount)<a)throw new Error('隔夜帳金額不可超過原回傳目前可拆出的金額。')}
+ return {payload:{operation:'create',operationId:state.operationId,businessDate:d,originalDate:o,storeId:s,salespersonLineUserId:p,grossAmount:a,amountMode:m,note:n,sourceReportId:src?src.id:null,sourceGrossAmount:src?Number(src.grossAmount):null,sourceUpdatedAt:src?src.updatedAt:null},source:src,person:state.people.find(function(x){return x.lineUserId===p}),store:state.stores.find(function(x){return x.id===s})};
+}
+function preview(){if(!state||state.mode!=='create'||!el('overnight88Preview'))return;try{var x=model(),p=x.payload;el('overnight88Preview').textContent='入帳日：'+p.businessDate+'｜業績歸 '+x.person.name+' '+money(p.grossAmount)+'\n'+(x.source?'原回傳 '+(x.source.salespersonName||x.source.submitterName)+'：'+money(x.source.grossAmount)+' → '+money(x.source.grossAmount-p.grossAmount)+'\n門市合計不變，只轉移這筆金額的業績歸屬。':'門市當日營業額增加 '+money(p.grossAmount)+'；當日人員回傳請排除此筆。')+'\n不增加任何人的日薪、工時或上班天數。'}catch(e){el('overnight88Preview').textContent=e.message}}
+function busy(value){if(state)state.busy=value;var f=el('overnight88Fields');if(f)f.disabled=value;ensure().querySelectorAll('button').forEach(function(b){b.disabled=value})}
+async function refresh(){var ok=false;try{ok=await window.loadSalesAdminReport();if(typeof window.showSalesReportView==='function')window.showSalesReportView('proxy',document.querySelector('[data-sales-view="proxy"]'));if(typeof window.loadSalesData==='function')await window.loadSalesData()}catch(_){}return ok}
+async function save(){var token=state;if(!token||token.busy||!allowed())return;var x;try{if(auth()!==token.auth)throw new Error('登入身分已變更，請重新開啟表單。');x=model();if(!el('overnight88Consent').checked)throw new Error('請先勾選已核對金額來源。')}catch(e){error(e.message);return}
+ busy(true);error('正在儲存隔夜帳…');var acknowledged=false;
+ try{var r=await api('sales_overnight_mutate',x.payload);acknowledged=true;if(state!==token||auth()!==token.auth)return;
+   var posted=r.record;if(!posted||posted.isOvernightSale!==true||posted.businessDate!==x.payload.businessDate||posted.salespersonLineUserId!==x.payload.salespersonLineUserId||Number(posted.grossAmount)!==x.payload.grossAmount)throw new Error('伺服器回應與本次輸入不一致，請先重新整理核對，勿重複新增。');
+   var ok=await refresh();if(state!==token||auth()!==token.auth)return;token.mode='done';
+   show('新增完成','<div class="overnight88-success"><h4>✓ 隔夜帳已新增</h4><p>'+esc(posted.businessDate+'｜'+x.store.name+'\n業績歸 '+x.person.name+'：'+money(posted.grossAmount))+'</p></div><div class="overnight88-preview">'+esc(info(posted)+'\n不增加日薪或上班天數。'+(ok?'\n已更新報表；請以入帳日期及歸屬人員查詢。':'\n已儲存，但報表未完成更新。請重新整理，不用再次新增。'))+'</div>');
+ }catch(e){if(state===token)error((acknowledged?'已收到儲存回應；請先重新整理核對。\n':'未確認儲存成功，資料保留。請直接重試，勿重新輸入第二筆。\n')+e.message)}finally{if(state===token)busy(false)}
+}
+function view(id){if(!allowed())return;var r=record(id);if(!is(r)){window.alert('找不到隔夜帳，請重新整理報表。');return}state={mode:'view',row:r,auth:auth(),busy:false,operationId:crypto.randomUUID()};
+ show('隔夜帳明細／作廢','<div class="overnight88-preview">'+esc(r.businessDate+'｜'+[r.storeName,r.storeFloor].filter(Boolean).join('｜')+'\n業績歸 '+r.salespersonName+'：'+money(r.grossAmount)+'\n'+info(r))+'</div><p>更正隔夜帳請先作廢後重新新增。'+(r.overnightMeta.mode==='included'?'作廢會將金額加回當日原回傳，門市合計不變。':'作廢會移除這筆金額，入帳日門市合計會減少。')+'作廢紀錄會保留。</p><label>作廢原因（要作廢時必填）<textarea id="overnight88VoidReason" maxlength="500" rows="2" placeholder="至少 2 個字"></textarea></label>', '<button type="button" class="secondary" data-o88="close">關閉</button><button type="button" class="danger" data-o88="void">確認作廢隔夜帳</button>');
+}
+async function voidRecord(){var token=state;if(!token||token.mode!=='view'||token.busy||!allowed())return;var reason=el('overnight88VoidReason').value.trim();if(reason.length<2){error('請填寫至少 2 個字的作廢原因。');return}if(token.auth!==auth()){error('登入身分已變更，請重新開啟。');return}
+ busy(true);error('正在作廢並核對金額…');try{var r=await api('sales_overnight_mutate',{operation:'void',operationId:token.operationId,recordId:token.row.id,expectedUpdatedAt:token.row.updatedAt,reason:reason});if(state!==token||auth()!==token.auth)return;var ok=await refresh();token.mode='done';show('作廢完成','<div class="overnight88-success"><h4>✓ 隔夜帳已作廢</h4><p>'+esc(token.row.overnightMeta.mode==='included'?'金額已加回原回傳；門市合計不變。':'已移除該筆隔夜帳金額。')+'</p></div><p>'+esc(ok?'報表已重新計算；原日薪與工時不變。':'已儲存；請重新整理核對，勿重複操作。')+'</p>')}catch(e){if(state===token)error('作廢未確認完成：'+e.message+'\n直接重試不會重複加回。')}finally{if(state===token)busy(false)}}
+document.addEventListener('keydown',function(e){var m=el('overnight88Modal');if(!m||m.hidden)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){var all=Array.from(m.querySelectorAll('button,input,select,textarea')).filter(function(x){return !x.disabled&&x.offsetParent!==null});if(!all.length){e.preventDefault();return}var first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+window.StarredOvernight88={build:BUILD,open:open,view:view,is:is,label:label,info:info,close:close};
+window.openSalesAdminOvernightCreate=open;
+})();
+</script>
+
