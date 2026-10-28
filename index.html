@@ -11789,18 +11789,17 @@ function renderSalesStoreMissingNotice(summary){
   var model=salesStoreMissingModel(summary);var sections=[];
   if(model.enabled&&model.missingDates.length){
     var shown=model.missingDates.slice(0,18);var rest=model.missingDates.length-shown.length;
-    sections.push('<div class="sales-store-missing-warning"><strong>漏傳業績 '+String(model.missingDates.length)+' 天</strong><span>從該店本月第一筆業績日起檢查；補上當天業績後，日期會自動消失。</span><div class="sales-store-missing-dates">'+shown.map(function(date){return '<b>'+salesEsc(salesShortDate(date))+'</b>'}).join('')+(rest>0?'<em>另 '+String(rest)+' 天</em>':'')+'</div></div>');
+    var chips=function(dates){return dates.map(function(date){return '<b title="'+salesEsc(date)+'">'+salesEsc(salesShortDate(date))+'</b>'}).join('')};
+    sections.push('<div class="sales-store-missing-warning sales-store-missing-compact973"><div class="sales-store-missing-line973"><strong>漏傳業績 '+String(model.missingDates.length)+' 天</strong><div class="sales-store-missing-dates" tabindex="0" aria-label="漏傳日期，可左右捲動">'+chips(shown)+(rest>0?'<em>另 '+String(rest)+' 天</em>':'')+'</div></div><details id="salesStoreMissingHelp973" class="sales-store-help973"><summary>說明</summary><div><p>從該店本月第一筆業績日起檢查；補上當天業績後，日期會自動消失。</p>'+(rest>0?'<p>其餘漏傳日期：</p><div class="sales-store-missing-more973">'+chips(model.missingDates.slice(18))+'</div>':'')+'</div></details></div>');
   }
   if(model.enabled&&summary&&summary.storeId){
     var manualDate=String((model.endCandidates&&model.endCandidates[0]&&model.endCandidates[0].endedFrom)||(salesEl('salesAdminDateTo')||{}).value||salesToday());
     if(!/^\d{4}-\d{2}-\d{2}$/.test(manualDate)||manualDate>salesToday())manualDate=salesToday();
-    sections.push('<div class="sales-store-ending-manual"><span><b>自行設定結束特賣日期</b><small>選擇「停止回傳起始日」，該日與之後的空白日期不再列入漏傳。</small></span><label>停止回傳起始日<input type="date" max="'+salesEsc(salesToday())+'" value="'+salesEsc(manualDate)+'"></label><button type="button" data-store-id="'+salesEsc(summary.storeId)+'" onclick="markSalesStoreEnded(this.dataset.storeId,this.parentElement.querySelector(\'input[type=date]\').value)">設定結束特賣</button></div>');
+    var suggestions=(model.endCandidates||[]).map(function(candidate){return '<button type="button" class="sales-store-ending-suggestion973" data-reporting-end973="suggested" data-store-id="'+salesEsc(summary.storeId)+'" data-ended-from="'+salesEsc(candidate.endedFrom)+'" title="若 '+salesEsc(salesShortDate(candidate.endedFrom))+' 起已結束特賣，可排除後面 '+String(candidate.blankCount)+' 個空白日" onclick="markSalesStoreEnded(this.dataset.storeId,this.dataset.endedFrom)">建議 '+salesEsc(salesShortDate(candidate.endedFrom))+' 起 <small>（'+String(candidate.blankCount)+' 天）</small></button>'}).join('');
+    sections.push('<div id="salesStoreEndingControl973" class="sales-store-ending-control973"><label for="salesStoreEndedFrom973" class="sales-store-ending-field973"><span>特賣結束<small>停止回傳起始日</small></span><input id="salesStoreEndedFrom973" type="date" max="'+salesEsc(salesToday())+'" value="'+salesEsc(manualDate)+'"></label><button type="button" data-reporting-end973="manual" data-store-id="'+salesEsc(summary.storeId)+'" onclick="markSalesStoreEnded(this.dataset.storeId,this.parentElement.querySelector(\'input[type=date]\').value)">設定結束特賣</button>'+(suggestions?'<div class="sales-store-ending-suggestions973" aria-label="建議停止回傳日期">'+suggestions+'</div>':'')+'<details id="salesStoreEndingHelp973" class="sales-store-help973"><summary>設定說明</summary><div><p>選擇「停止回傳起始日」，該日與之後的空白日期不再列入漏傳。</p><p>可自行選擇日期後設定，或直接使用建議日期；送出前仍會確認店點與日期。</p></div></details></div>');
   }
-  (model.endCandidates||[]).forEach(function(candidate){
-    sections.push('<div class="sales-store-ending-action"><span>若 '+salesShortDate(candidate.endedFrom)+' 起已結束特賣，可一次排除後面 '+String(candidate.blankCount)+' 個空白日。</span><button type="button" data-store-id="'+salesEsc(summary.storeId)+'" data-ended-from="'+salesEsc(candidate.endedFrom)+'" onclick="markSalesStoreEnded(this.dataset.storeId,this.dataset.endedFrom)">從 '+salesEsc(salesShortDate(candidate.endedFrom))+' 起標記特賣結束</button></div>');
-  });
   (model.periods||[]).forEach(function(setting){
-    sections.push('<div class="sales-store-ending-current"><span>'+salesEsc(String(setting.monthKey||''))+' 已設定從 '+salesEsc(salesShortDate(setting.endedFrom))+' 起特賣結束'+(setting.endedByName?'（'+salesEsc(setting.endedByName)+'）':'')+'</span><button type="button" data-store-id="'+salesEsc(summary.storeId)+'" data-month-key="'+salesEsc(setting.monthKey)+'" onclick="clearSalesStoreEnded(this.dataset.storeId,this.dataset.monthKey)">取消標記</button></div>');
+    sections.push('<div class="sales-store-ending-current sales-store-ending-current973"><span>'+salesEsc(String(setting.monthKey||''))+' 已設定從 '+salesEsc(salesShortDate(setting.endedFrom))+' 起特賣結束'+(setting.endedByName?'（'+salesEsc(setting.endedByName)+'）':'')+'</span><button type="button" data-reporting-end973="clear" data-store-id="'+salesEsc(summary.storeId)+'" data-month-key="'+salesEsc(setting.monthKey)+'" onclick="clearSalesStoreEnded(this.dataset.storeId,this.dataset.monthKey)">取消標記</button></div>');
   });
   box.innerHTML=sections.join('');box.hidden=!sections.length;
 }
@@ -12426,7 +12425,7 @@ function ensureSalesStatDetailModal(){
   modal.id='salesStatDetailModal';
   modal.className='sales-stat-modal';
   modal.hidden=true;
-  modal.innerHTML='<div class="sales-stat-dialog" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><div id="salesStatDetailResponseCount85" hidden><span>回傳筆數</span><b>0 筆</b></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b><small class="personal85-only">未含公司帳</small></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b><small class="personal85-only">核准退貨扣除</small></div><div id="salesStatDetailExternalCard85" class="external85" hidden><span>公司帳</span><b id="salesStatDetailExternal85">$0</b><small>核准後計入業績</small></div><div id="salesStatDetailOtherCard" class="other" hidden><span>其他費用</span><b id="salesStatDetailOther">$0</b><small id="salesStatDetailOtherNote85">薪資另計・不列業績</small></div><div id="salesStatDetailNetCard" class="net" hidden><span>業績總額</span><b id="salesStatDetailNet">$0</b><small>扣退貨業績＋公司帳</small></div><div id="salesStatDetailCountCard85"><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStorePrintEnding" class="sales-store-print-ending" hidden></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><section id="salesStoreAverageSection" class="sales-store-average-section" hidden></section><section id="salesStatDetailExpenseSection" class="sales-person-expense-section" hidden></section><section id="salesStatDetailExternalAccountSection" class="sales-person-external-account-section" hidden></section><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
+  modal.innerHTML='<div class="sales-stat-dialog" data-detail-layout="v97.3" role="dialog" aria-modal="true" aria-labelledby="salesStatDetailTitle"><header><div><span>PERFORMANCE DETAIL</span><h3 id="salesStatDetailTitle">業績明細</h3><p id="salesStatDetailPeriod"></p></div><div id="salesStatDetailResponseCount85" hidden><span>回傳筆數</span><b>0 筆</b></div><button type="button" class="sales-stat-close" onclick="closeSalesStatDetail()" aria-label="關閉">×</button></header><div id="salesStatDetailContent973" class="sales-stat-detail-content973" role="region" aria-label="業績明細內容" tabindex="0"><div class="sales-stat-detail-summary"><div><span>營業總額</span><b id="salesStatDetailGross">$0</b><small class="personal85-only">未含公司帳</small></div><div class="return"><span id="salesStatDetailReturnsLabel">退貨另計</span><b id="salesStatDetailReturns">$0</b><small class="personal85-only">核准退貨扣除</small></div><div id="salesStatDetailExternalCard85" class="external85" hidden><span>公司帳</span><b id="salesStatDetailExternal85">$0</b><small>核准後計入業績</small></div><div id="salesStatDetailOtherCard" class="other" hidden><span>其他費用</span><b id="salesStatDetailOther">$0</b><small id="salesStatDetailOtherNote85">薪資另計・不列業績</small></div><div id="salesStatDetailNetCard" class="net" hidden><span>業績總額</span><b id="salesStatDetailNet">$0</b><small>扣退貨業績＋公司帳</small></div><div id="salesStatDetailCountCard85"><span>回傳筆數</span><b id="salesStatDetailCount">0 筆</b></div></div><div id="salesStorePrintEnding" class="sales-store-print-ending" hidden></div><div id="salesStoreMissingNotice" class="sales-store-missing-notice" hidden></div><div id="salesStatDetailViewSwitcher" class="sales-stat-detail-switcher" hidden><span>顯示方式</span><div role="tablist" aria-label="門市業績顯示方式"><button type="button" class="active" data-stat-detail-view="list" onclick="showSalesStatDetailView(\'list\',this)">明細清單</button><button type="button" data-stat-detail-view="matrix" onclick="showSalesStatDetailView(\'matrix\',this)">人員月表</button></div></div><div id="salesStatDetailListView" class="sales-stat-detail-view"><div class="sales-stat-detail-table-wrap" tabindex="0" aria-label="業績明細表格，可捲動"><table class="sales-stat-detail-table"><thead><tr><th>日期</th><th>類型</th><th id="salesStatDetailTargetHead">店點／人員</th><th>營業額</th><th>退貨</th><th>原發票日期</th><th>最後更新</th></tr></thead><tbody id="salesStatDetailBody"></tbody></table></div></div><div id="salesStatDetailMatrixView" class="sales-stat-detail-view sales-store-matrix-view" hidden></div><section id="salesStoreAverageSection" class="sales-store-average-section" hidden></section><section id="salesStatDetailExpenseSection" class="sales-person-expense-section" hidden></section><section id="salesStatDetailExternalAccountSection" class="sales-person-external-account-section" hidden></section></div><footer><button type="button" class="secondary" onclick="closeSalesStatDetail()">關閉</button><button type="button" class="secondary" onclick="printSalesStatDetail()">友善列印</button><button type="button" class="primary" onclick="exportSalesStatDetailExcel()">匯出 Excel</button></footer></div>';
   modal.addEventListener('click',function(event){if(event.target===modal)closeSalesStatDetail()});
   document.body.appendChild(modal);
   return modal;
@@ -12605,6 +12604,7 @@ function openSalesStatDetail(kind,key){
   if(kind==='person'){renderSalesPersonExpenseSection(key);renderSalesPersonExternalAccountSection(key)}else{var expenseSection=salesEl('salesStatDetailExpenseSection');if(expenseSection){expenseSection.hidden=true;expenseSection.innerHTML=''}var externalSection=salesEl('salesStatDetailExternalAccountSection');if(externalSection){externalSection.hidden=true;externalSection.innerHTML=''}}
   renderSalesStoreMatrix();renderSalesStoreAverageSection();showSalesStatDetailView('list');
   modal.hidden=false;
+  var detailContent973=salesEl('salesStatDetailContent973');if(detailContent973)detailContent973.scrollTop=0;
   document.body.classList.add('sales-stat-modal-open');
   if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.open();
   window.StarredPerformance85.fit();
@@ -21137,7 +21137,8 @@ function mount(){
   var summary=modal.querySelector('.sales-stat-detail-summary');
   var last=summary.lastElementChild;
   last.insertAdjacentHTML('beforebegin','<div id="salesPersonDeductionCard781" class="ded781-card" hidden><span>當月淨扣款</span><b id="salesPersonDeductionNet781">—</b><small>核准扣款－沖回</small></div><div id="salesPersonSettlementCard781" class="ded781-card settlement" hidden><span>扣款後結算</span><b id="salesPersonSettlement781">—</b><small>業績總額－淨扣款</small></div>');
-  modal.querySelector('.sales-stat-dialog > footer').insertAdjacentHTML('beforebegin','<section id="salesPersonDeduction781" class="ded781-section" aria-label="個人當月扣款明細" hidden><header><div><h4 id="ded781Heading">當月扣款明細</h4><p id="ded781Period"></p></div><button type="button" class="secondary" data-ded781-action="refresh">重新讀取扣款</button></header><p id="ded781Notice" class="ded781-notice"></p><div id="ded781Status" class="ded781-status" role="status" aria-live="polite"></div><div id="ded781Rows"></div><div id="ded781Pagination" class="ded781-pagination"></div><div id="ded781Totals" class="ded781-totals"></div></section>');
+  // v97.3: keep dynamically mounted deductions in the same scroll region as company accounts and expenses.
+  modal.querySelector('#salesStatDetailContent973').insertAdjacentHTML('beforeend','<section id="salesPersonDeduction781" class="ded781-section" aria-label="個人當月扣款明細" hidden><header><div><h4 id="ded781Heading">當月扣款明細</h4><p id="ded781Period"></p></div><button type="button" class="secondary" data-ded781-action="refresh">重新讀取扣款</button></header><p id="ded781Notice" class="ded781-notice"></p><div id="ded781Status" class="ded781-status" role="status" aria-live="polite"></div><div id="ded781Rows"></div><div id="ded781Pagination" class="ded781-pagination"></div><div id="ded781Totals" class="ded781-totals"></div></section>');
 }
 function hide(){['salesPersonDeductionCard781','salesPersonSettlementCard781','salesPersonDeduction781'].forEach(function(id){if(el(id))el(id).hidden=true});buttons(false)}
 function setStatus(text,error){var box=el('ded781Status');if(box){box.textContent=text;box.hidden=!text;box.classList.toggle('error',!!error)}}
@@ -22388,3 +22389,102 @@ document.addEventListener('keydown',function(e){var root=el('typhoon97Modal');if
 window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',open:open,close:close};
 })();
 </script>
+
+
+<!-- UI PATCH v97.3: compact store detail; shared content scroll keeps personal ledgers accessible. Reporting, payroll, print and export data rules are unchanged. -->
+<style id="sales-detail-compact-v973-style">
+@media screen{
+ #salesStatDetailModal{padding:12px 16px;overflow:hidden;box-sizing:border-box}
+ #salesStatDetailModal .sales-stat-dialog,#salesStatDetailModal.person-detail-mode .sales-stat-dialog{max-width:100%!important;min-height:0;max-height:calc(100vh - 24px)!important;max-height:calc(100dvh - 24px)!important;overflow:hidden!important}
+ #salesStatDetailModal .sales-stat-dialog>header,#salesStatDetailModal .sales-stat-dialog>footer{flex:0 0 auto}
+ #salesStatDetailModal .sales-stat-dialog>footer{position:relative!important;z-index:8;margin:0;background:#fff;border-top:1px solid #dce5e9}
+ #salesStatDetailModal #salesStatDetailContent973{flex:1 1 auto!important;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
+ #salesStatDetailModal #salesStatDetailContent973:focus-visible{outline:2px solid #638899;outline-offset:-2px}
+ #salesStatDetailModal.person-detail-mode #salesStatDetailContent973>.sales-stat-detail-view{display:block;overflow:visible}
+ #salesStatDetailModal.person-detail-mode #salesStatDetailContent973 .sales-stat-detail-table-wrap{max-height:none;overflow-y:visible}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog{height:min(840px,calc(100vh - 24px));height:min(840px,calc(100dvh - 24px))}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>header{align-items:center;gap:12px;padding:11px 16px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>header>div:first-child{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 16px;min-width:0}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>header>div:first-child>span{display:none}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailTitle{margin:0;font-size:21px;line-height:1.35;overflow-wrap:anywhere}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailPeriod{margin:0;color:#6d8490;font-size:12px!important;line-height:1.5}
+ #salesStatDetailModal.store-detail-mode .sales-stat-close{flex:0 0 34px;width:34px;height:34px;min-height:34px!important;padding:0!important;line-height:1}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailContent973{display:flex;flex-direction:column;padding-bottom:10px}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailContent973>:not(.sales-stat-detail-view){flex:0 0 auto}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailContent973>.sales-stat-detail-view{flex:1 1 auto;min-height:180px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:0;margin:0 0 9px;padding:10px 16px;border-bottom:1px solid #e0e8ec;background:#f5f8fa}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary>div{display:flex;grid-column:auto!important;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px 10px;min-width:0;margin:0;padding:0 12px;border:0;border-radius:0;background:transparent}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary>.return,#salesStatDetailModal.store-detail-mode .sales-stat-detail-summary>#salesStatDetailCountCard85{border-left:1px solid #d5e1e7}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary span{font-size:13px!important;line-height:1.4;color:#6c8491;white-space:nowrap}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary b{margin:0;font-size:18px!important;line-height:1.4;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-notice{gap:6px;margin:0 16px 8px;line-height:1.4}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-compact973{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 10px;padding:6px 10px;border-radius:8px}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-line973{display:flex;align-items:center;gap:10px;min-width:0}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-line973>strong{flex:none;white-space:nowrap}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-dates{flex:1 1 auto;min-width:0;flex-wrap:nowrap;gap:4px;overflow-x:auto;scrollbar-width:thin}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-dates b,#salesStatDetailModal.store-detail-mode .sales-store-missing-dates em,#salesStatDetailModal.store-detail-mode .sales-store-missing-more973 b{flex:none;padding:3px 7px;border-radius:999px;background:#fff;font-size:12px!important;font-weight:400;white-space:nowrap}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-more973{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+ #salesStatDetailModal.store-detail-mode .sales-store-help973{min-width:0;font-size:12px;color:inherit}
+ #salesStatDetailModal.store-detail-mode .sales-store-help973>summary{width:max-content;padding:5px 2px;cursor:pointer;white-space:nowrap;font-size:12px;font-weight:400;line-height:1.4}
+ #salesStatDetailModal.store-detail-mode .sales-store-help973>div{padding:7px 0 1px;border-top:1px solid #d7dfd8;font-size:13px;line-height:1.6}
+ #salesStatDetailModal.store-detail-mode .sales-store-help973 p{margin:0 0 4px;font-size:13px;font-weight:400}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-compact973>.sales-store-help973[open]{grid-column:1/-1}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973{display:flex;align-items:center;flex-wrap:wrap;gap:5px 9px;padding:7px 10px;border:1px solid #c4dacc;border-radius:8px;background:#f1f8f3;color:#315d47}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-field973{display:flex;align-items:center;gap:9px;min-width:0;margin:0;font-size:13px;font-weight:400}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-field973>span{flex:none;line-height:1.35}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-field973 small{display:block;font-size:11px;font-weight:400;color:#647e6e}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-field973 input{width:145px;min-width:0;min-height:34px;height:34px;margin:0;padding:5px 7px;border:1px solid #a9c3b3;border-radius:6px;background:#fff;color:#315d47;font-family:inherit;font-size:13px;box-sizing:border-box}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973 button,#salesStatDetailModal.store-detail-mode .sales-store-ending-current973 button{flex:none;width:auto;min-height:34px;margin:0;padding:6px 10px;border:1px solid #85a492;border-radius:6px;background:#fff;color:#315d47;box-shadow:none;font-size:13px!important;font-weight:400!important;line-height:1.4;white-space:nowrap;cursor:pointer}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973 button:hover,#salesStatDetailModal.store-detail-mode .sales-store-ending-current973 button:hover{background:#e4f0e9}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-suggestions973{display:flex;flex:1 1 auto;flex-wrap:wrap;gap:5px;min-width:0}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-suggestions973 button{border-color:#b4c8d2;background:#fff;color:#426778}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-suggestions973 small{font-size:12px;color:#728995;font-weight:400}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973>.sales-store-help973{margin-left:auto}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973>.sales-store-help973[open]{flex-basis:100%;margin-left:0}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-current973{align-items:center;flex-direction:row;flex-wrap:nowrap;gap:8px;padding:6px 10px;border-radius:8px}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-current973>span{flex:1 1 auto;min-width:0;font-size:12px!important;line-height:1.45}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-switcher{gap:8px;margin:0 16px 7px;padding:3px 4px 3px 9px;border-radius:8px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-switcher button{min-height:30px;padding:5px 10px;font-size:13px!important;line-height:1.4}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-table-wrap,#salesStatDetailModal.store-detail-mode .sales-store-matrix-scroll{margin-right:16px;margin-left:16px;border-radius:8px;overscroll-behavior:contain;scrollbar-width:thin}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-table th,#salesStatDetailModal.store-detail-mode .sales-stat-detail-table td{padding:8px 9px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-table th{z-index:2}
+ #salesStatDetailModal.store-detail-mode .sales-store-matrix-note{margin:0 16px 5px;line-height:1.4}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>footer{padding:9px 16px;gap:8px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>footer button{min-height:36px;padding:7px 13px;font-size:13px!important;line-height:1.4}
+}
+@media screen and (max-width:720px){
+ #salesStatDetailModal{padding:8px}
+ #salesStatDetailModal .sales-stat-dialog,#salesStatDetailModal.person-detail-mode .sales-stat-dialog{max-height:calc(100vh - 16px)!important;max-height:calc(100dvh - 16px)!important}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog{width:100%;height:calc(100vh - 16px);height:calc(100dvh - 16px);border-radius:12px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>header{padding:10px 12px}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailTitle{font-size:18px}
+ #salesStatDetailModal.store-detail-mode #salesStatDetailPeriod{font-size:12px!important}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary{margin-bottom:7px;padding:8px 9px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary>div{flex-direction:column;gap:1px;padding:0 5px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary span{font-size:12px!important}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-summary b{font-size:17px!important}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-notice{margin:0 10px 7px}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-compact973{gap:5px 7px;padding:6px 8px}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-line973{gap:6px}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-line973>strong{font-size:12px!important}
+ #salesStatDetailModal.store-detail-mode .sales-store-missing-dates b,#salesStatDetailModal.store-detail-mode .sales-store-missing-dates em{padding:3px 5px}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973{gap:5px 6px;padding:7px 8px}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-field973{flex:1 1 180px;gap:6px}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-field973 input{flex:1 1 110px;width:110px;font-size:14px}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-control973>[data-reporting-end973="manual"]{padding:6px 8px;font-size:12px!important}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-suggestions973{flex-basis:calc(100% - 80px)}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-current973{padding:6px 8px}
+ #salesStatDetailModal.store-detail-mode .sales-store-ending-current973 button{padding:6px 8px;font-size:12px!important}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-switcher{margin:0 10px 7px;padding:3px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-switcher>span{display:none}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-switcher>div{display:grid;grid-template-columns:1fr 1fr;width:100%}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-switcher button{width:100%;min-width:0;min-height:30px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-detail-table-wrap,#salesStatDetailModal.store-detail-mode .sales-store-matrix-scroll{margin-right:10px;margin-left:10px}
+ #salesStatDetailModal.store-detail-mode .sales-store-matrix-note{margin:0 10px 5px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>footer{padding:8px 10px max(8px,env(safe-area-inset-bottom));gap:6px}
+ #salesStatDetailModal.store-detail-mode .sales-stat-dialog>footer button{flex:1;min-width:0;padding:7px 5px}
+}
+@media print{
+ body.sales-stat-printing #salesStatDetailModal .sales-stat-dialog,body.sales-stat-printing #salesStatDetailContent973{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+}
+</style>
