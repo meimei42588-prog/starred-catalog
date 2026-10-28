@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH v97: explicit typhoon store/date closures, batch selection, no-pay protection and safe reopening. -->
 <!-- UI PATCH v96: explicit daily-wage amount editor; base rankings_v94; existing payDetailsVersion 80 / v93 line-api unchanged. -->
 <!-- UI PATCH: 20261007-ranking-four-views-top-three-v94; base: overnight_nextmonth_v93/index.html; v93 API and SQL unchanged. -->
 <!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
@@ -4733,7 +4734,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       <section class="panel sales-admin-panel">
         <div class="sales-admin-heading">
           <div><span class="sales-eyebrow">SALES REPORT</span><h2>業績報表</h2><p>依日期、區域、門市或銷售人員查看每日明細與統計。</p></div>
-          <div class="sales-report-main-actions"><button type="button" class="secondary" onclick="printCurrentSalesReport()">友善列印</button><button type="button" id="salesExportBtn" class="primary sales-export-btn" onclick="exportCurrentSalesReportExcel()">匯出 Excel</button></div>
+          <div class="sales-report-main-actions"><button type="button" id="salesTyphoonOpen97" class="secondary sales-typhoon-open97" onclick="StarredTyphoon97.open()">颱風天放假</button><button type="button" class="secondary" onclick="printCurrentSalesReport()">友善列印</button><button type="button" id="salesExportBtn" class="primary sales-export-btn" onclick="exportCurrentSalesReportExcel()">匯出 Excel</button></div>
         </div>
         <div class="sales-admin-filter">
           <div class="field sales-admin-date-field"><label>開始日期</label><div class="sales-admin-date-control"><input id="salesAdminDateFrom" type="date" onchange="loadSalesAdminReport()"></div></div>
@@ -8761,7 +8762,7 @@ async function starredApi(action,payload={}){
       expiredError.relogin=true;
       throw expiredError;
     }
-    const e=new Error(message);e.blocked=!!result.blocked;e.errorCode=result.errorCode||"";e.outcomeUnknown=result.outcomeUnknown===true;e.writeNotStarted=result.writeNotStarted===true;e.httpStatus=response.status;if(/^sales_overnight_/.test(String(action)))e.rawMessage93=String(result.error||message);throw e;
+    const e=new Error(message);e.blocked=!!result.blocked;e.errorCode=result.errorCode||"";e.outcomeUnknown=result.outcomeUnknown===true;e.writeNotStarted=result.writeNotStarted===true;e.httpStatus=response.status;if(/^sales_overnight_/.test(String(action)))e.rawMessage93=String(result.error||message);if(/^sales_typhoon_/.test(String(action))){e.rawMessage97=String(result.error||message);e.conflicts=Array.isArray(result.conflicts)?result.conflicts:[]}throw e;
   }
   return result;
 }
@@ -10035,15 +10036,18 @@ function salesPersonName(lineUserId,fallback){
   var user=(typeof lineUsers!=='undefined'?lineUsers:[]).find(function(item){return String(item.id||item.line_user_id||'')===id});
   return String((user&&(user.employeeName||user.employee_name||user.name||user.displayName||user.line_display_name))||fallback||'LINE 使用者');
 }
+function salesIsTyphoon97(record){return !!(record&&record.isTyphoonClosure===true)}
 function salesCreditedLineUserId(record){
+  if(record&&record.isTyphoonPlaceholder===true)return '';
   if(salesRecordType(record)==='return')return String(record&&record.assignedSalespersonLineUserId||'');
   return String(record&&record.salespersonLineUserId||record&&record.submitterLineUserId||'');
 }
 function salesCreditedName(record){
+  if(record&&record.isTyphoonPlaceholder===true)return '颱風天放假';
   if(salesRecordType(record)==='return')return salesPersonName(record&&record.assignedSalespersonLineUserId,record&&record.assignedSalespersonName||'LINE 使用者');
   return salesPersonName(salesCreditedLineUserId(record),record&&record.salespersonName||record&&record.submitterName||'LINE 使用者');
 }
-function salesSubmitterName(record){return salesPersonName(record&&record.submitterLineUserId,record&&record.submitterName||'LINE 使用者')}
+function salesSubmitterName(record){if(record&&record.isTyphoonPlaceholder===true)return '系統自動補 0';return salesPersonName(record&&record.submitterLineUserId,record&&record.submitterName||'LINE 使用者')}
 function salesStoreById(id){
   return (typeof stores !== 'undefined' ? stores : []).find(function(store){return String(store.id)===String(id)}) || null;
 }
@@ -10063,7 +10067,7 @@ function renderSalesStoreDaySummary93(){var parent=document.getElementById('sale
 function salesTodayOvernightHtml93(){var x=window.salesTodayExtra93||{},rows=x.rows||[];if(!rows.length)return '';return '<div class="overnight93-store-summary"><p><b>今日門市入帳合計 '+salesMoney(x.total)+'</b><span>其中隔夜帳 '+salesMoney(rows.reduce(function(s,r){return s+Number(r.grossAmount||0)},0))+'；不列下方當班人員排名。</span></p>'+rows.map(function(r){return '<p><span>'+salesEsc(salesStoreText(r)+'：含 '+salesCreditedName(r)+' '+salesMoney(r.grossAmount)+'／隔夜帳（'+(r.overnightMeta.performanceMonth||r.businessDate.slice(0,7))+' 業績）')+'</span></p>'}).join('')+'</div>'}
 
 function salesIsOvernight88(record){return !!(record&&(record.isOvernightSale===true||record.overnightMeta))}
-function salesKindLabel88(record){return salesRecordType(record)==='return'?'退貨':salesIsOvernight88(record)?'隔夜帳':record&&record.isProxySale?'代銷售':'業績'}
+function salesKindLabel88(record){if(salesIsTyphoon97(record))return '颱風天放假';return salesRecordType(record)==='return'?'退貨':salesIsOvernight88(record)?'隔夜帳':record&&record.isProxySale?'代銷售':'業績'}
 function salesOvernightInfo88(record){return window.StarredOvernight88?window.StarredOvernight88.info(record):'隔夜帳'}
 function salesRecordType(record){
   if(record&&record.recordType==='return')return 'return';
@@ -10406,6 +10410,7 @@ function salesBuildRanking(records,limit,options){
   options=options||{};
   var map=new Map();
   (records||[]).forEach(function(record){
+    if(salesIsTyphoon97(record))return;
     var isAssignedReturn=salesRecordType(record)==='return'&&options.attributeAssignedReturns;
     var key=String(isAssignedReturn?record.assignedSalespersonLineUserId||'':salesRecordType(record)==='return'?record.submitterLineUserId||'':salesCreditedLineUserId(record));
     if(!key)return;
@@ -10438,7 +10443,7 @@ function salesBuildStoreRanking(records,limit){
     current.returnAmount+=Number(record.returnAmount||0);
     current.recordCount+=1;
     var personId=salesRecordType(record)==='return'?String(record.submitterLineUserId||''):salesCreditedLineUserId(record);
-    if(personId)current.people.add(personId);
+    if(personId&&!salesIsTyphoon97(record))current.people.add(personId);
     map.set(key,current);
   });
   var rows=Array.from(map.values()).sort(function(a,b){return b.grossAmount-a.grossAmount||salesStoreText(a).localeCompare(salesStoreText(b),'zh-Hant')}).map(function(item,index){
@@ -10458,7 +10463,7 @@ function salesBuildStoreDaily(records){
     current.returnAmount+=Number(record.returnAmount||0);
     current.recordCount+=1;
     var personId=salesRecordType(record)==='return'?String(record.submitterLineUserId||''):salesCreditedLineUserId(record);
-    if(personId)current.people.add(personId);
+    if(personId&&!salesIsTyphoon97(record))current.people.add(personId);
     map.set(key,current);
   });
   return Array.from(map.values()).sort(function(a,b){
@@ -10468,12 +10473,14 @@ function salesBuildStoreDaily(records){
   });
 }
 function salesWorkdayStatus(record){
+  if(salesIsTyphoon97(record))return 'excluded';
   var status=String(record&&record.workdayStatus||'').trim();
   if(['auto','counted','excluded','pending'].includes(status))return status;
   if(salesRecordType(record)==='return'||record&&record.salespersonWasWorking===false)return 'excluded';
   return 'auto';
 }
 function salesWorkHoursValue(record){
+  if(salesIsTyphoon97(record))return 0;
   var raw=record&&record.workHours;
   if(raw===null||raw===undefined||raw==='')return null;
   var hours=Number(raw);
@@ -10509,7 +10516,7 @@ function salesWorkdayCountsAsDay(status){return status==='auto'||status==='count
 function salesBuildWorkdayGroups(records){
   var byDate=new Map();
   (records||[]).forEach(function(record){
-    if(salesRecordType(record)!=='sales'||record.isProxySale===true)return;
+    if(salesIsTyphoon97(record)||salesRecordType(record)!=='sales'||record.isProxySale===true)return;
     var date=String(record.businessDate||'');var storeId=String(record.storeId||'');var personId=salesCreditedLineUserId(record);var id=String(record.id||'');
     if(!date||!storeId||!personId||!id)return;
     if(!byDate.has(date))byDate.set(date,[]);
@@ -10576,7 +10583,7 @@ function salesBuildWorkdayStats(records,salespeople){
   }
   (salespeople||[]).forEach(function(p){ensure(p.lineUserId||p.line_user_id,p.name||p.employeeName||p.lineDisplayName)});
   (records||[]).forEach(function(record){
-    if(salesRecordType(record)==='return')return;
+    if(salesIsTyphoon97(record)||salesRecordType(record)==='return')return;
     var rid=String(record.id||'');if(rid&&seenIds.has(rid))return;if(rid)seenIds.add(rid);
     var row=ensure(salesCreditedLineUserId(record),salesCreditedName(record));if(!row)return;
     row.grossAmount+=Number(record.grossAmount||0);row.recordCount+=1;
@@ -10824,11 +10831,13 @@ function salesLatestEditRequest(record){
   return salesRequestsForRecord(record)[0]||null;
 }
 function salesRecordStatus(record){
+  if(salesIsTyphoon97(record))return 'typhoon';
   var latest=salesLatestEditRequest(record);
   return latest?String(latest.status||'submitted'):'submitted';
 }
 function salesStatusMeta(status){
   var map={
+    typhoon:{label:'颱風停班・不計薪',className:'typhoon97'},
     submitted:{label:'已回傳',className:'submitted'},
     pending:{label:'申請中',className:'pending'},
     approved:{label:'已核准',className:'approved'},
@@ -10868,6 +10877,7 @@ function salesRequestHistoryHtml(record){
   return requestHtml+'<div class="sales-history-item submitted"><span class="sales-history-dot"></span><div><div class="sales-history-head"><b>初次回傳</b><time>'+salesEsc(salesDateTime(record.createdAt))+'</time></div><small>'+salesEsc(salesStoreText(record))+'</small></div></div>';
 }
 function salesRecordActionHtml(record,status){
+  if(salesIsTyphoon97(record))return '<span class="sales-typhoon-note97">停班日由後台管理</span>';
   if(salesIsOvernight88(record))return '<span class="overnight88-row-note">隔夜帳由後台管理</span>';
   if(Number(record.overnightAllocatedAmount||0)>0)return '<span class="overnight88-row-note">已拆出隔夜帳，原金額變更請洽後台核對</span>';
   var noun=salesRecordType(record)==='return'?'退貨':'業績';
@@ -10981,13 +10991,14 @@ function salesGroupAdminDailyRecords(records){
   return Array.from(groups.values()).sort(function(a,b){return String(b.businessDate).localeCompare(String(a.businessDate))||Number(b.grossAmount||0)-Number(a.grossAmount||0)||salesStoreText(a).localeCompare(salesStoreText(b),'zh-Hant')});
 }
 function salesAdminPersonCellHtml(record){
+  if(salesIsTyphoon97(record))return '<span class="sales-person-cell"><b>'+salesEsc(record.isTyphoonPlaceholder?'颱風天放假':salesCreditedName(record))+'</b><small class="sales-typhoon-note97">'+(record.isTyphoonPlaceholder?'系統自動補 0':'原 0 業績保留')+'・不計薪</small></span>';
   if(salesRecordType(record)==='return')return '<span class="sales-person-cell"><b>'+salesEsc(salesSubmitterName(record))+'</b><small>退貨處理人</small></span>';
   var credited=salesCreditedName(record);
   if(record&&record.isProxySale===true)return '<span class="sales-person-cell proxy"><b>'+salesEsc(credited)+'</b><small>'+salesKindLabel88(record)+'・'+salesEsc(salesSubmitterName(record))+' 回傳</small>'+salesOvernightRowNote93(record)+'</span>';
   return '<span class="sales-person-cell"><b>'+salesEsc(credited)+'</b><small>本人回傳</small></span>';
 }
 function salesGroupStatus(group){
-  var priority={pending:5,approved:4,rejected:3,completed:2,submitted:1};
+  var priority={typhoon:6,pending:5,approved:4,rejected:3,completed:2,submitted:1};
   return (group.records||[]).map(salesRecordStatus).sort(function(a,b){return (priority[b]||0)-(priority[a]||0)})[0]||'submitted';
 }
 function salesOwnReturnDetailsHtml(group){
@@ -11028,7 +11039,7 @@ function renderSalesOwnRecords(){
     var workdayStatus=group.salesRecord?salesWorkdayStatus(group.salesRecord):'';
     var workHours=group.salesRecord?salesWorkHoursValue(group.salesRecord):null;
     var pendingWorkdayText=group.salesRecord&&['dual_store','mixed'].includes(String(group.salesRecord.workdayReviewReason||''))?'一日雙門市上傳・確認中':'工時與薪資待後台確認';
-    var proxyBadge=group.salesRecord&&group.salesRecord.isProxySale===true?'<small class="sales-own-proxy-note">'+salesKindLabel88(group.salesRecord)+'給 '+salesEsc(salesCreditedName(group.salesRecord))+'・不自動計日薪</small>':workdayStatus==='pending'?'<small class="sales-own-proxy-note workday-pending">'+salesEsc(pendingWorkdayText)+'</small>':workdayStatus==='excluded'?'<small class="sales-own-proxy-note '+(salesWorkdayIsHourly(workHours)?'workday-hourly':'workday-excluded')+'">'+salesEsc(salesWorkdayPayText(workHours,workdayStatus))+'</small>':'';
+    var proxyBadge=salesIsTyphoon97(group.salesRecord)?'<small class="sales-own-proxy-note workday-excluded">颱風天放假・當天不計薪</small>':group.salesRecord&&group.salesRecord.isProxySale===true?'<small class="sales-own-proxy-note">'+salesKindLabel88(group.salesRecord)+'給 '+salesEsc(salesCreditedName(group.salesRecord))+'・不自動計日薪</small>':workdayStatus==='pending'?'<small class="sales-own-proxy-note workday-pending">'+salesEsc(pendingWorkdayText)+'</small>':workdayStatus==='excluded'?'<small class="sales-own-proxy-note '+(salesWorkdayIsHourly(workHours)?'workday-hourly':'workday-excluded')+'">'+salesEsc(salesWorkdayPayText(workHours,workdayStatus))+'</small>':'';
     return '<details class="sales-record-row grouped-record '+(!group.salesRecord?'return-record':'sales-record')+'">'+
       '<summary><div class="sales-record-primary"><time title="'+salesEsc(group.businessDate||'')+'">'+salesEsc(shortDate)+'</time><div class="sales-record-store"><b>'+salesEsc(salesStoreText(group))+'</b>'+proxyBadge+'</div></div>'+
       '<div class="sales-record-secondary"><div class="sales-record-toggle"><span class="sales-record-status '+meta.className+'">'+meta.label+'</span><span class="sales-record-chevron">⌄</span></div><div class="sales-record-amounts">'+amountHtml+'</div></div></summary>'+
@@ -11586,6 +11597,7 @@ function salesIncludeApprovedExpensePeople(){
 function salesApplyRealNames(){
   function decorateRecord(record){
     record=Object.assign({},record);
+    if(salesIsTyphoon97(record)){record.workdayStatus='excluded';record.workHours=0;record.dailyWageAmount=null;record.salespersonWasWorking=false;}
     record.submitterName=salesSubmitterName(record);
     if(salesRecordType(record)!=='return'){
       record.salespersonLineUserId=salesCreditedLineUserId(record);
@@ -11641,6 +11653,8 @@ async function loadSalesAdminReport(){
       expenses:Array.isArray(result.expenses)?result.expenses:[],
       externalAccounts:Array.isArray(result.externalAccounts)?result.externalAccounts:[],
       companyAccountScope:result.companyAccountScope||null,
+      storeClosures:Array.isArray(result.storeClosures)?result.storeClosures:[],
+      typhoonBuild:result.typhoonBuild||'',
       missingTrackingEnabled:result.missingTrackingEnabled!==false
     };
     window.salesAdminData=salesAdminData;
@@ -11700,11 +11714,14 @@ function salesStoreMissingModel(row){
   var dates=salesMissingTrackingDates();
   if(!dates.length)return Object.assign({},empty,{enabled:true});
   var salesDates=new Set((salesAdminData.records||[]).filter(function(record){return salesRecordType(record)!=='return'&&!salesIsOvernight88(record)&&salesStoreRecordMatches(record,row)&&record.businessDate}).map(function(record){return String(record.businessDate)}));
+  (salesAdminData.storeClosures||[]).forEach(function(closure){if(String(closure.storeId||closure.store_id||'')===storeId){var d=String(closure.businessDate||closure.business_date||'').slice(0,10);if(d)salesDates.add(d)}});
   if(!salesDates.size)return Object.assign({},empty,{enabled:true});
   var periods=(salesAdminData.reportingPeriods||[]).filter(function(setting){return storeId&&String(setting.storeId||'')===storeId}).slice().sort(function(a,b){return String(a.monthKey||'').localeCompare(String(b.monthKey||''))});
   var periodByMonth=new Map(periods.map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),setting]}));
   var firstSalesDateByMonth=new Map();
-  Array.from(salesDates).sort().forEach(function(date){var monthKey=date.slice(0,7);if(!firstSalesDateByMonth.has(monthKey))firstSalesDateByMonth.set(monthKey,date)});
+  // System-created closure zeros cover that date without starting an unopened store's tracking period.
+  var trackingStartDates97=(salesAdminData.records||[]).filter(function(record){return record.isTyphoonPlaceholder!==true&&salesRecordType(record)!=='return'&&!salesIsOvernight88(record)&&salesStoreRecordMatches(record,row)&&record.businessDate}).map(function(record){return String(record.businessDate)});
+  trackingStartDates97.sort().forEach(function(date){var monthKey=date.slice(0,7);if(!firstSalesDateByMonth.has(monthKey))firstSalesDateByMonth.set(monthKey,date)});
   var activeDates=dates.filter(function(date){var firstSalesDate=firstSalesDateByMonth.get(date.slice(0,7));return firstSalesDate&&date>=firstSalesDate});
   var missingDates=activeDates.filter(function(date){var period=periodByMonth.get(date.slice(0,7));return !salesDates.has(date)&&!(period&&date>=String(period.endedFrom||''))});
   var endCandidates=[];
@@ -11896,6 +11913,7 @@ function salesWorkdaySetUnpaid793(button){
 }
 function salesWorkdaySyncUnpaid793(row){salesWorkdaySyncRow96(row,true)}
 function salesWorkdayRecordLabel96(record){
+  if(salesIsTyphoon97(record))return '颱風天放假・不計薪／不計上班天數';
   var meta=salesWorkdayMeta(salesWorkdayStatus(record),salesWorkHoursValue(record));
   var fixed=record&&record.dailyWageAmount;
   if(salesRecordType(record)==='sales'&&!record.isProxySale&&salesWorkdayStatus(record)==='counted'&&fixed!==null&&fixed!==undefined&&Number.isSafeInteger(Number(fixed)))
@@ -12134,10 +12152,10 @@ function salesWorkdayNoteForRecordIds(recordIds){
 function salesWorkdayDetailRows(lineUserId){
   var groups=new Map();
   (salesAdminData.records||[]).forEach(function(record){
-    if(salesRecordType(record)==='return'||salesCreditedLineUserId(record)!==lineUserId)return;
+    if(record.isTyphoonPlaceholder===true||salesRecordType(record)==='return'||salesCreditedLineUserId(record)!==lineUserId)return;
     var date=String(record.businessDate||'');if(!date)return;
     var store=salesStoreText(record)||'未設定店點';var key=date+'\u0001'+store;
-    if(!groups.has(key))groups.set(key,{date:date,store:store,amount:0,hours:null,status:salesWorkdayStatus(record),confirmedByName:String(record.workdayConfirmedByName||''),recordIds:[],fixedDailyAmounts96:[]});
+    if(!groups.has(key))groups.set(key,{date:date,store:store,amount:0,hours:null,status:salesWorkdayStatus(record),confirmedByName:String(record.workdayConfirmedByName||''),isTyphoonClosure:salesIsTyphoon97(record),recordIds:[],fixedDailyAmounts96:[]});
     var group=groups.get(key);var nextStatus=salesWorkdayStatus(record);
     if(!record.isProxySale&&record.dailyWageAmount!==null&&record.dailyWageAmount!==undefined&&nextStatus==='counted')group.fixedDailyAmounts96.push(Number(record.dailyWageAmount));
     if(record.id&&!group.recordIds.includes(String(record.id)))group.recordIds.push(String(record.id));
@@ -12174,7 +12192,7 @@ function openSalesWorkdayDetail(lineUserId){
   if(salesEl('salesWorkdayDetailHours'))salesEl('salesWorkdayDetailHours').textContent=hourRows.length?salesWorkHoursText(hours):'—';
   if(salesEl('salesWorkdayDetailGross'))salesEl('salesWorkdayDetailGross').textContent=salesMoney(gross);
   var body=salesEl('salesWorkdayDetailBody');
-  if(body)body.innerHTML=rows.length?rows.map(function(row){var meta=salesWorkdayMeta(row.status,row.hours),ids=(row.recordIds||[]).join(',');return '<tr><td>'+salesEsc(String(row.date).replace(/-/g,'/'))+'</td><td>'+salesEsc(row.store)+'</td><td class="hours">'+salesEsc(salesWorkHoursText(row.hours))+'</td><td><span class="sales-workday-status '+meta.className+'">'+salesEsc(meta.short)+'</span>'+(row.fixedDailyAmounts96&&row.fixedDailyAmounts96.length?'<small class="sales-workday-fixed-detail96">日薪 '+salesEsc(Array.from(new Set(row.fixedDailyAmounts96)).map(salesMoney).join('／'))+'</small>':'')+(row.confirmedByName?'<small class="sales-workday-detail-confirmer">'+salesEsc(row.confirmedByName)+'</small>':'')+'</td><td class="amount '+(Number(row.amount||0)>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+salesMoney(row.amount)+'</td><td class="sales-workday-note-cell">'+(row.note?'<button type="button" class="sales-workday-note-trigger has-note" data-record-ids="'+salesEsc(ids)+'" data-note="'+salesEsc(row.note)+'" onclick="editSalesWorkdayNote(this)"><span>'+salesEsc(row.note)+'</span><small>修改</small></button>':'<button type="button" class="secondary sales-workday-note-trigger" data-record-ids="'+salesEsc(ids)+'" data-note="" onclick="editSalesWorkdayNote(this)">＋ 新增備註</button>')+'</td></tr>'}).join(''):'<tr><td colspan="6" class="sales-table-empty">此區間沒有業績明細。</td></tr>';
+  if(body)body.innerHTML=rows.length?rows.map(function(row){var meta=row.isTyphoonClosure?{className:'excluded',short:'颱風天放假・不計薪'}:salesWorkdayMeta(row.status,row.hours),ids=(row.recordIds||[]).join(',');return '<tr><td>'+salesEsc(String(row.date).replace(/-/g,'/'))+'</td><td>'+salesEsc(row.store)+'</td><td class="hours">'+salesEsc(salesWorkHoursText(row.hours))+'</td><td><span class="sales-workday-status '+meta.className+'">'+salesEsc(meta.short)+'</span>'+(row.fixedDailyAmounts96&&row.fixedDailyAmounts96.length?'<small class="sales-workday-fixed-detail96">日薪 '+salesEsc(Array.from(new Set(row.fixedDailyAmounts96)).map(salesMoney).join('／'))+'</small>':'')+(row.confirmedByName?'<small class="sales-workday-detail-confirmer">'+salesEsc(row.confirmedByName)+'</small>':'')+'</td><td class="amount '+(Number(row.amount||0)>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+salesMoney(row.amount)+'</td><td class="sales-workday-note-cell">'+(row.note?'<button type="button" class="sales-workday-note-trigger has-note" data-record-ids="'+salesEsc(ids)+'" data-note="'+salesEsc(row.note)+'" onclick="editSalesWorkdayNote(this)"><span>'+salesEsc(row.note)+'</span><small>修改</small></button>':'<button type="button" class="secondary sales-workday-note-trigger" data-record-ids="'+salesEsc(ids)+'" data-note="" onclick="editSalesWorkdayNote(this)">＋ 新增備註</button>')+'</td></tr>'}).join(''):'<tr><td colspan="6" class="sales-table-empty">此區間沒有業績明細。</td></tr>';
   modal.hidden=false;document.body.classList.add('sales-workday-detail-open');
   setTimeout(function(){var closeButton=modal.querySelector('.sales-workday-detail-close');if(closeButton)closeButton.focus()},0);
 }
@@ -12306,7 +12324,7 @@ function salesAveragePerformanceModel(sourceRecords){
   var records=Array.isArray(sourceRecords)?sourceRecords:salesPersonRecords93();if(Array.isArray(sourceRecords)){var scope93=new Set(sourceRecords.map(function(r){return String(r.storeId||'')}));records=salesPersonRecords93().filter(function(r){return scope93.has(String(r.storeId||''))})}var map=new Map();
   function ensure(id,name){id=String(id||'');name=salesPersonName(id,name||'LINE 使用者');var key=id||('name:'+name);var row=map.get(key);if(!row){row={key:key,lineUserId:id,name:name,grossAmount:0,recordCount:0,dailyDates:new Set(),hourlyDates:new Set(),confirmedDates:new Set(),pendingDates:new Set(),hourlyHoursByDate:new Map()};map.set(key,row)}else row.name=name;return row}
   records.forEach(function(record){
-    if(salesRecordType(record)==='return')return;
+    if(salesIsTyphoon97(record)||salesRecordType(record)==='return')return;
     var row=ensure(salesCreditedLineUserId(record),salesCreditedName(record));var date=String(record.businessDate||'');row.grossAmount+=Number(record.grossAmount||0);row.recordCount+=1;
     if(!date||record.isProxySale===true)return;
     var status=salesWorkdayStatus(record);var hours=salesWorkHoursValue(record);var hourly=(status==='counted'||status==='excluded')&&salesWorkdayIsHourly(hours);
@@ -12357,17 +12375,18 @@ function salesStoreMatrixDates(rows){
   return dates;
 }
 function salesStoreMatrixModel(rows){
-  var salesRows=(rows||[]).filter(function(record){return salesRecordType(record)!=='return'});var peopleMap=new Map();var values=new Map();
+  var salesRows=(rows||[]).filter(function(record){return salesRecordType(record)!=='return'});var closureDates=new Set(salesRows.filter(salesIsTyphoon97).map(function(record){return String(record.businessDate||'')}));var peopleMap=new Map();var values=new Map();
   salesRows.forEach(function(record){
+    if(salesIsTyphoon97(record))return;
     var name=salesCreditedName(record)||'LINE 使用者';var id=salesCreditedLineUserId(record);var key=id||('name:'+name);if(salesIsOvernight88(record)){name+='／隔夜帳（非當班）';key='overnight:'+key;id='';}
     if(!peopleMap.has(key))peopleMap.set(key,{key:key,lineUserId:id,name:name});
     var valueKey=String(record.businessDate||'')+'\u0001'+key;values.set(valueKey,Number(values.get(valueKey)||0)+Number(record.grossAmount||0));
   });
   var collator=salesPersonSortCollator();var people=Array.from(peopleMap.values()).sort(function(a,b){return collator.compare(salesPersonSurname(a.name),salesPersonSurname(b.name))||collator.compare(a.name,b.name)});var totals=new Map();people.forEach(function(person){totals.set(person.key,0)});
-  var firstSalesByMonth=new Map();salesRows.forEach(function(record){var date=String(record.businessDate||'');var monthKey=date.slice(0,7);if(date&&(!firstSalesByMonth.has(monthKey)||date<firstSalesByMonth.get(monthKey)))firstSalesByMonth.set(monthKey,date)});
+  var firstSalesByMonth=new Map();salesRows.forEach(function(record){if(record.isTyphoonPlaceholder===true)return;var date=String(record.businessDate||'');var monthKey=date.slice(0,7);if(date&&(!firstSalesByMonth.has(monthKey)||date<firstSalesByMonth.get(monthKey)))firstSalesByMonth.set(monthKey,date)});
   var endedByMonth=new Map(salesStoreReportingEndSettings((salesStatDetailState||{}).summary).map(function(setting){return [String(setting.monthKey||String(setting.endedFrom||'').slice(0,7)),String(setting.endedFrom||'')]}));
-  var matrixRows=salesStoreMatrixDates(rows).map(function(date){var cells={};var total=0;people.forEach(function(person){var amount=Number(values.get(date+'\u0001'+person.key)||0);cells[person.key]=amount;totals.set(person.key,Number(totals.get(person.key)||0)+amount);total+=amount});var monthKey=String(date).slice(0,7);var firstSalesDate=firstSalesByMonth.get(monthKey);var endedFrom=endedByMonth.get(monthKey);return {date:date,cells:cells,total:total,beforeFirstSale:Boolean(!total&&firstSalesDate&&date<firstSalesDate),specialSaleEnded:Boolean(!total&&endedFrom&&date>=endedFrom)}});
-  return {people:people,rows:matrixRows,totals:totals,grandTotal:matrixRows.reduce(function(sum,row){return sum+Number(row.total||0)},0)};
+  var matrixRows=salesStoreMatrixDates(rows).map(function(date){var cells={};var total=0;people.forEach(function(person){var amount=Number(values.get(date+'\u0001'+person.key)||0);cells[person.key]=amount;totals.set(person.key,Number(totals.get(person.key)||0)+amount);total+=amount});var monthKey=String(date).slice(0,7);var firstSalesDate=firstSalesByMonth.get(monthKey);var endedFrom=endedByMonth.get(monthKey);return {date:date,cells:cells,total:total,isTyphoonClosure:closureDates.has(date),beforeFirstSale:Boolean(!closureDates.has(date)&&!total&&firstSalesDate&&date<firstSalesDate),specialSaleEnded:Boolean(!closureDates.has(date)&&!total&&endedFrom&&date>=endedFrom)}});
+  return {people:people,rows:matrixRows,totals:totals,hasTyphoonClosures:closureDates.size>0,grandTotal:matrixRows.reduce(function(sum,row){return sum+Number(row.total||0)},0)};
 }
 function salesStoreMatrixDisplayRows(rows){
   var output=[];var current=null;
@@ -12382,17 +12401,17 @@ function salesStoreMatrixDisplayRows(rows){
   return output;
 }
 function salesStoreMatrixExportRows(rows){
-  var model=salesStoreMatrixModel(rows);var exportRows=model.rows.map(function(row){var result={'日期':row.date};model.people.forEach(function(person){result[person.name]=Number(row.cells[person.key]||0)});result['銷售總額']=Number(row.total||0);return result});
-  var totalRow={'日期':'合計'};model.people.forEach(function(person){totalRow[person.name]=Number(model.totals.get(person.key)||0)});totalRow['銷售總額']=Number(model.grandTotal||0);exportRows.push(totalRow);return {model:model,rows:exportRows};
+  var model=salesStoreMatrixModel(rows);var exportRows=model.rows.map(function(row){var result={'日期':row.date};if(model.hasTyphoonClosures)result['狀態']=row.isTyphoonClosure?'颱風天放假・0元・不計薪':'';model.people.forEach(function(person){result[person.name]=Number(row.cells[person.key]||0)});result['銷售總額']=Number(row.total||0);return result});
+  var totalRow={'日期':'合計'};if(model.hasTyphoonClosures)totalRow['狀態']='';model.people.forEach(function(person){totalRow[person.name]=Number(model.totals.get(person.key)||0)});totalRow['銷售總額']=Number(model.grandTotal||0);exportRows.push(totalRow);return {model:model,rows:exportRows};
 }
 function renderSalesStoreMatrix(){
   var box=salesEl('salesStatDetailMatrixView');if(!box)return;var state=salesStatDetailState||{};
   if(state.kind!=='store'){box.innerHTML='';return}
-  var model=salesStoreMatrixModel(state.rows||[]);if(!model.people.length){box.innerHTML='<div class="sales-empty">此門市在篩選區間內沒有銷售業績可製作月表。</div>';return}
+  var model=salesStoreMatrixModel(state.rows||[]);if(!model.people.length&&!model.hasTyphoonClosures){box.innerHTML='<div class="sales-empty">此門市在篩選區間內沒有銷售業績可製作月表。</div>';return}
   var formatter=new Intl.NumberFormat('zh-TW');var head='<thead><tr><th>日期</th>'+model.people.map(function(person){return '<th>'+salesEsc(person.name)+'</th>'}).join('')+'<th>銷售總額</th></tr></thead>';
-  var displayRows=salesStoreMatrixDisplayRows(model.rows);var body='<tbody>'+displayRows.map(function(row){if(row.rangeStatus){var rangeLabel=salesPersonDetailDateLabel(row.rangeStart)+(row.rangeEnd!==row.rangeStart?'～'+salesPersonDetailDateLabel(row.rangeEnd):'');var isEnded=row.rangeStatus==='ended';return '<tr class="'+(isEnded?'sales-store-special-ended-row':'sales-store-not-started-row')+'"><th class="date">'+salesEsc(rangeLabel)+'</th><td colspan="'+String(model.people.length+1)+'">'+(isEnded?'特賣結束':'尚未進櫃')+'</td></tr>'}return '<tr><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="amount total '+(row.total>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
+  var displayRows=salesStoreMatrixDisplayRows(model.rows);var body='<tbody>'+displayRows.map(function(row){if(row.isTyphoonClosure)return '<tr class="sales-store-typhoon-row97"><th class="date">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th><td colspan="'+String(model.people.length+1)+'">颱風天放假・0 元・不計薪</td></tr>';if(row.rangeStatus){var rangeLabel=salesPersonDetailDateLabel(row.rangeStart)+(row.rangeEnd!==row.rangeStart?'～'+salesPersonDetailDateLabel(row.rangeEnd):'');var isEnded=row.rangeStatus==='ended';return '<tr class="'+(isEnded?'sales-store-special-ended-row':'sales-store-not-started-row')+'"><th class="date">'+salesEsc(rangeLabel)+'</th><td colspan="'+String(model.people.length+1)+'">'+(isEnded?'特賣結束':'尚未進櫃')+'</td></tr>'}return '<tr><th class="date '+(salesIsWeekend(row.date)?'weekend':'')+'">'+salesEsc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="amount total '+(row.total>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
   var foot='<tfoot><tr><th>合計</th>'+model.people.map(function(person){var amount=Number(model.totals.get(person.key)||0);return '<td class="amount '+(amount>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+formatter.format(amount)+'</td>'}).join('')+'<td class="amount grand '+(model.grandTotal>=SALES_HIGH_VALUE_THRESHOLD?'sales-high-value':'')+'">'+formatter.format(model.grandTotal)+'</td></tr></tfoot>';
-  var width=Math.max(720,125+model.people.length*120+135);box.innerHTML='<div class="sales-store-matrix-note"><span>日期 × 銷售人員</span><b>'+String(model.people.length)+' 位人員・'+String(model.rows.length)+' 天</b></div><div class="sales-store-matrix-scroll"><table style="min-width:'+String(width)+'px">'+head+body+foot+'</table></div>';
+  var width=Math.max(model.people.length?720:360,125+model.people.length*120+135);box.innerHTML='<div class="sales-store-matrix-note"><span>日期 × 銷售人員</span><b>'+String(model.people.length)+' 位人員・'+String(model.rows.length)+' 天</b></div><div class="sales-store-matrix-scroll"><table style="min-width:'+String(width)+'px">'+head+body+foot+'</table></div>';
 }
 function showSalesStatDetailView(view,button){
   var state=salesStatDetailState||{};view=view==='matrix'&&state.kind==='store'?'matrix':'list';state.view=view;salesStatDetailState=state;
@@ -12482,7 +12501,7 @@ function salesPersonDailyModel782(records,personId){
   });
   return Array.from(groups.values()).map(function(g){g.netAmount=g.grossAmount-g.returnAmount;g.invoiceDates.sort();g.performanceMonths.sort();return g}).sort(function(a,b){return b.date.localeCompare(a.date)||salesStoreText(a).localeCompare(salesStoreText(b),'zh-Hant')||a.key.localeCompare(b.key)});
 }
-function salesPersonDailyNote782(group){return [salesWorkdayNoteForRecordIds(group.sales.map(function(r){return r.id}).filter(Boolean)),group.sales.filter(salesIsOvernight88).map(function(r){return '隔夜帳 '+salesMoney(r.grossAmount)+'｜'+salesOvernightInfo88(r)}).join('；')].filter(Boolean).join('；')}
+function salesPersonDailyNote782(group){return [group.sales.some(salesIsTyphoon97)?'颱風天放假・不計薪':'',salesWorkdayNoteForRecordIds(group.sales.map(function(r){return r.id}).filter(Boolean)),group.sales.filter(salesIsOvernight88).map(function(r){return '隔夜帳 '+salesMoney(r.grossAmount)+'｜'+salesOvernightInfo88(r)}).join('；')].filter(Boolean).join('；')}
 function salesPersonDailyDetails782(group){
   var hasReturn=group.returns.length>0,hasAudit=group.records.some(function(r){return salesAmountAuditLogs(r,'').length>0});
   if(!hasReturn&&group.sales.length<2&&!hasAudit&&!group.sales.some(salesIsOvernight88))return '';
@@ -12499,16 +12518,16 @@ function salesRenderPersonDaily782(records,personId){
     var count=g.sales.length>1?'<small class="return782-meta">合併 '+g.sales.length+' 筆業績</small>':'';
     var target=salesEsc(salesStoreText(g))+(g.sales.some(salesIsOvernight88)?'<small class="return782-meta">含隔夜帳・業績歸本人</small>'+g.sales.filter(salesIsOvernight88).map(salesOvernightRowNote93).join(''):g.sales.some(function(r){return r.isProxySale})?'<small class="return782-meta">含代銷售</small>':'');
     var months=g.performanceMonths.filter(function(m){return m!==g.date.slice(0,7)});
-    return '<tr class="return782-daily-row'+(!g.sales.length?' return782-only':'')+'" data-return782-date="'+salesEsc(g.date)+'" data-return782-store="'+salesEsc(g.storeId)+'"><td data-label="日期">'+salesEsc(salesPersonGroupDate93(g))+'</td><td data-label="類型"><span class="sales-stat-type '+(g.sales.length?'gross':'return')+'">'+(g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨')+'</span>'+count+'</td><td data-label="店點">'+target+(workNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workNote)+'</small>':'')+salesPersonDailyDetails782(g)+'</td><td class="amount gross return782-net-cell" data-label="營業額" title="'+salesEsc('原始營業額 '+salesMoney(g.grossAmount)+' − 退貨 '+salesMoney(g.returnAmount)+' ＝ '+salesMoney(g.netAmount))+'">'+amount+'</td><td class="amount return" data-label="退貨">'+(hasReturn?salesEsc(salesMoney(g.returnAmount)):'—')+'</td><td data-label="原發票日期">'+salesEsc(g.invoiceDates.join('、')||'—')+(months.length?'<small class="return782-meta">歸列 '+salesEsc(months.join('、'))+'</small>':'')+'</td><td data-label="最後更新">'+salesEsc(salesDateTime(g.lastUpdated))+'</td></tr>';
+    return '<tr class="return782-daily-row'+(!g.sales.length?' return782-only':'')+'" data-return782-date="'+salesEsc(g.date)+'" data-return782-store="'+salesEsc(g.storeId)+'"><td data-label="日期">'+salesEsc(salesPersonGroupDate93(g))+'</td><td data-label="類型"><span class="sales-stat-type '+(g.sales.length?'gross':'return')+'">'+(g.sales.some(salesIsTyphoon97)?'颱風天放假・不計薪':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨')+'</span>'+count+'</td><td data-label="店點">'+target+(workNote?'<small class="sales-workday-note-sync">上班備註：'+salesEsc(workNote)+'</small>':'')+salesPersonDailyDetails782(g)+'</td><td class="amount gross return782-net-cell" data-label="營業額" title="'+salesEsc('原始營業額 '+salesMoney(g.grossAmount)+' − 退貨 '+salesMoney(g.returnAmount)+' ＝ '+salesMoney(g.netAmount))+'">'+amount+'</td><td class="amount return" data-label="退貨">'+(hasReturn?salesEsc(salesMoney(g.returnAmount)):'—')+'</td><td data-label="原發票日期">'+salesEsc(g.invoiceDates.join('、')||'—')+(months.length?'<small class="return782-meta">歸列 '+salesEsc(months.join('、'))+'</small>':'')+'</td><td data-label="最後更新">'+salesEsc(salesDateTime(g.lastUpdated))+'</td></tr>';
   }).join('');
 }
 function salesPersonDailyPrintRows782(records,personId){
-  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':salesPersonGroupDate93(g),'門市入帳日':g.sales.filter(salesIsOvernight88).map(function(r){return r.postingDate93||r.businessDate}).join('；'),'類型':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(salesIsOvernight88)?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','隔夜帳說明':g.sales.filter(salesIsOvernight88).map(salesOvernightInfo88).join('；'),'最後更新':salesDateTime(g.lastUpdated)}});
+  return salesPersonDailyModel782(records,personId).map(function(g){return {'日期':salesPersonGroupDate93(g),'門市入帳日':g.sales.filter(salesIsOvernight88).map(function(r){return r.postingDate93||r.businessDate}).join('；'),'類型':g.sales.some(salesIsTyphoon97)?'颱風天放假・不計薪':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨','店點':salesStoreText(g)+(g.sales.some(salesIsOvernight88)?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':''),'營業額':salesMoney(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'退貨':g.returnAmount!==0?salesMoney(g.returnAmount):'—','原發票日':g.invoiceDates.join('、')||'—','上班備註':salesPersonDailyNote782(g)||'—','隔夜帳說明':g.sales.filter(salesIsOvernight88).map(salesOvernightInfo88).join('；'),'最後更新':salesDateTime(g.lastUpdated)}});
 }
 function salesPersonDailyExportRows782(records,personId){
   function unique(values){return Array.from(new Set(values.filter(function(v){return v!==''&&v!==null&&v!==undefined}))).join('；')}
   return salesPersonDailyModel782(records,personId).map(function(g){
-    return {'日期':salesPersonGroupDate93(g),'門市入帳日':unique(g.sales.filter(salesIsOvernight88).map(function(r){return r.postingDate93||r.businessDate})),'類型':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayRecordLabel96(r)})),'上班備註':salesPersonDailyNote782(g),'隔夜帳說明':g.sales.filter(salesIsOvernight88).map(salesOvernightInfo88).join('；'),'隔夜帳金額':g.sales.filter(salesIsOvernight88).reduce(function(sum,r){return sum+Number(r.grossAmount||0)},0),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
+    return {'日期':salesPersonGroupDate93(g),'門市入帳日':unique(g.sales.filter(salesIsOvernight88).map(function(r){return r.postingDate93||r.businessDate})),'類型':g.sales.some(salesIsTyphoon97)?'颱風天放假・不計薪':g.sales.length&&g.sales.every(salesNextMonthRecord93)?'次月隔夜帳':g.sales.length?'業績':'僅退貨','區域':(typeof areaText!=='undefined'&&areaText[g.area])||g.area,'門市':salesStoreText(g),'銷售／處理人員':salesPersonName(g.personId,g.sales[0]?.salespersonName||g.sales[0]?.submitterName||g.returns[0]?.assignedSalespersonName),'回傳人員':unique(g.sales.map(salesSubmitterName)),'是否代銷售':g.sales.some(function(r){return r.isProxySale})?'是':'否','上班時數':unique(g.sales.map(function(r){var h=salesWorkHoursValue(r);return h===null?'':salesWorkHoursNumberText(h)})),'薪資狀態':unique(g.sales.map(function(r){return salesWorkdayRecordLabel96(r)})),'上班備註':salesPersonDailyNote782(g),'隔夜帳說明':g.sales.filter(salesIsOvernight88).map(salesOvernightInfo88).join('；'),'隔夜帳金額':g.sales.filter(salesIsOvernight88).reduce(function(sum,r){return sum+Number(r.grossAmount||0)},0),'原始營業額':g.grossAmount,'退貨':g.returnAmount,'營業額':g.netAmount,'營業額說明':g.returnAmount!==0?'（已扣除退貨）':'','核准費用':0,'核准公司帳':0,'撤櫃／進櫃／費用說明':'','原發票日期':g.invoiceDates.join('、'),'最後更新':salesDateTime(g.lastUpdated),'退貨處理人':unique(g.returns.map(salesSubmitterName)),'退貨歸列月份':g.performanceMonths.join('、'),'原始業績編號':g.sales.map(function(r){return r.id||''}).filter(Boolean).join('；'),'退貨編號':g.returns.map(function(r){return r.id||''}).filter(Boolean).join('；')};
   });
 }
 // Format the numeric/formula net column without losing Excel arithmetic.
@@ -12600,7 +12619,7 @@ function printSalesStatDetail(){
   var modal=salesEl('salesStatDetailModal');
   if(!modal||modal.hidden)return;
   var state=salesStatDetailState||{};var previousView=state.view||'list';
-  if(state.kind==='store'&&salesStoreMatrixModel(state.rows||[]).people.length)showSalesStatDetailView('matrix');
+  if(state.kind==='store'){var matrix97=salesStoreMatrixModel(state.rows||[]);if(matrix97.people.length||matrix97.hasTyphoonClosures)showSalesStatDetailView('matrix');}
   document.body.classList.add('sales-stat-printing');
   var cleared=false;var clearPrintMode=function(){if(cleared)return;cleared=true;document.body.classList.remove('sales-stat-printing');showSalesStatDetailView(previousView)};
   window.addEventListener('afterprint',clearPrintMode,{once:true});
@@ -12669,6 +12688,7 @@ function closeSalesAuditHistory(){
   document.body.classList.remove('sales-audit-open');
 }
 function salesAdminActionsHtml(record){
+  if(salesIsTyphoon97(record))return '<span class="sales-admin-row-actions"><button type="button" class="sales-admin-action" data-typhoon-date97="'+salesEsc(record.businessDate)+'" data-typhoon-store97="'+salesEsc(record.storeId)+'" onclick="StarredTyphoon97.open({businessDate:this.dataset.typhoonDate97,storeId:this.dataset.typhoonStore97,operation:\'reopen\'})">停班設定</button></span>';
   if(salesIsOvernight88(record)){var oid88=salesEsc(String(record.id||''));return '<span class="sales-admin-row-actions"><button type="button" class="sales-admin-action" onclick="StarredOvernight88.view(\''+oid88+'\')">查看／作廢</button></span>'} 
   var id=salesEsc(String(record&&record.id||''));
   var history=salesAmountAuditLogs(record,'').length?'<button type="button" class="sales-admin-action" onclick="openSalesAuditHistory(\''+id+'\',\'\')">紀錄</button>':'';
@@ -13161,7 +13181,7 @@ async function exportSalesStatDetailExcel(){
   if(!rows.length&&state.kind!=='person'){salesSetAdminStatus('此明細目前沒有可匯出的資料。','error');return}
   var title=String((salesEl('salesStatDetailTitle')||{}).textContent||'業績明細').replace(/[\\/:*?"<>|]/g,'_');
   if(state.kind==='store'&&state.view==='matrix'){
-    var matrix=salesStoreMatrixExportRows(rows);if(!matrix.model.people.length){salesSetAdminStatus('此門市目前沒有可匯出的人員月表。','error');return}
+    var matrix=salesStoreMatrixExportRows(rows);if(!matrix.model.people.length&&!matrix.model.hasTyphoonClosures){salesSetAdminStatus('此門市目前沒有可匯出的人員月表。','error');return}
     var matrixHeaders=matrix.model.people.map(function(person){return person.name}).concat(['銷售總額']);var matrixWidths=[13].concat(matrix.model.people.map(function(){return 14})).concat([16]);
     try{salesSetAdminStatus('正在匯出門市人員月表…','working');await salesExportSingleSheetExcel('門市人員月表',matrix.rows,matrixWidths,title+'_人員月表_'+salesAdminPeriodLabel().replace(/\s/g,'')+'.xlsx',matrixHeaders);salesSetAdminStatus('門市人員月表已匯出。','success')}catch(error){salesSetAdminStatus('月表匯出失敗：'+String(error&&error.message||error),'error')}return;
   }
@@ -13722,6 +13742,7 @@ window.STARRED_SALES_REPORT_BRIDGE_V55={
   areaLabel:function(value){var labels={north:'北部',central:'中部',south:'南部',east:'東部／離島'};return labels[value]||value||'—'},
   storeText:salesStoreText,
   personName:salesPersonName,
+  isTyphoon97:salesIsTyphoon97,
   recordType:salesRecordType,
   submitterName:salesSubmitterName,
   creditedName:salesCreditedName,
@@ -17659,7 +17680,7 @@ function v54OpenPrint(title,content,options){
   var html='<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>　</title><style>@page{size:A4 '+orientation+';margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff;color:#243d49;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;font-size:12px;line-height:1.25}.print-actions{position:sticky;z-index:10;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;background:#294b5e;color:#fff}.print-actions span{font-size:12px}.print-actions button{padding:7px 15px;border:0;border-radius:6px;background:#fff;color:#294b5e;font-size:13px;font-weight:700;cursor:pointer}.print-sheet{width:100%;min-height:210mm;padding:6mm 7mm}.print-sheet.one-page{height:210mm;min-height:210mm;overflow:hidden;padding:4.5mm 5mm}.report-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:5px;padding-bottom:4px;border-bottom:2px solid #294b5e}.report-head h1{margin:0;font-size:14px;line-height:1.2}.report-head p{margin:2px 0 0;color:#667d88;font-size:12px}.report-head time{color:#667d88;font-size:12px;white-space:nowrap}.print-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:0 0 6px}.print-summary>div{padding:4px 6px;border:1px solid #c8d1d5;background:#f6f8f9;text-align:center}.print-summary span,.print-summary b{display:block}.print-summary span{font-size:12px;color:#617783}.print-summary b{margin-top:1px;font-size:13px;color:#294858;font-variant-numeric:tabular-nums}.high-value{color:#c62828!important;font-weight:700!important}section{margin:0 0 8px;break-inside:auto}h2{margin:0 0 3px;color:#294858;font-size:14px;line-height:1.2}.section-note{margin:0 0 4px;color:#667d88;font-size:12px}.table-wrap{width:100%;overflow:visible}table{width:100%;border-collapse:collapse;table-layout:auto;font-size:12px}th,td{padding:3px 4px;border:1px solid #aeb9be;vertical-align:middle;text-align:left;word-break:break-word}th{background:#dfe4e7;color:#243d49;font-size:12px;font-weight:700;white-space:nowrap}th.num,td.num{text-align:center;font-variant-numeric:tabular-nums}tbody tr:nth-child(even) td{background:#f0f2f3}tfoot th,tfoot td{background:#dfe4e7;font-weight:700}tr{break-inside:avoid;page-break-inside:avoid}.empty{padding:10px;border:1px dashed #aeb9be;color:#6f838d}.notice{margin:0 0 5px;padding:3px 6px;border-left:3px solid #9eafb7;background:#f4f6f7;color:#5c707a;font-size:12px}.average-table h2{font-size:14px;font-weight:800}.store-print-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,.85fr);gap:5px;align-items:start}.one-page section{margin-bottom:4px}.one-page .report-head{margin-bottom:3px}.one-page .print-summary{margin-bottom:4px}.one-page table{font-size:12px;line-height:1.05}.one-page th,.one-page td{padding:1px 2px}.one-page h2{margin-bottom:2px}.one-page .section-note{margin-bottom:2px;line-height:1.1}.one-page .matrix-table th,.one-page .matrix-table td{white-space:nowrap}.one-page .matrix-table th:first-child{width:58px}.one-page .average-table table{table-layout:fixed}.one-page .average-table th,.one-page .average-table td{white-space:normal}.person-print section{margin-bottom:8px}.person-print td small{display:block;color:#667d88}@media print{.print-actions{display:none!important}.print-sheet{padding:6mm 7mm}.print-sheet.one-page{padding:4.5mm 5mm}thead{display:table-header-group}tfoot{display:table-row-group}}</style></head><body><div class="print-actions"><span>列印內容已移除網址；若瀏覽器仍啟用頁首頁尾，請在列印設定取消「頁首與頁尾」。</span><button type="button" onclick="window.print()">開始列印／另存 PDF</button></div><main class="print-sheet'+onePage+compact+'"><header class="report-head"><div><h1>'+v54Esc(title)+'</h1><p>查詢區間：'+v54Esc(salesAdminPeriodLabel())+'</p></div><time>列印時間：'+v54Esc(salesDateTime(new Date().toISOString()))+'</time></header>'+content+'</main><script>document.title="　";setTimeout(function(){window.focus();window.print()},350)<\/script></body></html>';
   popup.document.open();popup.document.write(html);popup.document.close();return true;
 }
-function v54DailyRows(excel){return (salesAdminData.records||[]).map(function(record){return {'業績日期':record.businessDate||'','類型':record.isOvernightSale?'隔夜帳':record.isProxySale?'代銷售':salesRecordType(record)==='return'?'退貨':'業績','原成交日':record.overnightMeta&&record.overnightMeta.originalDate||'','人員業績月份':salesIsOvernight88(record)?record.overnightMeta.performanceMonth||record.businessDate.slice(0,7):'','隔夜帳註記':salesIsOvernight88(record)?salesOvernightInfo88(record):'','區域':v54Area(record.area),'門市／樓層':salesStoreText(record),'銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),'營業總額':excel?Number(record.grossAmount||0):v54Money(record.grossAmount||0),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'—','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}})}
+function v54DailyRows(excel){return (salesAdminData.records||[]).map(function(record){return {'業績日期':record.businessDate||'','類型':record.isTyphoonClosure?'颱風天放假':record.isOvernightSale?'隔夜帳':record.isProxySale?'代銷售':salesRecordType(record)==='return'?'退貨':'業績','原成交日':record.overnightMeta&&record.overnightMeta.originalDate||'','人員業績月份':salesIsOvernight88(record)?record.overnightMeta.performanceMonth||record.businessDate.slice(0,7):'','隔夜帳註記':salesIsOvernight88(record)?salesOvernightInfo88(record):'','區域':v54Area(record.area),'門市／樓層':salesStoreText(record),'銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),'營業總額':excel?Number(record.grossAmount||0):v54Money(record.grossAmount||0),'退貨金額':excel?Number(record.returnAmount||0):v54Money(record.returnAmount||0),'原發票日期':record.originalInvoiceDate||'—','修改狀態':salesStatusMeta(salesRecordStatus(record)).label,'最後更新':salesDateTime(record.updatedAt)}})}
 function v54ProxyRows(excel){return salesProxyReportRows().map(function(row){var copy=Object.assign({},row);if(!excel)copy['營業總額']=v54Money(copy['營業總額']);return copy})}
 function v54StoreRows(excel){return (salesAdminData.byStore||[]).map(function(row,index){return {'排名':index+1,'區域':v54Area(row.area),'門市／樓層':salesStoreText(row),'營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨另計':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'回傳筆數':Number(row.recordCount||0)}})}
 function v54PersonRows(excel){return (salesAdminData.byPerson||[]).map(function(row,index){var net=Number(row.netAmount!=null?row.netAmount:Number(row.grossAmount||0)-Number(row.returnAmount||0));return {'排名':row.expenseOnly?'—':index+1,'銷售人員':salesPersonName(row.lineUserId,row.name),'店點':(row.locations||[]).map(salesStoreText).join('、')||'—','營業總額':excel?Number(row.grossAmount||0):v54Money(row.grossAmount||0),'退貨':excel?Number(row.returnAmount||0):v54Money(row.returnAmount||0),'當月業績':excel?net:v54Money(net),'筆數':Number(row.recordCount||0)}})}
@@ -17701,9 +17722,9 @@ async function v54ExportWorkbook(spec){
   var book=window.XLSX.utils.book_new();window.XLSX.utils.book_append_sheet(book,worksheet,spec.title);var fallback=window.XLSX.write(book,{bookType:'xlsx',type:'array',compression:true,cellStyles:true});salesDownloadExcelBuffer(fallback,fileName);
 }
 function v54StoreMatrixHtml(state){
-  var model=salesStoreMatrixModel(state.rows||[]),display=salesStoreMatrixDisplayRows(model.rows),formatter=new Intl.NumberFormat('zh-TW');if(!model.people.length)return v54PrintTable('人員月表',[],'此門市目前沒有可製作月表的銷售資料。','matrix-section');
+  var model=salesStoreMatrixModel(state.rows||[]),display=salesStoreMatrixDisplayRows(model.rows),formatter=new Intl.NumberFormat('zh-TW');if(!model.people.length&&!model.hasTyphoonClosures)return v54PrintTable('人員月表',[],'此門市目前沒有可製作月表的銷售資料。','matrix-section');
   var head='<thead><tr><th class="num">日期</th>'+model.people.map(function(person){return '<th class="num">'+v54Esc(person.name)+'</th>'}).join('')+'<th class="num">銷售總額</th></tr></thead>';
-  var body='<tbody>'+display.map(function(row){if(row.rangeStatus){var label=salesPersonDetailDateLabel(row.rangeStart)+(row.rangeEnd!==row.rangeStart?'～'+salesPersonDetailDateLabel(row.rangeEnd):'');return '<tr><th class="num">'+v54Esc(label)+'</th><td class="num" colspan="'+String(model.people.length+1)+'">'+(row.rangeStatus==='ended'?'特賣結束':'尚未進櫃')+'</td></tr>'}return '<tr><th class="num">'+v54Esc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="num'+v54HighClass(amount)+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="num'+v54HighClass(row.total)+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
+  var body='<tbody>'+display.map(function(row){if(row.isTyphoonClosure)return '<tr><th class="num">'+v54Esc(salesPersonDetailDateLabel(row.date))+'</th><td class="num" colspan="'+String(model.people.length+1)+'">颱風天放假・0 元・不計薪</td></tr>';if(row.rangeStatus){var label=salesPersonDetailDateLabel(row.rangeStart)+(row.rangeEnd!==row.rangeStart?'～'+salesPersonDetailDateLabel(row.rangeEnd):'');return '<tr><th class="num">'+v54Esc(label)+'</th><td class="num" colspan="'+String(model.people.length+1)+'">'+(row.rangeStatus==='ended'?'特賣結束':'尚未進櫃')+'</td></tr>'}return '<tr><th class="num">'+v54Esc(salesPersonDetailDateLabel(row.date))+'</th>'+model.people.map(function(person){var amount=Number(row.cells[person.key]||0);return '<td class="num'+v54HighClass(amount)+'">'+(amount?formatter.format(amount):'')+'</td>'}).join('')+'<td class="num'+v54HighClass(row.total)+'">'+(row.total?formatter.format(row.total):'')+'</td></tr>'}).join('')+'</tbody>';
   var foot='<tfoot><tr><th class="num">合計</th>'+model.people.map(function(person){var total=Number(model.totals.get(person.key)||0);return '<td class="num'+v54HighClass(total)+'">'+formatter.format(total)+'</td>'}).join('')+'<td class="num'+v54HighClass(model.grandTotal)+'">'+formatter.format(model.grandTotal)+'</td></tr></tfoot>';
   return '<section class="matrix-section"><h2>人員月表</h2><p class="section-note">日期 × 銷售人員，共 '+String(model.people.length)+' 位人員、'+String(model.rows.length)+' 天。</p><div class="table-wrap"><table class="matrix-table">'+head+body+foot+'</table></div></section>';
 }
@@ -21464,7 +21485,7 @@ function table(title,headers,rows,note,cls){
 function cards(items){return '<div class="print-summary">'+items.map(function(i){return '<div><span>'+esc(i[0])+'</span><b class="'+(i[2]?'high-value':'')+'">'+esc(money(i[1]))+'</b></div>'}).join('')+'</div>'}
 function reportHtml(data,seq){
  var s=data.summary,groups=bridge.personDailyModel782(data.records.concat(data.performanceReturns),data.person.lineUserId),notes=data.workdayNotes||{},rates=data.operationRates||{};
- var detail=groups.map(function(g){var work=g.sales.map(function(r){return notes[r.id]}).filter(Boolean).sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))})[0];return [cell(g.date),cell(g.sales.length?'業績':'僅退貨'),cell(bridge.storeText(g)+(g.sales.some(function(r){return r.isOvernightSale===true||!!r.overnightMeta})?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':'')),cell(money(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'money',g.netAmount),cell(g.returnAmount!==0?money(g.returnAmount):'—'),cell(g.invoiceDates.join('、')||'—'),cell([work?.text,g.sales.filter(function(r){return r.isOvernightSale===true||!!r.overnightMeta}).map(function(r){return '隔夜帳 '+money(r.grossAmount)+'｜原成交 '+(r.overnightMeta?.originalDate||'—')+'；入帳 '+r.businessDate+(r.note?'；'+r.note:'')}).join('；')].filter(Boolean).join('；')||'—'),cell(stamp(g.lastUpdated))]});
+ var detail=groups.map(function(g){var work=g.sales.map(function(r){return notes[r.id]}).filter(Boolean).sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))})[0];return [cell(g.date),cell(g.sales.some(function(r){return r.isTyphoonClosure===true})?'颱風天放假・不計薪':g.sales.length?'業績':'僅退貨'),cell(bridge.storeText(g)+(g.sales.some(function(r){return r.isOvernightSale===true||!!r.overnightMeta})?'（含隔夜帳）':g.sales.some(function(r){return r.isProxySale})?'（含代銷售）':'')),cell(money(g.netAmount)+(g.returnAmount!==0?'（已扣除退貨）':''),'money',g.netAmount),cell(g.returnAmount!==0?money(g.returnAmount):'—'),cell(g.invoiceDates.join('、')||'—'),cell([work?.text,g.sales.filter(function(r){return r.isOvernightSale===true||!!r.overnightMeta}).map(function(r){return '隔夜帳 '+money(r.grossAmount)+'｜原成交 '+(r.overnightMeta?.originalDate||'—')+'；入帳 '+r.businessDate+(r.note?'；'+r.note:'')}).join('；')].filter(Boolean).join('；')||'—'),cell(stamp(g.lastUpdated))]});
  var type=function(v){return {move_out:'撤櫃',move_in:'進櫃',other:'其他',overtime:'移櫃／加班',expense:'費用'}[v]||v};
  var expenses=data.expenses.slice().sort(function(a,b){return String(b.requestDate).localeCompare(String(a.requestDate))}).map(function(i){var p=pay(i,rates),adjust=i.isDeletionAdjustment,description=adjust?i.deletionNote:i.requestType==='expense'?i.reason:[bridge.storeText(i),window.StarredExpenseTime81.rangeText(i)].filter(Boolean).join('・'),review=[adjust?'刪除人：'+(i.deletedByName||'—'):'核准人：'+(i.reviewerName||'—'),i.note?'申請：'+i.note:'',i.reviewNote?'後台：'+i.reviewNote:''].filter(Boolean).join('；');return [cell(i.requestDate),cell(adjust?'刪除沖減':type(i.requestType)),cell(description),cell(p.hours),cell(p.rate?money(p.rate):'—'),cell(p.amount===null?'—':money(p.amount)),cell(p.formula),cell(review)]});
  var external=data.externalAccounts.slice().sort(function(a,b){return String(b.transactionDate).localeCompare(String(a.transactionDate))}).map(function(i){return [cell(i.transactionDate),cell(money(i.customerAmount)),cell([i.isDeletionAdjustment?i.deletionNote:'',i.note||''].filter(Boolean).join('；')||'—'),cell(i.isDeletionAdjustment?'刪除人：'+(i.deletedByName||'—'):i.reviewerName||'—'),cell(stamp(i.isDeletionAdjustment?i.deletedAt:i.reviewedAt))]});
@@ -22279,3 +22300,76 @@ window.StarredOvernight88={build:BUILD,open:open,view:view,is:is,label:label,inf
 #lineUserTab #lineUserFilters92[hidden],#lineUserTab #lineUserList [hidden]{display:none!important}
 
 </style>
+
+
+<style id="sales-typhoon-v97-style">
+.sales-store-typhoon-row97{background:#f4f0f9;color:#68527e}.sales-store-typhoon-row97 td{text-align:center;font-weight:500}
+#salesReportTab .sales-typhoon-open97{border-color:#b7a9d1;background:#f6f2fc;color:#665080;white-space:nowrap}
+.sales-record-status.typhoon97{color:#65517c;background:#eee8f6;border:1px solid #d6cae8}.sales-typhoon-note97{color:#6a537f!important;font-size:12px}
+.typhoon97-modal[hidden],.typhoon97-modal [hidden]{display:none!important}
+.typhoon97-modal{position:fixed;inset:0;z-index:180000;display:grid;place-items:center;padding:18px;background:rgba(28,48,61,.48);font-family:inherit;color:#294454}
+.typhoon97-dialog{width:min(900px,100%);max-height:calc(100dvh - 36px);display:flex;flex-direction:column;min-height:0;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 18px 70px rgba(27,43,57,.24)}
+.typhoon97-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 24px;border-bottom:1px solid #e3ddeb;background:#faf8fd;flex:none}
+.typhoon97-head small{font-size:11px;letter-spacing:.16em;color:#8b7d9d}.typhoon97-head h3{font-size:23px;font-weight:600;margin:5px 0 0;color:#4f3e64}
+.typhoon97-head button{width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#716780;font-size:28px;box-shadow:none}
+.typhoon97-body{padding:20px 24px;overflow:auto;min-height:0;overscroll-behavior:contain}.typhoon97-body p{font-size:14px;line-height:1.75;margin:0 0 14px}
+.typhoon97-body fieldset{border:0;margin:0;padding:0;min-width:0}.typhoon97-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.typhoon97-body label.typhoon97-field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;min-width:0}.typhoon97-body input:not([type=checkbox]),.typhoon97-body select,.typhoon97-body textarea{font:inherit!important;font-size:16px!important;width:100%;min-width:0;border:1px solid #cddbe3;border-radius:10px;min-height:44px;padding:9px 11px;background:#fff;color:#294454;box-sizing:border-box}
+.typhoon97-body input[type=checkbox]{width:20px!important;height:20px!important;min-height:20px!important;accent-color:#78618f;flex:none;margin:2px 0}
+.typhoon97-hint{padding:12px 14px;background:#f4f0f9;border:1px solid #e0d6ed;border-radius:12px;font-size:14px;line-height:1.7;margin:14px 0;color:#66517c}
+.typhoon97-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.typhoon97-toolbar button{font:inherit!important;font-size:13px!important;min-height:37px;padding:7px 11px;border:1px solid #d1dce3;border-radius:8px;background:#f5f8fa;color:#426072;box-shadow:none}
+.typhoon97-toolbar strong{margin-left:auto;font-size:14px;font-weight:500}.typhoon97-filter-grid{margin-top:14px}.typhoon97-storelist{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:340px;overflow:auto;border:1px solid #d9e2e8;border-radius:12px;padding:10px;min-height:74px;overscroll-behavior:contain}
+.typhoon97-store{display:flex;gap:9px;align-items:flex-start;border:1px solid #dce4e9;border-radius:10px;padding:11px;min-width:0;cursor:pointer;background:#fff;line-height:1.5}.typhoon97-store:has(input:checked){border-color:#a48cbe;background:#f7f3fb}.typhoon97-store.unavailable{background:#f8fafb;cursor:default}.typhoon97-store>span{min-width:0;flex:1}.typhoon97-store b{display:block;font-size:14px;font-weight:500;overflow-wrap:anywhere}.typhoon97-store small{display:block;font-size:12px;color:#788c98;margin-top:2px}.typhoon97-store .closed{color:#71578a}.typhoon97-store .conflict{color:#a36633}.typhoon97-empty{grid-column:1/-1;align-self:center;text-align:center;padding:12px;color:#7b8d96;font-size:14px;line-height:1.7}.typhoon97-reason{margin-top:14px}
+.typhoon97-selection{margin-top:10px;font-size:13px;color:#6b7c86;line-height:1.6}.typhoon97-selection .typhoon97-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;max-height:105px;overflow:auto}.typhoon97-chips span{padding:3px 7px;background:#edf2f5;border-radius:6px;font-size:12px}.typhoon97-confirm h4{font-size:20px;font-weight:500;margin:0 0 8px;color:#5e4975}.typhoon97-reviewlist{list-style:none;margin:12px 0;padding:0;border:1px solid #dde3e8;border-radius:10px;max-height:290px;overflow:auto}.typhoon97-reviewlist li{padding:10px 13px;border-bottom:1px solid #e7ecef;font-size:14px;line-height:1.65}.typhoon97-reviewlist li:last-child{border-bottom:0}.typhoon97-reviewlist small{display:block;color:#7b8d97;font-size:12px}
+.typhoon97-message{margin:0 24px 14px;padding:11px 13px;border-radius:10px;background:#edf5fa;color:#46657a;white-space:pre-line;font-size:14px;line-height:1.7;max-height:160px;overflow:auto;flex:none;outline:none}.typhoon97-message:empty{display:none}.typhoon97-message.error{background:#fff1ed;color:#9b5342}.typhoon97-message.success{background:#eaf5ef;color:#376e51}.typhoon97-footer{display:flex;justify-content:flex-end;gap:9px;padding:14px 24px;border-top:1px solid #e1e7ec;background:#fff;flex:none}.typhoon97-footer button{font:inherit!important;font-size:15px!important;min-height:43px;padding:10px 16px;border-radius:10px}.typhoon97-footer .typhoon97-primary{background:#75608c;color:#fff;border:1px solid #75608c}.typhoon97-footer button:disabled{opacity:.5;cursor:not-allowed}.typhoon97-success{padding:18px 0;text-align:center}.typhoon97-success h4{color:#467259;font-size:23px;margin:0 0 10px;font-weight:500}.typhoon97-success strong{font-size:16px;display:block;margin:12px 0;color:#4d3d63}.typhoon97-resultlist{max-height:190px;overflow:auto;white-space:pre-line;text-align:left;border-radius:10px;background:#f6f8fa;padding:12px 15px;font-size:14px;line-height:1.8}
+@media(max-width:700px){.typhoon97-modal{padding:8px}.typhoon97-dialog{max-height:calc(100dvh - 16px);border-radius:14px}.typhoon97-head,.typhoon97-body{padding:15px}.typhoon97-head h3{font-size:21px}.typhoon97-grid,.typhoon97-storelist{grid-template-columns:1fr}.typhoon97-filter-grid{grid-template-columns:1fr 1fr}.typhoon97-storelist{max-height:300px}.typhoon97-toolbar strong{width:100%;margin-left:0}.typhoon97-footer{padding:12px 15px max(12px,env(safe-area-inset-bottom));flex-wrap:wrap}.typhoon97-footer button{flex:1}.typhoon97-message{margin:0 15px 12px}.typhoon97-body input[type=date]{appearance:none;-webkit-appearance:none;text-align:left}.typhoon97-selection .typhoon97-chips{max-height:75px}#salesReportTab .sales-report-main-actions{flex-wrap:wrap}}
+@media print{.typhoon97-modal,#salesTyphoonOpen97{display:none!important}}
+</style>
+<script id="sales-typhoon-v97-module">
+(function(){
+'use strict';
+var BUILD='20261028-typhoon-v97',state=null,epoch=0,lastFocus=null;
+function el(id){return document.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function today(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date())}
+function valid(v){return /^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v}
+function allowed(){return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&typeof normalizeCurrentAdminRole==='function'&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
+function auth(){if(!allowed())return '';return [currentUser.id||currentUser.account||'',currentUser.adminSessionToken||'',currentUser.role||'',window.starredVerifiedLineUser&&window.starredVerifiedLineUser.lineUserId||''].join('|')}
+function area(s){var v=s.region||s.area||'';return {north:'北部',central:'中部',south:'南部',east:'東部／離島'}[v]||v||'未分區'}
+function storeName(s){return [s.name,s.floor].filter(Boolean).join('｜')||'未命名店點'}
+function status(text,tone){var n=el('typhoon97Message');if(!n)return;n.className='typhoon97-message'+(tone?' '+tone:'');n.textContent=text||'';if(tone==='error'){n.focus({preventScroll:true});n.scrollIntoView({block:'nearest'})}}
+async function api(action,payload){
+ var timer,r;
+ try{r=await Promise.race([window.starredApi(action,payload||{}),new Promise(function(_,reject){timer=setTimeout(function(){var e=new Error(action==='sales_typhoon_mutate'?'儲存連線逾時，結果尚待確認。請使用「核對／重試原操作」。':'店點資料讀取逾時，請重新讀取。');e.outcomeUnknown=action==='sales_typhoon_mutate';reject(e)},action==='sales_typhoon_mutate'?45000:25000)})])}
+ catch(e){if(e.rawMessage97)e.message=e.rawMessage97;if(/^(不支援的操作|unknown action|unsupported action)$/i.test(String(e.message||'').trim())){e.message='颱風停班後端尚未更新。請先執行本次 SQL，再部署 line-api，最後更新網頁。';e.writeNotStarted=true}throw e}finally{clearTimeout(timer)}
+ if(!r||r.success!==true)throw new Error(r&&r.error||'沒有取得完整回應。');
+ if(r.typhoonBuild!==BUILD){var versionError=new Error('颱風停班後端尚未更新。請先執行本次 SQL，再部署 line-api，最後更新網頁。');versionError.outcomeUnknown=action==='sales_typhoon_mutate';throw versionError;}
+ return r;
+}
+function ensure(){var root=el('typhoon97Modal');if(root)return root;root=document.createElement('div');root.id='typhoon97Modal';root.className='typhoon97-modal';root.hidden=true;root.innerHTML='<section class="typhoon97-dialog" role="dialog" aria-modal="true" aria-labelledby="typhoon97Title"><header class="typhoon97-head"><div><small>STORE CLOSURE</small><h3 id="typhoon97Title">颱風天放假</h3></div><button type="button" data-t97="close" aria-label="關閉">×</button></header><div class="typhoon97-body" id="typhoon97Body"></div><div id="typhoon97Message" class="typhoon97-message" role="status" aria-live="polite" tabindex="-1"></div><footer id="typhoon97Footer" class="typhoon97-footer"></footer></section>';
+ root.addEventListener('click',function(e){var b=e.target.closest('[data-t97]');if(!b||b.disabled)return;var a=b.dataset.t97;if(a==='close')close();else if(a==='reload')load();else if(a==='all')selectAll(false);else if(a==='visible')selectAll(true);else if(a==='clear'){state.selected.clear();renderList()}else if(a==='review')review();else if(a==='back')back();else if(a==='save')save();else if(a==='again')open()});
+ root.addEventListener('change',function(e){if(!state||state.busy||state.uncertain)return;var id=e.target.id;if(id==='typhoon97Date'){state.selected.clear();load()}else if(id==='typhoon97Mode'){state.operation=e.target.value;state.selected.clear();renderMode();renderList()}else if(id==='typhoon97Area')renderList();else if(e.target.matches('[data-store97]')){var sid=e.target.dataset.store97;if(e.target.checked)state.selected.add(sid);else state.selected.delete(sid);renderSelection()}});
+ root.addEventListener('input',function(e){if(e.target.id==='typhoon97Search'&&state&&!state.busy&&!state.uncertain)renderList()});
+ document.body.appendChild(root);return root;
+}
+function editorHtml(date,operation){return '<p>一次設定多個店點的停班日。設定後業績自動為 0，不計日薪、時薪或上班天數，也不再提醒缺業績。</p><fieldset id="typhoon97Fields"><div class="typhoon97-grid"><label class="typhoon97-field">停班日期<input id="typhoon97Date" type="date" max="'+today()+'" value="'+esc(date)+'"></label><label class="typhoon97-field">要進行的操作<select id="typhoon97Mode"><option value="close"'+(operation==='close'?' selected':'')+'>設定颱風天放假</option><option value="reopen"'+(operation==='reopen'?' selected':'')+'>取消已設定的停班</option></select></label></div><div id="typhoon97Hint" class="typhoon97-hint"></div><div class="typhoon97-grid typhoon97-filter-grid"><label class="typhoon97-field">區域<select id="typhoon97Area"><option value="">全部區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></label><label class="typhoon97-field">搜尋店點<input id="typhoon97Search" type="search" placeholder="輸入店名或樓層"></label></div><div class="typhoon97-toolbar"><button type="button" data-t97="all" id="typhoon97All">全選全部可設定店點</button><button type="button" data-t97="visible">全選篩選結果</button><button type="button" data-t97="clear">清空勾選</button><strong id="typhoon97Count">已選 0 個店點</strong></div><div id="typhoon97StoreList" class="typhoon97-storelist" aria-label="店點多選清單"></div><div id="typhoon97Selection" class="typhoon97-selection" aria-live="polite"></div><label class="typhoon97-field typhoon97-reason"><span id="typhoon97ReasonLabel">備註（選填）</span><textarea id="typhoon97Reason" maxlength="500" rows="2" placeholder="例如：颱風停班"></textarea></label></fieldset>'}
+function editorFooter(){return '<button type="button" class="secondary" data-t97="close">關閉</button><button type="button" class="secondary" data-t97="reload">重新讀取</button><button type="button" class="typhoon97-primary" id="typhoon97Review" data-t97="review" disabled>下一步：核對店點</button>'}
+function renderMode(){if(!state||!el('typhoon97Hint'))return;var reopen=state.operation==='reopen';el('typhoon97Hint').textContent=reopen?'取消停班後，恢復原本的回傳與計薪規則；系統自動補的 0 會移除，未回傳日期會重新提醒。':'一般回傳 0 元仍照原規則計薪。只有在此設定的店點／日期才會停薪；已有非 0 業績、退貨或隔夜帳的店點會先阻擋，避免覆蓋資料。';el('typhoon97All').textContent=reopen?'全選全部已停班店點':'全選全部可設定店點';el('typhoon97ReasonLabel').textContent=reopen?'取消原因（至少 2 個字）':'備註（選填）';el('typhoon97Reason').placeholder=reopen?'例如：誤選店點，恢復營業':'例如：颱風停班'}
+function eligible(s){return !!state&&!!state.ready&&(state.operation==='reopen'?!!s.closure:s.isEnabled!==false&&!s.closure&&!s.conflictReason)}
+function filtered(){if(!state)return [];var a=el('typhoon97Area')&&el('typhoon97Area').value||'',q=(el('typhoon97Search')&&el('typhoon97Search').value||'').trim().toLocaleLowerCase();return state.stores.filter(function(s){return (!a||String(s.region||s.area||'')===a)&&(!q||(storeName(s)+' '+area(s)).toLocaleLowerCase().includes(q))})}
+function renderList(){if(!state||!el('typhoon97StoreList'))return;var rows=filtered();el('typhoon97StoreList').innerHTML=!state.ready?'<div class="typhoon97-empty">'+(state.loading?'正在讀取店點與停班狀態…':'請重新讀取店點資料，完成後才能設定。')+'</div>':rows.length?rows.map(function(s){var ok=eligible(s),selected=state.selected.has(s.id),note=s.closure?'已設颱風停班・不計薪':s.conflictReason?String(s.conflictReason):s.isEnabled===false?'店點已停用':Number(s.normalZeroCount||0)>0?'已有 '+Number(s.normalZeroCount)+' 筆 0 業績，設定後一併不計薪':'當日無業績，設定後自動補 0';return '<label class="typhoon97-store'+(ok?'':' unavailable')+'"><input type="checkbox" data-store97="'+esc(s.id)+'"'+(selected?' checked':'')+(ok?'':' disabled')+'><span><b>'+esc(storeName(s))+'</b><small>'+esc(area(s))+'</small><small class="'+(s.closure?'closed':s.conflictReason?'conflict':'')+'">'+esc(note)+'</small></span></label>'}).join(''):'<div class="typhoon97-empty">沒有符合篩選條件的店點。</div>';renderSelection()}
+function renderSelection(){if(!state)return;var rows=state.stores.filter(function(s){return state.selected.has(s.id)}),visible=new Set(filtered().map(function(s){return s.id})),hidden=rows.filter(function(s){return !visible.has(s.id)}).length;if(el('typhoon97Count'))el('typhoon97Count').textContent='已選 '+rows.length+' 個店點'+(hidden?'（篩選外 '+hidden+' 個）':'');if(el('typhoon97Selection'))el('typhoon97Selection').innerHTML=rows.length?'已選店點'+(hidden?'，包含目前篩選外的店點':'')+'：<div class="typhoon97-chips">'+rows.map(function(s){return '<span>'+esc(storeName(s))+'</span>'}).join('')+'</div>':'勾選單一或多個店點，也可以使用全選。';if(el('typhoon97Review'))el('typhoon97Review').disabled=state.busy||!state.ready||!rows.length}
+function selectAll(visibleOnly){if(!state||state.busy||!state.ready)return;(visibleOnly?filtered():state.stores).filter(eligible).forEach(function(s){state.selected.add(s.id)});renderList()}
+async function open(options){if(!allowed()){window.alert('只有已登入後台的會計或系統管理員可以設定颱風停班。');return}if(state&&state.busy)return;options=options||{};lastFocus=document.activeElement;var from=(el('salesAdminDateFrom')||{}).value,to=(el('salesAdminDateTo')||{}).value,d=valid(options.businessDate)?options.businessDate:from===to&&valid(from)?from:today();if(d>today())d=today();state={operation:options.operation==='reopen'?'reopen':'close',auth:auth(),businessDate:d,selected:new Set(),stores:[],ready:false,loading:false,busy:false,phase:'edit',uncertain:false,focusStore:options.storeId||''};var root=ensure();el('typhoon97Title').textContent='颱風天放假';el('typhoon97Body').innerHTML=editorHtml(d,state.operation);el('typhoon97Footer').innerHTML=editorFooter();root.hidden=false;renderMode();await load();if(state&&el('typhoon97Date'))el('typhoon97Date').focus()}
+async function load(){var token=state;if(!token||token.busy||token.uncertain||token.phase!=='edit')return;var d=el('typhoon97Date').value,ticket=++epoch;token.ready=false;token.loading=true;token.selected.clear();token.stores=[];renderList();status('');if(!valid(d)||d>today()){token.loading=false;renderList();status('請選擇今天或過去的有效日期。','error');return}token.businessDate=d;try{var r=await api('sales_typhoon_options',{businessDate:d});if(state!==token||ticket!==epoch||auth()!==token.auth)return;if(r.ready!==true||r.businessDate!==d||!Array.isArray(r.stores))throw new Error('店點狀態尚未完整載入，請重新讀取。');var ids=new Set();if(r.stores.some(function(s){if(!s||typeof s.id!=='string'||!s.id||ids.has(s.id))return true;ids.add(s.id);return false}))throw new Error('店點資料不完整，請重新讀取。');token.stores=r.stores.slice().sort(function(a,b){return area(a).localeCompare(area(b),'zh-Hant')||storeName(a).localeCompare(storeName(b),'zh-Hant')});token.ready=true;if(token.focusStore){var target=token.stores.find(function(s){return s.id===token.focusStore});if(target&&eligible(target))token.selected.add(target.id);token.focusStore=''}status('已讀取 '+token.stores.length+' 個店點；請勾選要'+(token.operation==='reopen'?'取消停班':'設為颱風放假')+'的店點。')}catch(e){if(state===token&&ticket===epoch){token.ready=false;status('無法讀取：'+e.message,'error')}}finally{if(state===token&&ticket===epoch){token.loading=false;renderList()}}}
+function review(){if(!state||state.busy||!state.ready||state.phase!=='edit')return;if(auth()!==state.auth){status('登入身分已變更，請重新開啟停班設定。','error');return}var rows=state.stores.filter(function(s){return state.selected.has(s.id)}),reason=el('typhoon97Reason').value.trim();if(!rows.length){status('請至少勾選一個店點。','error');return}if(rows.some(function(s){return !eligible(s)})){status('勾選店點狀態已變更，請重新讀取。','error');return}if(state.operation==='reopen'&&reason.length<2){status('請填寫至少 2 個字的取消原因。','error');return}if(reason.length>500){status('備註最多 500 個字。','error');return}state.editor=el('typhoon97Body').innerHTML;state.reason=reason;state.filterArea=el('typhoon97Area').value;state.filterSearch=el('typhoon97Search').value;state.reviewRows=rows;var expected={};rows.forEach(function(s){expected[s.id]=s.closure?s.closure.updatedAt:null});state.payload={operation:state.operation,businessDate:state.businessDate,storeIds:rows.map(function(s){return s.id}).sort(),operationId:crypto.randomUUID(),reason:reason,expectedVersions:expected};state.phase='review';var reopen=state.operation==='reopen';el('typhoon97Body').innerHTML='<div class="typhoon97-confirm"><h4>'+esc(state.businessDate)+'｜'+(reopen?'取消停班':'颱風天放假')+'</h4><p>請核對以下 '+rows.length+' 個店點。'+(reopen?'取消後恢復原本計薪規則；自動補 0 的紀錄會移除。':'當日業績為 0，不計日薪、時薪與上班天數；既有 0 元回傳會保留並標示停班。')+'</p><ul class="typhoon97-reviewlist">'+rows.map(function(s){return '<li>'+esc(storeName(s))+'<small>'+esc(area(s))+(reopen?'｜取消既有停班':Number(s.normalZeroCount||0)>0?'｜'+Number(s.normalZeroCount)+' 筆原 0 業績一併不計薪':'｜系統自動補 0')+'</small></li>'}).join('')+'</ul>'+(reason?'<div class="typhoon97-hint">'+(reopen?'取消原因':'備註')+'：'+esc(reason)+'</div>':'')+'<p>所有店點會一起檢查；如果有資料衝突，整批不會套用，請重新核對後再送出。</p></div>';el('typhoon97Footer').innerHTML='<button type="button" class="secondary" data-t97="back">返回修改</button><button type="button" class="typhoon97-primary" id="typhoon97Save" data-t97="save">'+(reopen?'確認取消 '+rows.length+' 個店點停班':'確認 '+rows.length+' 個店點放假')+'</button>';status('');el('typhoon97Save').focus()}
+function back(){if(!state||state.busy||state.uncertain)return;state.phase='edit';el('typhoon97Body').innerHTML=editorHtml(state.businessDate,state.operation);el('typhoon97Footer').innerHTML=editorFooter();el('typhoon97Area').value=state.filterArea||'';el('typhoon97Search').value=state.filterSearch||'';el('typhoon97Reason').value=state.reason||'';renderMode();renderList();status('')}
+function lock(value){if(state)state.busy=value;ensure().querySelectorAll('button').forEach(function(b){b.disabled=value});var f=el('typhoon97Fields');if(f)f.disabled=value||!!(state&&state.uncertain);if(!value&&state&&state.uncertain){var back=ensure().querySelector('[data-t97="back"]');if(back)back.disabled=true;var save=el('typhoon97Save');if(save)save.textContent='核對／重試原操作'}if(!value&&state&&state.phase==='edit')renderSelection()}
+async function refresh(){var timer;try{var reads=[typeof window.loadSalesAdminReport==='function'?window.loadSalesAdminReport():Promise.resolve(false),typeof window.loadSalesData==='function'?window.loadSalesData():Promise.resolve(false)];var results=await Promise.race([Promise.allSettled(reads),new Promise(function(resolve){timer=setTimeout(function(){resolve(null)},25000)})]);return !!results&&results.every(function(r){return r.status==='fulfilled'&&!!r.value})}catch(_){return false}finally{clearTimeout(timer)}}
+async function save(){var token=state;if(!token||token.busy||token.phase!=='review'||!token.payload)return;if(auth()!==token.auth){status('登入身分已變更，請重新開啟停班設定。','error');return}lock(true);status(token.uncertain?'正在核對原操作結果…':'正在套用 '+token.reviewRows.length+' 個店點，請稍候…');var acknowledged=false;try{var r=await api('sales_typhoon_mutate',token.payload);acknowledged=true;if(state!==token||auth()!==token.auth)return;var resultIds=(Array.isArray(r.updatedIds)?r.updatedIds:[]).concat(Array.isArray(r.alreadyIds)?r.alreadyIds:[]),seen=new Set(resultIds);if(resultIds.length!==seen.size||seen.size!==token.payload.storeIds.length||token.payload.storeIds.some(function(id){return !seen.has(id)}))throw new Error('操作回應尚未完整核對，請重試原操作確認結果。');token.uncertain=false;token.phase='done';var ok=await refresh();if(state!==token||auth()!==token.auth)return;var reopen=token.operation==='reopen';el('typhoon97Title').textContent=reopen?'已取消停班':'颱風停班已設定';el('typhoon97Body').innerHTML='<div class="typhoon97-success"><h4>'+esc(token.businessDate)+'｜'+token.reviewRows.length+' 個店點</h4><p>'+(reopen?'已取消停班設定，恢復原本回傳及計薪規則。':'業績為 0、當天不計薪，也不再列入缺業績提醒。')+'</p><strong>'+(ok?'業績及缺業績清單已更新。':'已儲存；報表尚未完全更新，請重新查詢。')+'</strong></div><div class="typhoon97-resultlist">'+token.reviewRows.map(function(s){return esc(storeName(s))}).join('\n')+'</div>';el('typhoon97Footer').innerHTML='<button type="button" class="secondary" data-t97="again">設定其他日期</button><button type="button" class="typhoon97-primary" data-t97="close">完成</button>';status(ok?'':'設定已完成，不需要再送出；請重新查詢業績報表與漏傳清單。',ok?'':'success')}
+ catch(e){if(state===token){token.uncertain=acknowledged||(!e.writeNotStarted&&(e.outcomeUnknown===true||Number(e.httpStatus||0)>=500||/fetch|network|timeout|逾時|連線|未取得|未確認|回應|格式/i.test(e.message)));if(!token.uncertain)token.ready=false;var conflicts=(e.conflicts||[]).map(function(c){var store=token.stores.find(function(s){return s.id===c.storeId});return (c.storeName||store&&storeName(store)||c.storeId||'店點')+'：'+c.reason}).join('\n');status((token.uncertain?'結果尚待確認；請使用「核對／重試原操作」，會沿用同一識別碼。\n':'本次尚未套用，請返回修改並重新讀取店點狀態。\n')+e.message+(conflicts?'\n'+conflicts:''),'error')}}finally{if(state===token)lock(false)}}
+function close(){if(state&&state.busy)return;if(state&&state.uncertain&&!window.confirm('這次操作的結果尚未確認。建議留在此頁使用「核對／重試原操作」。關閉後請先重新讀取店點狀態再決定下一步。確定關閉？'))return;ensure().hidden=true;state=null;epoch++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
+document.addEventListener('keydown',function(e){var root=el('typhoon97Modal');if(!root||root.hidden)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){var controls=Array.from(root.querySelectorAll('button,input,select,textarea')).filter(function(n){return !n.disabled&&n.offsetParent!==null});if(!controls.length)return;var first=controls[0],last=controls[controls.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+window.StarredTyphoon97={build:BUILD,open:open,close:close};
+})();
+</script>
