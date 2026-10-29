@@ -22690,26 +22690,28 @@ window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',o
 #orderBackupSection .ob101-toggle:focus-visible,#orderBackupSection .ob101-close:focus-visible,
 #orderBackupSection .ob101-cell>.oq99-text-link:focus-visible{outline:2px solid #55788b;outline-offset:1px}
 #orderBackupSection .ob101-row.has-overflow{cursor:pointer}
-#orderBackupTab #orderBackupSection .backup-table tr.ob101-row.is-open>td{background:#f1f6f9!important}
+#orderBackupTab #orderBackupSection .backup-table tr.ob101-row.is-open>td{background:#edf4f8!important;border-bottom-color:transparent!important}
 #orderBackupTab #orderBackupSection .backup-table tr.ob101-detail[hidden]{display:none!important}
 #orderBackupTab #orderBackupSection .backup-table tr.ob101-detail>td{
-  padding:0!important;height:auto!important;vertical-align:top!important;
-  background:#f8fafc!important;border-bottom:1px solid #d9e4eb!important
+  padding:0 10px 12px!important;height:auto!important;vertical-align:top!important;
+  background:#f4f8fb!important;border-bottom:1px solid #d9e4eb!important
 }
-#orderBackupSection .ob101-detail-content{padding:12px 16px 16px;color:#355264}
-#orderBackupSection .ob101-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
-#orderBackupSection .ob101-detail-title{font-size:13px;color:#667e8c;font-weight:400}
+#orderBackupSection .ob101-detail-content{padding:14px 16px 16px;color:#355264;background:linear-gradient(180deg,#ffffff 0%,#f9fbfd 100%);border:1px solid #dbe5ec;border-radius:18px;box-shadow:0 10px 26px rgba(37,72,96,.12),0 2px 8px rgba(37,72,96,.08)}
+#orderBackupSection .ob101-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+#orderBackupSection .ob101-detail-title{font-size:13px;color:#667e8c;font-weight:400;letter-spacing:.02em}
 #orderBackupTab #orderBackupSection .ob101-close{
   min-height:32px!important;min-width:52px!important;height:auto!important;margin:0!important;
-  padding:5px 8px!important;border:1px solid #d5e1e8!important;border-radius:7px!important;
-  background:#fff!important;color:#355c72!important;box-shadow:none!important;transform:none!important;
+  padding:5px 10px!important;border:1px solid #d5e1e8!important;border-radius:999px!important;
+  background:#fff!important;color:#355c72!important;box-shadow:0 1px 2px rgba(37,72,96,.08)!important;transform:none!important;
   font-size:13px!important;font-weight:400!important;line-height:20px!important
 }
 #orderBackupSection .ob101-details{margin:0}
-#orderBackupSection .ob101-details>div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:12px;padding:9px 0;border-top:1px solid #e0e8ed}
+#orderBackupSection .ob101-details>div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid #e0e8ed}
 #orderBackupSection .ob101-details dt{font-size:13px;line-height:23px;color:#718691;font-weight:400}
 #orderBackupSection .ob101-details dd{margin:0;font-size:14px;line-height:23px;font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}
 #orderBackupSection .ob101-help{margin:5px 0 9px;color:#6a818e;font-size:12px;line-height:1.5;font-weight:400}
+#orderBackupSection .ob101-row.is-open + .ob101-detail .ob101-detail-content{animation:ob101CardIn .18s ease-out}
+@keyframes ob101CardIn{from{opacity:.72;transform:translateY(-2px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){
   /* Keep the existing stacked mobile list; only shorten its long field previews. */
   #orderBackupTab #orderBackupSection .backup-table tr.ob101-row>td{height:56px!important;padding:6px 4px!important}
@@ -22719,7 +22721,7 @@ window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',o
   #orderBackupSection .ob101-note{grid-template-columns:minmax(0,1fr) 36px}
   #orderBackupSection .ob101-toggle-slot{width:36px}
   #orderBackupTab #orderBackupSection .ob101-toggle{width:36px!important;min-width:36px!important}
-  #orderBackupSection .ob101-detail-content{padding:10px 12px 12px}
+  #orderBackupSection .ob101-detail-content{padding:12px 12px 13px;border-radius:16px}
   #orderBackupSection .ob101-details>div{grid-template-columns:64px minmax(0,1fr);gap:8px}
 }
 @media(prefers-reduced-motion:reduce){#orderBackupSection .ob101-toggle svg{transition:none}}
@@ -22807,7 +22809,12 @@ window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',o
  function toggle(row,returnFocus){
   if(!row||!row.classList.contains('has-overflow'))return;
   const x=window.scrollX,y=window.scrollY,wrap=row.closest('.backup-table-wrap'),sx=wrap?.scrollLeft||0,sy=wrap?.scrollTop||0;
-  const open=!row.classList.contains('is-open');setOpen(row,open);
+  const open=!row.classList.contains('is-open');
+  if(open){
+   row.parentElement?.querySelectorAll('tr.ob101-row.is-open').forEach(other=>{if(other!==row)setOpen(other,false);});
+   expanded.clear();
+  }
+  setOpen(row,open);
   // Do not rebuild the list, reset filters or fetch data when expanding a row.
   if(returnFocus)row.querySelector('.ob101-toggle')?.focus({preventScroll:true});
   if(wrap){wrap.scrollLeft=sx;wrap.scrollTop=sy;}
