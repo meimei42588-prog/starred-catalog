@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH v103: single-line logistics toolbar; inline selection count. Base v102; v99 API/SQL unchanged. -->
 <!-- UI PATCH v101: order-backup two-line previews with in-place expansion; base v100. API v99 and SQL v99 unchanged. -->
 <!-- UI PATCH v99: unified server-paged order lookup; requires v99 SQL + line-api. Base v98 retained. -->
 <!-- UI PATCH v98: complete order history, >60 Taipei calendar days, text-only archives and all backoffice viewers. Requires v98 line-api; no new SQL. -->
@@ -4636,7 +4637,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 <button type="button" class="admin-status-btn returned" data-status="returned" onclick="setAdminOrderStatus('returned')">退貨 <b id="adminStatusReturned">0</b></button>
 </div><input id="adminOrderStatus" type="hidden" value="">
 <div class="order-admin-filter compact-filter"><input id="adminOrderKeyword" placeholder="搜尋姓名、電話、地址、商品" oninput="renderOrderAdmin()"><select id="adminOrderStoreFilter" onchange="renderOrderAdmin()"><option value="">全部門市</option></select><select id="adminOrderDeliveryFilter" onchange="renderOrderAdmin()"><option value="">全部配送方式</option><option value="總公司寄出">公司寄出</option><option value="門市自取">門市自取</option></select><div class="compact-date-field"><label>訂單日起</label><input id="adminOrderDateFrom" type="date" onchange="renderOrderAdmin()"></div><div class="compact-date-field"><label>訂單日迄</label><input id="adminOrderDateTo" type="date" onchange="renderOrderAdmin()"></div><button type="button" class="secondary compact-btn" onclick="clearAdminOrderFilters()">清除</button></div>
-<div class="compact-batch-panel"><div class="compact-select-row"><label><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" onchange="toggleAllOrders(this.checked)"> 全選目前結果</label><b id="orderSelectedCount">已選 0 筆</b></div><div class="compact-process-row"><select id="orderHandler" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button id="markPendingBtn" class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="approveChangeRequestBtn" class="secondary compact-action" style="display:none;background:#f5e7f4;color:#8a3f84" onclick="approveSelectedChangeRequests()">確認申請</button><button id="returnOrderBtn" class="secondary compact-action" style="background:#fff0dc;color:#a85a00" onclick="markSelectedOrdersReturned()">退貨</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button type="button" class="secondary compact-action" onclick="exportOrdersExcel(event)">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
+<div class="compact-batch-panel"><div class="compact-process-row" role="group" aria-label="本頁一般訂單批次處理" aria-describedby="orderBatchHelp103"><label class="order-select-inline103" for="orderSelectAll" title="全選本頁一般訂單；不包含備份訂單"><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" aria-label="全選本頁一般訂單" onchange="toggleAllOrders(this.checked)"><span>全選</span><span id="orderSelectedCount" role="status" aria-live="polite" aria-atomic="true" hidden></span></label><select id="orderHandler" aria-label="處理人" title="選擇處理人" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date" aria-label="寄出日期" title="寄出日期"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button id="markPendingBtn" class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="approveChangeRequestBtn" class="secondary compact-action" style="display:none;background:#f5e7f4;color:#8a3f84" onclick="approveSelectedChangeRequests()">確認申請</button><button id="returnOrderBtn" class="secondary compact-action" style="background:#fff0dc;color:#a85a00" onclick="markSelectedOrdersReturned()">退貨</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button type="button" class="secondary compact-action" onclick="exportOrdersExcel(event)">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
 <div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div>
     <div id="orderBackupTab" class="admin-tab-panel">
       <div class="backup-hub-heading">
@@ -7353,7 +7354,14 @@ function renderOrderHandlerOptions(){renderAdminOrderStoreOptions();const e=$("o
 function renderOrderAdmin(){updateCancelDeleteOrderButton();const list=filteredAdminOrders();renderAdminOrderStoreOptions();updateAdminStatusCounts();$("orderAdminList").innerHTML=list.length?list.map(o=>{const st=o.status||'pending',displaySt=(st==='returned'&&o.returnReceived)?'return_received':st,label=st==='shipped'?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';return `<div class="order-admin-card clean-admin-card ${selectedOrderIds.has(o.id)?'selected':''}"><label class="admin-check-wrap"><input class="order-big-checkbox" type="checkbox" ${selectedOrderIds.has(o.id)?'checked':''} onchange="toggleOrderSelection('${o.id}',this.checked)"></label><div class="admin-order-main"><div class="admin-order-top"><div class="admin-customer-head"><b>${escapeHtml(o.name)}</b><span class="order-status ${displaySt}">${label}</span><time>${escapeHtml(orderDateValue(o))}</time></div><button class="secondary admin-edit-compact" onclick="openOrderEdit('${o.id}','admin')">修改／原始資料</button></div><div class="admin-order-columns"><div class="admin-customer-block"><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div><span>${o.delivery==='門市自取'?'取件門市':'地址'}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${escapeHtml(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address)}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div></div><div class="admin-product-block"><span>購買商品</span><b>${escapeHtml(o.items||'')}</b></div></div><div class="admin-order-footer"><span>回傳人員：<b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></span><span>處理人：<b>${escapeHtml((o.status||'pending')==='pending'?'—':(o.handler||'—'))}</b></span><span>寄件日期：<b>${escapeHtml(o.shippedDate||'—')}</b></span><span>最後更新：<b>${escapeHtml(orderLastUpdatedValue(o)||'—')}</b></span></div></div></div>`}).join(''):'<div class="empty">目前沒有符合條件的訂單</div>';updateOrderSelectionCount()}
 function toggleOrderSelection(id,c){c?selectedOrderIds.add(id):selectedOrderIds.delete(id);renderOrderAdmin()}
 function toggleAllOrders(c){filteredAdminOrders().forEach(o=>c?selectedOrderIds.add(o.id):selectedOrderIds.delete(o.id));renderOrderAdmin()}
-function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));$("orderSelectedCount").textContent='已選 '+selectedOrderIds.size+' 筆';const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}const pendingBtn=$("markPendingBtn");if(pendingBtn&&$("adminOrderStatus")?.value==="returned"){const selected=orders.filter(o=>selectedOrderIds.has(o.id));pendingBtn.disabled=selected.length>0&&selected.every(o=>o.returnReceived);pendingBtn.title=pendingBtn.disabled?"選取的訂單皆已收回退貨":"將尚未收回的退貨標記為已收回退貨"}updateConfirmShipButton()}
+// v103: presentation only. Selection scope and permissions are still controlled by v99.
+function updateOrderSelectedLabel103(){
+ const count=$('orderSelectedCount');if(!count)return;
+ const size=selectedOrderIds.size;
+ count.textContent=size?'（已選'+size+'筆）':'';
+ count.hidden=size===0;
+}
+function updateOrderSelectionCount(){const visible=filteredAdminOrders(),all=visible.length>0&&visible.every(o=>selectedOrderIds.has(o.id)),some=visible.some(o=>selectedOrderIds.has(o.id));updateOrderSelectedLabel103();const box=$("orderSelectAll");if(box){box.checked=all;box.indeterminate=some&&!all}const pendingBtn=$("markPendingBtn");if(pendingBtn&&$("adminOrderStatus")?.value==="returned"){const selected=orders.filter(o=>selectedOrderIds.has(o.id));pendingBtn.disabled=selected.length>0&&selected.every(o=>o.returnReceived);pendingBtn.title=pendingBtn.disabled?"選取的訂單皆已收回退貨":"將尚未收回的退貨標記為已收回退貨"}updateConfirmShipButton()}
 function updateConfirmShipButton(){const handlerSelected=!!$("orderHandler")?.value;const isChange=($("adminOrderStatus")?.value||'')==='change_request';const b=$("confirmShipBtn"),approve=$("approveChangeRequestBtn");if(b){b.disabled=false;b.classList.toggle("needs-handler",!isChange&&selectedOrderIds.size>0&&!handlerSelected)}if(approve){approve.classList.remove("needs-handler");approve.title="確認更改申請"}}
 function ensureSelected(){if(!selectedOrderIds.size){showOrderAction('尚未勾選訂單','請先勾選至少一筆訂單。');return false}return true}
 // 訂單確認操作允許主管、會計與系統管理員執行。
@@ -22837,6 +22845,83 @@ window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',o
 })();
 </script>
 
+<style id="order-logistics-toolbar-v103-style">
+/* v103: scoped layout only. Do not override display:none set by each status/role. */
+#orderAdminTab .compact-batch-panel{
+ width:100%!important;min-width:0!important;max-width:100%!important;
+ padding:8px 10px!important;margin:0 0 12px!important;
+ border-radius:12px!important;box-shadow:none!important;
+ overflow-x:auto!important;overscroll-behavior-x:contain;
+ -webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#b8c9d3 transparent
+}
+#orderAdminTab .compact-batch-panel .compact-process-row,
+#orderAdminTab .compact-batch-panel .compact-process-row.change-request-mode{
+ display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+ align-items:center!important;justify-content:flex-start!important;gap:8px!important;
+ grid-template-columns:none!important;width:max-content!important;min-width:100%!important;
+ margin:0!important;padding:0!important;white-space:nowrap!important
+}
+#orderAdminTab .compact-process-row>.order-select-inline103{
+ display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;
+ flex:0 0 auto!important;gap:5px!important;height:42px!important;min-height:42px!important;
+ width:auto!important;min-width:66px!important;margin:0 4px 0 0!important;padding:0 4px!important;
+ position:static!important;font-size:14px!important;font-weight:500!important;line-height:1.4!important;
+ white-space:nowrap!important;cursor:pointer;border-radius:8px
+}
+#orderAdminTab .order-select-inline103:focus-within{outline:2px solid #7894a4;outline-offset:1px}
+#orderAdminTab .order-select-inline103>#orderSelectAll{
+ flex:0 0 20px!important;width:20px!important;min-width:20px!important;max-width:20px!important;
+ height:20px!important;min-height:20px!important;max-height:20px!important;
+ padding:0!important;margin:0 3px 0 0!important;accent-color:#34596d;box-shadow:none!important;cursor:pointer
+}
+#orderAdminTab .order-select-inline103>#orderSelectedCount{
+ font-size:14px!important;font-weight:500!important;line-height:1.4!important;
+ color:#526d7d;white-space:nowrap!important;font-variant-numeric:tabular-nums
+}
+#orderAdminTab .order-select-inline103>#orderSelectedCount[hidden]{display:none!important}
+#orderAdminTab .compact-process-row>select,
+#orderAdminTab .compact-process-row>input,
+#orderAdminTab .compact-process-row>button{
+ flex:0 0 auto!important;margin:0!important;grid-column:auto!important;grid-row:auto!important;
+ min-height:42px!important;height:42px!important;font-size:14px!important;line-height:1.4!important;
+ border-radius:10px!important;white-space:nowrap!important
+}
+#orderAdminTab .compact-process-row>#orderHandler{
+ width:160px!important;min-width:160px!important;max-width:160px!important;padding:7px 9px!important
+}
+#orderAdminTab .compact-process-row>#orderShipDate{
+ width:155px!important;min-width:155px!important;max-width:155px!important;padding:7px 9px!important
+}
+#orderAdminTab .compact-process-row>button{
+ width:auto!important;min-width:0!important;max-width:none!important;
+ padding:8px 12px!important;font-weight:500!important;box-shadow:none!important
+}
+#orderAdminTab #orderBatchHelp103{margin:0 0 6px!important;font-size:12px!important;line-height:1.5!important;font-weight:400!important}
+/* All seven status filters remain a single strip. Small screens scroll only within this strip. */
+#orderAdminTab .admin-order-status-buttons{
+ display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+ gap:6px!important;overflow-x:auto!important;max-width:100%!important;
+ scrollbar-width:thin;overscroll-behavior-x:contain
+}
+#orderAdminTab .admin-order-status-buttons>.admin-status-btn{
+ flex:1 0 auto!important;width:auto!important;min-width:96px!important;
+ min-height:42px!important;white-space:nowrap!important;padding:8px 10px!important
+}
+@media(max-width:900px){
+ #orderAdminTab .compact-batch-panel{padding:7px 8px!important}
+ #orderAdminTab .compact-process-row>.order-select-inline103,
+ #orderAdminTab .compact-process-row>select,
+ #orderAdminTab .compact-process-row>input,
+ #orderAdminTab .compact-process-row>button{height:44px!important;min-height:44px!important}
+ /* Keep native mobile controls legible without enlarging the entire page on focus. */
+ #orderAdminTab .compact-process-row>select,#orderAdminTab .compact-process-row>input{font-size:16px!important}
+}
+@media print{
+ #orderAdminTab .compact-batch-panel{overflow:visible!important}
+ #orderAdminTab .compact-batch-panel .compact-process-row{flex-wrap:wrap!important;width:auto!important}
+}
+</style>
+
 <script id="order-unified-v99-module">
 /* v99: unified server-paged lookup. Keep operational recent cache and existing forms intact. */
 (function(){
@@ -22885,7 +22970,7 @@ function selectionUi(){
  for(const id of [...selectedOrderIds])if(!ids.has(String(id)))selectedOrderIds.delete(id);
  const checked=rows.filter(o=>selectedOrderIds.has(o.id)).length,box=el('orderSelectAll');
  if(box){box.disabled=!rows.length;box.checked=!!rows.length&&checked===rows.length;box.indeterminate=checked>0&&checked<rows.length;}
- if(el('orderSelectedCount'))el('orderSelectedCount').textContent='已選 '+selectedOrderIds.size+' 筆（僅本頁一般訂單）';
+ updateOrderSelectedLabel103();
  if(originalConfirm)originalConfirm();
  const enabled=!!auth('admin')&&state.admin.phase==='ready'&&selectedOrderIds.size>0;
  ['confirmShipBtn','markPendingBtn','approveChangeRequestBtn','returnOrderBtn','cancelDeleteOrderBtn'].forEach(id=>{if(el(id))el(id).disabled=!enabled;});
@@ -23061,10 +23146,10 @@ function mount(){
  root.querySelector('.order-title-row').insertAdjacentElement('afterend',toolbar);
  root.querySelector('.compact-batch-panel').insertAdjacentHTML('beforebegin','<p id="orderQuerySummary99" class="oq99-summary" role="status">預設搜尋全部訂單（含備份），不限日期。</p><p id="orderQueryExportStatus99" class="oq99-export-status" role="status"></p>');
  el('orderAdminList').insertAdjacentHTML('afterend','<nav id="orderQueryPager99" class="oq99-pagination" aria-label="訂單管理分頁"></nav>');
- const selectedLabel=el('orderSelectAll')?.parentElement;if(selectedLabel){for(const node of [...selectedLabel.childNodes])if(node.nodeType===3)node.textContent=' 全選本頁一般訂單';}
+ updateOrderSelectedLabel103();
  if(el('adminOrderKeyword')){el('adminOrderKeyword').placeholder='搜尋姓名、電話、商品、訂單編號';el('adminOrderKeyword').maxLength=120;el('adminOrderKeyword').setAttribute('aria-label','搜尋全部訂單');}
  const filterClearButton=root.querySelector('.order-admin-filter .compact-btn');if(filterClearButton){filterClearButton.hidden=true;filterClearButton.disabled=true;filterClearButton.classList.add('oq99-hidden-clear');}
- root.querySelector('.compact-batch-panel').insertAdjacentHTML('afterbegin','<div class="oq99-bulk-note">以下為一般訂單作業。備份訂單不可勾選；純查詢匯出請使用上方「匯出查詢文字」。</div>');
+ root.querySelector('.compact-batch-panel').insertAdjacentHTML('beforebegin','<div id="orderBatchHelp103" class="oq99-bulk-note">僅處理本頁一般訂單；備份訂單不可勾選。純查詢匯出請使用上方「匯出查詢文字」。</div>');
  if(el('orderBackupSection')){
   el('orderBackupSection').querySelector('.backup-table-wrap').insertAdjacentHTML('afterend','<nav id="orderBackupPager99" class="oq99-pagination" aria-label="訂單備份分頁"></nav><p id="orderBackupExportStatus99" class="oq99-export-status" role="status"></p>');
   const b=el('orderBackupSection').querySelector('.backup-export-btn');if(b){b.removeAttribute('onclick');b.dataset.oq99Export='backup';b.textContent='匯出篩選文字';}
