@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH v101: order-backup two-line previews with in-place expansion; base v100. API v99 and SQL v99 unchanged. -->
 <!-- UI PATCH v99: unified server-paged order lookup; requires v99 SQL + line-api. Base v98 retained. -->
 <!-- UI PATCH v98: complete order history, >60 Taipei calendar days, text-only archives and all backoffice viewers. Requires v98 line-api; no new SQL. -->
 <!-- UI PATCH v97: explicit typhoon store/date closures, batch selection, no-pay protection and safe reopening. -->
@@ -22649,6 +22650,186 @@ window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',o
 }
 </style>
 
+<style id="order-backup-expand-v101-style">
+/* v101: only the order-backup list. Full source strings, exports and APIs are unchanged. */
+#orderBackupTab #orderBackupSection .backup-table{overflow-anchor:none}
+#orderBackupTab #orderBackupSection .backup-table tr.ob101-row>td{
+  height:68px!important;padding:11px 7px!important;vertical-align:top!important;
+  font-size:14px!important;line-height:22px!important
+}
+#orderBackupSection .ob101-cell{min-width:0;height:44px;max-height:44px;overflow:hidden}
+#orderBackupSection .ob101-clip{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;
+  max-height:44px;overflow:hidden;text-overflow:ellipsis;white-space:pre-wrap!important;
+  overflow-wrap:anywhere!important;word-break:break-word!important;
+  font-size:14px!important;font-weight:400!important;line-height:22px!important
+}
+#orderBackupSection .ob101-cell>.oq99-text-link{
+  display:block!important;width:100%;max-width:100%;min-height:0!important;height:auto!important;
+  padding:0!important;border:0!important;border-radius:3px!important;text-align:left!important;
+  line-height:22px!important
+}
+#orderBackupSection .ob101-status{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+#orderBackupSection .ob101-status .backup-status{
+  flex:none;max-width:100%;height:24px;padding:2px 7px;font-size:12px;line-height:20px;
+  overflow:hidden;text-overflow:ellipsis
+}
+#orderBackupSection .ob101-status .oq99-overdue-text{margin:0;font-size:12px;line-height:18px;white-space:nowrap}
+#orderBackupSection .ob101-note{display:grid;grid-template-columns:minmax(0,1fr) 28px;align-items:start;gap:4px;min-width:0}
+#orderBackupSection .ob101-toggle-slot{display:block;width:28px;height:44px}
+#orderBackupTab #orderBackupSection .ob101-toggle{
+  display:inline-flex;align-items:center;justify-content:center;width:28px!important;min-width:28px!important;
+  height:44px!important;min-height:44px!important;margin:0!important;padding:0!important;
+  border:0!important;border-radius:6px!important;background:transparent!important;color:#55788b!important;
+  box-shadow:none!important;transform:none!important;cursor:pointer
+}
+#orderBackupSection .ob101-toggle svg{width:14px;height:14px;flex:none;transition:transform .15s ease}
+#orderBackupSection .ob101-row.is-open .ob101-toggle svg{transform:rotate(180deg)}
+#orderBackupTab #orderBackupSection .ob101-toggle[hidden]{display:none!important}
+#orderBackupTab #orderBackupSection .ob101-toggle:hover{background:#e9f0f4!important}
+#orderBackupSection .ob101-toggle:focus-visible,#orderBackupSection .ob101-close:focus-visible,
+#orderBackupSection .ob101-cell>.oq99-text-link:focus-visible{outline:2px solid #55788b;outline-offset:1px}
+#orderBackupSection .ob101-row.has-overflow{cursor:pointer}
+#orderBackupTab #orderBackupSection .backup-table tr.ob101-row.is-open>td{background:#f1f6f9!important}
+#orderBackupTab #orderBackupSection .backup-table tr.ob101-detail[hidden]{display:none!important}
+#orderBackupTab #orderBackupSection .backup-table tr.ob101-detail>td{
+  padding:0!important;height:auto!important;vertical-align:top!important;
+  background:#f8fafc!important;border-bottom:1px solid #d9e4eb!important
+}
+#orderBackupSection .ob101-detail-content{padding:12px 16px 16px;color:#355264}
+#orderBackupSection .ob101-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+#orderBackupSection .ob101-detail-title{font-size:13px;color:#667e8c;font-weight:400}
+#orderBackupTab #orderBackupSection .ob101-close{
+  min-height:32px!important;min-width:52px!important;height:auto!important;margin:0!important;
+  padding:5px 8px!important;border:1px solid #d5e1e8!important;border-radius:7px!important;
+  background:#fff!important;color:#355c72!important;box-shadow:none!important;transform:none!important;
+  font-size:13px!important;font-weight:400!important;line-height:20px!important
+}
+#orderBackupSection .ob101-details{margin:0}
+#orderBackupSection .ob101-details>div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:12px;padding:9px 0;border-top:1px solid #e0e8ed}
+#orderBackupSection .ob101-details dt{font-size:13px;line-height:23px;color:#718691;font-weight:400}
+#orderBackupSection .ob101-details dd{margin:0;font-size:14px;line-height:23px;font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}
+#orderBackupSection .ob101-help{margin:5px 0 9px;color:#6a818e;font-size:12px;line-height:1.5;font-weight:400}
+@media(max-width:900px){
+  /* Keep the existing stacked mobile list; only shorten its long field previews. */
+  #orderBackupTab #orderBackupSection .backup-table tr.ob101-row>td{height:56px!important;padding:6px 4px!important}
+  #orderBackupTab #orderBackupSection .backup-table tr.ob101-detail{display:block!important;padding:0!important}
+  #orderBackupTab #orderBackupSection .backup-table tr.ob101-detail>td{display:block!important;width:100%!important}
+  #orderBackupTab #orderBackupSection .backup-table tr.ob101-detail>td:before{display:none!important}
+  #orderBackupSection .ob101-note{grid-template-columns:minmax(0,1fr) 36px}
+  #orderBackupSection .ob101-toggle-slot{width:36px}
+  #orderBackupTab #orderBackupSection .ob101-toggle{width:36px!important;min-width:36px!important}
+  #orderBackupSection .ob101-detail-content{padding:10px 12px 12px}
+  #orderBackupSection .ob101-details>div{grid-template-columns:64px minmax(0,1fr);gap:8px}
+}
+@media(prefers-reduced-motion:reduce){#orderBackupSection .ob101-toggle svg{transition:none}}
+@media print{
+  #orderBackupTab #orderBackupSection .backup-table tr.ob101-row>td{height:auto!important}
+  #orderBackupSection .ob101-cell{height:auto!important;max-height:none!important;overflow:visible!important}
+  #orderBackupSection .ob101-clip{display:block!important;-webkit-line-clamp:unset;line-clamp:unset;max-height:none!important;overflow:visible!important}
+  #orderBackupSection .ob101-toggle-slot,#orderBackupSection .ob101-help,
+  #orderBackupTab #orderBackupSection .backup-table tr.ob101-detail{display:none!important}
+  #orderBackupSection .ob101-note{display:block}
+}
+</style>
+<script id="order-backup-expand-v101-module">
+/* v101: presentation-only backup row previews. No network calls or storage writes. */
+(function(){
+ 'use strict';
+ let viewKey='',expanded=new Set(),frame=0,observed=null,observer=null,lastWidth=-1;
+ const $=id=>document.getElementById(id);
+ const escape=value=>String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const clip=(value,label)=>'<span class="ob101-clip" data-ob101-label="'+escape(label)+'">'+escape(value==null||value===''?'—':value)+'</span>';
+ const cell=(value,label)=>'<td><div class="ob101-cell">'+clip(value,label)+'</div></td>';
+ function install(){
+  const body=$('orderBackupTableBody'),table=body?.closest('table');if(!table)return;
+  if(!$('orderBackupHelp101')){
+   const help=document.createElement('p');help.id='orderBackupHelp101';help.className='ob101-help';
+   help.textContent='每欄最多顯示 2 行；出現「…」時，可點文字或右側箭頭展開，再點收合。點姓名仍可查看完整明細。';
+   table.closest('.backup-table-wrap').insertAdjacentElement('beforebegin',help);
+  }
+  if(observed!==table&&typeof ResizeObserver==='function'){
+   observer?.disconnect();observed=table;lastWidth=-1;
+   observer=new ResizeObserver(entries=>{const width=entries[0]?.contentRect.width||0;if(Math.abs(width-lastWidth)>.5){lastWidth=width;schedule();}});
+   observer.observe(table);
+  }
+ }
+ function fields(row){
+  return Array.from(row.querySelectorAll('.ob101-clip')).filter(node=>node.clientWidth>0&&node.scrollHeight>node.clientHeight+1)
+   .map(node=>({label:node.dataset.ob101Label||'內容',text:node.textContent||''}));
+ }
+ function fillDetail(row,items){
+  const detail=row.nextElementSibling;if(!detail?.classList.contains('ob101-detail'))return;
+  const dataKey=JSON.stringify(items);if(detail.dataset.ob101Content===dataKey)return;
+  const cell=detail.firstElementChild,section=document.createElement('section');section.className='ob101-detail-content';
+  const head=document.createElement('div');head.className='ob101-detail-head';
+  const title=document.createElement('span');title.className='ob101-detail-title';title.textContent='完整內容';
+  const close=document.createElement('button');close.type='button';close.className='ob101-close';close.dataset.ob101Toggle='1';close.textContent='收合';
+  close.setAttribute('aria-label','收合這筆訂單的展開內容');
+  head.append(title,close);section.append(head);
+  const list=document.createElement('dl');list.className='ob101-details';
+  items.forEach(item=>{const part=document.createElement('div'),label=document.createElement('dt'),value=document.createElement('dd');label.textContent=item.label;value.textContent=item.text;part.append(label,value);list.append(part);});
+  section.append(list);cell.replaceChildren(section);detail.dataset.ob101Content=dataKey;
+ }
+ function setOpen(row,open,items){
+  const detail=row.nextElementSibling,button=row.querySelector('.ob101-toggle');if(!detail?.classList.contains('ob101-detail')||!button)return;
+  const id=row.dataset.ob101Id;
+  if(open){fillDetail(row,items||fields(row));expanded.add(id);}else expanded.delete(id);
+  row.classList.toggle('is-open',open);detail.hidden=!open;button.setAttribute('aria-expanded',String(open));
+  button.title=open?'收合完整內容':'展開完整內容';button.setAttribute('aria-label',(open?'收合':'展開')+'這筆訂單的完整文字');
+ }
+ function measure(){
+  frame=0;const body=$('orderBackupTableBody');if(!body||!body.getBoundingClientRect().width)return;
+  body.querySelectorAll('tr.ob101-row').forEach(row=>{
+   const items=fields(row),button=row.querySelector('.ob101-toggle');if(!button)return;
+   const available=items.length>0;row.classList.toggle('has-overflow',available);button.hidden=!available;
+   setOpen(row,available&&expanded.has(row.dataset.ob101Id),items);
+  });
+ }
+ function schedule(){if(!frame)frame=requestAnimationFrame(measure);}
+ function render(body,rows,key){
+  key=String(key||'');if(key!==viewKey){expanded.clear();viewKey=key;}
+  const ids=new Set(rows.map(row=>String(row.id)));for(const id of expanded)if(!ids.has(id))expanded.delete(id);
+  body.innerHTML=rows.length?rows.map((o,index)=>{
+   const id=escape(o.id),detailId='orderBackupDetail101-'+index;
+   const status=escape(typeof backupStatusLabel==='function'?backupStatusLabel(o):o.status||'');
+   const unfinished=['pending','processing','change_request'].includes(o.status)||o.status==='returned'&&!o.returnReceived;
+   return '<tr class="ob101-row" data-ob101-id="'+id+'">'+cell(orderDateValue(o),'訂單日期')+
+    '<td><div class="ob101-cell"><button type="button" class="oq99-text-link" data-oq99-detail="'+id+'">'+clip(o.name,'姓名')+'</button></div></td>'+
+    cell(o.phone,'電話')+cell(o.address,'地址')+cell(o.delivery,'配送')+cell(o.items,'商品')+
+    '<td><div class="ob101-cell ob101-status"><span class="backup-status '+escape(o.status||'pending')+'">'+status+'</span>'+(unfinished?'<small class="oq99-overdue-text">逾 60 天未完成</small>':'')+'</div></td>'+
+    cell(o.handler||'—','處理人')+cell(o.shippedDate||'—','寄出日期')+
+    '<td><div class="ob101-note"><div class="ob101-cell">'+clip(orderBackupNote98(o)||'—','備註')+'</div><span class="ob101-toggle-slot"><button type="button" class="ob101-toggle" data-ob101-toggle="1" aria-expanded="false" aria-controls="'+detailId+'" aria-label="展開這筆訂單的完整文字" title="展開完整內容" hidden><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span></div></td></tr>'+
+    '<tr class="ob101-detail" id="'+detailId+'" data-ob101-id="'+id+'" hidden><td colspan="10"></td></tr>';
+  }).join(''):'<tr><td colspan="10" class="backup-empty-cell">沒有符合條件的備份訂單</td></tr>';
+  install();schedule();
+ }
+ function toggle(row,returnFocus){
+  if(!row||!row.classList.contains('has-overflow'))return;
+  const x=window.scrollX,y=window.scrollY,wrap=row.closest('.backup-table-wrap'),sx=wrap?.scrollLeft||0,sy=wrap?.scrollTop||0;
+  const open=!row.classList.contains('is-open');setOpen(row,open);
+  // Do not rebuild the list, reset filters or fetch data when expanding a row.
+  if(returnFocus)row.querySelector('.ob101-toggle')?.focus({preventScroll:true});
+  if(wrap){wrap.scrollLeft=sx;wrap.scrollTop=sy;}
+  if(window.scrollX!==x||window.scrollY!==y)window.scrollTo(x,y);
+ }
+ document.addEventListener('click',event=>{
+  const body=$('orderBackupTableBody'),target=event.target instanceof Element?event.target:null;
+  if(!body||!target||!body.contains(target)||body.inert)return;
+  const button=target.closest('[data-ob101-toggle]');
+  if(button){
+   event.preventDefault();const tr=button.closest('tr'),row=tr?.classList.contains('ob101-detail')?tr.previousElementSibling:tr;
+   toggle(row,tr?.classList.contains('ob101-detail'));return;
+  }
+  if(target.closest('button,a,input,select,textarea,label')||window.getSelection()?.isCollapsed===false)return;
+  const row=target.closest('tr.ob101-row');if(row)toggle(row,false);
+ });
+ window.addEventListener('resize',schedule,{passive:true});
+ if(document.fonts?.ready)document.fonts.ready.then(schedule);
+ window.StarredBackupRows101={render,refresh:schedule};
+})();
+</script>
+
 <script id="order-unified-v99-module">
 /* v99: unified server-paged lookup. Keep operational recent cache and existing forms intact. */
 (function(){
@@ -22751,7 +22932,7 @@ function renderBackup(){
  const s=state.backup,body=el('orderBackupTableBody');if(!body)return;
  el('orderBackupCount').textContent=String(s.total);
  el('orderBackupSummary').textContent=(value('orderBackupMonth')||'全部月份')+'・共 '+s.total+' 筆・第 '+s.page+' 頁・僅文字，亦可在訂單管理統一查詢';
- body.innerHTML=s.rows.length?s.rows.map(o=>'<tr><td>'+esc(orderDateValue(o))+'</td><td><button type="button" class="oq99-text-link" data-oq99-detail="'+esc(o.id)+'">'+esc(o.name)+'</button></td><td>'+esc(o.phone)+'</td><td>'+esc(o.address)+'</td><td>'+esc(o.delivery)+'</td><td>'+esc(o.items)+'</td><td><span class="backup-status '+esc(o.status)+'">'+esc(backupStatusLabel(o))+'</span>'+(unfinished(o)?'<small class="oq99-overdue-text">逾 60 天未完成</small>':'')+'</td><td>'+esc(o.handler||'—')+'</td><td>'+esc(o.shippedDate||'—')+'</td><td>'+esc(orderBackupNote98(o)||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="backup-empty-cell">沒有符合條件的備份訂單</td></tr>';
+ window.StarredBackupRows101.render(body,s.rows,s.auth+'|'+s.key+'|'+s.page);
  pager('backup');
 }
 function paint(kind){
