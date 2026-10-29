@@ -22608,6 +22608,47 @@ window.StarredTyphoon97={build:BUILD,uiBuild:'20261028-typhoon-activity-v97.2',o
 @media(max-width:760px){#orderAdminTab .oq99-toolbar{padding:12px;gap:10px}#orderAdminTab .oq99-toolbar .oq99-check{grid-column:1/-1;min-height:30px}#orderAdminTab .oq99-toolbar-actions{display:grid;grid-template-columns:1fr 1fr}#orderAdminTab .oq99-card{grid-template-columns:26px minmax(0,1fr)!important;padding:12px!important;gap:8px!important}#orderAdminTab .oq99-card .admin-customer-head{min-width:0;width:100%;flex:auto}#orderAdminTab .oq99-card .admin-order-columns{grid-template-columns:1fr!important}#orderAdminTab .oq99-card-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}#orderAdminTab .oq99-card-actions>button:only-child{grid-column:1/-1}#orderAdminTab .oq99-card-actions button{font-size:13px;white-space:normal!important}#orderAdminTab .oq99-card input.order-big-checkbox{width:24px!important;height:24px!important;min-height:24px!important}.oq99-modal{padding:8px}.oq99-dialog{max-height:calc(100dvh - 16px);border-radius:14px}.oq99-dialog>header{padding:12px 14px}.oq99-dialog h2{font-size:19px}.oq99-detail-body{padding:14px}.oq99-detail-grid>div{grid-template-columns:85px minmax(0,1fr);gap:8px;font-size:14px}#orderTextDetail99 .edit-history-row{grid-template-columns:1fr}.oq99-pagination{gap:9px!important}.oq99-pagination button{min-width:76px}}
 
 </style>
+<style id="order-unified-layout-v100">
+#orderAdminTab .order-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#orderAdminTab .order-title-row .note{margin-top:0}
+#orderAdminTab .oq99-toolbar{display:grid!important;grid-template-columns:minmax(230px,1.2fr) 120px max-content auto!important;gap:10px!important;align-items:end!important;padding:12px 14px!important;margin:12px 0 10px!important}
+#orderAdminTab .oq99-toolbar>label{gap:5px!important;margin:0!important}
+#orderAdminTab .oq99-toolbar select{min-width:0}
+#orderAdminTab .oq99-toolbar .oq99-check{min-height:42px!important;white-space:nowrap}
+#orderAdminTab .oq99-toolbar-actions{display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important}
+#orderAdminTab .oq99-toolbar-actions button{min-width:106px!important;white-space:nowrap!important}
+#orderAdminTab .admin-order-status-buttons{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:8px!important;margin:10px 0 8px!important}
+#orderAdminTab .admin-status-btn{min-height:50px!important;padding:8px 10px!important;border-radius:12px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;white-space:nowrap!important}
+#orderAdminTab .admin-status-btn b{margin:0!important}
+#orderAdminTab .compact-filter,#orderAdminTab .order-admin-filter.compact-filter{display:grid!important;grid-template-columns:minmax(260px,1.45fr) minmax(140px,.78fr) minmax(150px,.8fr) minmax(140px,.72fr) minmax(140px,.72fr)!important;gap:10px!important;align-items:end!important;margin:0 0 8px!important}
+#orderAdminTab .compact-filter>*,#orderAdminTab .order-admin-filter.compact-filter>*{min-width:0!important;grid-column:auto!important}
+#orderAdminTab .compact-date-field{min-width:0}
+#orderAdminTab .compact-date-field label{margin-bottom:5px!important}
+#orderAdminTab .oq99-hidden-clear{display:none!important}
+#orderAdminTab .oq99-summary{margin-top:2px!important}
+@media(max-width:1340px){
+  #orderAdminTab .admin-order-status-buttons{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  #orderAdminTab .compact-filter,#orderAdminTab .order-admin-filter.compact-filter{grid-template-columns:minmax(240px,1.25fr) repeat(2,minmax(140px,.8fr)) minmax(140px,.72fr) minmax(140px,.72fr)!important}
+}
+@media(max-width:1080px){
+  #orderAdminTab .oq99-toolbar{grid-template-columns:minmax(0,1fr) 110px!important}
+  #orderAdminTab .oq99-toolbar .oq99-check{grid-column:1/-1!important}
+  #orderAdminTab .oq99-toolbar-actions{grid-column:1/-1!important;justify-content:flex-start!important;flex-wrap:wrap!important}
+  #orderAdminTab .admin-order-status-buttons{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  #orderAdminTab .compact-filter,#orderAdminTab .order-admin-filter.compact-filter{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #orderAdminTab .compact-filter>input:first-child,#orderAdminTab .order-admin-filter.compact-filter>input:first-child{grid-column:1/-1!important}
+}
+@media(max-width:760px){
+  #orderAdminTab .oq99-toolbar{grid-template-columns:1fr!important;padding:12px!important}
+  #orderAdminTab .oq99-toolbar .oq99-check{grid-column:auto!important;white-space:normal!important}
+  #orderAdminTab .oq99-toolbar-actions{grid-column:auto!important;display:grid!important;grid-template-columns:1fr 1fr!important}
+  #orderAdminTab .oq99-toolbar-actions button:last-child{grid-column:1/-1!important}
+  #orderAdminTab .admin-order-status-buttons{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #orderAdminTab .admin-status-btn{min-height:42px!important;font-size:13px!important;padding:8px 6px!important}
+  #orderAdminTab .compact-filter,#orderAdminTab .order-admin-filter.compact-filter{grid-template-columns:1fr!important}
+}
+</style>
+
 <script id="order-unified-v99-module">
 /* v99: unified server-paged lookup. Keep operational recent cache and existing forms intact. */
 (function(){
@@ -22828,12 +22869,13 @@ function mount(){
  const root=el('orderAdminTab');if(!root||el('orderQueryToolbar99'))return;
  root.classList.add('order-unified99');const heading=root.querySelector('h2'),note=root.querySelector('.order-title-row .note');if(heading)heading.textContent='訂單管理・統一查詢';if(note)note.textContent='姓名、電話、商品或訂單編號一次查全部；已備份訂單僅供查閱，不會混入寄出或刪除。';
  const toolbar=document.createElement('div');toolbar.id='orderQueryToolbar99';toolbar.className='oq99-toolbar';
- toolbar.innerHTML='<label>資料範圍<select id="orderQueryScope99"><option value="all">全部訂單（含備份）</option><option value="recent">60 天內訂單</option><option value="archived">已備份訂單</option></select></label><label>每頁筆數<select id="orderQuerySize99"><option value="20">20 筆</option><option value="50">50 筆</option></select></label><label class="oq99-check"><input id="orderQueryOverdue99" type="checkbox"><span>只看逾 60 天未完成</span></label><div class="oq99-toolbar-actions"><button type="button" class="secondary" data-oq99-retry="admin">重新查詢</button><button type="button" class="primary" data-oq99-export="admin">匯出查詢文字</button></div>';
+ toolbar.innerHTML='<label>資料範圍<select id="orderQueryScope99"><option value="all">全部訂單（含備份）</option><option value="recent">60 天內訂單</option><option value="archived">已備份訂單</option></select></label><label>每頁筆數<select id="orderQuerySize99"><option value="20">20 筆</option><option value="50">50 筆</option></select></label><label class="oq99-check"><input id="orderQueryOverdue99" type="checkbox"><span>只看逾 60 天未完成</span></label><div class="oq99-toolbar-actions"><button type="button" class="secondary" data-oq99-clear="admin">清除條件</button><button type="button" class="secondary" data-oq99-retry="admin">重新查詢</button><button type="button" class="primary" data-oq99-export="admin">匯出查詢文字</button></div>';
  root.querySelector('.order-title-row').insertAdjacentElement('afterend',toolbar);
  root.querySelector('.compact-batch-panel').insertAdjacentHTML('beforebegin','<p id="orderQuerySummary99" class="oq99-summary" role="status">預設搜尋全部訂單（含備份），不限日期。</p><p id="orderQueryExportStatus99" class="oq99-export-status" role="status"></p>');
  el('orderAdminList').insertAdjacentHTML('afterend','<nav id="orderQueryPager99" class="oq99-pagination" aria-label="訂單管理分頁"></nav>');
  const selectedLabel=el('orderSelectAll')?.parentElement;if(selectedLabel){for(const node of [...selectedLabel.childNodes])if(node.nodeType===3)node.textContent=' 全選本頁一般訂單';}
  if(el('adminOrderKeyword')){el('adminOrderKeyword').placeholder='搜尋姓名、電話、商品、訂單編號';el('adminOrderKeyword').maxLength=120;el('adminOrderKeyword').setAttribute('aria-label','搜尋全部訂單');}
+ const filterClearButton=root.querySelector('.order-admin-filter .compact-btn');if(filterClearButton){filterClearButton.hidden=true;filterClearButton.disabled=true;filterClearButton.classList.add('oq99-hidden-clear');}
  root.querySelector('.compact-batch-panel').insertAdjacentHTML('afterbegin','<div class="oq99-bulk-note">以下為一般訂單作業。備份訂單不可勾選；純查詢匯出請使用上方「匯出查詢文字」。</div>');
  if(el('orderBackupSection')){
   el('orderBackupSection').querySelector('.backup-table-wrap').insertAdjacentHTML('afterend','<nav id="orderBackupPager99" class="oq99-pagination" aria-label="訂單備份分頁"></nav><p id="orderBackupExportStatus99" class="oq99-export-status" role="status"></p>');
@@ -22883,11 +22925,12 @@ window.StarredOrderQuery99={build:BUILD,state,load,schedule,page,invalidate,deta
  acceptBootstrap:function(data){storeNames=(data.orderQueryStores99||[]).map(s=>String(s.name||'')).filter(Boolean);invalidate();},
  refreshVisible:function(){for(const kind of Object.keys(state))if(visible(kind)){state[kind].loadedAt=0;load(kind,{force:true});}}};
 document.addEventListener('click',event=>{
- const b=event.target.closest?.('[data-oq99-page],[data-oq99-retry],[data-oq99-detail],[data-oq99-edit],[data-oq99-close],[data-oq99-photo],[data-oq99-export],[data-oq99-expand]');
+ const b=event.target.closest?.('[data-oq99-page],[data-oq99-retry],[data-oq99-clear],[data-oq99-detail],[data-oq99-edit],[data-oq99-close],[data-oq99-photo],[data-oq99-export],[data-oq99-expand]');
  if(b){
   event.preventDefault();
   if(b.dataset.oq99Page){const [kind,n]=b.dataset.oq99Page.split(':');page(kind,Number(n));}
   else if(b.dataset.oq99Retry)load(b.dataset.oq99Retry,{force:true});
+  else if(b.dataset.oq99Clear)resetAdmin(false);
   else if(b.dataset.oq99Detail)openDetail(b.dataset.oq99Detail);
   else if(b.dataset.oq99Edit)window.openOrderEdit(b.dataset.oq99Edit,'admin');
   else if(b.dataset.oq99Close)closeDetail();
