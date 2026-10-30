@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- UI PATCH v104: own-sales summary validation aligned to the existing line-api; v103 order/backup UI retained. No API or SQL changes. -->
 <!-- UI PATCH v103: single-line logistics toolbar; inline selection count. Base v102; v99 API/SQL unchanged. -->
 <!-- UI PATCH v101: order-backup two-line previews with in-place expansion; base v100. API v99 and SQL v99 unchanged. -->
 <!-- UI PATCH v99: unified server-paged order lookup; requires v99 SQL + line-api. Base v98 retained. -->
@@ -21480,10 +21481,15 @@ function validate(data,t){
  var s=data.summary||{};
  ['gross','returns','base','expense','external','other','before','deduction','reversal','netDeduction','settlement'].forEach(function(k){number(s[k])});
  var sum=function(list,k){return list.reduce(function(a,r){return a+number(r[k]||0)},0)},g=sum(data.records,'grossAmount'),r=sum(data.records.concat(data.performanceReturns),'returnAmount'),e=sum(data.expenses.filter(function(r){return r.requestType==='expense'}),'amount'),x=sum(data.externalAccounts,'customerAmount'),d=sum(data.deductions.filter(function(r){return number(r.amount)>0}),'amount'),v=-sum(data.deductions.filter(function(r){return number(r.amount)<0}),'amount');
- var expected={gross:g,returns:r,base:g-r,expense:e,external:x,other:e+x,before:g-r+e+x,deduction:d,reversal:v,netDeduction:d-v,settlement:g-r+e+x-d+v};
- Object.keys(expected).forEach(function(k){if(Math.abs(expected[k]-number(s[k]))>.001)throw new Error('明細與合計不一致，請重新整理後再列印。')});
+ // v104: reconcile the deployed sales_my_detail response, not the pre-v85 formula.
+ // API summary.expense/other = direct expenses only. Company accounts enter performance;
+ // expenses/operation pay remain outside performance and the post-deduction settlement.
+ // After validation, StarredPerformance85 adds operation pay to the display-only expense card.
+ var expected={gross:g,returns:r,base:g-r,expense:e,external:x,other:e,before:g-r+x,deduction:d,reversal:v,netDeduction:d-v,settlement:g-r+x-d+v};
+ var totalLabels104={gross:'原始營業總額',returns:'退貨',base:'扣退貨業績',expense:'核准費用小計',external:'公司帳',other:'費用小計',before:'業績總額',deduction:'核准扣款',reversal:'沖回金額',netDeduction:'淨扣款',settlement:'扣款後結算'};
+ Object.keys(expected).forEach(function(k){if(Math.abs(expected[k]-number(s[k]))>.001)throw new Error('明細與合計不一致（'+totalLabels104[k]+'），請重新整理；若仍出現，請聯絡管理員核對。核對完成前不會顯示或列印未確認的金額。')});
  if(!bridge||typeof bridge.personDailyModel782!=='function')throw new Error('業績明細元件未完整載入，請重新整理網站。');
- // Keep legacy server integrity validation above. Derive display only on a shallow clone.
+ // Keep server integrity validation above. Derive display only on a shallow clone.
  var separated=window.StarredPerformance85.totals({grossAmount:g,returnAmount:r,netAmount:g-r},t.identity,data,function(item){return pay(item,data.operationRates||{})});
  return Object.assign({},data,{summary:Object.assign({},s,separated,{settlement:separated.before-(d-v)})});
 }
@@ -21599,6 +21605,7 @@ var oldLogout=window.logout;window.logout=function(){close();return typeof oldLo
 var oldPage=window.showPage;window.showPage=function(page){if(page!=='sales'&&active)close();return typeof oldPage==='function'?oldPage.apply(this,arguments):undefined};
 window.openMySalesDetail783=open;
 window.STARRED_MY_SALES_UI_BUILD=BUILD;
+window.STARRED_MY_SALES_FIX_BUILD104='20261030-own-sales-summary-reconciliation-v104';
 window.STARRED_MY_SALES_LAYOUT_BUILD='20260916-own-sales-mobile-list-v78.4';
 })();
 </script>
