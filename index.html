@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v110: rebuilt from intact v108; activity layout only, print templates preserved; existing SQL/API/secrets unchanged. -->
 <!-- v108: unified activity editor + grouped store dropdown + system-admin-only bulk disable. Requires v108 catalog RPC and line-api; v107 core retained. -->
 <!-- v107 recovery: one activity extension after original modules; original report scripts preserved. v105 API/SQL unchanged. -->
 <!-- v105: optional event-stock reminders with server receipts; pending orders / 50 and 100 rows. Requires v105 SQL in ACTIVITY project, updated line-api, and catalog server secret. -->
@@ -13,7 +14,7 @@
 <!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
 <!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
-<html lang="zh-Hant">
+<html lang="zh-Hant" data-site-build="v110">
 <head>
 <meta charset="UTF-8">
 <!-- v90: report schema recovery; exact v89 base retained. -->
@@ -6371,7 +6372,7 @@ function renderManage(){
      <input class="manage-card-checkbox" type="checkbox" value="${e.id}" ${selectedManageEventIds.has(e.id)?"checked":""} onchange="selectManageEvent('${e.id}',this.checked)" aria-label="選取 ${escapeHtml(e.campaign||"活動")}">
     </span>
     <div class="manage-summary-main">
-     <div class="manage-summary-title">${escapeHtml(e.campaign||"未命名活動")}</div>
+     <div class="manage-summary-title">${e.stockPrepEnabled105===true?'<span class="a110-bell" role="img" aria-label="已開啟備貨提醒" title="已開啟備貨提醒"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>':''}<span class="a110-title-text">${escapeHtml(e.campaign||"未命名活動")}</span></div>
      <div class="manage-summary-sub">
       <span class="activity-area-label ${e.area}">${areaText[e.area]}</span>
       <span>${escapeHtml(e.mall)}｜${escapeHtml(e.location)}</span>
@@ -23819,20 +23820,20 @@ setInterval(()=>{if(inAdmin())check();else if(lastIdentity&&!identity())clearPri
       if(progressBar)progressBar.style.width=ratio+'%';
       const items=(summary.current?.snapshot?.items)||event.stockPrepItems105||[];
       const due=stockDueText106(event);
-      const metaHtml='<div class="stock-confirm-meta">'
-        +'<div>提醒版本：<b>'+esc106(summary.currentVersion||event.stockPrepVersion105||0)+'</b></div>'
-        +'<div>活動日期：<b>'+esc106(event.start||'')+' ～ '+esc106(event.end||'')+'</b></div>'
-        +'<div>活動狀態：<b>'+esc106(due.label)+'</b></div>'
-        +'<div>建立／修改：<b>'+esc106(event.updatedBy||event.createdBy||'舊資料')+'</b>'+(event.updatedAt?' ・ '+esc106(dateText106(event.updatedAt)):'')+'</div>'
-        +'</div>';
-      const pendingHtml=pendingTargets.length?pendingTargets.map(item=>'<div class="stock-confirm-member pending"><div><b>'+esc106(item.name)+'</b><small>帳號：'+esc106(item.username||'—')+' ・ '+esc106(item.role)+'</small></div><em>未確認</em></div>').join(''):'<div class="stock-confirm-member done"><div><b>目前帳號皆有確認紀錄</b><small>帳號確認不等於所有使用同帳號的人都已閱讀。</small></div><em>完成</em></div>';
-      const confirmedHtml=confirmedTargets.length?confirmedTargets.map(item=>{const receipt=currentReceiptMap.get(item.key)||{};return '<div class="stock-confirm-member done"><div><b>'+esc106(item.name)+'</b><small>帳號：'+esc106(item.username||'—')+' ・ '+esc106(item.role)+'<br>實際確認者：'+esc106(receipt.actor?.name||item.name)+'<br>確認時間：'+esc106(dateText106(receipt.acknowledgedAt||''))+'</small></div><em>已確認</em></div>'}).join(''):'<div class="stock-confirm-empty">目前尚無人確認此版本。</div>';
-      body.innerHTML='<div class="stock-confirm-detail-grid">'
-        +'<section class="stock-confirm-panel-box"><h4>活動資訊與備貨品項</h4>'+metaHtml+stockItemHtml106(items)+'</section>'
-        +'<section class="stock-confirm-panel-box"><h4>確認狀態</h4><div class="stock-confirm-member-list">'+pendingHtml+'</div><div class="stock-confirm-actions"><button type="button" class="secondary" data-stock-history105="'+esc106(event.id)+'">確認紀錄</button></div></section>'
-        +'<section class="stock-confirm-panel-box"><h4>已確認帳號</h4><div class="stock-confirm-member-list">'+confirmedHtml+'</div></section>'
-        +'<section class="stock-confirm-panel-box"><h4>說明</h4><div class="stock-confirm-meta"><div>「已確認」代表已閱讀提醒，不代表已完成備貨。</div><div>若活動日期或備貨品項有修改，系統會要求重新確認。</div><div>如需查看歷史版本，請按右側的「確認紀錄」。</div></div></section>'
-        +'</div>';
+      // v110: compact read-only list. Keep the validated account/receipt matching above unchanged.
+      const memberRows=pendingTargets.map(item=>({item,receipt:null})).concat(confirmedTargets.map(item=>({item,receipt:currentReceiptMap.get(item.key)})));
+      const memberHtml=memberRows.map(({item,receipt})=>'<tr class="'+(receipt?'is-confirmed':'is-pending')+'">'+
+        '<td data-label="人員／帳號"><span>'+esc106(item.name)+'</span><small>'+esc106(item.username||'—')+' ・ '+esc106(item.role)+'</small></td>'+
+        '<td data-label="確認狀態"><span class="a110-state '+(receipt?'is-confirmed':'is-pending')+'">'+(receipt?'已確認':'未確認')+'</span></td>'+
+        '<td data-label="實際確認者">'+(receipt?esc106(receipt.actor?.name||item.name):'—')+'</td>'+
+        '<td data-label="確認時間">'+(receipt?esc106(dateText106(receipt.acknowledgedAt||'')):'—')+'</td></tr>').join('');
+      body.innerHTML='<div class="a110-stock-detail">'+
+        '<div class="a110-detail-top"><span>版本 '+esc106(summary.currentVersion||event.stockPrepVersion105||0)+' ・ 已確認 '+confirmedTargets.length+'／'+targets.length+' 帳號 ・ 未確認 '+pendingTargets.length+' 帳號</span><button type="button" class="secondary" data-stock-history105="'+esc106(event.id)+'">確認紀錄</button></div>'+
+        '<dl class="a110-meta"><div><dt>活動日期</dt><dd>'+esc106(event.start||'')+' ～ '+esc106(event.end||'')+' ・ '+esc106(due.label)+'</dd></div>'+
+        '<div><dt>建立／修改</dt><dd>'+esc106(event.updatedBy||event.createdBy||'舊資料')+(event.updatedAt?' ・ '+esc106(dateText106(event.updatedAt)):'')+'</dd></div>'+
+        '<div><dt>備貨品項</dt><dd>'+stockItemHtml106(items)+'</dd></div></dl>'+
+        '<div class="a110-roster-wrap"><table class="a110-roster"><caption>確認名單（未確認優先）</caption><thead><tr><th scope="col">人員／帳號</th><th scope="col">確認狀態</th><th scope="col">實際確認者</th><th scope="col">確認時間</th></tr></thead><tbody>'+memberHtml+'</tbody></table></div>'+
+        '<p class="a110-detail-note">已確認僅代表已閱讀，不代表已備貨。共用帳號請核對實際確認者；內容更新後需重新確認，歷史版本可由「確認紀錄」查看。</p></div>';
     }catch(error){
       if(seq!==stockConfirmSeq106 || !body)return;
       if(progressValue)progressValue.textContent='讀取失敗';
@@ -24208,5 +24209,91 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 </script>
+
+<style id="activity-ui-v110-style">
+/* v110: confined presentation rules. Stored values and API behavior remain v108. */
+#activityTab .a108-form-panel{padding:14px!important;border-radius:16px!important}
+#activityTab .a108-form-panel #formTitle{font-weight:400!important;font-size:21px}
+#activityTab .a108-editor{gap:10px!important}
+#activityTab .a108-editor>.field>label{font-weight:400!important;font-size:13px!important}
+#activityTab .a108-editor textarea{height:68px!important;min-height:68px!important}
+#activityTab .a108-editor input:not([type=checkbox]):not([type=file]),#activityTab .a108-editor select,#activityTab #activityStoreTrigger108{height:40px!important;min-height:40px!important;font-size:14px!important}
+#activityTab .a108-editor #stockEditor105{padding:9px 11px!important}
+#activityTab .a108-editor .stock105-enabled span{font-weight:400!important}
+#activityTab .a108-editor .photo-workspace{grid-template-columns:136px minmax(0,1fr)!important;gap:8px!important}
+#activityTab .a108-editor .photo-upload-zone,#activityTab .a108-editor .photo-preview{min-height:94px!important;padding:8px!important}
+#activityTab .a108-editor .photo-preview .photo-empty-hint{min-height:72px!important}
+#activityTab .a108-editor .photo-upload-title{font-weight:400!important}
+#activityTab .a108-form-panel .activity-action-bar{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:7px!important;padding-top:10px!important;margin-top:10px!important}
+#activityTab .a108-form-panel .activity-action-bar>button{width:auto!important;min-width:0!important;max-width:100%!important;flex:0 0 auto!important;padding:7px 11px!important;min-height:38px!important;height:38px!important;white-space:nowrap!important;font-size:14px!important;font-weight:400!important;border-radius:10px!important}
+#activityTab .a108-form-panel #activityCloudSaveStatus{flex:1 1 100%;order:20;font-weight:400!important}
+#activityTab .a108-form-panel>.note{font-size:12px!important;margin-top:6px!important}
+#activityTab .manage-list-heading h2,#activityTab .manage-result-count,#activityTab .activity-manage-mode-tabs button,#activityTab .manage-filter-bar label,#activityTab .manage-select-all,#activityTab .manage-selected-count,#activityTab .manage-column-head,#activityTab .manage-activity-card,#activityTab .manage-activity-card b,#activityTab .manage-activity-card strong,#activityTab .manage-summary-title,#activityTab .manage-summary-sub,#activityTab .manage-activity-card .badge,#activityTab .activity-area-label,#activityTab .manage-info-label,#activityTab .manage-bulk-bar button,#activityTab .manage-clear-filter,#activityTab .a108-bulk,#activityTab .a108-disable-button{font-weight:400!important}
+#activityTab .manage-summary-title{display:flex!important;align-items:center;gap:6px;min-width:0;line-height:1.5!important}
+#activityTab .a110-title-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400!important}
+#activityTab .a110-bell{display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px;width:22px;height:22px;color:#91662b!important;background:#fff4df;border-radius:7px}
+#activityTab .a110-bell svg{display:block;width:16px;height:16px}
+#activityTab .stock-confirm-main b,#activityTab .stock-confirm-summary-bar b,#activityTab .stock-confirm-pill,#activityTab .stock-confirm-progress-top{font-weight:400!important}
+#activityTab .stock-confirm-body{padding:10px 14px 14px!important}
+#activityTab .a110-stock-detail{min-width:0;color:#355469;font-size:14px;font-weight:400;line-height:1.5}
+#activityTab .a110-detail-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid #dce6ec;flex-wrap:wrap}
+#activityTab .a110-detail-top>span{font-size:13px;color:#597487}
+#activityTab .a110-detail-top button{min-width:0!important;min-height:34px!important;padding:5px 10px!important;font-size:14px!important;font-weight:400!important;white-space:nowrap;border-radius:9px}
+#activityTab .a110-meta{margin:4px 0 10px}
+#activityTab .a110-meta>div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:8px;padding:5px 0}
+#activityTab .a110-meta dt{font-size:13px;font-weight:400;color:#6c8290}
+#activityTab .a110-meta dd{margin:0;min-width:0;overflow-wrap:anywhere;font-size:14px}
+#activityTab .a110-meta .stock-confirm-goods{display:block;margin:0}
+#activityTab .a110-meta .stock-confirm-good{border:0;border-radius:0;background:transparent;padding:0 0 4px;font-size:14px;font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}
+#activityTab .a110-meta .stock-confirm-good:last-child{padding-bottom:0}
+#activityTab .a110-meta .stock-confirm-good span{display:inline;font-size:13px;color:#718594;margin:0 0 0 8px}
+#activityTab .a110-roster-wrap{width:100%;min-width:0}
+#activityTab .a110-roster{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;font-weight:400;color:#355469}
+#activityTab .a110-roster caption{text-align:left;font-size:14px;padding:4px 0 7px;color:#355469;font-weight:400}
+#activityTab .a110-roster th,#activityTab .a110-roster td{padding:7px 9px;border:0;border-bottom:1px solid #e2eaf0;text-align:left;vertical-align:middle;font-weight:400;line-height:1.45;overflow-wrap:anywhere}
+#activityTab .a110-roster th{font-size:13px;background:#edf3f7;color:#617c8e}
+#activityTab .a110-roster th:nth-child(1){width:30%}
+#activityTab .a110-roster th:nth-child(2){width:15%}
+#activityTab .a110-roster th:nth-child(3){width:25%}
+#activityTab .a110-roster th:nth-child(4){width:30%}
+#activityTab .a110-roster td small{display:block;color:#748997;font-size:12px;margin-top:2px}
+#activityTab .a110-roster tbody tr:last-child td{border-bottom:0}
+#activityTab .a110-roster tbody tr:hover{background:#f3f7fa}
+#activityTab .a110-state{display:inline-block;white-space:nowrap;border-radius:6px;padding:2px 6px;font-size:12px;font-weight:400;background:#edf2f6;color:#4e6b80}
+#activityTab .a110-state.is-pending{background:#fff1df;color:#986322}
+#activityTab .a110-state.is-confirmed{background:#e8f0f8;color:#456e91}
+#activityTab .a110-detail-note{margin:10px 0 0;font-size:12px;line-height:1.6;color:#7b8e9b;font-weight:400}
+@media(min-width:641px){
+ #activityTab .a110-roster td small{display:inline;margin:0 0 0 8px}
+}
+@media(min-width:1100px){
+ #activityTab .a108-editor>.a108-store-field{grid-column:span 3!important}
+ #activityTab .a108-editor>.field:has(>#campaign){grid-column:span 3!important}
+ #activityTab .a108-editor>.a108-date-field{grid-column:span 2!important}
+ #activityTab #activityStorePopover108{width:560px;max-width:min(560px,calc(100vw - 50px))}
+}
+@media(max-width:640px){
+ #activityTab .a108-form-panel{padding:11px!important}
+ #activityTab .a108-editor{gap:8px!important}
+ #activityTab .a108-editor .photo-workspace{grid-template-columns:102px minmax(0,1fr)!important}
+ #activityTab .a108-form-panel .activity-action-bar{gap:6px!important}
+ #activityTab .a108-form-panel .activity-action-bar>button{padding:7px 8px!important}
+ #activityTab .a108-form-panel .activity-cancel-action{margin-left:0!important}
+ #activityTab .stock-confirm-body{padding:9px 10px 12px!important}
+ #activityTab .a110-meta>div{grid-template-columns:70px minmax(0,1fr);gap:6px}
+ #activityTab .a110-roster,#activityTab .a110-roster tbody{display:block}
+ #activityTab .a110-roster caption{display:block;padding-top:2px}
+ #activityTab .a110-roster thead{display:none}
+ #activityTab .a110-roster tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;padding:8px 0;border-bottom:1px solid #e2eaf0}
+ #activityTab .a110-roster tbody tr:last-child{border-bottom:0}
+ #activityTab .a110-roster td{display:block;padding:0;border:0;font-size:14px}
+ #activityTab .a110-roster td:nth-child(2){justify-self:end}
+ #activityTab .a110-roster td:nth-child(3),#activityTab .a110-roster td:nth-child(4){grid-column:1/-1;font-size:12px;color:#718594}
+ #activityTab .a110-roster tr.is-pending td:nth-child(3),#activityTab .a110-roster tr.is-pending td:nth-child(4){display:none}
+ #activityTab .a110-roster tr.is-confirmed td:nth-child(3):before{content:'確認者：'}
+ #activityTab .a110-roster tr.is-confirmed td:nth-child(4):before{content:'確認時間：'}
+}
+</style>
+
 </body>
 </html>
