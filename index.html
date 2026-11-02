@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v112: desktop-only order alignment/pickup label, account page visibility controls, blank real names and active activity outlines. Requires v112 catalog SQL + line-api. -->
 <!-- v111.1 checked delivery: unique patch placement; server-side order-query wrapper preserved. -->
 <!-- v110: rebuilt from intact v108; activity layout only, print templates preserved; existing SQL/API/secrets unchanged. -->
 <!-- v108: unified activity editor + grouped store dropdown + system-admin-only bulk disable. Requires v108 catalog RPC and line-api; v107 core retained. -->
@@ -342,7 +343,7 @@ var expense={ready:false,loading:false};
 function el(id){return document.getElementById(id)}
 function value(id){return String((el(id)||{}).value||'').trim()}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function allowed(kind){return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&typeof normalizeCurrentAdminRole==='function'&&(kind==='expense'?['admin','accounting','manager']:['admin','accounting']).includes(normalizeCurrentAdminRole(currentUser.role))}
+function allowed(kind){if(window.StarredPageAccess112)return kind==='expense'?(window.StarredPageAccess112.can('expenseAdmin')||window.StarredPageAccess112.can('salesReport')):(window.StarredPageAccess112.can('externalAccountAdmin')||window.StarredPageAccess112.can('salesReport'));return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&typeof normalizeCurrentAdminRole==='function'&&(kind==='expense'?['admin','accounting','manager']:['admin','accounting']).includes(normalizeCurrentAdminRole(currentUser.role))}
 function auth(kind){if(!allowed(kind))return '';var v=window.starredVerifiedLineUser||{};return [currentUser.id||currentUser.account||'',currentUser.adminSessionToken||'',currentUser.role||'',v.lineUserId||''].join('|')}
 function outside(date,from,to){return !!((from&&date<from)||(to&&date>to))}
 function matchesDate(date,status,q){return (q.includePendingOutsideDate===true&&status==='pending')||!outside(date,q.dateFrom,q.dateTo)}
@@ -5273,6 +5274,7 @@ function isCurrentLineUserEnabled(){const profile=getCurrentLineUser();if(!profi
 function enforceLineUserAccess(){const block=$("lineAccessBlock");if(!block)return true;const enabled=isCurrentLineUserEnabled();block.classList.toggle("show",!enabled);document.body.style.overflow=enabled?"":"hidden";return enabled}
 // v92: LINE users list presentation only. Existing save/toggle API contracts are unchanged.
 function lineUserListAllowed92(){
+ if(window.StarredPageAccess112)return window.StarredPageAccess112.can('lineUser');
  return !!currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)==='admin';
 }
 function lineUserListOwner92(){
@@ -5280,7 +5282,7 @@ function lineUserListOwner92(){
 }
 function lineUserNameParts92(user){
  const display=String(user.displayName||user.lineDisplayName||user.name||'未命名');
- return {display,employee:String(user.employeeName||((user.name&&user.name!==display)?user.name:''))};
+ return {display,employee:String(user.employeeName||'')};
 }
 function lineUserLoginText92(value){
  if(!value)return {full:'尚無紀錄',compact:'尚無紀錄',iso:''};
@@ -5336,7 +5338,7 @@ function resetLineUserFilters92(){
 function makeLineUserRow92(){
  const row=document.createElement('tr');row.className='line-user-item';
  row.innerHTML='<td class="lu92-identity"><div class="lu92-name-line"><span class="line-user-name"></span><span class="line-user-status lu92-mobile-status"></span></div><span class="line-user-sub line-user-id"></span></td>'+ 
- '<td class="lu92-realname"><label class="line-user-realname"><span class="lu92-sr-only">備註本名</span><input type="text" maxlength="40" autocomplete="off" placeholder="填寫本名" oninput="lineUserDraftState92(this)"></label></td>'+ 
+ '<td class="lu92-realname"><label class="line-user-realname"><span class="lu92-sr-only">備註本名</span><input type="text" maxlength="40" autocomplete="off" placeholder="" oninput="lineUserDraftState92(this)"></label></td>'+ 
  '<td class="lu92-status"><span class="line-user-status"></span></td>'+ 
  '<td class="lu92-login"><time><span class="lu92-login-full"></span><span class="lu92-login-mobile"></span></time></td>'+ 
  '<td class="lu92-actions-cell"><div class="line-user-actions"><button type="button" class="secondary" data-lu92-save onclick="saveLineUserEmployeeName(this)">儲存本名</button><button type="button" class="secondary" data-lu92-toggle onclick="toggleLineUser(this.closest(\'.line-user-item\').dataset.lineUserId)"></button></div></td>';
@@ -5482,6 +5484,7 @@ function adminRoleLabel(value){
  return role==="admin"?"系統管理員":role==="accounting"?"會計":"主管";
 }
 function canAccessAdminTab(tab,notify){
+ if(window.StarredPageAccess112)return window.StarredPageAccess112.allowedTab(tab,notify);
  if(tab==='orderBackup'){
   const allowed=canViewOrderBackup98();
   if(!allowed&&notify)alert('請先登入後台，所有有效後台帳號皆可查看訂單備份。');
@@ -5534,7 +5537,7 @@ function showAdminTab(tab){
  if(tab==="capacity"&&typeof loadCapacityUsage==="function")loadCapacityUsage();
  if(tab==="activity")rebuildMallOptions();
  if(tab==="account")renderAccounts();if(tab==="lineUser")renderLineUsers();if(tab==="orderAdmin"){renderOrderHandlerOptions();renderOrderAdmin();}
- if(tab==="expenseAdmin"&&typeof loadExpenseAdminReport==="function")loadExpenseAdminReport();
+ if(tab==="expenseAdmin"&&typeof loadExpenseAdminReport==="function"&&(!window.StarredPageAccess112||window.StarredPageAccess112.can("expenseAdmin")))loadExpenseAdminReport();
 }
 function checkLogin(){
  const ok=isAdminLoginValid();
@@ -5619,6 +5622,7 @@ async function login(){
   window.StarredStorage89.session.setItem(LOGIN_KEY,"1");
   window.StarredStorage89.local.setItem(CURRENT_USER_KEY,JSON.stringify(currentUser));
   window.StarredStorage89.local.setItem(ADMIN_LOGIN_EXPIRY_KEY,String(Number(result.expiresAt)||taipeiEndOfDayTimestamp()));
+  window.StarredPageAccess112?.acceptLogin(result);
   await loadCloudAccounts();
   checkLogin();
   showAdminTab("dashboard");
@@ -7363,7 +7367,7 @@ function renderOrderCards(options={}){
       return `<article class="order-card${archived?' order-text-only98':''}" data-order-id="${esc111(String(o.id||''))}">
         <button class="order-card-summary" onclick="toggleOrderCard(this)">
           <div class="sent-summary-main">
-            <div class="order-mobile-headline"><b>${name}</b><span class="order-mobile-order-no">${orderNo}</span></div>
+            <div class="order-mobile-headline"><b>${name}</b>${o.delivery==='門市自取'?'<span class="pickup-mark112" title="此筆訂單由門市取貨">★ 門市取貨</span>':''}<span class="order-mobile-order-no">${orderNo}</span></div>
             <small class="order-mobile-updated">最後更新：${updated}</small>
             ${archived?'<small class="order-archive-label98">已備份・文字紀錄</small>':''}
           </div>
@@ -8596,7 +8600,7 @@ function orderAgeDays(order){
 }
 // 處理中仍是未寄出；不以處理日／寄出日或狀態觸發提前備份。第 60 天保留，第 61 天起備份。
 function isBackupOrder(order){return orderAgeDays(order)>ORDER_BACKUP_DAYS}
-function canViewOrderBackup98(){return !!(currentUser&&currentUser.enabled!==false&&isAdminLoginValid())}
+function canViewOrderBackup98(){if(window.StarredPageAccess112)return window.StarredPageAccess112.can('orderBackup');return !!(currentUser&&currentUser.enabled!==false&&isAdminLoginValid())}
 function canEmailOrderBackup98(){return canViewOrderBackup98()&&normalizeCurrentAdminRole(currentUser.role)==='admin'}
 function applyOrderBackupPermissions98(){
  const allowed=canViewOrderBackup98(),button=$('orderBackupTabBtn'),email=$('backupOrdersEmailBtn');
@@ -13589,6 +13593,7 @@ async function exportSalesReportExcel(){
   }
 }
 function salesBackupRoleAllowed(){
+  if(window.StarredPageAccess112)return window.StarredPageAccess112.can('salesBackup');
   if(typeof currentUser==='undefined'||!currentUser)return false;
   var role=typeof normalizeCurrentAdminRole==='function'?normalizeCurrentAdminRole(currentUser.role):String(currentUser.role||'');
   return role==='admin'||role==='accounting';
@@ -14583,7 +14588,7 @@ function capacityRenderBuckets(projects){var rows=[];(projects||[]).forEach(func
 function capacityRenderTables(projects){var rows=[];(projects||[]).forEach(function(project){(project.tables||[]).forEach(function(table){rows.push({project:project.label,tableName:String(table.tableName||table.table_name||'未命名'),bytes:Number(table.bytes||0)})})});rows.sort(function(a,b){return b.bytes-a.bytes});var box=document.getElementById('capacityTableList');if(!box)return;if(!rows.length){box.innerHTML='<div class="capacity-empty">目前沒有可顯示的文字資料表</div>';return}box.innerHTML='<table class="capacity-table"><thead><tr><th>資料類別</th><th>所屬資料</th><th>容量</th></tr></thead><tbody>'+rows.slice(0,30).map(function(row){return '<tr><td>'+capacityEsc(capacityTableLabels[row.tableName]||row.tableName)+'<small>'+capacityEsc(row.tableName)+'</small></td><td>'+capacityEsc(row.project)+'</td><td class="amount">'+capacityFormatBytes(row.bytes)+'</td></tr>'}).join('')+'</tbody></table>'}
 function renderCapacityUsage(){var data=capacityUsageData;if(!data)return;var limits=capacityLimits();var set=function(id,text){var el=document.getElementById(id);if(el)el.textContent=text};set('capacityTotalBytes',capacityFormatBytes(data.totalBytes));set('capacityDatabaseBytes',capacityFormatBytes(data.databaseBytes));set('capacityStorageBytes',capacityFormatBytes(data.storageBytes));set('capacityObjectCount',capacityNumber(data.storageObjectCount)+' 個');var measured=data.measuredAt?new Date(data.measuredAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'剛剛';set('capacityMeasuredAt','最後更新：'+measured);var projectList=document.getElementById('capacityProjectList');if(projectList)projectList.innerHTML=(data.projects||[]).map(function(project){return capacityProjectHtml(project,limits)}).join('')||'<div class="capacity-empty">沒有可顯示的專案容量</div>';capacityRenderWarnings(data,limits);capacityRenderBuckets(data.projects);capacityRenderTables(data.projects)}
 window.changeCapacityPlanReference=function(value){window.StarredStorage89.local.setItem(CAPACITY_PLAN_KEY,value==='pro'?'pro':'free');renderCapacityUsage()};
-window.loadCapacityUsage=async function(silent){if(capacityLoading)return;if(!currentUser||normalizeCurrentAdminRole(currentUser.role)!=='admin')return;capacityLoading=true;var button=document.getElementById('capacityRefreshBtn'),status=document.getElementById('capacityStatus');if(button)button.disabled=true;if(status&&!silent){status.className='capacity-status working';status.textContent='正在讀取兩個資料專案的最新容量…'}try{capacityUsageData=await starredApi('capacity_usage',{});renderCapacityUsage();if(status){status.className='capacity-status success';status.textContent=capacityUsageData.complete?'容量已完整更新。':'容量已更新，但仍有一部分尚未納入，請查看下方提醒。'}}catch(error){if(status){status.className='capacity-status error';status.textContent='容量讀取失敗：'+String(error&&error.message||error)}}finally{capacityLoading=false;if(button)button.disabled=false}};
+window.loadCapacityUsage=async function(silent){if(capacityLoading)return;if(window.StarredPageAccess112?!window.StarredPageAccess112.can('capacity'):(!currentUser||normalizeCurrentAdminRole(currentUser.role)!=='admin'))return;capacityLoading=true;var button=document.getElementById('capacityRefreshBtn'),status=document.getElementById('capacityStatus');if(button)button.disabled=true;if(status&&!silent){status.className='capacity-status working';status.textContent='正在讀取兩個資料專案的最新容量…'}try{capacityUsageData=await starredApi('capacity_usage',{});renderCapacityUsage();if(status){status.className='capacity-status success';status.textContent=capacityUsageData.complete?'容量已完整更新。':'容量已更新，但仍有一部分尚未納入，請查看下方提醒。'}}catch(error){if(status){status.className='capacity-status error';status.textContent='容量讀取失敗：'+String(error&&error.message||error)}}finally{capacityLoading=false;if(button)button.disabled=false}};
 document.addEventListener('DOMContentLoaded',function(){var select=document.getElementById('capacityPlanReference');if(select)select.value=capacityPlan();setInterval(function(){var panel=document.getElementById('capacityTab');if(panel&&panel.classList.contains('active'))window.loadCapacityUsage(true)},60000)});
 })();
 </script>
@@ -18131,7 +18136,7 @@ function lineIdentity(){try{var p=(typeof getCurrentLineUser==='function'?getCur
 function localLineUser(){var id=lineIdentity().id;try{return (typeof lineUsers!=='undefined'&&Array.isArray(lineUsers)?lineUsers:[]).find(function(x){return String(x.id||x.lineUserId||'')===id})||null}catch(_){return null}}
 function hasBackofficeLogin(){var u=current();return !!(u&&u.adminSessionToken)}
 function isSystemAdmin(){return role(current()&&current().role)==='admin'}
-function canAccessLocal(){if(!hasBackofficeLogin())return false;if(isSystemAdmin())return true;var u=localLineUser();return !!(u&&u.leaveAdminAccess)}
+function canAccessLocal(){if(!hasBackofficeLogin())return false;if(window.StarredPageAccess112)return window.StarredPageAccess112.can('leaveAdmin');if(isSystemAdmin())return true;var u=localLineUser();return !!(u&&u.leaveAdminAccess)}
 function today(){try{return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'})}catch(_){return new Date().toISOString().slice(0,10)}}
 function roc(value){var s=String(value||'').slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?'民國'+String(Number(m[1])-1911)+'/'+m[2]+'/'+m[3]:(s||'—')}
 function rocInput(value){var s=String(value||'').slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?String(Number(m[1])-1911)+'/'+m[2]+'/'+m[3]:''}
@@ -20821,7 +20826,7 @@ function money(value){var n=Number(value||0);return (n<0?'−':'')+'$'+Math.abs(
 function time(value){if(!value)return '—';var date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
 function nameOfStatus(value){return {pending:'待審核',approved:'已核准',rejected:'未通過',cancelled:'已取消',voided:'已沖回'}[value]||value}
 function identity(){var p=typeof getCurrentLineUser==='function'?getCurrentLineUser():{},v=window.starredVerifiedLineUser||{};return String(v.lineUserId||(p&&p.id)||'')}
-function adminAllowed(){return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
+function adminAllowed(){if(window.StarredPageAccess112)return window.StarredPageAccess112.can('deductionAdmin')||window.StarredPageAccess112.can('externalAccountAdmin')||window.StarredPageAccess112.can('salesReport');return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
 function authKey(scope){return identity()+'|'+(scope==='admin'&&typeof currentUser!=='undefined'&&currentUser?String(currentUser.adminSessionToken||''):'own')}
 function status(scope,text,bad){var box=el('ded78-'+scope+'-message');if(box){box.textContent=text||'';box.className='ded78-message'+(bad?' error':'');box.hidden=!text}}
 async function api(action,payload){
@@ -20877,7 +20882,7 @@ function showAdmin(value,options){
   options=options||{};
   // Legacy callers still use true/false for deduction/expense.
   var mode=value===true?'deduction':value===false?'expense':String(value||'expense');
-  if(!['expense','deduction','company'].includes(mode))mode='expense';
+  if(!['expense','deduction','company'].includes(mode))mode='expense';if(window.StarredPageAccess112&&window.StarredPageAccess112.ready()&&!window.StarredPageAccess112.expenseModeAllowed(mode)){mode=['expense','deduction','company'].find(x=>window.StarredPageAccess112.expenseModeAllowed(x))||'';if(!mode)return false;}
   if(mode==='company'&&!adminAllowed()){
     if(!options.silent)window.alert('公司帳管理僅開放已登入的會計與系統管理員。');
     return false;
@@ -21235,7 +21240,7 @@ function el(id){return document.getElementById(id)}
 function esc(value){return bridge.esc(value==null?'':String(value))}
 function money(value){var n=Number(value);return (n<0?'−':'')+'$'+Math.abs(n).toLocaleString('zh-TW')}
 function stamp(value){if(!value)return '—';var d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
-function allowed(){return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
+function allowed(){if(window.StarredPageAccess112)return window.StarredPageAccess112.can('salesReport')||window.StarredPageAccess112.can('deductionAdmin');return typeof currentUser!=='undefined'&&currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
 function auth(){var profile=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(window.starredVerifiedLineUser?.lineUserId||profile?.id||'')+'|'+String(typeof currentUser!=='undefined'&&currentUser?currentUser.adminSessionToken||'':'')}
 function values(){return {dateFrom:String(el('salesAdminDateFrom')?.value||''),dateTo:String(el('salesAdminDateTo')?.value||''),area:String(el('salesAdminArea')?.value||''),storeId:String(el('salesAdminStore')?.value||''),lineUserId:String(el('salesAdminPerson')?.value||'')}}
 function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;var d=new Date(s+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===s}
@@ -21993,7 +21998,7 @@ function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,funct
 function money(value){return (value<0?'−':'')+'$'+Math.abs(value).toLocaleString('zh-TW',{maximumFractionDigits:2})}
 function stamp(value){if(!value)return '—';var d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
 function label(status){return {pending:'待審核',approved:'已核准',rejected:'未通過',cancelled:'已取消'}[status]||status}
-function allowed(){return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&typeof normalizeCurrentAdminRole==='function'&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
+function allowed(){if(window.StarredPageAccess112)return window.StarredPageAccess112.can('externalAccountAdmin')||window.StarredPageAccess112.can('salesReport');return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&typeof normalizeCurrentAdminRole==='function'&&['admin','accounting'].includes(normalizeCurrentAdminRole(currentUser.role))}
 function auth(){if(!allowed())return '';var v=window.starredVerifiedLineUser||{};return [currentUser.id||currentUser.account||'',currentUser.adminSessionToken||'',currentUser.role||'',v.lineUserId||''].join('|')}
 function filters(){var v=ids.map(function(id){return String((el(id)||{}).value||'').trim()});return {dateFrom:v[0],dateTo:v[1],status:v[2],lineUserId:v[3],keyword:v[4].slice(0,80),includePendingOutsideDate:true}}
 function selectedPerson(){var s=el('externalAccountAdminPerson');return s&&s.value&&s.selectedOptions.length?s.selectedOptions[0].textContent:'全部人員'}
@@ -24499,5 +24504,399 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 </script>
+<style id="admin-access-and-visual-v112-style">
+/* v112: desktop-only order changes. Mobile card geometry intentionally unchanged. */
+#orderPage .order-card-summary .pickup-mark112{display:none!important}
+@media(min-width:901px){
+ #orderPage .order-sent-panel .order-card-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto 20px!important;justify-content:stretch!important;justify-items:stretch!important;text-align:left!important;align-items:center!important;padding:12px 14px!important;gap:10px!important}
+ #orderPage .order-card-summary>.sent-summary-main{grid-column:1!important;grid-row:1!important;justify-self:stretch!important;align-self:center!important;width:100%!important;max-width:none!important;padding:0!important;margin:0!important;text-align:left!important;justify-content:start!important}
+ #orderPage .sent-summary-main .order-mobile-headline{display:flex!important;justify-content:flex-start!important;align-items:center!important;gap:7px!important;flex-wrap:wrap!important;margin:0!important;text-align:left!important}
+ #orderPage .order-card-summary>.order-summary-badges{grid-column:2!important;grid-row:1!important;justify-self:end!important;width:auto!important;min-width:0!important;max-width:none!important;display:flex!important;flex-direction:column!important;gap:4px!important}
+ #orderPage .order-card-summary>.order-summary-badges .order-editable-placeholder{display:none!important}
+ #orderPage .order-card-summary>.order-chevron{grid-column:3!important;grid-row:1!important;display:block!important;text-align:center!important}
+ #orderPage .order-card-summary .sent-summary-main .pickup-mark112{display:inline-flex!important;flex:0 0 auto!important;align-items:center;white-space:nowrap!important;overflow:visible!important;padding:3px 7px!important;margin:0!important;min-width:0!important;border:1px solid #e5c28b;border-radius:7px;background:#fff3dd!important;color:#8b5c18!important;font-size:13px!important;line-height:1.5;font-weight:400!important}
+ #orderPage .order-card.open>.order-card-summary .sent-summary-main .pickup-mark112{color:#795010!important;background:#fff0cf!important}
+}
+/* A complete outline around the expanded store; an independent outline around the active event. */
+#homePage #eventList>.store-activity-group{border:1px solid #d3dce3!important;border-radius:18px!important;overflow:hidden!important;position:relative;background:#fff!important}
+#homePage #eventList>.store-activity-group[open]{border:2px solid #9eafbd!important;border-radius:18px!important;background:#edf0f3!important;box-shadow:0 9px 24px rgba(40,57,69,.14)!important;transform:none!important}
+#homePage #eventList>.store-activity-group[open]>summary{background:#e5e9ed!important;border-bottom:1px solid #c7d1d9!important;color:#29495f!important}
+#homePage #eventList>.store-activity-group[open]>.store-group-events{background:#f0f2f4!important;padding:10px 14px 14px!important}
+#homePage #eventList>.store-activity-group[open] .store-group-arrow{color:#4d6678!important}
+#homePage #eventList>.store-activity-group .event-row{border:1px solid #d7dfe5!important;border-radius:12px!important;margin-top:7px!important;background:#fff!important;overflow:hidden!important}
+#homePage #eventList>.store-activity-group .event-row.open{border:2px solid #9aabba!important;box-shadow:0 5px 15px rgba(42,58,71,.1)!important;background:#e9edf0!important}
+#homePage #eventList>.store-activity-group .event-row.open>.event-summary{background:#e6eaee!important}
+#homePage #eventList>.store-activity-group .event-row.open>.event-detail{background:#f0f2f4!important}
+@media(max-width:720px){#homePage #eventList>.store-activity-group[open]>.store-group-events{padding:7px 9px 10px!important}}
+/* Admin settings: true list, regular weight, no exposed password column. */
+#accountTab,#accountTab h2,#accountTab h3,#accountTab b,#accountTab strong,#accountTab label,#accountTab button,#accountTab .role-badge,#accountTab .name{font-weight:400!important}
+#accountTab .panel{padding:16px!important}
+#accountTab .account-form{gap:9px!important}
+#accountTab .account-list{display:block!important;border:1px solid #d4dfe6;border-radius:13px;overflow:hidden;background:#fff;margin-top:10px!important}
+#accountTab .ac112-table{width:100%;border-collapse:collapse;table-layout:fixed;color:#324d5e;font-size:14px}
+#accountTab .ac112-table th,#accountTab .ac112-table td{font-weight:400;text-align:left;vertical-align:middle;padding:10px 12px;border-bottom:1px solid #e1e7ec;overflow-wrap:anywhere;line-height:1.5}
+#accountTab .ac112-table th{background:#edf1f4;color:#637987;font-size:13px}
+#accountTab .ac112-table th:nth-child(1){width:18%}#accountTab .ac112-table th:nth-child(2){width:12%}#accountTab .ac112-table th:nth-child(3){width:10%}#accountTab .ac112-table th:nth-child(4){width:17%}#accountTab .ac112-table th:nth-child(5){width:43%}
+#accountTab .ac112-table tr:last-child td{border-bottom:0}
+#accountTab .ac112-table tbody tr:hover{background:#f4f6f8}
+#accountTab .ac112-account{display:block;color:#728694;font-size:12px}
+#accountTab .ac112-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;justify-content:flex-end}
+#accountTab .ac112-actions button{width:auto!important;min-width:0!important;min-height:35px!important;height:auto!important;padding:6px 10px!important;font-size:14px!important;border-radius:9px!important;white-space:nowrap!important}
+#accountTab .ac112-actions .ac112-permissions{background:#edf2f6;border:1px solid #cbd9e3}
+#accountTab .ac112-lock{font-size:12px;color:#7c8c98}
+#accountTab .ac112-note{color:#657c8c;font-size:13px;line-height:1.6;margin:0 0 9px}
+.access112-denied{display:none!important}
+#adminContent.access112-loading>.admin-tab-panel,#adminContent.access112-loading>#dashboardPage{display:none!important}
+#adminAccessStatus112{padding:10px 14px;margin:8px 0 12px;background:#f1f4f7;border:1px solid #d2dde6;border-radius:12px;color:#526e80;font-size:14px;line-height:1.6}
+#adminAccessStatus112 button{font-weight:400;font-size:14px;margin-left:8px}
+#adminAccessDialog112{width:min(590px,calc(100vw - 24px));max-width:calc(100vw - 24px);padding:0;border:1px solid #d0dce4;border-radius:20px;background:#fff;color:#304e63;box-shadow:0 22px 65px #1d314e40;font-family:inherit}
+#adminAccessDialog112:not([open]){display:none!important}
+#adminAccessDialog112::backdrop{background:rgba(33,47,61,.42);backdrop-filter:blur(5px)}
+#adminAccessDialog112 .ac112-dialog-shell{display:flex;flex-direction:column;max-height:88vh;max-height:88dvh}
+#adminAccessDialog112 header{padding:17px 19px 12px;border-bottom:1px solid #dbe4ea;background:#f8fafb}
+#adminAccessDialog112 h3{margin:0 0 4px;font-size:20px;font-weight:400}
+#adminAccessDialog112 p{font-size:13px;line-height:1.6;color:#6a8190;margin:4px 0;font-weight:400}
+#adminAccessDialog112 .ac112-dialog-body{padding:0 19px;overflow:auto;min-height:0}
+#adminAccessDialog112 .ac112-view-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e3e9ee;min-height:48px;font-size:14px;font-weight:400;cursor:pointer}
+#adminAccessDialog112 .ac112-view-row small{display:block;margin-top:2px;font-size:12px;line-height:1.4;color:#7a8c98}
+#adminAccessDialog112 .ac112-view-row input{appearance:auto!important;display:block!important;width:20px!important;height:20px!important;min-height:20px!important;flex:0 0 20px;margin:0;padding:0;accent-color:#3f637a;cursor:pointer}
+#adminAccessDialog112 .ac112-view-row.is-locked{opacity:.72}
+#adminAccessDialog112 footer{padding:12px 19px 16px;background:#f8fafb;border-top:1px solid #dbe4ea}
+#adminAccessDialog112 .ac112-dialog-actions{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+#adminAccessDialog112 button{font-weight:400!important;min-height:38px!important;padding:7px 12px!important;font-size:14px!important;white-space:nowrap!important}
+#adminAccessMessage112{font-size:13px;color:#9b4b34;line-height:1.6;padding-bottom:8px;white-space:pre-wrap}
+#adminAccessMessage112:empty{display:none}
+.ac112-readonly-note{font-size:13px;color:#6e7f8e;background:#f0f3f5;border:1px solid #d9e1e7;border-radius:9px;padding:8px 11px;margin:6px 0 10px}
+@media(max-width:760px){
+ #accountTab .ac112-table,#accountTab .ac112-table tbody{display:block}
+ #accountTab .ac112-table thead{display:none}
+ #accountTab .ac112-table tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px 9px;padding:11px 12px;border-bottom:1px solid #dee6ec}
+ #accountTab .ac112-table th,#accountTab .ac112-table td{display:block;width:auto;padding:0;border:0;min-width:0}
+ #accountTab .ac112-table td:nth-child(4){grid-column:1/-1;color:#778997;font-size:12px}
+ #accountTab .ac112-table td:nth-child(4):before{content:'最後登入：'}
+ #accountTab .ac112-table td:nth-child(5){grid-column:1/-1}
+ #accountTab .ac112-actions{justify-content:flex-start;gap:6px}
+ #accountTab .ac112-actions button{min-height:38px!important}
+}
+</style>
+
+<script id="admin-page-access-v112-module">
+(function(){
+'use strict';
+const BUILD='20261102-admin-page-access-v112';
+const pages=[
+  [
+    "dashboard",
+    "首頁"
+  ],
+  [
+    "activity",
+    "活動清單／備貨確認"
+  ],
+  [
+    "store",
+    "百貨門市管理"
+  ],
+  [
+    "capacity",
+    "容量監控"
+  ],
+  [
+    "orderAdmin",
+    "訂單管理"
+  ],
+  [
+    "orderBackup",
+    "訂單備份"
+  ],
+  [
+    "salesBackup",
+    "業績備份"
+  ],
+  [
+    "expenseAdmin",
+    "費用明細"
+  ],
+  [
+    "externalAccountAdmin",
+    "公司帳（後台）"
+  ],
+  [
+    "deductionAdmin",
+    "扣款明細"
+  ],
+  [
+    "salesReport",
+    "業績報表"
+  ],
+  [
+    "employeeRulesAdmin",
+    "員工守則管理"
+  ],
+  [
+    "leaveAdmin",
+    "員工資料／休假"
+  ],
+  [
+    "lineGroupMessages",
+    "補貨／追加整理"
+  ],
+  [
+    "lineUser",
+    "LINE 使用者"
+  ],
+  [
+    "account",
+    "管理員設定"
+  ]
+];
+const keys=new Set(pages.map(p=>p[0]));
+const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const current=()=>typeof currentUser!=='undefined'?currentUser:null;
+const valid=()=>!!(current()?.adminSessionToken&&typeof isAdminLoginValid==='function'&&isAdminLoginValid());
+const identity=()=>valid()?String(current().id)+'|'+String(current().adminSessionToken):'';
+const state={auth:'',meta:null,loadedAt:0,busy:null,seq:0,error:'',navDepth:0,rootTab:'',queuedTab:'',records:new Map()};
+let editing=null,syncFrame=0;
+function ready(){return !!(state.meta&&state.auth===identity());}
+function role(){return ready()?state.meta.role:String(current()?.role||'');}
+function can(key){
+ if(!valid()||!ready())return false;
+ if(key==='backup')return can('orderBackup')||can('salesBackup');
+ return state.meta.effective[key]===true;
+}
+function expenseModeAllowed(mode){return mode==='expense'?can('expenseAdmin'):mode==='company'?(can('externalAccountAdmin')||can('salesReport')):mode==='deduction'?(can('deductionAdmin')||can('salesReport')):false;}
+function expenseRootAllowed(){return ['expense','company','deduction'].some(expenseModeAllowed);}
+function allowedTab(key,notify=false){
+ if(state.navDepth>0&&key==='dashboard'&&state.rootTab!=='dashboard')return true;
+ const allowed=key==='orderBackup'?can('backup'):key==='expenseAdmin'?expenseRootAllowed():can(key);
+ if(!allowed&&notify&&valid()&&ready())window.alert('目前帳號沒有這個後台區域的查看權限，請洽系統管理員。');
+ return allowed;
+}
+function canWrite(key){
+ if(!can(key))return false;
+ if(role()==='admin')return true;
+ if(['salesReport','salesBackup','externalAccountAdmin','deductionAdmin'].includes(key))return role()==='accounting';
+ if(key==='lineUser'||key==='account')return false;
+ if(key==='leaveAdmin')return state.meta.legacyLeaveAccess===true;
+ return true;
+}
+function notice(text){
+ const root=$('adminContent');if(!root)return;
+ let box=$('adminAccessStatus112');
+ if(!box){box=document.createElement('div');box.id='adminAccessStatus112';box.setAttribute('role','status');box.innerHTML='<span></span><button type="button" class="secondary">重新檢查權限</button>';box.querySelector('button').addEventListener('click',()=>ensure(true));root.prepend(box);}
+ box.querySelector('span').textContent=text||'';box.hidden=!text;
+ box.querySelector('button').hidden=!state.error;
+}
+function setClass(node,name,on){if(node&&node.classList.contains(name)!==on)node.classList.toggle(name,on);}
+function panelFor(key){return $(key==='dashboard'?'dashboardPage':key+'Tab');}
+function sync(){
+ const logged=valid(),loaded=ready(),root=$('adminContent');
+ setClass(root,'access112-loading',logged&&!loaded);
+ for(const [key] of pages){
+  const button=$(key+'TabBtn');
+  const allowed=key==='orderBackup'?can('backup'):key==='expenseAdmin'?expenseRootAllowed():key==='externalAccountAdmin'?(can(key)||can('salesReport')):can(key);
+  setClass(button,'access112-denied',logged&&!allowed);
+  if(button&&loaded)setClass(button,'hidden-by-role',!allowed);
+  if(['salesBackup','externalAccountAdmin','deductionAdmin'].includes(key))continue;
+  setClass(panelFor(key),'access112-denied',logged&&!allowed);
+ }
+ const backupOrders=document.querySelector('[data-backup-section="orders"]'),backupSales=document.querySelector('[data-backup-section="sales"]');
+ setClass(backupOrders,'access112-denied',logged&&!can('orderBackup'));
+ setClass(backupSales,'access112-denied',logged&&!can('salesBackup'));
+ if(loaded)setClass($('salesBackupSectionBtn'),'hidden-by-role',!can('salesBackup'));
+ for(const [mode,buttonId,panelId] of [['expense','expenseAdminDetailsTabBtn91','expenseAdminDetailsPanel91'],['deduction','expenseAdminDeductionTabBtn91','ded78AdminPanel'],['company','externalAccountAdminTabBtn','externalAccountAdminTab']]){
+  const allowed=expenseModeAllowed(mode),button=$(buttonId);
+  setClass(button,'access112-denied',logged&&!allowed);
+  setClass($(panelId),'access112-denied',logged&&!allowed);
+  if(loaded&&button){button.hidden=!allowed;setClass(button,'hidden-by-role',!allowed);}
+ }
+ setClass($('expenseAdminDeductionTabBtn91'),'access112-denied',logged&&!(can('deductionAdmin')||can('salesReport')));
+ setClass($('externalAccountAdminTabBtn'),'access112-denied',logged&&!(can('externalAccountAdmin')||can('salesReport')));
+ for(const [key] of pages){
+  const panel=panelFor(key);if(!panel)continue;
+  let hint=panel.querySelector(':scope>.ac112-readonly-note');
+  const readOnly=loaded&&can(key)&&!canWrite(key);
+  if(readOnly&&!hint){hint=document.createElement('p');hint.className='ac112-readonly-note';hint.textContent='此帳號已獲准查看本區；修改、刪除與審核仍依原本角色權限。';panel.prepend(hint);}
+  if(hint)hint.hidden=!readOnly;
+  if(key==='lineUser')panel.querySelectorAll('[data-lu92-save],[data-lu92-toggle]').forEach(b=>{if(readOnly){b.dataset.ac112Disabled='1';b.disabled=true;}else if(b.dataset.ac112Disabled){delete b.dataset.ac112Disabled;b.disabled=false;}});
+ }
+ if(!logged){notice('');return;}
+ if(!loaded){notice(state.error||'正在確認目前帳號的頁面權限…');return;}
+ const any=pages.some(([k])=>can(k));
+ const deniedActive=Array.from(root?.querySelectorAll(':scope>.active')||[]).some(n=>n.classList.contains('access112-denied'));
+ notice(!any?'目前沒有開放的後台頁面，請由系統管理員調整。前台功能仍可使用。':deniedActive?'此區的查看權限已變更，請從上方選擇其他已開放的頁面。':'');
+}
+function scheduleSync(){if(syncFrame)return;syncFrame=requestAnimationFrame(()=>{syncFrame=0;sync();});}
+function accept(meta){
+ if(!meta||String(meta.id)!==String(current()?.id)||!meta.effective||!meta.overrides||!Number.isSafeInteger(meta.version)||pages.some(([k])=>typeof meta.effective[k]!=='boolean'))throw new Error('頁面權限回應不完整，暫不開放後台區域。');
+ state.auth=identity();state.meta=meta;state.loadedAt=Date.now();state.error='';
+ if(current()){currentUser.role=meta.role;currentUser.enabled=meta.enabled;}
+ sync();
+}
+function acceptLogin(result){
+ state.seq++;state.busy=null;state.records.clear();state.auth='';state.meta=null;
+ if(result?.accessBuild112===BUILD&&result.pageAccess112)accept(result.pageAccess112);
+ else {state.error='請先完成 v112 SQL 與 line-api 更新，再登入後台。';sync();}
+}
+async function ensure(force=false){
+ if(!valid()){clear();return false;}
+ const auth=identity();
+ if(ready()&&!force&&Date.now()-state.loadedAt<30000)return true;
+ if(state.busy&&state.auth===auth)return state.busy;
+ if(state.auth!==auth){state.meta=null;state.records.clear();state.auth=auth;}
+ const seq=++state.seq;sync();
+ const promise=(async()=>{
+  try{
+   const result=await window.starredApi('admin_page_access_get112',{});
+   if(auth!==identity()||seq!==state.seq)return false;
+   if(result?.success!==true||result.accessBuild112!==BUILD)throw new Error('請先完成 v112 SQL 與 line-api 更新；權限尚未確認。');
+   accept(result.access);return true;
+  }catch(error){
+   if(auth===identity()&&seq===state.seq){state.meta=null;state.error='頁面權限尚未確認：'+String(error?.message||error);sync();}
+   return false;
+  }finally{if(seq===state.seq)state.busy=null;}
+ })();state.busy=promise;return promise;
+}
+function clear(){state.seq++;state.meta=null;state.auth='';state.loadedAt=0;state.busy=null;state.error='';state.records.clear();state.queuedTab='';editing=null;if($('adminAccessDialog112')?.open)$('adminAccessDialog112').close();sync();}
+function checkReply(r){if(!r||r.success!==true||r.accessBuild112!==BUILD)throw new Error('頁面設定後端尚未完整更新，請先部署 v112。');}
+function renderAccounts112(){
+ const box=$('accountList');if(!box)return;
+ if(!current()||normalizeCurrentAdminRole(current().role)!=='admin'){box.replaceChildren();return;}
+ const records=typeof accounts!=='undefined'&&Array.isArray(accounts)?accounts:[];
+ const note=box.previousElementSibling?.classList.contains('ac112-note')?box.previousElementSibling:null;
+ if(!note){const n=document.createElement('p');n.className='ac112-note';n.textContent='按「頁面權限」逐一勾選可查看區域；只有系統管理員可設定。帳號密碼不在清單中直接顯示。';box.before(n);}
+ box.innerHTML='<table class="ac112-table" aria-label="管理帳號與頁面權限清單"><thead><tr><th>姓名／帳號</th><th>角色</th><th>狀態</th><th>最後登入</th><th>操作</th></tr></thead><tbody>'+records.map(a=>{
+  const admin=normalizeCurrentAdminRole(a.role)==='admin',enabled=a.enabled!==false;
+  return '<tr><td><span>'+esc(a.name||a.username)+'</span><small class="ac112-account">'+esc(a.username||'')+'</small></td><td>'+esc(adminRoleLabel(a.role))+'</td><td><span class="status-dot '+(enabled?'':'off')+'">'+(enabled?'啟用':'停用')+'</span></td><td>'+esc(a.lastLogin?fmtDateTime(a.lastLogin):'—')+'</td><td><div class="ac112-actions">'+
+    '<button type="button" class="secondary ac112-permissions" data-ac112-open="'+esc(a.id)+'">頁面權限</button>'+ 
+    '<button type="button" class="secondary" data-ac112-edit="'+esc(a.id)+'">修改</button>'+ 
+    '<button type="button" class="secondary" data-ac112-toggle="'+esc(a.id)+'">'+(enabled?'停用':'啟用')+'</button>'+ 
+    (admin?'<span class="ac112-lock">系統保留</span>':'<button type="button" class="danger" data-ac112-delete="'+esc(a.id)+'">刪除</button>')+'</div></td></tr>';
+ }).join('')+'</tbody></table>';
+}
+function mountDialog(){
+ if($('adminAccessDialog112'))return;
+ document.body.insertAdjacentHTML('beforeend','<dialog id="adminAccessDialog112" aria-labelledby="adminAccessTitle112"><div class="ac112-dialog-shell"><header><h3 id="adminAccessTitle112">頁面權限</h3><p id="adminAccessDescription112"></p></header><div class="ac112-dialog-body" id="adminAccessFields112"></div><footer><div id="adminAccessMessage112" role="status" aria-live="polite"></div><div class="ac112-dialog-actions"><button type="button" class="secondary" id="adminAccessReset112">沿用角色預設</button><button type="button" class="secondary" id="adminAccessCancel112">取消</button><button type="button" class="primary" id="adminAccessSave112">儲存權限</button></div></footer></div></dialog>');
+ $('adminAccessDialog112').addEventListener('cancel',e=>{e.preventDefault();closeEditor();});
+ $('adminAccessCancel112').addEventListener('click',closeEditor);
+ $('adminAccessReset112').addEventListener('click',()=>{if(editing?.record&&!editing.busy&&!editing.record.locked){editing.draft={};editing.dirty=true;paintEditor();}});
+ $('adminAccessSave112').addEventListener('click',saveEditor);
+ $('adminAccessFields112').addEventListener('change',e=>{const k=e.target.dataset.ac112Key;if(editing&&!editing.busy&&keys.has(k)&&k!=='account'){editing.draft[k]=e.target.checked;editing.dirty=true;}});
+}
+function closeEditor(){if(editing?.busy)return;editing=null;if($('adminAccessDialog112')?.open)$('adminAccessDialog112').close();}
+function paintEditor(){
+ if(!editing)return;
+ const r=editing.record;
+ $('adminAccessTitle112').textContent=(r.name||r.username)+'｜頁面權限';
+ $('adminAccessDescription112').textContent=r.locked?'系統管理員固定可查看全部區域，避免鎖住設定入口。':'帳號 '+r.username+'。勾選代表可查看；未變更的項目沿用原規則。刪改及審核權限不會因勾選而提升。'+(r.enabled?'':'此帳號目前停用，勾選不會重新啟用。');
+ $('adminAccessFields112').innerHTML=pages.map(([k,label])=>{
+  const has=Object.prototype.hasOwnProperty.call(editing.draft,k),value=r.locked?true:has?editing.draft[k]:r.defaults[k],locked=r.locked||k==='account';
+  const hint=locked?(k==='account'&&!r.locked?'僅系統管理員可使用':'系統保留'):has?'個別設定':k==='leaveAdmin'?'未個別設定時，仍依各 LINE 使用者的既有休假權限':'沿用角色預設';
+  return '<label class="ac112-view-row '+(locked?'is-locked':'')+'"><span>'+esc(label)+'<small>'+esc(hint)+'</small></span><input type="checkbox" data-ac112-key="'+esc(k)+'" '+(value?'checked ':'')+(locked||editing.busy?'disabled ':'')+'aria-label="允許查看'+esc(label)+'"></label>';
+ }).join('');
+ $('adminAccessSave112').disabled=r.locked||editing.busy;
+ $('adminAccessReset112').disabled=r.locked||editing.busy;
+ $('adminAccessCancel112').disabled=editing.busy;
+ $('adminAccessSave112').textContent=editing.busy?'儲存中…':'儲存權限';
+}
+async function openEditor(id){
+ if(!valid()||normalizeCurrentAdminRole(current()?.role)!=='admin')return window.alert('只有系統管理員可以設定頁面權限。');
+ mountDialog();const auth=identity(),m={auth,record:null,draft:{},busy:false,dirty:false};editing=m;
+ $('adminAccessTitle112').textContent='正在讀取頁面權限';$('adminAccessDescription112').textContent='取得雲端目前版本後，才會開放勾選。';$('adminAccessFields112').textContent='讀取中…';$('adminAccessMessage112').textContent='';
+ ['adminAccessSave112','adminAccessReset112'].forEach(x=>$(x).disabled=true);$('adminAccessCancel112').disabled=false;
+ if(!$('adminAccessDialog112').open)$('adminAccessDialog112').showModal();
+ try{
+  const data=await window.starredApi('admin_page_access_list112',{});checkReply(data);
+  if(editing!==m||auth!==identity())return;
+  if(!Array.isArray(data.accounts))throw new Error('帳號清單未完整回傳');
+  state.records=new Map(data.accounts.map(r=>[String(r.id),r]));const r=state.records.get(String(id));
+  if(!r||!r.overrides||!r.defaults||!Number.isSafeInteger(r.version))throw new Error('找不到完整的帳號權限資料');
+  m.record=r;m.draft={...r.overrides};m.busy=false;paintEditor();
+ }catch(error){if(editing===m){m.busy=false;$('adminAccessMessage112').textContent=String(error?.message||error);$('adminAccessFields112').textContent='尚未載入設定，本次不會覆寫任何權限。';}}
+}
+async function saveEditor(){
+ const m=editing;if(!m||m.busy||!m.record||m.record.locked||m.auth!==identity())return;
+ m.busy=true;paintEditor();$('adminAccessMessage112').textContent='';
+ try{
+  const result=await window.starredApi('admin_page_access_save112',{adminId:m.record.id,expectedVersion:m.record.version,overrides:m.draft});checkReply(result);
+  if(editing!==m||m.auth!==identity())return;
+  if(String(result.adminId)!==String(m.record.id)||!Number.isSafeInteger(result.version)||!result.overrides||pages.some(([k])=>result.overrides[k]!==m.draft[k]))throw new Error('權限儲存回應不完整，請保留設定並核對，不要重複建立帳號。');
+  m.record={...m.record,overrides:result.overrides,version:result.version,updatedAt:result.updatedAt};state.records.set(String(m.record.id),m.record);
+  m.busy=false;closeEditor();renderAccounts112();
+  if(typeof showActivityFeedback111==='function')showActivityFeedback111('權限已儲存','已更新「'+m.record.name+'」的查看區域。對方切換頁面或下次權限檢查時會更新；尚未完成的表單不會因此被清空。');
+ }catch(error){if(editing===m&&m.auth===identity()){m.busy=false;paintEditor();$('adminAccessMessage112').textContent='尚未確認儲存成功：'+String(error?.message||error)+'\n目前勾選已保留。';}}
+}
+const oldShow=window.showAdminTab;
+function navigate(tab){
+ if(!ready())return;
+ if(!allowedTab(tab,false)){
+  const first=pages.find(([k])=>k!=='salesBackup'&&k!=='externalAccountAdmin'&&k!=='deductionAdmin'&&allowedTab(k,false));
+  if(!first){sync();return;}
+  tab=first[0];
+ }
+ state.navDepth++;state.rootTab=tab;
+ try{if(typeof oldShow==='function')oldShow.call(window,tab);}
+ finally{state.navDepth--;if(!state.navDepth)state.rootTab='';sync();}
+ if(tab==='orderBackup'&&!can('orderBackup')&&can('salesBackup')&&typeof window.showBackupSection==='function')window.showBackupSection('sales');
+ if(tab==='expenseAdmin'&&window.StarredDeduction78){
+  const currentMode=$('expenseAdminTab')?.dataset.expenseAdminSection||'expense';
+  if(!expenseModeAllowed(currentMode))window.StarredDeduction78.showAdmin(['expense','company','deduction'].find(expenseModeAllowed));
+ }
+ if(tab==='lineUser')window.starredApi('admin_line_users112',{}).then(r=>{checkReply(r);if(!can('lineUser'))return;if(Array.isArray(r.lineUsers)){lineUsers=r.lineUsers.map(cloudUserToLocal);renderLineUsers();sync();}}).catch(e=>notice('LINE 使用者尚未更新：'+String(e.message||e)));
+}
+window.showAdminTab=function(tab){
+ if(!valid())return typeof oldShow==='function'?oldShow.apply(this,arguments):undefined;
+ if(ready()&&!allowedTab(String(tab),false)){if(String(tab)==='dashboard'){navigate('dashboard');return;}window.alert('目前帳號沒有這個後台區域的查看權限。');sync();return;}
+ state.queuedTab=String(tab);
+ if(ready()&&Date.now()-state.loadedAt<30000){navigate(String(tab));return;}
+ ensure().then(ok=>{if(ok&&state.queuedTab===String(tab))navigate(String(tab));});
+};
+const oldApply=window.applyAdminRoleUI;
+window.applyAdminRoleUI=function(){if(ready()){sync();return;}if(typeof oldApply==='function')oldApply.apply(this,arguments);sync();};
+const oldCheck=window.checkLogin;
+window.checkLogin=function(){const result=typeof oldCheck==='function'?oldCheck.apply(this,arguments):undefined;if(valid())ensure().then(()=>sync());else clear();return result;};
+const oldLogout=window.logout;
+window.logout=function(){state.seq++;state.meta=null;state.auth='';state.records.clear();if($('adminAccessDialog112')?.open){editing=null;$('adminAccessDialog112').close();}const result=oldLogout?.apply(this,arguments);clear();return result;};
+window.renderAccounts=renderAccounts112;
+const oldBackup=window.showBackupSection;
+window.showBackupSection=function(name,button){if(ready()&&!can(name==='sales'?'salesBackup':'orderBackup')){name=can('orderBackup')?'orders':can('salesBackup')?'sales':'';if(!name)return;}const out=oldBackup?.call(this,name,button);sync();return out;};
+// Keep direct activity mutations subject to the same page setting, without changing their existing rules.
+for(const name of ['editEvent','deleteEvent','deleteSelectedEvents','saveEventCloud','saveStore','deleteStore']){
+ const original=window[name];if(typeof original!=='function')continue;
+ window[name]=function(){const page=/Store/.test(name)?'store':'activity';if(ready()&&!can(page)){window.alert('目前帳號沒有此區域的操作權限。');return;}return original.apply(this,arguments);};
+}
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('[data-ac112-open],[data-ac112-edit],[data-ac112-toggle],[data-ac112-delete]');if(!b)return;
+ if(b.dataset.ac112Open)openEditor(b.dataset.ac112Open);
+ else if(b.dataset.ac112Edit)editAccount(b.dataset.ac112Edit);
+ else if(b.dataset.ac112Toggle)toggleAccount(b.dataset.ac112Toggle);
+ else if(b.dataset.ac112Delete)deleteAccount(b.dataset.ac112Delete);
+});
+// Read-only grants never make mutation controls usable. Server checks remain authoritative.
+document.addEventListener('click',e=>{
+ if(!ready())return;
+ const b=e.target.closest?.('button');if(!b)return;
+ const root=b.closest('#salesReportTab,#leaveAdminTab,#lineUserTab,#salesBackupSection,#externalAccountAdminTab,#ded78AdminPanel');if(!root)return;
+ const key=root.id==='externalAccountAdminTab'?'externalAccountAdmin':root.id==='ded78AdminPanel'?'deductionAdmin':root.id==='salesReportTab'?'salesReport':root.id==='leaveAdminTab'?'leaveAdmin':root.id==='lineUserTab'?'lineUser':'salesBackup';
+ if(canWrite(key))return;
+ const handler=String(b.getAttribute('onclick')||''),label=b.textContent||'';
+ if((b.dataset.ded78Action&&!['history','reload','export','print'].includes(b.dataset.ded78Action))||/save|delete|remove|reopen|approve|reject|review|assign|confirm|submit|create|edit|new/i.test(handler)&&!/print|export|download|detail|history|filter|showView/i.test(handler)||/^(新增|刪除|儲存|核准|駁回|確認日薪|修改金額)/.test(label.trim())){
+  e.preventDefault();e.stopImmediatePropagation();window.alert('此帳號只能查看本區，原本的修改／審核權限沒有開放。');
+ }
+},true);
+function startup(){
+ renderAccounts112();sync();
+ const nav=document.querySelector('#adminContent>.admin-tabs');if(nav)new MutationObserver(scheduleSync).observe(nav,{attributes:true,subtree:true,attributeFilter:['class','hidden'],childList:true});
+ const lu=$('lineUserList');if(lu)new MutationObserver(scheduleSync).observe(lu,{childList:true,subtree:true});
+ ensure().then(()=>{sync();});
+}
+window.StarredPageAccess112={build:BUILD,pages,ready,can,canWrite,allowedTab,expenseModeAllowed,acceptLogin,ensure,sync,open:openEditor,clear};
+window.addEventListener('focus',()=>{if(valid())ensure(true).then(()=>sync());});
+setInterval(()=>{if(valid()&&!document.hidden)ensure(true).then(()=>sync());},60000);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startup,{once:true});else startup();
+})();
+</script>
+
 </body>
 </html>
