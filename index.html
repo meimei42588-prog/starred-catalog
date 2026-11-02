@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v113: compact aligned workday summary; read-only store/person month analysis. Base v112, API/SQL unchanged. -->
 <!-- v112: desktop-only order alignment/pickup label, account page visibility controls, blank real names and active activity outlines. Requires v112 catalog SQL + line-api. -->
 <!-- v111.1 checked delivery: unique patch placement; server-side order-query wrapper preserved. -->
 <!-- v110: rebuilt from intact v108; activity layout only, print templates preserved; existing SQL/API/secrets unchanged. -->
@@ -16,7 +17,7 @@
 <!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
 <!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
-<html lang="zh-Hant" data-site-build="v110">
+<html lang="zh-Hant" data-site-build="v113">
 <head>
 <meta charset="UTF-8">
 <!-- v90: report schema recovery; exact v89 base retained. -->
@@ -4813,7 +4814,29 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <div id="salesReportProxyView" class="sales-report-view"><div class="sales-proxy-toolbar"><div><b>代銷售／隔夜帳明細</b><span>隔夜帳依入帳日計入門市，業績歸指定人員；不計入當日其他人員業績，也不增加日薪。</span></div><div class="sales-proxy-toolbar-actions"><strong id="salesProxySummary">共 0 筆</strong><button id="salesAdminCreateProxyBtn" type="button" class="secondary sales-admin-create-proxy" onclick="openSalesAdminProxyCreate()">＋ 新增代銷售</button><button id="salesAdminCreateOvernightBtn88" type="button" class="secondary" onclick="openSalesAdminOvernightCreate()">＋ 新增隔夜帳</button></div></div><div class="sales-table-wrap sales-proxy-table-wrap"><table class="sales-table sales-proxy-table"><thead><tr><th>業績／入帳日</th><th>區域／門市</th><th>回傳人員</th><th>業績歸屬</th><th>日薪狀態</th><th>營業總額</th><th>修改狀態</th><th>最後更新</th><th>操作</th></tr></thead><tbody id="salesAdminProxyBody"></tbody></table></div><div id="salesAdminProxyMobile" class="sales-admin-proxy-mobile"></div></div>
         <div id="salesReportStoreView" class="sales-report-view"><div id="salesAdminStoreStats" class="sales-stat-list"></div></div>
         <div id="salesReportPersonView" class="sales-report-view"><div id="salesAdminPersonStats" class="sales-stat-list"></div></div>
-        <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b id="salesComparisonHeading">業績對比</b><span id="salesComparisonDescription">可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesComparisonCurrent()">友善列印</button><button type="button" class="primary" onclick="exportSalesComparisonCurrentExcel()">匯出 Excel</button></div></div><div class="sales-comparison-switcher" role="tablist" aria-label="業績對比檢視"><button type="button" class="active" data-sales-comparison-view="detail" onclick="showSalesComparisonView('detail',this)">業績對比</button><button type="button" data-sales-comparison-view="average" onclick="showSalesComparisonView('average',this)">平均業績</button></div><div id="salesComparisonDetailPanel"><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div><div id="salesComparisonAveragePanel" hidden><div class="sales-average-inline-note">平均業績＝個人營業總額 ÷ 已確認上班日期；同一天只算 1 天，計日薪與時薪日期都納入，代銷售不增加上班天數。</div><div id="salesAveragePerformanceTable" class="sales-average-table-wrap"></div></div></div>
+        <div id="salesReportPersonDetailView" class="sales-report-view"><div class="sales-person-detail-toolbar"><div><b id="salesComparisonHeading">業績對比</b><span id="salesComparisonDescription">可複選人員；表格依日期橫向比較每日營業額，最下方自動加總。</span></div><div class="sales-person-detail-actions"><button type="button" class="secondary" onclick="printSalesComparisonCurrent()">友善列印</button><button type="button" class="primary" onclick="exportSalesComparisonCurrentExcel()">匯出 Excel</button></div></div><div class="sales-comparison-switcher" role="tablist" aria-label="業績比較與分析檢視"><button type="button" class="active" role="tab" data-sales-comparison-view="average" onclick="showSalesComparisonView('average',this)">平均業績</button><button type="button" role="tab" data-sales-comparison-view="analysis" onclick="showSalesComparisonView('analysis',this)">分析業績</button><button type="button" role="tab" data-sales-comparison-view="detail" onclick="showSalesComparisonView('detail',this)">業績對比</button></div><div id="salesComparisonAnalysisPanel113" hidden>
+ <div class="sa113-controls">
+  <label for="sa113Month">分析月份<input id="sa113Month" type="month"></label>
+  <label for="sa113Mode">比較方式<select id="sa113Mode"><option value="auto">自動可比期間</option><option value="full">完整月份（歷史月份）</option></select></label>
+  <label for="sa113Kind">分析分類<select id="sa113Kind"><option value="store">店點分析</option><option value="person">人員分析</option></select></label>
+  <button id="sa113Run" type="button" class="primary">開始分析</button>
+ </div>
+ <p class="sa113-scope-note">使用此處選的月份，區域／門市／人員沿用報表上方篩選；上方起訖日期不影響本分析。新分析只讀取資料，不修改業績、薪資或權限。</p>
+ <div class="sa113-list-filters">
+  <label for="sa113Target">單一對象<select id="sa113Target"><option value="">全部對象</option></select></label>
+  <label for="sa113Keyword">搜尋<input id="sa113Keyword" type="search" placeholder="姓名／店點" maxlength="120"></label>
+  <label for="sa113Sort">排序<select id="sa113Sort"><option value="current">本期營業額高到低</option><option value="delta">增加金額高到低</option><option value="decline">減少金額多到少</option><option value="rate">成長率高到低</option></select></label>
+ </div>
+ <p id="sa113Status" role="status" aria-live="polite">選擇月份後按「開始分析」。</p>
+ <div id="sa113Result"></div>
+ <details class="sa113-definitions"><summary>計算方式與判讀提醒</summary>
+  <p>營業額沿用原報表的「營業總額」欄，不另外加公司帳，也不在此頁再次扣退貨；不是扣款後結算或獲利。代銷售依原業績歸屬計入，隔夜帳沿用門市入帳日／人員業績月規則。</p>
+  <p>成長率＝（本期營業額－上期營業額）÷ 上期營業額。上期無回傳、為 0 或負值時不計算百分比；兩期都有零元紀錄才顯示持平。缺少回傳不等於零元、停業或離職。</p>
+  <p>店點日均＝營業額 ÷ 有銷售回傳的日期數（同日一次、包含零元，排除颱風停業日期）。此日期數不是排班或實際營業天數，漏傳仍需另外核對。</p>
+  <p>人員日均＝營業額 ÷ 已確認上班日期（同日一次，日薪／時薪日期都可納入，代銷售不增加天數）。任一期有待確認工時，該期日均暫不顯示。日薪核准的跨門市計薪天數規則不變。</p>
+  <p>本月預設與上月相同日數比較；歷史月份比較整月。兩月有回傳的對象與天數可能不同，請搭配日均判讀，不能僅由成長率推論活動或個人造成變化。</p>
+ </details>
+</div><div id="salesComparisonDetailPanel"><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div><div id="salesComparisonAveragePanel" hidden><div class="sales-average-inline-note">平均業績＝個人營業總額 ÷ 已確認上班日期；同一天只算 1 天，計日薪與時薪日期都納入，代銷售不增加上班天數。</div><div id="salesAveragePerformanceTable" class="sales-average-table-wrap"></div></div></div>
         <div id="salesReportWorkdaysView" class="sales-report-view">
           <div class="sales-workday-note">業績與薪資分開計算：同店同日只有一人本人回傳時自動計 1 日薪；同店多人或同一人同日跨兩個門市時，會進入核准。代銷售不計日薪。日薪金額與小時分開填寫；時薪填 0.5～7.5 小時，同組可分別選日薪、時薪或不計薪。日期異動後，相關工時與薪資需重新確認。</div>
           <section class="sales-workday-review-panel">
@@ -11788,6 +11811,7 @@ async function loadSalesAdminReport(){
     var compat90=result.salesSchema90&&result.salesSchema90.fieldsReady===false;
     salesSetAdminStatus(compat90?'現有業績已載入（相容讀取），共 '+String(salesAdminData.records.length)+' 筆；請完成下方結構更新。':'報表已更新，共 '+String(salesAdminData.records.length)+' 筆。',compat90?'working':'success');
     if(window.StarredPersonDeduction781)window.StarredPersonDeduction781.reportReady();
+    window.dispatchEvent(new Event('starred-sales-report-loaded113'));
     return true;
   }catch(error){
     if(seq781!==salesAdminLoadSequence781)return false;
@@ -13892,6 +13916,7 @@ window.STARRED_SALES_REPORT_BRIDGE_V55={
   shortDate:salesShortDate,
   workdayNote:salesWorkdayNoteForRecordIds,
   averageModel:salesAveragePerformanceModel,
+  workdayStats113:salesBuildWorkdayStats,
   expensePayModel:salesExpenseOperationPayModel,
   renderAverage:renderSalesAveragePerformance,
   renderComparison:renderSalesPersonDetail
@@ -24898,5 +24923,297 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<style id="sales-analysis-v113-style">
+/* v113: scoped presentation only for workday summary; no salary / workday mutations. */
+#salesAdminWorkdayStats .sales-workday-list{border-radius:12px!important;overflow:hidden!important;gap:0!important}
+#salesAdminWorkdayStats .sales-workday-head,#salesAdminWorkdayStats .sales-workday-row{gap:10px!important;padding:8px 12px!important;align-items:center!important;min-height:0!important}
+#salesAdminWorkdayStats .sales-workday-head>span{font-size:14px!important;line-height:1.4!important;font-weight:400!important}
+#salesAdminWorkdayStats .sales-workday-row{margin:0!important;border-radius:0!important;box-shadow:none!important;border-bottom:1px solid #dfe7ec!important;font-size:14px!important;line-height:1.4!important}
+#salesAdminWorkdayStats .sales-workday-row:last-child{border-bottom:0!important}
+#salesAdminWorkdayStats .sales-workday-row .name{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+#salesAdminWorkdayStats .sales-workday-row .name .title{font-size:14px!important;line-height:1.4!important;font-weight:400!important}
+#salesAdminWorkdayStats .sales-workday-row .name small{margin:0!important;font-size:12px!important;font-weight:400!important;white-space:nowrap;color:#788b98}
+#salesAdminWorkdayStats .sales-workday-row>span{font-size:14px!important;line-height:1.4!important;font-variant-numeric:tabular-nums}
+#salesAdminWorkdayStats .sales-workday-days{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:32px!important;height:auto!important;min-width:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:3px 2px!important;flex-wrap:wrap!important;box-shadow:none!important;border-radius:7px!important}
+#salesAdminWorkdayStats .sales-workday-days .sales-workday-pay-total{font-size:14px!important;line-height:1.4!important;font-weight:400!important;white-space:normal!important}
+#salesAdminWorkdayStats .sales-workday-days small{font-size:12px!important;margin:0!important;font-weight:400!important;line-height:1.4!important;white-space:nowrap}
+@media(min-width:901px){
+ #salesAdminWorkdayStats .sales-workday-head,#salesAdminWorkdayStats .sales-workday-row{display:grid!important;grid-template-columns:minmax(140px,1.2fr) minmax(190px,1.6fr) repeat(5,minmax(80px,.8fr)) minmax(115px,1fr)!important}
+ #salesAdminWorkdayStats .sales-workday-head>*,#salesAdminWorkdayStats .sales-workday-row>*{text-align:center!important;justify-self:stretch!important;grid-column:auto!important;grid-row:auto!important;min-width:0}
+ #salesAdminWorkdayStats .sales-workday-head>:first-child,#salesAdminWorkdayStats .sales-workday-row>:first-child{text-align:left!important}
+ #salesAdminWorkdayStats .sales-workday-head>:last-child,#salesAdminWorkdayStats .sales-workday-row>:last-child{text-align:right!important}
+}
+@media(max-width:900px){
+ #salesAdminWorkdayStats .sales-workday-row{row-gap:4px!important;padding:9px 11px!important}
+ #salesAdminWorkdayStats .sales-workday-days{justify-content:flex-end!important}
+}
+#salesReportPersonDetailView .sales-comparison-switcher{display:flex!important;gap:5px!important;flex-wrap:wrap;padding:5px!important;background:#eef2f5;border:1px solid #d7e0e7;border-radius:12px}
+#salesReportPersonDetailView .sales-comparison-switcher button{font-size:14px!important;font-weight:400!important;min-height:38px!important;padding:7px 14px!important;border-radius:9px!important}
+#salesComparisonAnalysisPanel113{color:#314e60;font-size:14px;min-width:0}
+#salesComparisonAnalysisPanel113 [hidden]{display:none!important}
+#salesComparisonAnalysisPanel113 .sa113-controls{display:grid;grid-template-columns:160px minmax(180px,1.2fr) 130px auto;align-items:end;gap:10px;padding:12px;background:#f2f5f7;border:1px solid #d7e0e7;border-radius:12px;margin:12px 0 8px}
+#salesComparisonAnalysisPanel113 label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12px!important;font-weight:400!important;color:#637a89}
+#salesComparisonAnalysisPanel113 input,#salesComparisonAnalysisPanel113 select{width:100%;min-width:0;height:40px!important;min-height:40px!important;font-size:14px!important;border:1px solid #d0dce5;border-radius:9px;padding:7px 9px;background:#fff}
+#salesComparisonAnalysisPanel113 button{font-size:14px!important;font-weight:400!important;min-height:36px!important;white-space:normal}
+#salesComparisonAnalysisPanel113 #sa113Run{height:40px!important;min-height:40px!important;padding:8px 16px!important;width:auto;justify-self:start}
+#salesComparisonAnalysisPanel113 .sa113-list-filters{display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) 160px;align-items:end;gap:8px;margin:10px 0}
+#salesComparisonAnalysisPanel113 .sa113-scope-note,#salesComparisonAnalysisPanel113 #sa113Status{font-size:12px;line-height:1.6;color:#637a89;margin:7px 0}
+#salesComparisonAnalysisPanel113 #sa113Status.error{background:#fff2ec;border:1px solid #e7c3b4;color:#945343;padding:8px 10px;border-radius:8px}
+#salesComparisonAnalysisPanel113 .sa113-definitions{border-top:1px solid #dce4eb;padding-top:8px;margin-top:10px}
+#salesComparisonAnalysisPanel113 .sa113-definitions summary{cursor:pointer;font-size:13px;line-height:1.5;color:#566f81}
+#salesComparisonAnalysisPanel113 .sa113-definitions p{font-size:13px;line-height:1.7;margin:5px 0;color:#657c8c}
+#salesComparisonAnalysisPanel113 .sa113-period{display:grid;gap:3px;padding:9px 0;font-size:14px;line-height:1.55}
+#salesComparisonAnalysisPanel113 .sa113-period small{font-size:12px;color:#718391}
+#salesComparisonAnalysisPanel113 .sa113-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #d4dfe7;border-radius:12px;overflow:hidden;background:#f3f6f8}
+#salesComparisonAnalysisPanel113 .sa113-kpis>div{min-width:0;padding:11px 13px;border-right:1px solid #dae3ea;display:grid;gap:4px}
+#salesComparisonAnalysisPanel113 .sa113-kpis>div:last-child{border-right:0}
+#salesComparisonAnalysisPanel113 .sa113-kpis span{font-size:13px;color:#607888}
+#salesComparisonAnalysisPanel113 .sa113-kpis b{font-size:22px;font-weight:400;line-height:1.35;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#salesComparisonAnalysisPanel113 .sa113-kpis small{font-size:12px;color:#6e8291;line-height:1.5}
+#salesComparisonAnalysisPanel113 .up{color:#265f92!important}
+#salesComparisonAnalysisPanel113 .down{color:#ad5144!important}
+#salesComparisonAnalysisPanel113 .neutral{color:#718390!important}
+#salesComparisonAnalysisPanel113 .sa113-insights{padding:8px 11px;background:#f4f6f8;border-radius:9px;border:1px solid #dfe5ea;margin:9px 0}
+#salesComparisonAnalysisPanel113 .sa113-insights p{margin:3px 0;font-size:13px;line-height:1.55}
+#salesComparisonAnalysisPanel113 .sa113-count{font-size:12px;color:#6a808f;line-height:1.5;margin:9px 0 6px}
+#salesComparisonAnalysisPanel113 .sa113-table-wrap{border:1px solid #d9e2e8;border-radius:12px;overflow:auto;max-width:100%}
+#salesComparisonAnalysisPanel113 .sa113-table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:14px;min-width:880px}
+#salesComparisonAnalysisPanel113 .sa113-table th,#salesComparisonAnalysisPanel113 .sa113-table td{padding:8px 9px;border:0;border-bottom:1px solid #dde5eb;text-align:right;font-weight:400;vertical-align:middle;line-height:1.5;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#salesComparisonAnalysisPanel113 .sa113-table th{background:#304e60;color:#fff;font-size:13px}
+#salesComparisonAnalysisPanel113 .sa113-table th:first-child{width:23%}
+#salesComparisonAnalysisPanel113 .sa113-table td:first-child,#salesComparisonAnalysisPanel113 .sa113-table th:first-child{text-align:left}
+#salesComparisonAnalysisPanel113 .sa113-table td:nth-child(7),#salesComparisonAnalysisPanel113 .sa113-table th:nth-child(7),#salesComparisonAnalysisPanel113 .sa113-table td:nth-child(8),#salesComparisonAnalysisPanel113 .sa113-table th:nth-child(8){text-align:center}
+#salesComparisonAnalysisPanel113 .sa113-data-row:nth-of-type(even){background:#f6f8fa}
+#salesComparisonAnalysisPanel113 .sa113-data-row.is-open{background:#e8eef3}
+#salesComparisonAnalysisPanel113 .sa113-data-row td button{justify-content:flex-start;text-align:left;padding:0!important;border:0;background:transparent;min-height:28px!important;width:100%;color:#315b77;line-height:1.5;box-shadow:none}
+#salesComparisonAnalysisPanel113 .sa113-data-row td small{display:block;font-size:12px;color:#8b704a;margin-top:3px;line-height:1.45}
+#salesComparisonAnalysisPanel113 .sa113-expanded>td{padding:8px 12px!important;text-align:left!important;background:#edf2f6}
+#salesComparisonAnalysisPanel113 .sa113-row-detail{margin:0;display:grid;gap:5px}
+#salesComparisonAnalysisPanel113 .sa113-row-detail>div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px}
+#salesComparisonAnalysisPanel113 .sa113-row-detail dt{color:#6f8594;font-size:13px}
+#salesComparisonAnalysisPanel113 .sa113-row-detail dd{margin:0;font-size:14px;line-height:1.5}
+#salesComparisonAnalysisPanel113 .sa113-empty{padding:20px;text-align:center;color:#728695;background:#f5f7f9;border-radius:10px}
+@media(max-width:900px){#salesComparisonAnalysisPanel113 .sa113-controls{grid-template-columns:repeat(2,minmax(0,1fr))}#salesComparisonAnalysisPanel113 #sa113Run{width:100%}#salesComparisonAnalysisPanel113 .sa113-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#salesComparisonAnalysisPanel113 .sa113-kpis>div:nth-child(2){border-right:0}#salesComparisonAnalysisPanel113 .sa113-kpis>div:nth-child(-n+2){border-bottom:1px solid #d7e1e9}}
+@media(max-width:640px){
+ #salesComparisonAnalysisPanel113 .sa113-controls{padding:10px;gap:8px}
+ #salesComparisonAnalysisPanel113 .sa113-list-filters{grid-template-columns:1fr 1fr}
+ #salesComparisonAnalysisPanel113 .sa113-list-filters>label:first-child{grid-column:1/-1}
+ #salesComparisonAnalysisPanel113 .sa113-kpis b{font-size:20px}
+ #salesComparisonAnalysisPanel113 .sa113-table,#salesComparisonAnalysisPanel113 .sa113-table tbody{display:block;min-width:0;width:100%}
+ #salesComparisonAnalysisPanel113 .sa113-table thead{display:none}
+ #salesComparisonAnalysisPanel113 .sa113-data-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 12px;padding:10px 12px;border-bottom:1px solid #d5e1e9}
+ #salesComparisonAnalysisPanel113 .sa113-data-row td{display:flex;align-items:flex-start;flex-direction:column;gap:2px;border:0;padding:0!important;text-align:left!important;font-size:15px}
+ #salesComparisonAnalysisPanel113 .sa113-data-row td:before{content:attr(data-label);font-size:12px;color:#6c8292}
+ #salesComparisonAnalysisPanel113 .sa113-data-row td:first-child{grid-column:1/-1;padding-bottom:3px!important}
+ #salesComparisonAnalysisPanel113 .sa113-data-row td:first-child:before{display:none}
+ #salesComparisonAnalysisPanel113 .sa113-expanded,#salesComparisonAnalysisPanel113 .sa113-expanded>td{display:block}
+ #salesComparisonAnalysisPanel113 .sa113-row-detail>div{grid-template-columns:96px minmax(0,1fr)}
+}
+
+</style>
+<script id="sales-analysis-v113-module">
+/* v113 read-only analysis. No payroll writes, storage changes or financial re-attribution. */
+(function(root){
+'use strict';
+function monthOK(m){return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m||''))&&Number(m.slice(0,4))>=1900;}
+function dateOK(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s||'')))return false;var d=new Date(s+'T12:00:00Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===s;}
+function lastDay(month){if(!monthOK(month))throw Error('請選擇有效月份。');var p=month.split('-').map(Number);return new Date(Date.UTC(p[0],p[1],0)).getUTCDate();}
+function previousMonth(month){if(!monthOK(month))throw Error('請選擇有效月份。');var p=month.split('-').map(Number);return (p[1]===1?p[0]-1:p[0])+'-'+String(p[1]===1?12:p[1]-1).padStart(2,'0');}
+function periods(month,today,mode){
+ if(!monthOK(month)||!dateOK(today))throw Error('月份或日期格式不正確。');
+ if(month>today.slice(0,7))throw Error('尚未開始的月份不能分析，請選本月或過去月份。');
+ var pm=previousMonth(month),isCurrent=month===today.slice(0,7),full=mode==='full';
+ if(full&&isCurrent)throw Error('本月尚未結束，請選「自動可比期間」，或改選已結束月份。');
+ var n=isCurrent?Math.min(Number(today.slice(8,10)),lastDay(pm)):lastDay(month);
+ var pn=isCurrent?n:lastDay(pm);
+ return {month:month,previousMonth:pm,current:{from:month+'-01',to:month+'-'+String(n).padStart(2,'0'),days:n},previous:{from:pm+'-01',to:pm+'-'+String(pn).padStart(2,'0'),days:pn},partial:isCurrent,clipped:isCurrent&&n<Number(today.slice(8,10)),label:isCurrent?'相同日數比較':'完整月份比較',note:isCurrent?'兩期都比較月初至 '+n+' 日；尚未結算整月。'+(n<Number(today.slice(8,10))?'因上月較短，本期也截至相同日數。':''):(n!==pn?'兩月日曆天數不同，請搭配回傳／上班天數與日均一起判讀。':'兩期均為完整月份。')};
+}
+function finite(v,label){if(v===null||v===undefined||v===''||typeof v==='boolean')throw Error(label+'缺少數值，不能當成 0。');var n=Number(v);if(!Number.isFinite(n))throw Error(label+'格式不正確。');return n;}
+function recordType(r){return String(r.recordType||(Number(r.returnAmount||0)>0&&Number(r.grossAmount||0)===0?'return':'sales'));}
+function validate(data,query){
+ if(!data||data.success!==true||!Array.isArray(data.records)||!Array.isArray(data.personRecords))throw Error('報表資料未完整讀取，請重新分析。');
+ if(data.personalSalesBuild93!=='20261007-next-month-overnight-v93')throw Error('目前後端未提供完整人員業績歸屬，請確認已部署原 v112 後端。');
+ if(!data.salesSchema90||data.salesSchema90.fieldsReady!==true)throw Error('業績資料結構尚未就緒，暫不顯示分析金額。');
+ if(!data.companyAccountScope||data.companyAccountScope.dateFrom!==query.dateFrom||data.companyAccountScope.dateTo!==query.dateTo||['area','storeId','lineUserId'].some(k=>String(data.companyAccountScope[k]||'')!==String(query[k]||'')))throw Error('回傳日期或篩選範圍不一致，請重新分析。');
+ ['records','personRecords'].forEach(kind=>{
+  var seen=new Set();data[kind].forEach(r=>{
+   if(!r||!r.id||seen.has(String(r.id)))throw Error('業績筆數有缺漏或重複，請重新分析。');seen.add(String(r.id));
+   if(!dateOK(r.businessDate)||r.businessDate<query.dateFrom||r.businessDate>query.dateTo)throw Error('業績日期超出分析範圍。');
+   finite(r.grossAmount,'營業額');
+   if(query.area&&String(r.area)!==query.area)throw Error('區域資料與篩選不符。');
+   if(query.storeId&&String(r.storeId)!==query.storeId)throw Error('門市資料與篩選不符。');
+   if(query.lineUserId&&String(recordType(r)==='return'?r.assignedSalespersonLineUserId||'':r.salespersonLineUserId||r.submitterLineUserId||'')!==query.lineUserId)throw Error('人員資料與篩選不符。');
+  });
+ });
+ if(!data.totals||Number(data.totals.recordCount)!==data.records.length)throw Error('報表筆數核對不一致，請重新分析。');
+ var total=data.records.reduce((s,r)=>s+finite(r.grossAmount,'營業額'),0);
+ if(Math.abs(total-finite(data.totals.grossAmount,'營業額合計'))>.01)throw Error('營業額明細與合計不一致，請重新分析。');
+ return data;
+}
+function change(current,previous,hasCurrent,hasPrevious){
+ if(!hasCurrent)return {delta:null,rate:null,label:'本期無回傳'};
+ if(!hasPrevious)return {delta:null,rate:null,label:'上期無回傳'};
+ var delta=current-previous;
+ if(previous<0)return {delta:delta,rate:null,label:'上期負值，不算成長率'};
+ if(previous===0)return {delta:delta,rate:current===0?0:null,label:current===0?'持平':'上期為 0，不算成長率'};
+ return {delta:delta,rate:delta/previous*100,label:delta>0?'成長':delta<0?'下降':'持平'};
+}
+function aggregate(data,kind,bridge){
+ var records=kind==='person'?data.personRecords:data.records,map=new Map();
+ records.forEach(r=>{
+  if(recordType(r)==='return'||r.isTyphoonPlaceholder===true)return;
+  var id=kind==='person'?String(r.salespersonLineUserId||r.submitterLineUserId||''):String(r.storeId||[r.area,r.storeName,r.storeFloor].join('|'));
+  if(!id)throw Error('業績缺少歸屬識別碼，暫停分析。');
+  var name=kind==='person'?String(r.salespersonName||r.submitterName||'未命名人員'):[r.storeName,r.storeFloor].filter(Boolean).join('｜')||'未命名門市';
+  var a=map.get(id);if(!a){a={id:id,name:name,amount:0,count:0,days:0,pending:0,dateSet:new Set(),locations:new Set(),areas:new Set(),average:null};map.set(id,a);}
+  a.amount+=finite(r.grossAmount,'營業額');a.count++;
+  if(r.isTyphoonClosure!==true)a.dateSet.add(r.businessDate);
+  a.locations.add([r.storeName,r.storeFloor].filter(Boolean).join('｜'));if(r.area)a.areas.add(r.area);
+ });
+ var work=new Map();
+ if(kind==='person'){
+  if(!bridge||typeof bridge.workdayStats113!=='function')throw Error('上班日期統計元件未載入，請重新開啟網頁。');
+  work=new Map(bridge.workdayStats113(records,[]).map(r=>[String(r.lineUserId),r]));
+ }
+ map.forEach(a=>{
+  var w=work.get(a.id);a.days=kind==='person'?Number(w&&w.actualWorkDays||0):a.dateSet.size;
+  a.pending=kind==='person'?Number(w&&w.pendingDays||0):0;
+  a.average=a.days>0&&a.pending===0?a.amount/a.days:null;
+  a.locations=[...a.locations].filter(Boolean);a.areas=[...a.areas];delete a.dateSet;
+ });
+ var sorted=[...map.values()].sort((a,b)=>b.amount-a.amount||a.name.localeCompare(b.name,'zh-Hant'));
+ var prev=null,rank=0;sorted.forEach((a,i)=>{if(prev===null||a.amount!==prev)rank=i+1;a.rank=rank;prev=a.amount;});
+ return map;
+}
+function model(current,previous,kind,bridge){
+ var c=aggregate(current,kind,bridge),p=aggregate(previous,kind,bridge);
+ var rows=[...new Set([...c.keys(),...p.keys()])].map(id=>{
+  var a=c.get(id),b=p.get(id),x=change(a?a.amount:0,b?b.amount:0,!!a,!!b);
+  return {id:id,name:a?a.name:b.name,current:a||null,previous:b||null,delta:x.delta,rate:x.rate,state:x.label,rankDelta:a&&b?b.rank-a.rank:null,averageChange:a&&b&&a.average!==null&&b.average!==null?change(a.average,b.average,true,true):null};
+ });
+ return rows.sort((a,b)=>Number(!!b.current)-Number(!!a.current)||(b.current?b.current.amount:0)-(a.current?a.current.amount:0)||a.name.localeCompare(b.name,'zh-Hant'));
+}
+function total(rows){
+ var sum=side=>rows.reduce((s,r)=>s+(r[side]?r[side].amount:0),0),c=sum('current'),p=sum('previous');
+ var hc=rows.some(r=>r.current),hp=rows.some(r=>r.previous),ch=change(c,p,hc,hp);
+ return {current:c,previous:p,hasCurrent:hc,hasPrevious:hp,delta:ch.delta,rate:ch.rate,state:ch.label,currentEntities:rows.filter(r=>r.current).length,previousEntities:rows.filter(r=>r.previous).length};
+}
+var api={periods:periods,previousMonth:previousMonth,validate:validate,change:change,aggregate:aggregate,model:model,total:total};
+root.StarredSalesAnalysisCore113=api;
+if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window==='object'?window:globalThis);
+
+(function(){
+'use strict';
+const BUILD='20261102-sales-analysis-v113',core=window.StarredSalesAnalysisCore113;
+const $=id=>document.getElementById(id),bridge=()=>window.STARRED_SALES_REPORT_BRIDGE_V55;
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:0}).format(n),money=n=>n==null?'—':(n<0?'−':'')+'$'+fmt(Math.abs(n));
+const signed=n=>n==null?'—':(n>0?'+':n<0?'−':'')+'$'+fmt(Math.abs(n));
+const percent=n=>n==null?'—':(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(1)+'%';
+const tone=n=>n==null||n===0?'neutral':n>0?'up':'down';
+const dateLabel=r=>r.from+' ～ '+r.to;
+let view='average',seq=0,busy=false,snapshot=null,rows=[],openRow='',lastContext='',timer=null;
+function today(){let p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=k=>p.find(x=>x.type===k)?.value;return v('year')+'-'+v('month')+'-'+v('day');}
+function actor(){const u=typeof currentUser!=='undefined'?currentUser:null;return u?.adminSessionToken?String(u.id||u.username)+'|'+u.adminSessionToken+'|'+(window.starredVerifiedLineUser?.lineUserId||''):'';}
+function allowed(){return !!actor()&&!!window.StarredPageAccess112?.can('salesReport')&&typeof isAdminLoginValid==='function'&&isAdminLoginValid();}
+function scope(){return {area:$('salesAdminArea')?.value||'',storeId:$('salesAdminStore')?.value||'',lineUserId:$('salesAdminPerson')?.value||''};}
+function context(){return JSON.stringify([actor(),$('sa113Month')?.value,$('sa113Mode')?.value,scope()]);}
+function status(text,bad=false){const e=$('sa113Status');if(e){e.textContent=text;e.classList.toggle('error',bad);}}
+function clear(text){seq++;busy=false;snapshot=null;rows=[];openRow='';if($('sa113Result'))$('sa113Result').replaceChildren();if($('sa113Target'))$('sa113Target').innerHTML='<option value="">全部對象</option>';if($('sa113Run'))$('sa113Run').disabled=false;status(text||'選擇月份後按「開始分析」。不會修改原始業績或薪資。');}
+function requireReady(){if(!allowed()||!snapshot||snapshot.auth!==actor()||snapshot.key!==context())throw Error('尚未完成目前條件的分析，請先按「開始分析」。');return snapshot;}
+function wireTabs(){
+ const switcher=document.querySelector('#salesReportPersonDetailView .sales-comparison-switcher');if(!switcher)return;
+ [...switcher.querySelectorAll('button')].forEach(b=>{b.classList.toggle('active',b.dataset.salesComparisonView===view);b.setAttribute('aria-selected',String(b.dataset.salesComparisonView===view));});
+}
+const oldShow=window.showSalesComparisonView;
+window.showSalesComparisonView=function(next,button){
+ view=['average','analysis','detail'].includes(next)?next:'average';
+ if(view!=='analysis'){oldShow?.call(this,view,button);if($('salesComparisonAnalysisPanel113'))$('salesComparisonAnalysisPanel113').hidden=true;}
+ else{
+  if($('salesComparisonDetailPanel'))$('salesComparisonDetailPanel').hidden=true;
+  if($('salesComparisonAveragePanel'))$('salesComparisonAveragePanel').hidden=true;
+  if($('salesComparisonAnalysisPanel113'))$('salesComparisonAnalysisPanel113').hidden=false;
+  if($('salesComparisonHeading'))$('salesComparisonHeading').textContent='分析業績';
+  if($('salesComparisonDescription'))$('salesComparisonDescription').textContent='店點／人員與上月比較；先看總額增減，再核對天數與日均。';
+  if(snapshot&&snapshot.key!==context())clear('條件已變更，請重新分析。');
+ }
+ wireTabs();
+};
+function selectedRows(){const target=$('sa113Target')?.value||'',q=String($('sa113Keyword')?.value||'').trim().toLowerCase();let list=rows.filter(r=>(!target||r.id===target)&&(!q||[r.name,...(r.current?.locations||r.previous?.locations||[])].join(' ').toLowerCase().includes(q)));const sort=$('sa113Sort')?.value||'current';return list.sort((a,b)=>{const val=r=>sort==='delta'?r.delta:sort==='rate'?r.rate:sort==='decline'?(r.delta==null?null:-r.delta):r.current?.amount;const av=val(a),bv=val(b);return Number(bv!=null)-Number(av!=null)||(bv||0)-(av||0)||a.name.localeCompare(b.name,'zh-Hant');});}
+function fillTargets(){const select=$('sa113Target'),previous=select.value;select.innerHTML='<option value="">全部'+($('sa113Kind').value==='store'?'店點':'人員')+'</option>'+rows.slice().sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');if(rows.some(r=>r.id===previous))select.value=previous;}
+function recalc(){if(!snapshot)return;try{requireReady();rows=core.model(snapshot.current,snapshot.previous,$('sa113Kind').value,bridge());fillTargets();openRow='';render();}catch(e){clear(e.message);}}
+function dayText(r){return (r.previous?r.previous.days:'—')+' → '+(r.current?r.current.days:'—')+' 天';}
+function rowNote(r){let n=[];if(!r.current||!r.previous)n.push(r.state+'，不判定成長率');else if(r.previous.amount<=0&&r.rate===null)n.push(r.state);if((r.current?.pending||0)+(r.previous?.pending||0)>0)n.push('工時待確認；日均暫不顯示');if(r.current&&r.previous&&r.current.days!==r.previous.days)n.push('回傳／上班天數不同');return n.join('；');}
+function rankText(r){if(!r.current)return '本期無排名';if(!r.previous)return '上期無排名';return r.rankDelta>0?'↑ '+r.rankDelta:r.rankDelta<0?'↓ '+(-r.rankDelta):'持平';}
+function detailHTML(r){const kind=$('sa113Kind').value,dayLabel=kind==='store'?'有業績回傳日期':'已確認上班日期';return '<dl class="sa113-row-detail"><div><dt>日均比較</dt><dd>'+money(r.previous?.average)+' → '+money(r.current?.average)+(r.averageChange?.rate!=null?'（'+percent(r.averageChange.rate)+'）':'')+'</dd></div><div><dt>'+dayLabel+'</dt><dd>'+dayText(r)+'</dd></div><div><dt>銷售回傳筆數</dt><dd>'+(r.previous?r.previous.count:'—')+' → '+(r.current?r.current.count:'—')+' 筆（不是交易訂單數）</dd></div><div><dt>排名</dt><dd>'+(r.previous?'第 '+r.previous.rank+' 名':'上期無排名')+' → '+(r.current?'第 '+r.current.rank+' 名':'本期無排名')+'（同額並列）</dd></div>'+(kind==='person'?'<div><dt>回傳店點</dt><dd>'+esc([...new Set([...(r.previous?.locations||[]),...(r.current?.locations||[])])].join('、')||'—')+'</dd></div><div><dt>待確認日期</dt><dd>'+(r.previous?.pending||0)+' → '+(r.current?.pending||0)+' 天</dd></div>':'')+(rowNote(r)?'<div><dt>核對提醒</dt><dd>'+esc(rowNote(r))+'</dd></div>':'')+'</dl>';}
+function insights(list){let parts=[];const comparable=list.filter(r=>r.delta!==null),up=comparable.filter(r=>r.delta>0).sort((a,b)=>b.delta-a.delta)[0],down=comparable.filter(r=>r.delta<0).sort((a,b)=>a.delta-b.delta)[0];if(up)parts.push('增額最多：'+up.name+' '+signed(up.delta));if(down)parts.push('減額最多：'+down.name+' '+signed(down.delta));const missing=list.filter(r=>!r.previous||!r.current).length;if(missing)parts.push(missing+' 個對象有一期無回傳，不代表新開店／離職或零業績');if(list.some(r=>(r.current?.pending||0)+(r.previous?.pending||0)>0))parts.push('有人員工時尚未確認，暫不計算該期人員日均');return parts.length?'<div class="sa113-insights">'+parts.map(p=>'<p>'+esc(p)+'</p>').join('')+'</div>':'';}
+function render(){
+ let s;try{s=requireReady();}catch(e){clear(e.message);return;}const list=selectedRows(),tot=core.total(list),kind=$('sa113Kind').value,unit=kind==='store'?'店點':'人員';
+ const cards=[['本期營業額',tot.hasCurrent?money(tot.current):'無回傳',s.periods.month],['上期營業額',tot.hasPrevious?money(tot.previous):'無回傳',s.periods.previousMonth],['增減金額',signed(tot.delta),'含回傳對象變動影響'],['成長率',percent(tot.rate),tot.rate===null?tot.state:'（本期－上期）÷ 上期']];
+ const ranges='<div class="sa113-period"><span>'+esc(s.periods.label)+'｜本期 '+esc(dateLabel(s.periods.current))+'　對照 '+esc(dateLabel(s.periods.previous))+'</span><small>'+esc(s.periods.note)+' 依目前可讀取的雲端回傳紀錄計算，無回傳不等於停業。</small></div>';
+ const html=ranges+'<div class="sa113-kpis">'+cards.map((c,i)=>'<div><span>'+c[0]+'</span><b class="'+(i>1?tone(tot.delta):'')+'">'+esc(c[1])+'</b><small>'+esc(c[2])+'</small></div>').join('')+'</div>'+insights(list)+
+ '<div class="sa113-count">共 '+list.length+' 個'+unit+' · 本期有回傳 '+tot.currentEntities+'／上期 '+tot.previousEntities+' · 點名稱可展開核對</div>'+
+ (list.length?'<div class="sa113-table-wrap"><table class="sa113-table"><thead><tr><th scope="col">'+unit+'</th><th scope="col">上期營業額</th><th scope="col">本期營業額</th><th scope="col">增減金額</th><th scope="col">成長率</th><th scope="col">本期日均</th><th scope="col">天數（上→本）</th><th scope="col">排名變化</th></tr></thead><tbody>'+list.map(r=>'<tr class="sa113-data-row'+(openRow===r.id?' is-open':'')+'"><td data-label="'+unit+'"><button type="button" data-sa113-row="'+esc(r.id)+'" aria-expanded="'+(openRow===r.id)+'">'+esc(r.name)+' <span aria-hidden="true">'+(openRow===r.id?'⌃':'⌄')+'</span></button>'+(rowNote(r)?'<small>'+esc(rowNote(r))+'</small>':'')+'</td><td data-label="上期營業額">'+(r.previous?money(r.previous.amount):'無回傳')+'</td><td data-label="本期營業額">'+(r.current?money(r.current.amount):'無回傳')+'</td><td data-label="增減金額" class="'+tone(r.delta)+'">'+signed(r.delta)+'</td><td data-label="成長率" class="'+tone(r.rate)+'">'+percent(r.rate)+'</td><td data-label="本期日均">'+money(r.current?.average)+'</td><td data-label="天數（上→本）">'+dayText(r)+'</td><td data-label="排名變化">'+rankText(r)+'</td></tr>'+(openRow===r.id?'<tr class="sa113-expanded"><td colspan="8">'+detailHTML(r)+'</td></tr>':'')).join('')+'</tbody></table></div>':'<div class="sa113-empty">這兩期沒有符合條件的銷售回傳。未將缺少的資料當成 0 元。</div>');
+ $('sa113Result').innerHTML=html;status('分析完成；讀取時間 '+new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,dateStyle:'short',timeStyle:'medium'}).format(s.loadedAt)+'。僅供營運比較，不改動原始報表。');
+}
+async function run(){
+ if(busy)return;const token=++seq,initial=context(),id=actor();lastContext=initial;busy=true;snapshot=null;rows=[];openRow='';$('sa113Run').disabled=true;$('sa113Result').replaceChildren();status('正在讀取本期與上期業績，完成核對後顯示…');
+ try{
+  if(window.StarredPageAccess112)await window.StarredPageAccess112.ensure();
+  if(token!==seq||id!==actor()||initial!==context())return;
+  if(!allowed())throw Error('目前帳號沒有業績報表查看權限。');
+  const p=core.periods($('sa113Month').value,today(),$('sa113Mode').value),shared=scope();
+  const a={...shared,dateFrom:p.current.from,dateTo:p.current.to},b={...shared,dateFrom:p.previous.from,dateTo:p.previous.to};
+  let timeout;const responses=await Promise.race([Promise.all([window.starredApi('sales_admin_report',a),window.starredApi('sales_admin_report',b)]),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('讀取逾時，請重新分析；不會顯示不完整金額。')),60000);})]).finally(()=>clearTimeout(timeout));
+  if(token!==seq||id!==actor()||initial!==context())return;
+  if(!allowed())throw Error('查看權限已變更，請重新登入。');
+  const current=core.validate(responses[0],a),previous=core.validate(responses[1],b);
+  snapshot={auth:id,key:initial,current,previous,periods:p,loadedAt:new Date(),scope:shared};recalc();
+ }catch(e){if(token===seq){snapshot=null;rows=[];$('sa113Result').replaceChildren();status('分析未完成：'+String(e.message||e),true);}}
+ finally{if(token===seq){busy=false;$('sa113Run').disabled=false;}}
+}
+function exportRows(){const s=requireReady(),kind=$('sa113Kind').value;return selectedRows().map(r=>({'對象':r.name,'上期營業額':r.previous?r.previous.amount:null,'本期營業額':r.current?r.current.amount:null,'增減金額':r.delta,'成長率':r.rate===null?null:r.rate/100,'上期日均':r.previous?.average??null,'本期日均':r.current?.average??null,'上期天數':r.previous?.days??null,'本期天數':r.current?.days??null,'日數口徑':kind==='store'?'有銷售回傳的日期（含零元、排除颱風停業）':'已確認上班日期（同一天一次、代銷售不增加）','上期排名':r.previous?.rank??null,'本期排名':r.current?.rank??null,'排名變化':r.rankDelta,'上期銷售回傳筆數':r.previous?.count??null,'本期銷售回傳筆數':r.current?.count??null,'核對提醒':rowNote(r)}));}
+function exportExcel(){
+ try{
+  const s=requireReady(),X=window.XLSX;if(!X?.utils)throw Error('Excel 元件尚未載入，請重新開啟網頁。');
+  const data=exportRows(),headers=data.length?Object.keys(data[0]):['資料'],values=data.length?data.map(r=>headers.map(k=>r[k])):[['沒有符合條件的資料']];
+  const aoa=[['分析業績（營業額比較）'],['本期',dateLabel(s.periods.current),'上期',dateLabel(s.periods.previous)],['比較方式',s.periods.label,s.periods.note],['口徑','沿用營業總額；不另加公司帳，不在分析頁再次扣退貨，不含薪資、費用及扣款。'],['注意','空白為無回傳／不可比較；0 為有紀錄的零元。回傳筆數不是交易訂單數。'],['篩選',scopeLabel(s.scope),'對象', $('sa113Target').selectedOptions[0]?.textContent||'全部'],[],headers,...values];
+  const ws=X.utils.aoa_to_sheet(aoa);ws['!cols']=headers.map((k,i)=>({wch:i===0?26:k==='核對提醒'||k==='日數口徑'?50:18}));
+  for(let i=8;i<aoa.length;i++){headers.forEach((h,j)=>{const cell=ws[X.utils.encode_cell({r:i,c:j})];if(cell?.t==='n')cell.z=h==='成長率'?'0.0%;[Red]-0.0%;0.0%':'#,##0;[Red]-#,##0;0';});}
+  const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'分析業績');X.writeFile(wb,'業績分析_'+$('sa113Kind').value+'_'+s.periods.month+'.xlsx');
+ }catch(e){status('匯出未完成：'+e.message,true);}
+}
+function scopeLabel(s){const labels=[['salesAdminArea','區域'],['salesAdminStore','門市'],['salesAdminPerson','人員']];return labels.map(([id,k])=>k+'：'+($(id)?.selectedOptions[0]?.textContent||'全部')).join('／');}
+function print(){
+ try{
+  const s=requireReady(),data=exportRows(),headers=data.length?Object.keys(data[0]):['資料'],w=window.open('','_blank');if(!w)throw Error('請允許彈出視窗後再列印。');
+  const table='<table><thead><tr>'+headers.map(k=>'<th>'+esc(k)+'</th>').join('')+'</tr></thead><tbody>'+data.map(r=>'<tr>'+headers.map(k=>'<td>'+esc(r[k]==null?'—':k==='成長率'?percent(r[k]*100):typeof r[k]==='number'?fmt(r[k]):r[k])+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+  w.document.open();w.document.write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>分析業績</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:"Microsoft JhengHei",sans-serif;color:#263b49;margin:18px;font-size:12px}h1{font-size:22px;font-weight:500}p{line-height:1.6}table{width:100%;border-collapse:collapse}th,td{padding:5px;border:1px solid #bcc7cf;font-size:10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#eef2f5;font-weight:400}button{padding:10px 18px;margin:0 8px 12px 0}@media print{button{display:none}thead{display:table-header-group}tr{break-inside:avoid}}</style></head><body><button id="print113">列印／另存 PDF</button><button id="close113">關閉</button><h1>分析業績｜營業額與上月比較</h1><p>本期 '+esc(dateLabel(s.periods.current))+'；上期 '+esc(dateLabel(s.periods.previous))+'<br>'+esc(s.periods.note)+'<br>'+esc(scopeLabel(s.scope))+'<br>沿用營業總額，不另加公司帳、不再次扣退貨；回傳筆數不是交易筆數。無回傳／不可比較顯示 —，不等於 0 元。</p>'+table+'</body></html>');w.document.close();w.document.getElementById('print113').onclick=()=>w.print();w.document.getElementById('close113').onclick=()=>w.close();
+ }catch(e){status('列印未完成：'+e.message,true);}
+}
+['printSalesComparisonCurrent','printCurrentSalesReport','exportSalesComparisonCurrentExcel','exportCurrentSalesReportExcel'].forEach(name=>{const old=window[name];window[name]=function(){if(view==='analysis'&&$('salesReportPersonDetailView')?.classList.contains('active'))return name.startsWith('print')?print():exportExcel();return old?.apply(this,arguments);};});
+function mount(){
+ if(!$('salesComparisonAnalysisPanel113'))return;
+ const current=today().slice(0,7),end=$('salesAdminDateTo')?.value?.slice(0,7);$('sa113Month').max=current;$('sa113Month').value=end&&end<=current?end:current;
+ $('sa113Run').addEventListener('click',run);
+ ['sa113Month','sa113Mode'].forEach(id=>$(id).addEventListener('change',()=>clear('月份已變更，請按「開始分析」。')));
+ $('sa113Kind').addEventListener('change',recalc);
+ ['sa113Target','sa113Sort'].forEach(id=>$(id).addEventListener('change',()=>{openRow='';if(snapshot)render();}));
+ $('sa113Keyword').addEventListener('input',()=>{if(snapshot)render();});
+ $('sa113Result').addEventListener('click',e=>{const b=e.target.closest('[data-sa113-row]');if(!b)return;const id=b.dataset.sa113Row;openRow=openRow===id?'':id;render();$('sa113Result').querySelector('[data-sa113-row="'+CSS.escape(id)+'"]')?.focus({preventScroll:true});});
+ document.addEventListener('change',e=>{if(['salesAdminArea','salesAdminStore','salesAdminPerson'].includes(e.target.id))clear('上方篩選已變更，請重新分析。');});
+ window.addEventListener('starred-sales-report-loaded113',()=>{if(snapshot||busy)clear('原報表已更新，請重新分析以取得最新數據。');});
+ const oldLogout=window.logout;if(oldLogout)window.logout=function(){clear();return oldLogout.apply(this,arguments);};
+ window.showSalesComparisonView('average');lastContext=context();
+ timer=setInterval(()=>{if((snapshot||busy)&&(!allowed()||context()!==lastContext)){clear(!allowed()?'登入或權限已變更，分析資料已清除。':'條件已變更，請重新分析。');}lastContext=context();},1000);
+ ['sa113Month','sa113Mode','salesAdminArea','salesAdminStore','salesAdminPerson'].forEach(id=>$(id)?.addEventListener('change',()=>{lastContext=context();}));
+}
+window.StarredSalesAnalysis113={build:BUILD,run,clear,recalc,exportRows,print,exportExcel,state:()=>({view,busy,ready:!!snapshot,rows:rows.length})};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+})();
+
+</script>
 </body>
 </html>
