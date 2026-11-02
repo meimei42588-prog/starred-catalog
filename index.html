@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v111.1 checked delivery: unique patch placement; server-side order-query wrapper preserved. -->
 <!-- v110: rebuilt from intact v108; activity layout only, print templates preserved; existing SQL/API/secrets unchanged. -->
 <!-- v108: unified activity editor + grouped store dropdown + system-admin-only bulk disable. Requires v108 catalog RPC and line-api; v107 core retained. -->
 <!-- v107 recovery: one activity extension after original modules; original report scripts preserved. v105 API/SQL unchanged. -->
@@ -6248,7 +6249,9 @@ function renderHome(){
   .map(list=>list.sort((a,b)=>String(a.start).localeCompare(String(b.start))||String(a.end).localeCompare(String(b.end))))
   .sort((a,b)=>{
     const firstA=a[0],firstB=b[0];
-    return String(firstA.mall).localeCompare(String(firstB.mall),"zh-Hant")
+    const regionOrder111={north:0,central:1,south:2,east:3};
+    return (regionOrder111[firstA.area]??99)-(regionOrder111[firstB.area]??99)
+      ||String(firstA.mall).localeCompare(String(firstB.mall),"zh-Hant")
       ||String(firstA.location).localeCompare(String(firstB.location),"zh-Hant");
   });
 
@@ -7329,27 +7332,74 @@ function renderOrderPagination(totalPages,totalItems){
  box.innerHTML=`<button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent-1})" ${orderPageCurrent===1?'disabled':''}>‹ 上一頁</button><div class="order-page-numbers">${pages.map(p=>p===0?'<span class="order-page-dots">…</span>':`<button type="button" class="order-page-number ${p===orderPageCurrent?'active':''}" onclick="changeOrderPage(${p})">${p}</button>`).join('')}</div><button type="button" class="order-page-nav" onclick="changeOrderPage(${orderPageCurrent+1})" ${orderPageCurrent===totalPages?'disabled':''}>下一頁 ›</button><span class="order-page-info">第 ${orderPageCurrent} / ${totalPages} 頁・共 ${totalItems} 筆</span>`
 }
 function renderOrderCards(options={}){
- const viewState=options&&options.preserveView===false?null:captureOrderListViewState();
- renderFrontOrderStoreFilterOptions();
- const from=$("orderDateFrom")?.value||'',to=$("orderDateTo")?.value||'',store=$("orderStoreFilter")?.value||'';
- const list=options.serverRows99||orders.filter(o=>{const d=orderDateValue(o);return match(o,$("orderKeyword")?.value,$("orderStatusFilter")?.value)&&(!store||o.store===store)&&(!from||d>=from)&&(!to||d<=to)});
- const totalItems99=options.serverTotal99==null?list.length:options.serverTotal99;
- const totalPages=Math.max(1,Math.ceil(totalItems99/ORDER_PAGE_SIZE));if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
- const pageList=options.serverRows99?list:list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
- $("orderCardList").innerHTML=pageList.length?pageList.map(o=>{
-   const archived=isBackupOrder(o),shipped=isOrderShipped(o),st=String(o.status||'pending');
-   const isOwner=!archived&&canCurrentLineUserOwnOrder(o);
-   const canEdit=isOwner&&(st==='pending'||st==='change_request');
-   const canRequest=isOwner&&st==='processing';
-   const updated=escapeHtml(orderLastUpdatedValue(o));
-   const photoCount=archived?0:getOrderPhotoKeys(o).length;
-   const statusClass=shipped?'shipped':(st==='returned'&&o.returnReceived?'return_received':st);
-   const statusLabel=shipped?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';
-   return `<article class="order-card${archived?' order-text-only98':''}" data-order-id="${escapeHtml(String(o.id||''))}"><button class="order-card-summary" onclick="toggleOrderCard(this)"><div class="sent-summary-main"><b>${escapeHtml(o.name)}</b><span>${escapeHtml(o.phone)}</span><small>${escapeHtml(orderDateValue(o))}</small>${archived?'<small class="order-archive-label98">已備份・文字紀錄</small>':''}${updated?`<small class="order-updated-time">最後更新：${updated}</small>`:''}</div><span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span><span class="order-chevron">⌄</span></button><div class="order-card-detail"><div class="customer-block"><div class="customer-title">收件人資料</div><div class="customer-grid"><div><span>姓名</span><b>${escapeHtml(o.name)}</b></div><div><span>電話</span><b>${escapeHtml(o.phone)}</b></div><div class="wide"><span>回傳人員</span><b>${escapeHtml(o.returnPerson||'（登入後自動帶入）')}</b></div><div class="wide"><span>門市</span><b>${escapeHtml(o.store||'—')}</b></div><div class="wide"><span>訂單編號</span><b>${escapeHtml(o.orderNumber||o.id||'—')}</b></div><div class="wide"><span>地址</span><b>${escapeHtml(o.address)}</b></div><div class="wide"><span>商品／備註</span><b>${escapeHtml(o.items)}</b></div>${o.note&&o.note!==o.items?`<div class="wide"><span>訂單備註</span><b>${escapeHtml(o.note)}</b></div>`:''}</div></div><div class="delivery-photo-row"><div class="delivery-inline"><span>配送</span><b>${escapeHtml(o.delivery)}</b></div><div class="front-order-action-group">${photoCount?`<button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhotosByOrderId('${o.id}')">查看照片${photoCount>1?`（${photoCount} 張）`:''}</button>`:''}${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}</div></div>${shipped?`<div class="ship-line"><b>${escapeHtml(o.handler)}</b><span>${escapeHtml(o.shippedDate)}</span></div>`:''}${archived?'<div class="order-archive-note98">已移至訂單備份，仍可查詢完整文字資料；不顯示照片，僅供查閱。</div>':st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}</div></article>`;
- }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
- renderOrderPagination(totalPages,totalItems99);
- if(viewState)restoreOrderListViewState(viewState)
-}
+    const esc111 = value => escapeHtml(value == null ? "" : String(value));
+    const viewState=options&&options.preserveView===false?null:captureOrderListViewState();
+    renderFrontOrderStoreFilterOptions();
+    const from=$('orderDateFrom')?.value||'', to=$('orderDateTo')?.value||'', store=$('orderStoreFilter')?.value||'';
+    const list=options.serverRows99||orders.filter(o=>{const d=orderDateValue(o);return match(o,$('orderKeyword')?.value,$('orderStatusFilter')?.value)&&(!store||o.store===store)&&(!from||d>=from)&&(!to||d<=to)});
+    const totalItems99=options.serverTotal99==null?list.length:options.serverTotal99;
+    const totalPages=Math.max(1,Math.ceil(totalItems99/ORDER_PAGE_SIZE));
+    if(orderPageCurrent>totalPages)orderPageCurrent=totalPages;if(orderPageCurrent<1)orderPageCurrent=1;
+    const pageList=options.serverRows99?list:list.slice((orderPageCurrent-1)*ORDER_PAGE_SIZE,orderPageCurrent*ORDER_PAGE_SIZE);
+    $('orderCardList').innerHTML=pageList.length?pageList.map(o=>{
+      const archived=isBackupOrder(o), shipped=isOrderShipped(o), st=String(o.status||'pending');
+      const isOwner=!archived&&canCurrentLineUserOwnOrder(o);
+      const canEdit=isOwner&&(st==='pending'||st==='change_request');
+      const canRequest=isOwner&&st==='processing';
+      const updated=esc111(orderLastUpdatedValue(o)||'—');
+      const dateText=esc111(orderDateValue(o)||'—');
+      const photoCount=archived?0:getOrderPhotoKeys(o).length;
+      const statusClass=shipped?'shipped':(st==='returned'&&o.returnReceived?'return_received':st);
+      const statusLabel=shipped?'已寄出':st==='cancelled'?'取消訂單':st==='returned'?(o.returnReceived?'已收回退貨':'退貨'):st==='processing'?'處理中':st==='change_request'?'更改申請':'待寄出';
+      const orderNo=esc111(o.orderNumber||o.id||'—');
+      const name=esc111(o.name||'');
+      const phone=esc111(o.phone||'');
+      const storePerson=esc111((o.store||'—')+' ｜ '+(o.returnPerson||'（登入後自動帶入）'));
+      const addressLabel=o.delivery==='門市自取'?'取件門市':'地址';
+      const addressValue=esc111(o.delivery==='門市自取'?(o.pickupStore||String(o.address||'').replace(/^取件門市：/,'')):o.address||'—');
+      const itemsValue=esc111(o.items||'');
+      const noteBlock=(o.note&&o.note!==o.items)?`<div class="wide"><span>訂單備註</span><b>${esc111(o.note)}</b></div>`:'';
+      const shippedBlock=shipped?`<div class="wide"><span>處理人／寄出日期</span><b>${esc111((o.handler||'—')+' ｜ '+(o.shippedDate||'—'))}</b></div>`:'';
+      return `<article class="order-card${archived?' order-text-only98':''}" data-order-id="${esc111(String(o.id||''))}">
+        <button class="order-card-summary" onclick="toggleOrderCard(this)">
+          <div class="sent-summary-main">
+            <div class="order-mobile-headline"><b>${name}</b><span class="order-mobile-order-no">${orderNo}</span></div>
+            <small class="order-mobile-updated">最後更新：${updated}</small>
+            ${archived?'<small class="order-archive-label98">已備份・文字紀錄</small>':''}
+          </div>
+          <span class="order-summary-badges"><span class="order-status ${statusClass}">${statusLabel}</span>${canEdit?'<span class="order-editable-badge" title="這是您回傳的訂單，可以修改">可編輯</span>':'<span class="order-editable-placeholder" aria-hidden="true"></span>'}</span>
+          <span class="order-chevron">⌄</span>
+        </button>
+        <div class="order-card-detail">
+          <div class="customer-block">
+            <div class="customer-title">訂單資料</div>
+            <div class="customer-grid compact-order-grid">
+              <div><span>客戶／電話</span><b>${name} ｜ ${phone}</b></div>
+              <div><span>回傳店點／人員</span><b>${storePerson}</b></div>
+              <div class="wide"><span>${addressLabel}</span><b class="${o.delivery==='門市自取'?'pickup-store-alert':''}">${addressValue}${o.delivery==='門市自取'?'<span class="delivery-pickup-badge">門市自取</span>':''}</b></div>
+              <div class="wide"><span>商品／備註</span><b>${itemsValue}</b></div>
+              <div><span>配送方式</span><b>${esc111(o.delivery||'—')}</b></div>
+              <div><span>訂單日期</span><b>${dateText}</b></div>
+              ${shippedBlock}
+              ${noteBlock}
+            </div>
+          </div>
+          <div class="delivery-photo-row">
+            <div class="delivery-inline"><span>訂單狀態</span><b>${statusLabel}</b></div>
+            <div class="front-order-action-group">
+              ${photoCount?`<button type="button" class="photo-open-only photo-inline-btn" onclick="event.stopPropagation();viewOrderPhotosByOrderId('${o.id}')">查看照片${photoCount>1?`（${photoCount} 張）`:''}</button>`:''}
+              ${canRequest?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">編輯／更改申請</button>`:''}
+              ${canEdit?`<button type="button" class="front-order-edit-btn" onclick="event.stopPropagation();openOrderEdit('${o.id}','front')">${st==='change_request'?'編輯申請內容':'修改這筆訂單'}</button>`:''}
+            </div>
+          </div>
+          ${archived?'<div class="order-archive-note98">已移至訂單備份，仍可查詢完整文字資料；不顯示照片，僅供查閱。</div>':st==='change_request'?'<div class="front-order-edit-note">此訂單的更改申請已送出；後台可查看編輯前、編輯後資料，確認申請後會回到處理中。</div>':canRequest?'<div class="front-order-edit-note">此訂單正在處理中；按「編輯／更改申請」完成編輯後，再送出更改申請。</div>':(!canEdit?`<div class="front-order-edit-note">${shipped?'此訂單已寄出，前台不可再修改。':'只有原回傳人員可以從此頁修改這筆訂單。'}</div>`:'')}
+        </div>
+      </article>`;
+    }).join(''):'<div class="empty">此日期區間沒有訂單資料</div>';
+    renderOrderPagination(totalPages,totalItems99);
+    if(viewState)restoreOrderListViewState(viewState);
+  }
+
 async function requestOrderChange(orderId){
  const o=orders.find(x=>String(x.id)===String(orderId));if(!o)return;
  if(isBackupOrder(o)||!canCurrentLineUserOwnOrder(o)||String(o.status||'')!=='processing'){showOrderAction('無法申請','只有原回傳人員可對處理中的訂單提出更改申請。');return}
@@ -8516,12 +8566,12 @@ window.saveEventCloud=async function(){
 };
 window.deleteEvent=async function(id){
   if(!confirm("確定刪除這筆活動？"))return;
-  try{await removeEventPhotos([id]);const {error}=await cloudDb.from("department_events").delete().eq("id",Number(id));if(error)throw error;selectedManageEventIds.delete(String(id));await loadCloudData()}catch(error){cloudError("活動刪除失敗",error)}
+  try{await removeEventPhotos([id]);const {error}=await cloudDb.from("department_events").delete().eq("id",Number(id));if(error)throw error;selectedManageEventIds.delete(String(id));await loadCloudData();showActivityFeedback111('刪除成功','這筆活動已經刪除。')}catch(error){cloudError("活動刪除失敗",error)}
 };
 window.deleteSelectedEvents=async function(){
   const ids=[...selectedManageEventIds];if(!ids.length)return;
   if(!confirm(`確定刪除已選取的 ${ids.length} 筆活動？刪除後無法復原。`))return;
-  try{await removeEventPhotos(ids);const {error}=await cloudDb.from("department_events").delete().in("id",ids.map(Number));if(error)throw error;selectedManageEventIds.clear();await loadCloudData()}catch(error){cloudError("批次刪除失敗",error)}
+  try{await removeEventPhotos(ids);const {error}=await cloudDb.from("department_events").delete().in("id",ids.map(Number));if(error)throw error;selectedManageEventIds.clear();await loadCloudData();showActivityFeedback111('刪除成功','已刪除 '+ids.length+' 筆活動。')}catch(error){cloudError("批次刪除失敗",error)}
 };
 
 // 活動及門市改由 Supabase 管理；管理帳號暫時維持此瀏覽器，下一階段再改 Supabase Auth。
@@ -24295,5 +24345,159 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }
 </style>
 
+
+<style id="site-recovery-v111-style">
+/* v111：刪除成功提示、活動列表灰階辨識、前台訂單卡片手機優化 */
+#activityTab .manage-filter-bar input,
+#activityTab .manage-filter-bar select,
+#activityTab .a110-detail-top,
+#activityTab .a110-meta,
+#activityTab .a110-roster-wrap,
+#activityTab .stock-confirm-summary-bar,
+#activityTab .stock-confirm-panel-box,
+#activityTab .manage-info-grid,
+#activityTab .manage-photo-strip,
+#activityTab .stock105-card,
+#activityTab .manage-collapse-content,
+#activityTab .manage-collapse-body,
+#homePage .filter-shell,
+#homePage .stats,
+#homePage .store-group-events{background:#f4f6f8!important}
+
+#activityTab .manage-filter-bar,
+#activityTab .manage-bulk-bar,
+#homePage .filter-shell,
+#homePage .stats{border-color:#d8e2e9!important;box-shadow:0 8px 22px rgba(37,64,82,.05)!important}
+
+#activityTab .manage-collapse-content{border-radius:18px!important;padding:10px 0 0!important}
+#activityTab .manage-info-row{padding:8px 0!important}
+#activityTab .manage-photo-strip{padding:10px!important;border:1px solid #dde6ec!important;border-radius:16px!important}
+#activityTab .stock105-card,
+#activityTab .a110-meta,
+#activityTab .a110-roster-wrap{border:1px solid #dde6ec!important;border-radius:16px!important;padding:12px 14px!important}
+#activityTab .a110-roster th{background:#e7edf2!important}
+#activityTab .a110-roster tbody tr:hover{background:#eef3f7!important}
+#activityTab .a110-roster tbody tr.is-confirmed{background:#f7fafc}
+#activityTab .a110-roster tbody tr.is-pending{background:#fffaf2}
+#activityTab .manage-card-actions{display:flex!important;flex-direction:column!important;gap:8px!important}
+#activityTab .manage-card-actions button{min-height:40px!important;height:40px!important;padding:0 12px!important}
+#activityTab .stock105-card-head,#activityTab .a110-detail-top{gap:10px!important}
+
+#homePage .stats{overflow:hidden!important}
+#homePage .store-activity-group{border:1px solid #d9e3ea!important;border-radius:22px!important;box-shadow:0 6px 18px rgba(37,64,82,.05)!important;overflow:hidden!important}
+#homePage .store-activity-group>summary{padding:15px 18px!important}
+#homePage .store-activity-group[open]{box-shadow:0 16px 34px rgba(37,64,82,.12)!important;border-color:#c6d6e1!important}
+#homePage .store-activity-group[open]>summary{background:#edf4f8!important}
+#homePage .store-group-events{padding:0 16px 16px!important}
+#homePage .store-group-events .event-row{border-radius:18px!important;border-color:#d9e4eb!important;background:#fff!important;box-shadow:0 3px 10px rgba(37,64,82,.04)!important}
+#homePage .store-group-events .event-row .event-detail{background:#f7f9fb!important}
+
+#orderPage .order-card{border-radius:22px!important;border:1px solid #d8e2e9!important;overflow:hidden!important;box-shadow:0 7px 22px rgba(37,64,82,.05)!important}
+#orderPage .order-card-summary{grid-template-columns:minmax(0,1fr) auto auto!important;align-items:start!important;padding:14px 16px!important;gap:10px!important;min-height:auto!important}
+#orderPage .order-card-summary>.sent-summary-main{display:grid!important;gap:4px!important;min-width:0!important}
+#orderPage .sent-summary-main .order-mobile-headline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+#orderPage .sent-summary-main .order-mobile-headline b{font-size:20px!important;line-height:1.2!important;min-width:0!important}
+#orderPage .sent-summary-main .order-mobile-order-no{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#eef3f7;color:#516d81;font-size:12px!important;line-height:1.2!important;white-space:nowrap}
+#orderPage .sent-summary-main .order-mobile-updated,
+#orderPage .sent-summary-main .order-mobile-date,
+#orderPage .sent-summary-main .order-archive-label98{font-size:12px!important;color:#6d8292!important;line-height:1.45!important}
+#orderPage .order-card.open>.order-card-summary .order-mobile-order-no{background:rgba(255,255,255,.18)!important;color:#fff!important}
+#orderPage .order-card-detail{padding:12px 14px 14px!important;background:#fbfdff!important}
+#orderPage .order-card-detail .customer-block{margin:0!important}
+#orderPage .order-card-detail .customer-title{padding:8px 10px!important;font-size:14px!important;background:#eef3f7!important;border:1px solid #dbe5ec!important;border-radius:12px 12px 0 0!important;color:#355469!important}
+#orderPage .order-card-detail .customer-grid{gap:0!important;border:1px solid #dbe5ec!important;border-top:0!important;border-radius:0 0 16px 16px!important;overflow:hidden!important;background:#f4f6f8!important}
+#orderPage .order-card-detail .customer-grid>div{padding:10px 12px!important;background:#f4f6f8!important;border-bottom:1px solid #dbe5ec!important}
+#orderPage .order-card-detail .customer-grid>div:nth-last-child(-n+2),
+#orderPage .order-card-detail .customer-grid>div:last-child{border-bottom:0!important}
+#orderPage .order-card-detail .customer-grid span{font-size:12px!important;color:#688091!important;display:block;margin-bottom:4px!important}
+#orderPage .order-card-detail .customer-grid b{font-size:17px!important;line-height:1.45!important;font-weight:600!important;color:#29495f!important}
+#orderPage .order-card-detail .delivery-photo-row{margin-top:10px!important;align-items:stretch!important;gap:8px!important}
+#orderPage .order-card-detail .delivery-inline{background:#eef3f7!important;border:1px solid #dbe5ec!important;border-radius:14px!important;padding:9px 11px!important}
+#orderPage .front-order-action-group button{min-height:42px!important;border-radius:12px!important}
+#orderPage .ship-line,#orderPage .front-order-edit-note,#orderPage .order-archive-note98{margin-top:10px!important;border-radius:14px!important;padding:10px 12px!important;background:#eef3f7!important;border:1px solid #dbe5ec!important}
+#orderPage .order-card.open>.order-card-summary{background:linear-gradient(135deg,#2f566f 0%,#466f88 100%)!important}
+
+@media(max-width:720px){
+  #orderPage .order-card-summary{padding:12px!important;grid-template-columns:minmax(0,1fr) auto!important}
+  #orderPage .order-card-summary>.order-chevron{display:none!important}
+  #orderPage .order-card-summary .order-summary-badges{justify-self:end!important;align-items:flex-end!important;gap:6px!important}
+  #orderPage .sent-summary-main .order-mobile-headline b{font-size:18px!important}
+  #orderPage .order-card-detail{padding:10px!important}
+  #orderPage .order-card-detail .customer-grid{display:grid!important;grid-template-columns:1fr!important}
+  #orderPage .order-card-detail .customer-grid>div{padding:9px 10px!important}
+  #orderPage .order-card-detail .customer-grid b{font-size:16px!important}
+  #orderPage .order-card-detail .delivery-photo-row{grid-template-columns:1fr!important}
+  #orderPage .front-order-action-group{grid-template-columns:1fr!important;width:100%!important}
+}
+
+#activityFeedback111::backdrop{background:rgba(38,54,68,.28)}
+#activityFeedback111{border:0;padding:0;background:transparent}
+#activityFeedback111 .a111-feedback-shell{width:min(420px,calc(100vw - 32px));background:#fff;border:1px solid #d9e4eb;border-radius:24px;box-shadow:0 20px 48px rgba(29,49,64,.2);padding:22px 20px 18px;color:#29495f}
+#activityFeedback111 .a111-feedback-shell h3{margin:0 0 8px;font-size:24px;font-weight:600}
+#activityFeedback111 .a111-feedback-shell p{margin:0;font-size:15px;line-height:1.7;color:#5f7888}
+#activityFeedback111 .a111-feedback-actions{display:flex;justify-content:flex-end;margin-top:18px}
+#activityFeedback111 .a111-feedback-actions button{min-width:110px;min-height:44px;border-radius:14px}
+
+#activityFeedback111:not([open]){display:none!important}
+#activityTab .manage-activity-card[open],#activityTab .stock-confirm-card[open]{background:#eef0f3!important;border-color:#becbd5!important}
+#activityTab .manage-activity-card[open]>summary,#activityTab .stock-confirm-card[open]>summary{background:#e8edf1!important}
+#activityTab .stock-confirm-card[open] .stock-confirm-body{background:#f0f2f5!important}
+#homePage #eventList{display:flex!important;flex-direction:column!important;gap:12px!important;background:transparent!important;box-shadow:none!important;border:0!important;border-radius:0!important;overflow:visible!important}
+#homePage #eventList>.store-activity-group{margin:0!important;flex:none!important}
+#homePage #eventList>.store-activity-group[open]>summary{background:#e8edf1!important;color:#29495f!important}
+#homePage #eventList>.store-activity-group[open] .store-group-name,#homePage #eventList>.store-activity-group[open] .store-group-sub,#homePage #eventList>.store-activity-group[open] .store-group-count{color:#29495f!important;font-weight:400!important}
+#homePage #eventList .store-group-name,#homePage #eventList .mall-name,#homePage #eventList .front-activity-content{font-weight:400!important}
+#homePage #eventList .event-row.open{box-shadow:0 10px 24px rgba(37,64,82,.12)!important}
+#homePage #eventList .event-row.open>.event-summary{background:#e9eef2!important;color:#29495f!important}
+#homePage #eventList .event-row.open>.event-summary .mall-name,#homePage #eventList .event-row.open>.event-summary .summary-content,#homePage #eventList .event-row.open>.event-summary .summary-region,#homePage #eventList .event-row.open>.event-summary .summary-date{color:#29495f!important}
+#orderPage .order-card-summary .sent-summary-main .order-mobile-order-no{display:inline-flex!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;overflow:visible!important;font-size:14px!important}
+#orderPage .order-card-summary .sent-summary-main .order-mobile-updated{white-space:normal!important;overflow:visible!important;font-size:13px!important}
+#orderPage .order-card.open>.order-card-summary .sent-summary-main .order-mobile-updated{color:#eaf1f5!important}
+#orderPage .order-card-detail .customer-grid b{font-weight:400!important;overflow-wrap:anywhere;white-space:pre-wrap}
+#orderPage .order-card-detail .customer-grid>div{border-right:0!important;border-bottom:1px solid #dbe5ec!important}
+#orderPage .order-card-detail .customer-grid>div:last-child{border-bottom:0!important}
+#orderPage .order-card-detail .delivery-photo-row:has(.front-order-action-group:empty){display:none!important}
+@media(max-width:720px){
+ #orderPage .order-card-detail .customer-grid{grid-template-columns:1fr!important}
+ #orderPage .order-card-detail .customer-grid>div{grid-column:1/-1!important}
+ #orderPage .order-card-summary>.sent-summary-main .order-mobile-headline{display:flex!important;flex-direction:column;align-items:flex-start!important;gap:3px!important}
+ #orderPage .order-card-summary .order-summary-badges{width:auto!important;min-width:0!important;max-width:90px!important;grid-template-columns:1fr!important}
+ #orderPage .order-card-summary .order-summary-badges>.order-editable-placeholder{display:none!important}
+ #orderPage .order-card-detail .delivery-photo-row{display:flex!important;flex-wrap:wrap}
+ #orderPage .order-card-detail .delivery-inline{display:none!important}
+ #orderPage .front-order-action-group{display:flex!important;flex-wrap:wrap;gap:8px!important}
+ #orderPage .front-order-action-group button{width:auto!important;flex:1;white-space:normal!important;font-size:15px!important;min-height:44px!important}
+ #activityTab .manage-card-actions{flex-direction:row!important}
+ #homePage #eventList>.store-activity-group>summary{padding:12px!important}
+}
+
+</style>
+<script id="site-recovery-v111-script">
+(function(){
+  const areaRank111={north:0,central:1,south:2,east:3};
+  function esc111(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+  function ensureFeedback111(){
+    let dlg=document.getElementById('activityFeedback111');
+    if(dlg)return dlg;
+    document.body.insertAdjacentHTML('beforeend','<dialog id="activityFeedback111" aria-labelledby="activityFeedbackTitle111"><div class="a111-feedback-shell"><h3 id="activityFeedbackTitle111">完成</h3><p id="activityFeedbackText111">已完成操作。</p><div class="a111-feedback-actions"><button type="button" class="primary" id="activityFeedbackClose111">知道了</button></div></div></dialog>');
+    dlg=document.getElementById('activityFeedback111');
+    const close=()=>{try{dlg.close();}catch(_){dlg.removeAttribute('open');}};
+    dlg.addEventListener('click',e=>{if(e.target===dlg)close();});
+    document.getElementById('activityFeedbackClose111').addEventListener('click',close);
+    return dlg;
+  }
+  window.showActivityFeedback111=function(title,text){
+    const dlg=ensureFeedback111();
+    const t=document.getElementById('activityFeedbackTitle111');
+    const p=document.getElementById('activityFeedbackText111');
+    if(t)t.textContent=title||'完成';
+    if(p)p.textContent=text||'已完成操作。';
+    if(typeof dlg.showModal==='function'){try{dlg.showModal();return;}catch(_){}}
+    dlg.setAttribute('open','open');
+  };
+
+})();
+
+</script>
 </body>
 </html>
