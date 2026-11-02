@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v105: optional event-stock reminders with server receipts; pending orders / 50 and 100 rows. Requires v105 SQL in ACTIVITY project, updated line-api, and catalog server secret. -->
 <!-- UI PATCH v104: own-sales summary validation aligned to the existing line-api; v103 order/backup UI retained. No API or SQL changes. -->
 <!-- UI PATCH v103: single-line logistics toolbar; inline selection count. Base v102; v99 API/SQL unchanged. -->
 <!-- UI PATCH v101: order-backup two-line previews with in-place expansion; base v100. API v99 and SQL v99 unchanged. -->
@@ -4629,14 +4630,14 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 
     <div id="orderAdminTab" class="admin-tab-panel"><section class="panel compact-order-admin"><div class="order-title-row"><div><h2>訂單寄出管理</h2><div class="note">依狀態或訂單日期篩選，再勾選訂單批次處理。</div></div></div>
 <div class="admin-order-status-buttons">
-<button type="button" class="admin-status-btn active" data-status="" onclick="setAdminOrderStatus('')">全部 <b id="adminStatusAll">0</b></button>
-<button type="button" class="admin-status-btn pending" data-status="pending" onclick="setAdminOrderStatus('pending')">待寄出 <b id="adminStatusPending">0</b></button>
+<button type="button" class="admin-status-btn" data-status="" onclick="setAdminOrderStatus('')">全部 <b id="adminStatusAll">0</b></button>
+<button type="button" class="admin-status-btn pending active" data-status="pending" onclick="setAdminOrderStatus('pending')">待寄出 <b id="adminStatusPending">0</b></button>
 <button type="button" class="admin-status-btn processing" data-status="processing" onclick="setAdminOrderStatus('processing')">處理中 <b id="adminStatusProcessing">0</b></button>
 <button type="button" class="admin-status-btn change-request" data-status="change_request" onclick="setAdminOrderStatus('change_request')">更改申請 <b id="adminStatusChangeRequest">0</b></button>
 <button type="button" class="admin-status-btn shipped" data-status="shipped" onclick="setAdminOrderStatus('shipped')">已寄出 <b id="adminStatusShipped">0</b></button>
 <button type="button" class="admin-status-btn cancelled" data-status="cancelled" onclick="setAdminOrderStatus('cancelled')">取消訂單 <b id="adminStatusCancelled">0</b></button>
 <button type="button" class="admin-status-btn returned" data-status="returned" onclick="setAdminOrderStatus('returned')">退貨 <b id="adminStatusReturned">0</b></button>
-</div><input id="adminOrderStatus" type="hidden" value="">
+</div><input id="adminOrderStatus" type="hidden" value="pending">
 <div class="order-admin-filter compact-filter"><input id="adminOrderKeyword" placeholder="搜尋姓名、電話、地址、商品" oninput="renderOrderAdmin()"><select id="adminOrderStoreFilter" onchange="renderOrderAdmin()"><option value="">全部門市</option></select><select id="adminOrderDeliveryFilter" onchange="renderOrderAdmin()"><option value="">全部配送方式</option><option value="總公司寄出">公司寄出</option><option value="門市自取">門市自取</option></select><div class="compact-date-field"><label>訂單日起</label><input id="adminOrderDateFrom" type="date" onchange="renderOrderAdmin()"></div><div class="compact-date-field"><label>訂單日迄</label><input id="adminOrderDateTo" type="date" onchange="renderOrderAdmin()"></div><button type="button" class="secondary compact-btn" onclick="clearAdminOrderFilters()">清除</button></div>
 <div class="compact-batch-panel"><div class="compact-process-row" role="group" aria-label="本頁一般訂單批次處理" aria-describedby="orderBatchHelp103"><label class="order-select-inline103" for="orderSelectAll" title="全選本頁一般訂單；不包含備份訂單"><input id="orderSelectAll" class="order-big-checkbox" type="checkbox" aria-label="全選本頁一般訂單" onchange="toggleAllOrders(this.checked)"><span>全選</span><span id="orderSelectedCount" role="status" aria-live="polite" aria-atomic="true" hidden></span></label><select id="orderHandler" aria-label="處理人" title="選擇處理人" onchange="updateConfirmShipButton()"><option value="">請選擇處理人</option></select><input id="orderShipDate" type="date" aria-label="寄出日期" title="寄出日期"><button id="confirmShipBtn" class="primary compact-action" onclick="markSelectedOrdersShipped()">確認寄出</button><button id="markPendingBtn" class="secondary compact-action" onclick="markSelectedOrdersPending()">改回待寄出</button><button id="approveChangeRequestBtn" class="secondary compact-action" style="display:none;background:#f5e7f4;color:#8a3f84" onclick="approveSelectedChangeRequests()">確認申請</button><button id="returnOrderBtn" class="secondary compact-action" style="background:#fff0dc;color:#a85a00" onclick="markSelectedOrdersReturned()">退貨</button><button id="cancelDeleteOrderBtn" class="secondary compact-action cancel-action" onclick="handleCancelDeleteSelectedOrders()">取消訂單</button><button type="button" class="secondary compact-action" onclick="exportOrdersExcel(event)">匯出 Excel</button><button class="secondary compact-action" onclick="exportPickingPdf()">匯出揀貨單 PDF</button></div></div>
 <div id="orderAdminList" class="order-admin-list clean-admin-list"></div></section></div>
@@ -5510,6 +5511,8 @@ function applyAdminRoleUI(){
 }
 function showAdminTab(tab){
  if(!canAccessAdminTab(tab,true))return;
+ if(tab==='orderAdmin')window.StarredOrderQuery99?.enterAdmin105();
+ window.StarredStock105?.schedule();
  $("dashboardPage")?.classList.toggle("active",tab==="dashboard");
  $("activityTab").classList.toggle("active",tab==="activity");
  $("storeTab").classList.toggle("active",tab==="store");
@@ -5531,6 +5534,7 @@ function showAdminTab(tab){
 }
 function checkLogin(){
  const ok=isAdminLoginValid();
+ window.StarredStock105?.schedule();
  applyOrderBackupPermissions98();
  if(!ok&&typeof renderOrderBackup==='function')renderOrderBackup();
  $("loginSection").style.display=ok?"none":"grid";
@@ -6131,6 +6135,7 @@ function closeSuccessModal(){
  setTimeout(()=>{const el=$("campaign");if(el)el.focus()},220);
 }
 function resetForm(){
+ window.StarredStock105?.reset();
  editingId=null;currentPhotos=[];selectedStoreIds.clear();
  ["location","start","end","campaign","products","note"].forEach(id=>$(id).value="");
  $("area").value="north";$("photos").value="";$("autoStatus").value="請選擇日期";
@@ -6142,6 +6147,7 @@ function editEvent(id){
  editingId=id;selectedStoreIds.clear();$("area").value=e.area;rebuildMallOptions(e.storeId||e.mall);$("location").value=e.location;
  $("start").value=e.start;$("end").value=e.end;$("campaign").value=e.campaign;$("products").value=e.products.join(", ");
  $("note").value=e.note;currentPhotos=e.photos||[];$("formTitle").textContent="修改活動";$("saveBtn").textContent="儲存修改";$("cancelBtn").style.display="inline-block";
+ window.StarredStock105?.loadEvent(e);
  refreshAutoStatus();renderPhotoPreview();rebuildMallOptions();window.scrollTo({top:0,behavior:"smooth"});
 }
 function deleteEvent(id){
@@ -6391,6 +6397,7 @@ function renderManage(){
        e.photos.map(src=>`<img src="${src}" alt="活動照片" onclick="openLightbox('${src}')">`).join("")
      }</div>`:""}
 
+     ${window.StarredStock105?window.StarredStock105.card(e):""}
      <div class="audit">建立：${escapeHtml(e.createdBy||"舊資料")}｜最後修改：${escapeHtml(e.updatedBy||e.createdBy||"舊資料")} ${e.updatedAt?fmtDateTime(e.updatedAt):""}</div>
     </div>
 
@@ -8141,7 +8148,8 @@ function eventRowToLocal(row, imageMap){
     products, note:row.remark||"", status:row.status||calcStatus(row.start_date,row.end_date),
     storeId:row.store_id?String(row.store_id):"",
     photos:(imageMap.get(String(row.id))||[]).map(x=>x.image_url),
-    createdAt:row.created_at, updatedAt:row.updated_at
+    createdAt:row.created_at, updatedAt:row.updated_at,
+    stockPrepEnabled105:row.stock_prep_enabled105===true,stockPrepItems105:Array.isArray(row.stock_prep_items105)?row.stock_prep_items105:[],stockPrepVersion105:Number(row.stock_prep_version105||0)
   };
 }
 
@@ -8499,43 +8507,8 @@ window.deleteStore=async function(id){
   }
 };
 window.saveEventCloud=async function(){
-  if(!validate())return;
-  const selectedStores=getSelectedStores();
-  const common={start_date:$("start").value,end_date:$("end").value,event_name:$("campaign").value.trim(),event_content:JSON.stringify($("products").value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)),remark:$("note").value.trim(),status:calcStatus($("start").value,$("end").value)};
-  const wasEditing=Boolean(editingId);
-  setCloudBusy(true,wasEditing?"儲存中…":"新增中…");
-  try{
-    const resolvedStores=[];
-    for(const selectedStore of selectedStores){
-      resolvedStores.push(await ensureActivityStore(selectedStore));
-    }
-
-    if(wasEditing){
-      const store=resolvedStores[0];
-      const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id),updated_at:new Date().toISOString()};
-      const {error}=await cloudDb.from("department_events").update(payload).eq("id",Number(editingId));if(error)throw error;
-      await removeEventPhotos([editingId]);
-      await uploadEventPhotos(editingId,currentPhotos);
-    }else{
-      for(const store of resolvedStores){
-        const payload={...common,region:store.area,department:store.name,floor:store.floor,store_id:Number(store.id)};
-        const {data,error}=await cloudDb.from("department_events").insert(payload).select("id").single();if(error)throw error;
-        await uploadEventPhotos(data.id,currentPhotos);
-      }
-    }
-    const count=resolvedStores.length;
-    resetForm();
-    await loadCloudData();
-    renderHome();
-    updateManageStoreFilter();
-    renderManage();
-    if(!wasEditing)showSuccessModal(count);
-  }catch(error){
-    console.error("活動儲存失敗",error);
-    cloudError("活動儲存失敗",error);
-  }finally{
-    setCloudBusy(false);
-  }
+ if(!window.StarredStock105){cloudError('活動儲存失敗','備貨提醒元件尚未載入，請重新開啟網頁。');return;}
+ return window.StarredStock105.save();
 };
 window.deleteEvent=async function(id){
   if(!confirm("確定刪除這筆活動？"))return;
@@ -22937,7 +22910,7 @@ const BUILD='20261029-order-unified-query-v99';
 const el=id=>document.getElementById(id),esc=value=>escapeHtml(String(value==null?'':value));
 const originalFront=window.renderOrderCards,originalEdit=window.openOrderEdit,originalPhotos=window.getOrderPhotos;
 const originalSelectionCheck=window.ensureSelected,originalConfirm=window.updateConfirmShipButton;
-const state=Object.fromEntries(['admin','front','backup'].map(k=>[k,{phase:'idle',rows:[],total:0,page:1,pageSize:k==='front'?5:20,key:'',auth:'',seq:0,timer:null,promise:null,loadedAt:0,snapshotAt:'',asOfDate:'',counts:{}}]));
+const state=Object.fromEntries(['admin','front','backup'].map(k=>[k,{phase:'idle',rows:[],total:0,page:1,pageSize:k==='front'?5:k==='admin'?50:20,key:'',auth:'',seq:0,timer:null,promise:null,loadedAt:0,snapshotAt:'',asOfDate:'',counts:{}}]));
 let storeNames=[],detailSeq=0,detailPrevious=null,exportBusy=false;
 function auth(kind){
  const profile=window.starredVerifiedLineUser||{},local=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;
@@ -22949,7 +22922,7 @@ function auth(kind){
 function visible(kind){return kind==='front'?!!el('orderPage')?.classList.contains('active'):!!el('adminPage')?.classList.contains('active')&&(kind==='admin'?!!el('orderAdminTab')?.classList.contains('active'):!!el('orderBackupTab')?.classList.contains('active')&&!!el('orderBackupSection')?.classList.contains('active'));}
 function value(id){return String(el(id)?.value||'').trim();}
 function query(kind){
- if(kind==='admin')return {keyword:value('adminOrderKeyword'),scope:value('orderQueryScope99')||'all',status:value('adminOrderStatus'),store:value('adminOrderStoreFilter'),delivery:value('adminOrderDeliveryFilter')==='門市自取'?'store_pickup':value('adminOrderDeliveryFilter')==='總公司寄出'?'company_shipping':'',dateFrom:value('adminOrderDateFrom'),dateTo:value('adminOrderDateTo'),overdue:!!el('orderQueryOverdue99')?.checked,pageSize:Number(value('orderQuerySize99')||20)};
+ if(kind==='admin')return {keyword:value('adminOrderKeyword'),scope:value('orderQueryScope99')||'all',status:value('adminOrderStatus'),store:value('adminOrderStoreFilter'),delivery:value('adminOrderDeliveryFilter')==='門市自取'?'store_pickup':value('adminOrderDeliveryFilter')==='總公司寄出'?'company_shipping':'',dateFrom:value('adminOrderDateFrom'),dateTo:value('adminOrderDateTo'),overdue:!!el('orderQueryOverdue99')?.checked,pageSize:Number(value('orderQuerySize99')||50)};
  if(kind==='front')return {keyword:value('orderKeyword'),scope:'all',status:value('orderStatusFilter'),store:value('orderStoreFilter'),delivery:'',dateFrom:value('orderDateFrom'),dateTo:value('orderDateTo'),overdue:false,pageSize:ORDER_PAGE_SIZE};
  const month=value('orderBackupMonth');let from='',to='';
  if(month&&/^\d{4}-\d{2}$/.test(month)){from=month+'-01';const [year,m]=month.split('-').map(Number);to=new Date(Date.UTC(year,m,0)).toISOString().slice(0,10);}
@@ -23015,7 +22988,7 @@ function renderAdmin(){
  document.querySelector('.admin-status-btn.change-request')?.classList.toggle('has-items',Number(s.counts.change_request)>0);
  document.querySelectorAll('#orderAdminTab .admin-status-btn').forEach(b=>b.classList.toggle('active',String(b.dataset.status||'')===value('adminOrderStatus')));
  const q=query('admin'),range=(q.dateFrom||q.dateTo)?'日期：'+(q.dateFrom||'不限')+' ～ '+(q.dateTo||'不限'):'不限日期';
- el('orderQuerySummary99').textContent=scopeName(q.scope)+'・'+range+'・共 '+s.total+' 筆（已備份 '+s.archivedCount+' 筆）'+(s.overdueCount?'・逾 60 天未完成 '+s.overdueCount+' 筆':'');
+ el('orderQuerySummary99').textContent=scopeName(q.scope)+'・'+({'':'全部狀態',pending:'待寄出',processing:'處理中',change_request:'更改申請',shipped:'已寄出',cancelled:'取消訂單',returned:'退貨',return_received:'已收回退貨'}[q.status]||q.status)+'・'+range+'・共 '+s.total+' 筆（已備份 '+s.archivedCount+' 筆）'+(s.overdueCount?'・逾 60 天未完成 '+s.overdueCount+' 筆':'');
  el('orderAdminList').innerHTML=s.rows.length?s.rows.map(o=>{
   const id=esc(o.id),archived=isBackupOrder(o),statusClass=o.status==='returned'&&o.returnReceived?'return_received':o.status;
   return '<article class="order-admin-card clean-admin-card oq99-card '+(archived?'is-archived ':'')+(selectedOrderIds.has(o.id)?'selected':'')+'" data-oq99-id="'+id+'">'+
@@ -23090,6 +23063,18 @@ function schedule(kind,immediate=false){
 }
 function page(kind,number){const s=state[kind];if(!s||s.phase!=='ready'||number<1||number>Math.max(1,Math.ceil(s.total/s.pageSize)))return;clearTimeout(s.timer);s.page=number;s.loadedAt=0;if(kind==='admin')clearSelection();return load(kind);}
 function invalidate(){for(const s of Object.values(state)){s.seq++;s.phase='idle';s.rows=[];s.key='';s.loadedAt=0;s.snapshotAt='';clearTimeout(s.timer);}clearSelection();}
+function enterAdmin105(){
+ // Only navigation calls this. Filtering, paging, reloading and post-write refreshes keep the user's current choice.
+ mount();
+ ['adminOrderKeyword','adminOrderStoreFilter','adminOrderDeliveryFilter','adminOrderDateFrom','adminOrderDateTo'].forEach(id=>{if(el(id))el(id).value='';});
+ if(el('adminOrderStatus'))el('adminOrderStatus').value='pending';
+ if(el('orderQueryScope99'))el('orderQueryScope99').value='all';
+ if(el('orderQuerySize99'))el('orderQuerySize99').value='50';
+ if(el('orderQueryOverdue99'))el('orderQueryOverdue99').checked=false;
+ const s=state.admin;clearTimeout(s.timer);s.seq++;s.page=1;s.pageSize=50;s.loadedAt=0;s.key='';s.phase='idle';s.rows=[];s.snapshotAt='';s.promise=null;
+ clearSelection();updateCancelDeleteOrderButton();
+ document.querySelectorAll('#orderAdminTab .admin-status-btn').forEach(b=>b.classList.toggle('active',b.dataset.status==='pending'));
+}
 function resetAdmin(preserveKeyword=false){
  const keyword=preserveKeyword?value('adminOrderKeyword'):'';
  ['adminOrderKeyword','adminOrderStoreFilter','adminOrderDeliveryFilter','adminOrderDateFrom','adminOrderDateTo','adminOrderStatus'].forEach(id=>{if(el(id))el(id).value='';});
@@ -23147,14 +23132,14 @@ async function exportText(kind){
 }
 function mount(){
  const root=el('orderAdminTab');if(!root||el('orderQueryToolbar99'))return;
- root.classList.add('order-unified99');const heading=root.querySelector('h2'),note=root.querySelector('.order-title-row .note');if(heading)heading.textContent='訂單管理・統一查詢';if(note)note.textContent='姓名、電話、商品或訂單編號一次查全部；已備份訂單僅供查閱，不會混入寄出或刪除。';
+ root.classList.add('order-unified99');const heading=root.querySelector('h2'),note=root.querySelector('.order-title-row .note');if(heading)heading.textContent='訂單管理・統一查詢';if(note)note.textContent='進入時先顯示待寄出；查歷史訂單請切換「全部」。備份訂單僅供查閱，不會混入寄出或刪除。';
  const toolbar=document.createElement('div');toolbar.id='orderQueryToolbar99';toolbar.className='oq99-toolbar';
- toolbar.innerHTML='<label>資料範圍<select id="orderQueryScope99"><option value="all">全部訂單（含備份）</option><option value="recent">60 天內訂單</option><option value="archived">已備份訂單</option></select></label><label>每頁筆數<select id="orderQuerySize99"><option value="20">20 筆</option><option value="50">50 筆</option></select></label><label class="oq99-check"><input id="orderQueryOverdue99" type="checkbox"><span>只看逾 60 天未完成</span></label><div class="oq99-toolbar-actions"><button type="button" class="secondary" data-oq99-clear="admin">清除條件</button><button type="button" class="secondary" data-oq99-retry="admin">重新查詢</button><button type="button" class="primary" data-oq99-export="admin">匯出查詢文字</button></div>';
+ toolbar.innerHTML='<label>資料範圍<select id="orderQueryScope99"><option value="all">全部訂單（含備份）</option><option value="recent">60 天內訂單</option><option value="archived">已備份訂單</option></select></label><label>每頁筆數<select id="orderQuerySize99"><option value="50" selected>50 筆</option><option value="100">100 筆</option></select></label><label class="oq99-check"><input id="orderQueryOverdue99" type="checkbox"><span>只看逾 60 天未完成</span></label><div class="oq99-toolbar-actions"><button type="button" class="secondary" data-oq99-clear="admin">清除條件</button><button type="button" class="secondary" data-oq99-retry="admin">重新查詢</button><button type="button" class="primary" data-oq99-export="admin">匯出查詢文字</button></div>';
  root.querySelector('.order-title-row').insertAdjacentElement('afterend',toolbar);
- root.querySelector('.compact-batch-panel').insertAdjacentHTML('beforebegin','<p id="orderQuerySummary99" class="oq99-summary" role="status">預設搜尋全部訂單（含備份），不限日期。</p><p id="orderQueryExportStatus99" class="oq99-export-status" role="status"></p>');
+ root.querySelector('.compact-batch-panel').insertAdjacentHTML('beforebegin','<p id="orderQuerySummary99" class="oq99-summary" role="status">預設待寄出・每頁 50 筆；可切換全部訂單查歷史資料。</p><p id="orderQueryExportStatus99" class="oq99-export-status" role="status"></p>');
  el('orderAdminList').insertAdjacentHTML('afterend','<nav id="orderQueryPager99" class="oq99-pagination" aria-label="訂單管理分頁"></nav>');
  updateOrderSelectedLabel103();
- if(el('adminOrderKeyword')){el('adminOrderKeyword').placeholder='搜尋姓名、電話、商品、訂單編號';el('adminOrderKeyword').maxLength=120;el('adminOrderKeyword').setAttribute('aria-label','搜尋全部訂單');}
+ if(el('adminOrderKeyword')){el('adminOrderKeyword').placeholder='搜尋姓名、電話、商品、訂單編號';el('adminOrderKeyword').maxLength=120;el('adminOrderKeyword').setAttribute('aria-label','搜尋目前條件的訂單');}
  const filterClearButton=root.querySelector('.order-admin-filter .compact-btn');if(filterClearButton){filterClearButton.hidden=true;filterClearButton.disabled=true;filterClearButton.classList.add('oq99-hidden-clear');}
  root.querySelector('.compact-batch-panel').insertAdjacentHTML('beforebegin','<div id="orderBatchHelp103" class="oq99-bulk-note">僅處理本頁一般訂單；備份訂單不可勾選。純查詢匯出請使用上方「匯出查詢文字」。</div>');
  if(el('orderBackupSection')){
@@ -23201,7 +23186,7 @@ window.getOrderPhotos=async function(orderOrKeys){
  return originalPhotos(orderOrKeys);
 };
 window.exportOrderBackupExcel=function(){return exportText('backup');};
-window.StarredOrderQuery99={build:BUILD,state,load,schedule,page,invalidate,detail,exportText,
+window.StarredOrderQuery99={build:BUILD,state,load,schedule,page,invalidate,detail,exportText,enterAdmin105,
  acceptBootstrap:function(data){storeNames=(data.orderQueryStores99||[]).map(s=>String(s.name||'')).filter(Boolean);invalidate();},
  refreshVisible:function(){for(const kind of Object.keys(state))if(visible(kind)){state[kind].loadedAt=0;load(kind,{force:true});}}};
 document.addEventListener('click',event=>{
@@ -23233,4 +23218,268 @@ window.addEventListener('focus',()=>{for(const kind of Object.keys(state))if(vis
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
+</script>
+
+<style id="activity-stock-v105-style">
+#activityTab .stock105-editor{grid-column:1/-1!important;min-width:0;border:1px solid #d6e1e9;background:#f6f8fb;border-radius:15px;padding:14px 16px}
+#activityTab .stock105-enabled{display:flex;gap:10px;align-items:center;font-size:15px;font-weight:500;color:#294b60;min-height:36px;cursor:pointer}
+#activityTab .stock105-editor input[type=checkbox]{appearance:auto;width:20px!important;height:20px!important;min-height:20px!important;flex:none;margin:0;accent-color:#345c74}
+#activityTab .stock105-editor p{margin:6px 0 12px;font-size:13px;line-height:1.6;color:#71818f;font-weight:400}
+#activityTab .stock105-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#activityTab .stock105-option{display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid #dce4eb;border-radius:11px;padding:10px;min-width:0}
+#activityTab .stock105-option>label{display:flex;align-items:flex-start;gap:9px;min-height:26px;font-size:14px;font-weight:400;line-height:1.5;overflow-wrap:anywhere;cursor:pointer}
+#activityTab .stock105-option.is-selected{border-color:#668aa3;background:#f8fbff}
+#activityTab .stock105-detail-input{font-size:14px!important;min-height:38px!important;height:38px!important;background:#f6f8fa!important}
+#activityTab .stock105-add{display:flex;gap:8px;margin:12px 0 4px;min-width:0;align-items:center}
+#activityTab .stock105-add input{flex:1;min-width:0;font-size:14px!important}
+#activityTab .stock105-add button{white-space:nowrap!important;flex:none;font-size:14px!important}
+#stockFormStatus105{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:10px;color:#a04439}
+#stockFormStatus105:empty{display:none}
+.stock105-card{margin:12px 0 0;border:1px solid #d9e3eb;border-radius:12px;padding:11px 13px;background:#f5f8fc;font-size:14px;line-height:1.6}
+.stock105-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.stock105-card-head>span{font-weight:500;color:#335c78}
+.stock105-card-head button{font-size:14px!important;min-height:36px!important;padding:6px 10px!important;font-weight:400!important}
+.stock105-card p{margin:6px 0 0;white-space:pre-wrap;font-size:14px;overflow-wrap:anywhere}
+.stock105-card small{font-size:12px;color:#738694}
+#stockAlert105{margin:8px 0 12px;padding:11px 13px;border:1px solid #dfc7a3;border-radius:12px;background:#fff8ed;font-size:14px;line-height:1.6;color:#8d5b24}
+#stockAlert105 button{margin-left:8px;min-height:36px!important;font-size:14px!important}
+.stock105-dialog{width:min(620px,calc(100vw - 28px));max-width:calc(100vw - 28px);max-height:88vh;max-height:88dvh;border:1px solid rgba(220,228,237,.96);border-radius:24px;padding:0;background:#f6f8fb;color:#2d485b;box-shadow:0 24px 80px rgba(21,38,54,.3),0 3px 14px rgba(21,38,54,.12);overflow:hidden;font-family:inherit}
+.stock105-dialog:not([open]){display:none!important}
+.stock105-dialog::backdrop{background:rgba(29,43,57,.48);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.stock105-shell{display:flex;flex-direction:column;max-height:88vh;max-height:88dvh}
+.stock105-head{flex:none;padding:22px 24px 16px;border-bottom:1px solid #dfe6ec;background:rgba(255,255,255,.93)}
+.stock105-head .stock105-eyebrow{font-size:12px;color:#7b8d9b;letter-spacing:.12em;margin:0 0 6px}
+.stock105-head h2{font-size:23px;font-weight:500;margin:0 0 6px;color:#27475e;line-height:1.4}
+.stock105-head p{margin:0;font-size:14px;font-weight:400;color:#728593;line-height:1.6}
+.stock105-body{padding:18px 24px;overflow:auto;overscroll-behavior:contain;flex:1;min-height:0}
+.stock105-location{font-size:21px;font-weight:500;line-height:1.5;margin:0;color:#27475e;overflow-wrap:anywhere}
+.stock105-campaign{font-size:16px;line-height:1.6;margin:6px 0 4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.stock105-date{font-size:14px;color:#6c8090;margin:0 0 12px;line-height:1.7}
+.stock105-urgency{display:inline-block;font-size:13px;font-weight:400;background:#fff2e4;border:1px solid #eddbc4;color:#95622a;border-radius:7px;padding:3px 7px;margin:0 0 10px}
+.stock105-goods{margin:0;border:1px solid #dce4ec;border-radius:15px;background:#fff;overflow:hidden;box-shadow:0 4px 15px rgba(39,66,83,.04)}
+.stock105-good{padding:12px 14px;border-bottom:1px solid #e8edf2;font-size:15px;font-weight:400;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.stock105-good:last-child{border-bottom:0}.stock105-good>span{display:block;color:#718493;font-size:14px;margin-top:4px}
+.stock105-foot{padding:14px 24px 20px;background:#fff;border-top:1px solid #dfe6ec;flex:none}
+.stock105-foot p{font-size:13px;line-height:1.6;color:#708493;margin:0 0 10px;overflow-wrap:anywhere}
+#stockAck105{display:flex;width:100%;min-height:46px!important;border-radius:13px!important;font-weight:500!important;font-size:16px!important}
+#stockAck105:disabled{opacity:.55;cursor:wait}
+.stock105-status{font-size:14px;line-height:1.5;color:#a24439;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:8px}.stock105-status:empty{display:none}
+#stockHistory105{width:min(800px,calc(100vw - 28px))}
+#stockHistory105 .stock105-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+#stockHistory105 .stock105-head button{min-width:54px;font-size:14px!important;min-height:40px!important}
+.stock105-version{padding:12px 14px;margin:0 0 12px;border:1px solid #dce4ec;border-radius:14px;background:#fff;font-size:14px;line-height:1.7}
+.stock105-version h3{font-size:16px;margin:0 0 4px;font-weight:500}
+.stock105-version p{font-size:14px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.stock105-receipt{padding:8px 0;border-top:1px solid #e5ebf1;font-size:14px;overflow-wrap:anywhere}.stock105-receipt small{display:block;color:#738493;font-size:12px}
+.stock105-version details{margin:8px 0}.stock105-version summary{cursor:pointer;color:#4e728a}
+.stock105-version .stock105-goods{margin:7px 0;box-shadow:none}
+#stockHistoryMore105{width:100%;font-size:14px!important}
+@media(max-width:680px){
+ #activityTab .stock105-options{grid-template-columns:1fr}#activityTab .stock105-editor{padding:12px}
+ .stock105-dialog{width:calc(100vw - 20px);max-width:calc(100vw - 20px);border-radius:20px}
+ .stock105-head{padding:18px 16px 13px}.stock105-head h2{font-size:21px}
+ .stock105-body{padding:14px 16px}.stock105-location{font-size:19px}
+ .stock105-foot{padding:13px 16px max(16px,env(safe-area-inset-bottom))}
+ #activityTab .stock105-add input,#activityTab .stock105-detail-input{font-size:16px!important}
+}
+@media(prefers-reduced-motion:no-preference){.stock105-dialog[open]{animation:stock105In .2s ease-out}@keyframes stock105In{from{opacity:.65;transform:translateY(9px) scale(.985)}to{opacity:1;transform:none}}}
+</style>
+
+<script id="activity-stock-v105-module">
+/* v105: opt-in event stocking reminders. Acknowledgements are server-verified receipts, NOT completion of preparation. */
+(function(){
+'use strict';
+const BUILD='20261102-activity-stock-v105';
+const el=id=>document.getElementById(id),esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let choices=new Map(),custom=new Set(),editStamp=null,saveBusy=false,intent=null;
+let lastIdentity='',lastChecked=0,pending=[],actor=null,asOf='',checkSeq=0,checkBusy=false,checkTimer=0,ackBusy=false,previousFocus=null;
+let historyId='',historyPage=0,historySeq=0;
+function identity(){
+ if(typeof isAdminLoginValid!=='function'||!isAdminLoginValid()||typeof currentUser==='undefined'||!currentUser?.adminSessionToken)return '';
+ const line=window.starredVerifiedLineUser||{},user=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;
+ if(line.isEnabled===false||user?.enabled===false)return '';
+ const id=String(line.lineUserId||user?.id||'');
+ return id?id+'|'+currentUser.adminSessionToken:'';
+}
+function inAdmin(){return !!el('adminPage')?.classList.contains('active')&&!!identity();}
+function dateText(v){if(!v)return '—';const d=new Date(v);return Number.isFinite(d.getTime())?d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}):String(v);}
+function message(text,bad=true){const node=el('stockFormStatus105');if(node){node.textContent=text||'';node.style.color=bad?'#a04439':'#466f88';}}
+function candidateNames(){
+ const names=String(el('products')?.value||'').split(/[,，\r\n]+/).map(s=>s.normalize('NFKC').trim()).filter(s=>s&&s.length<=120);
+ return [...new Set([...names,...custom,...choices.keys()])].slice(0,200);
+}
+function drawOptions(){
+ const box=el('stockOptions105');if(!box)return;
+ const names=candidateNames();box.innerHTML=names.length?names.map((name,i)=>{
+ const selected=choices.has(name),detail=choices.get(name)||'';
+ return '<div class="stock105-option '+(selected?'is-selected':'')+'"><label><input type="checkbox" data-stock-choice105="'+i+'" value="'+esc(name)+'" '+(selected?'checked':'')+'><span>'+esc(name)+'</span></label><input class="stock105-detail-input" data-stock-item105="'+esc(name)+'" maxlength="300" aria-label="'+esc(name)+'規格數量" placeholder="規格／顏色／數量（選填）" value="'+esc(detail)+'" '+(!selected?'disabled':'')+'></div>';
+ }).join(''):'<p>可先填寫活動內容，或在下方自行新增要備貨的商品。</p>';
+ const count=el('stockItemCount105');if(count)count.textContent='已勾選 '+choices.size+' 項';
+}
+function addProduct(){
+ const input=el('stockNewItem105'),name=String(input?.value||'').normalize('NFKC').trim();
+ if(!name)return input?.focus();if(name.length>120)return message('商品名稱最多 120 個字。');
+ custom.add(name);choices.set(name,choices.get(name)||'');input.value='';drawOptions();message('');input.focus();
+}
+function getPrep(){
+ const enabled=el('stockEnabled105')?.checked===true;
+ const items=[...choices].map(([name,detail])=>({name,detail:String(detail||'').trim()}));
+ if(enabled&&!items.length)throw new Error('已勾選需要提前備貨，請至少勾選一項商品。');
+ if(items.length>100)throw new Error('單一活動最多設定 100 項備貨商品。');
+ return {enabled,items:enabled?items:[]};
+}
+function reset(){choices.clear();custom.clear();editStamp=null;intent=null;const enabled=el('stockEnabled105');if(enabled)enabled.checked=false;if(el('stockFields105'))el('stockFields105').hidden=true;if(el('stockNewItem105'))el('stockNewItem105').value='';drawOptions();message('');}
+function loadEvent(event){
+ choices.clear();custom.clear();intent=null;editStamp={id:String(event.id),updatedAt:event.updatedAt||null};
+ (event.stockPrepItems105||[]).forEach(item=>{if(item&&typeof item.name==='string'){custom.add(item.name);choices.set(item.name,String(item.detail||''));}});
+ el('stockEnabled105').checked=event.stockPrepEnabled105===true;el('stockFields105').hidden=!el('stockEnabled105').checked;drawOptions();message('');
+}
+function card(event){
+ if(!event.stockPrepEnabled105&&!event.stockPrepVersion105)return '';
+ const items=event.stockPrepItems105||[];
+ return '<div class="stock105-card"><div class="stock105-card-head"><span>'+(event.stockPrepEnabled105?'提前 5 天備貨提醒・'+items.length+' 項':'備貨提醒已關閉')+'</span><button type="button" class="secondary" data-stock-history105="'+esc(event.id)+'">確認紀錄</button></div>'+
+ (event.stockPrepEnabled105?'<p>'+items.map(x=>esc(x.name+(x.detail?'｜'+x.detail:''))).join('<br>')+'</p>':'')+'<small>確認代表已閱讀提醒，不代表已完成備貨。修改日期或品項會要求重新確認。</small></div>';
+}
+function goods(items){return '<div class="stock105-goods">'+items.map(item=>'<div class="stock105-good">'+esc(item.name)+(item.detail?'<span>'+esc(item.detail)+'</span>':'')+'</div>').join('')+'</div>';}
+function showDialog(dialog){if(!dialog.open){if(typeof dialog.showModal==='function')dialog.showModal();else throw new Error('目前瀏覽器不支援提醒視窗，請更新瀏覽器。');}}
+function hideReminder(){const d=el('stockReminder105');if(d?.open)d.close();if(previousFocus?.isConnected){try{previousFocus.focus({preventScroll:true});}catch(_){}}previousFocus=null;}
+function notice(text){const node=el('stockAlert105');if(!node)return;node.hidden=!text;node.querySelector('span').textContent=text||'';}
+function renderReminder(note=''){
+ if(!pending.length||!inAdmin()){hideReminder();return;}
+ const item=pending[0];
+ el('stockReminderHint105').textContent='尚有 '+pending.length+' 筆需逐筆確認・僅記錄已閱讀，不代表備貨完成';
+ el('stockReminderBody105').innerHTML='<h3 class="stock105-location">'+esc([item.mall,item.floor].filter(Boolean).join('｜'))+'</h3>'+
+ '<p class="stock105-campaign">'+esc(item.campaign)+'</p><p class="stock105-date">活動日期：'+esc(item.start)+' ～ '+esc(item.end)+'</p>'+
+ (asOf>=item.start?'<span class="stock105-urgency">活動已開始，請立即核對備貨</span>':'<span class="stock105-urgency">開始日前 5 天內・請提前安排送貨</span>')+
+ goods(item.items)+'<p class="stock105-date" style="margin-top:12px">提醒版本 '+item.version+'・建立／修改：'+esc(item.changedBy?.name||item.changedBy?.adminName||'舊資料')+'</p>';
+ el('stockAckIdentity105').textContent='確認人：'+(actor?.name||'')+'｜後台帳號：'+(actor?.account||'')+'。按下後會保存此人的確認時間，其他人仍需各自確認。';
+ el('stockAckStatus105').textContent=note;const button=el('stockAck105');button.disabled=ackBusy;button.textContent=ackBusy?'確認儲存中…':'已確認';
+ const dialog=el('stockReminder105');if(!dialog.open)previousFocus=document.activeElement;
+ showDialog(dialog);if(!ackBusy)button.focus({preventScroll:true});
+}
+function clearPrivate(){lastIdentity='';lastChecked=0;pending=[];actor=null;checkSeq++;checkBusy=false;ackBusy=false;hideReminder();notice('');historySeq++;if(el('stockHistory105')?.open)el('stockHistory105').close();}
+function validateReply(data){if(!data||data.success!==true||data.build!==BUILD)throw new Error('備貨提醒元件與後端尚未完整更新，請部署 v105 SQL 和 line-api。');}
+async function check(force=false){
+ if(!inAdmin()){if(!identity())clearPrivate();return;}
+ const auth=identity();if(lastIdentity!==auth){clearPrivate();lastIdentity=auth;}
+ if(checkBusy||ackBusy||(!force&&Date.now()-lastChecked<60000))return;
+ checkBusy=true;const seq=++checkSeq;
+ try{
+  const data=await window.starredApi('activity_stock_due105',{});if(seq!==checkSeq||auth!==identity())return;
+  validateReply(data);if(!Array.isArray(data.pending)||!data.actor?.key||!/^\d{4}-\d{2}-\d{2}$/.test(data.asOfDate))throw new Error('備貨提醒回傳不完整，尚未確認沒有待辦。');
+  if(data.pending.some(x=>!x.eventId||!Number.isInteger(x.version)||!Array.isArray(x.items)||!x.items.length))throw new Error('備貨提醒的活動或商品資料不完整。');
+  pending=data.pending;actor=data.actor;asOf=data.asOfDate;lastChecked=Date.now();notice('');renderReminder();
+ }catch(error){if(seq===checkSeq&&auth===identity()){notice('備貨提醒尚未檢查完成：'+String(error?.message||error));if(pending.length)renderReminder('提醒更新失敗；尚未記錄確認。');}}
+ finally{if(seq===checkSeq)checkBusy=false;}
+}
+function schedule(force=false){clearTimeout(checkTimer);checkTimer=setTimeout(()=>check(force),150);}
+async function acknowledge(){
+ if(ackBusy||!pending.length)return;
+ const auth=identity(),item=pending[0];if(!auth||auth!==lastIdentity){clearPrivate();return;}
+ ackBusy=true;el('stockAck105').disabled=true;el('stockAck105').textContent='確認儲存中…';el('stockAckStatus105').textContent='';
+ try{
+  const data=await window.starredApi('activity_stock_ack105',{eventId:String(item.eventId),version:item.version});
+  if(auth!==identity()){clearPrivate();return;}
+  validateReply(data);
+  if(String(data.eventId)!==String(item.eventId)||data.version!==item.version||data.receipt?.actor?.key!==actor?.key||!data.receipt?.acknowledgedAt)throw new Error('未收到完整確認紀錄，請用同一按鈕重試；不會重複記錄。');
+  pending=pending.filter(x=>!(String(x.eventId)===String(item.eventId)&&x.version===item.version));
+  ackBusy=false;renderReminder();
+ }catch(error){
+  if(auth!==identity()){clearPrivate();return;}
+  ackBusy=false;
+  if(error?.errorCode==='STOCK_CHANGED105'){await check(true);if(pending.length)renderReminder('活動內容已更新，請閱讀這個版本後再確認。');}
+  else renderReminder('尚未確認成功：'+String(error?.message||error)+'\n請再次按「已確認」重試，原紀錄不會被覆蓋。');
+ }finally{ackBusy=false;if(el('stockAck105')){el('stockAck105').disabled=false;el('stockAck105').textContent='已確認';}}
+}
+async function history(id,more=false){
+ if(!identity())return window.alert('請先登入後台。');
+ const auth=identity(),seq=++historySeq;
+ if(!more){historyId=String(id);historyPage=0;el('stockHistoryBody105').textContent='正在讀取雲端確認紀錄…';el('stockHistoryTitle105').textContent='備貨提醒・確認紀錄';showDialog(el('stockHistory105'));}
+ el('stockHistoryMore105').hidden=true;
+ try{
+  const data=await window.starredApi('activity_stock_history105',{eventId:historyId,page:historyPage+1});
+  if(seq!==historySeq||auth!==identity())return;validateReply(data);
+  if(String(data.eventId)!==historyId||!Array.isArray(data.versions))throw new Error('確認紀錄回傳不完整');
+  const html=data.versions.map(v=>{
+   const snap=v.snapshot||{},who=v.changedBy||{};
+   return '<section class="stock105-version"><h3>版本 '+v.version+(v.version===data.currentVersion?'・目前版本':'・歷史版本')+(snap.deleted?'・已刪除':!snap.enabled?'・已關閉':'')+'</h3><p>'+esc([snap.mall,snap.floor].filter(Boolean).join('｜'))+'<br>'+esc(snap.campaign)+'<br>'+esc(snap.start)+' ～ '+esc(snap.end)+'</p><p>建立／修改：'+esc(who.name||who.adminName||'未驗證身分')+'｜'+esc(who.account||'—')+'<br>'+esc(dateText(v.changedAt))+'</p><details><summary>查看這個版本的備貨品項</summary>'+goods(snap.items||[])+'</details><p>已確認 '+Number(v.receiptCount||0)+' 人（已閱讀，不代表已完成備貨）</p>'+
+   ((v.receipts||[]).length?v.receipts.map(r=>'<div class="stock105-receipt">'+esc(r.actor?.name||'—')+'｜帳號 '+esc(r.actor?.account||'—')+'<small>後台姓名：'+esc(r.actor?.adminName||'—')+'・'+esc(dateText(r.acknowledgedAt))+'</small></div>').join(''):'<p>此版本尚無人確認。</p>')+'</section>';
+  }).join('')||'<p>這個活動尚無備貨確認紀錄。</p>';
+  if(more)el('stockHistoryBody105').insertAdjacentHTML('beforeend',html);else el('stockHistoryBody105').innerHTML=html;
+  historyPage=data.page;el('stockHistoryMore105').hidden=historyPage*10>=data.totalVersions;
+ }catch(error){if(seq===historySeq&&auth===identity()){if(more)el('stockHistoryMore105').hidden=false;else el('stockHistoryBody105').textContent='讀取失敗：'+String(error?.message||error);}}
+}
+async function uploadedPhotos(storeId,photos){
+ const urls=[];
+ for(let i=0;i<photos.length;i++){
+  const src=String(photos[i]||'');if(/^https:\/\//i.test(src)){urls.push(src);continue;}
+  if(!/^data:image\//i.test(src))throw new Error('照片來源不正確，請重新選擇照片。');
+  const key=String(storeId)+':'+i;if(intent.uploads.has(key)){urls.push(intent.uploads.get(key));continue;}
+  const path='events/v105/'+intent.id+'/'+storeId+'/'+i+'.jpg',blob=await dataUrlToBlob(src);
+  const {error}=await cloudDb.storage.from(SUPABASE_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});
+  if(error&&!/already exists|duplicate|409/i.test(String(error.message||error)))throw error;
+  const {data}=cloudDb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);if(!data?.publicUrl)throw new Error('照片網址未完整取得');
+  intent.uploads.set(key,data.publicUrl);urls.push(data.publicUrl);
+ }
+ return urls;
+}
+async function save(){
+ if(saveBusy)return;if(typeof validate==='function'&&!validate())return;
+ const auth=identity();if(!auth)return window.alert('請先有效登入後台再儲存活動。');
+ let prep;try{prep=getPrep();}catch(error){message(error.message);return;}
+ const selection=getSelectedStores().map(s=>({...s})),wasEditing=!!editingId,id=String(editingId||''),photos=[...currentPhotos];
+ if(wasEditing&&(!editStamp||editStamp.id!==id)){message('活動版本資料不完整，請從清單重新開啟修改；本次未儲存。');return;}
+ const common={start_date:el('start').value,end_date:el('end').value,event_name:el('campaign').value.trim(),event_content:JSON.stringify(el('products').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)),remark:el('note').value.trim()};
+ const fingerprint=JSON.stringify([auth,id,editStamp,selection.map(s=>String(s.id)),common,prep,photos]);
+ if(!intent||intent.fingerprint!==fingerprint)intent={fingerprint,id:crypto.randomUUID(),uploads:new Map(),resolved:null};
+ saveBusy=true;setCloudBusy(true,wasEditing?'儲存中…':'新增中…');message('正在儲存活動與備貨設定…',false);
+ const locks=[...el('activityTab').querySelectorAll('.form-grid input,.form-grid select,.form-grid textarea,.form-grid button')].map(node=>[node,node.disabled]);
+ locks.forEach(([node])=>{node.disabled=true;});
+ let committed=false;
+ try{
+  const caps=await window.starredApi('activity_stock_capabilities105',{});validateReply(caps);if(caps.ready!==true)throw new Error('備貨資料庫尚未就緒');
+  if(!intent.resolved){intent.resolved=[];for(const s of selection)intent.resolved.push(await ensureActivityStore(s));}
+  if(intent.resolved.length!==selection.length){intent.resolved=null;throw new Error('門市資料未完整確認，請再次儲存。');}
+  const payload=[];
+  for(const store of intent.resolved){payload.push({...common,store_id:Number(store.id),images:await uploadedPhotos(store.id,photos),...(wasEditing?{id:Number(id),expectedUpdatedAt:editStamp.updatedAt}:{})});}
+  if(auth!==identity())throw new Error('登入身分已變更，本次未送出活動。');
+  const result=await window.starredApi('activity_save105',{requestId:intent.id,events:payload,prep});validateReply(result);
+  if(!Array.isArray(result.events)||result.events.length!==selection.length)throw new Error('活動儲存結果不完整，請保留表單再次儲存，以相同識別碼核對結果。');
+  committed=true;if(auth!==identity()){clearPrivate();return;}
+  // Only a confirmed server commit clears the form. Uploads + metadata failures keep the draft and the same idempotency key.
+  resetForm();await loadCloudData();renderHome();updateManageStoreFilter();renderManage();
+  message((result.reused?'原送出已完成，沒有重複建立。':'活動儲存完成。')+(prep.enabled?'已設定提前 5 天備貨提醒。':''),false);
+  if(!wasEditing)showSuccessModal(selection.length);lastChecked=0;schedule(true);
+ }catch(error){message((committed?'活動已儲存，但畫面更新失敗，請重新載入查核；不要重複新增。':'尚未完成儲存：')+String(error?.message||error));}
+ finally{locks.forEach(([node,disabled])=>{if(node.isConnected)node.disabled=disabled;});saveBusy=false;setCloudBusy(false);if(el('saveBtn'))el('saveBtn').textContent=editingId?'儲存修改':'＋ 新增活動';}
+}
+function mount(){
+ if(el('stockEditor105'))return;
+ const form=el('activityTab')?.querySelector('.form-grid');if(!form)return;
+ const node=document.createElement('section');node.id='stockEditor105';node.className='stock105-editor';
+ node.innerHTML='<label class="stock105-enabled"><input id="stockEnabled105" type="checkbox"><span>需要提前備貨提醒（自由勾選）</span></label><div id="stockFields105" hidden><p>從開始日前 5 天起至活動結束，未確認者登入後台會優先看到提醒。請勾選需備貨商品，規格與數量可自行填寫。</p><div id="stockOptions105" class="stock105-options"></div><div class="stock105-add"><input id="stockNewItem105" maxlength="120" placeholder="自行新增備貨商品名稱" aria-label="新增備貨商品名稱"><button type="button" class="secondary" id="stockAdd105">新增商品</button></div><p id="stockItemCount105">已勾選 0 項</p></div><div id="stockFormStatus105" role="status" aria-live="polite"></div>';
+ form.querySelector('.photo-field').insertAdjacentElement('beforebegin',node);
+ const alert=document.createElement('div');alert.id='stockAlert105';alert.hidden=true;alert.setAttribute('role','status');alert.innerHTML='<span></span><button type="button" class="secondary" id="stockRetry105">重新檢查提醒</button>';el('adminContent').prepend(alert);
+ document.body.insertAdjacentHTML('beforeend','<dialog id="stockReminder105" class="stock105-dialog" aria-labelledby="stockReminderTitle105" aria-describedby="stockReminderHint105"><div class="stock105-shell"><header class="stock105-head"><p class="stock105-eyebrow">ACTIVITY STOCK REMINDER</p><h2 id="stockReminderTitle105">活動備貨提醒</h2><p id="stockReminderHint105"></p></header><div class="stock105-body" id="stockReminderBody105"></div><footer class="stock105-foot"><p id="stockAckIdentity105"></p><div id="stockAckStatus105" class="stock105-status" role="status" aria-live="polite"></div><button type="button" class="primary" id="stockAck105">已確認</button></footer></div></dialog><dialog id="stockHistory105" class="stock105-dialog" aria-labelledby="stockHistoryTitle105"><div class="stock105-shell"><header class="stock105-head"><div><h2 id="stockHistoryTitle105">備貨提醒・確認紀錄</h2><p>只記錄誰已閱讀，不表示已完成備貨。</p></div><button type="button" class="secondary" id="stockHistoryClose105">關閉</button></header><div class="stock105-body" id="stockHistoryBody105"></div><footer class="stock105-foot"><button type="button" class="secondary" id="stockHistoryMore105" hidden>載入較早版本</button></footer></div></dialog>');
+ el('stockEnabled105').addEventListener('change',()=>{el('stockFields105').hidden=!el('stockEnabled105').checked;if(el('stockEnabled105').checked)drawOptions();message('');});
+ el('stockAdd105').addEventListener('click',addProduct);
+ el('stockNewItem105').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addProduct();}});
+ el('products').addEventListener('change',()=>{if(el('stockEnabled105').checked)drawOptions();});
+ node.addEventListener('change',event=>{const t=event.target;if(t.matches('[data-stock-choice105]')){if(t.checked)choices.set(t.value,choices.get(t.value)||'');else choices.delete(t.value);const row=t.closest('.stock105-option'),input=row.querySelector('.stock105-detail-input');input.disabled=!t.checked;row.classList.toggle('is-selected',t.checked);if(t.checked)choices.set(t.value,input.value);el('stockItemCount105').textContent='已勾選 '+choices.size+' 項';}});
+ node.addEventListener('input',event=>{const t=event.target;if(t.matches('[data-stock-item105]')&&choices.has(t.dataset.stockItem105))choices.set(t.dataset.stockItem105,t.value);});
+ el('stockReminder105').addEventListener('cancel',e=>e.preventDefault());
+ el('stockAck105').addEventListener('click',acknowledge);el('stockRetry105').addEventListener('click',()=>check(true));
+ el('stockHistoryClose105').addEventListener('click',()=>{historySeq++;el('stockHistory105').close();});
+ el('stockHistoryMore105').addEventListener('click',()=>history(historyId,true));drawOptions();
+}
+// Capture Escape before legacy dialog listeners; the mandatory reminder has no close action.
+window.addEventListener('keydown',event=>{if(el('stockReminder105')?.open&&event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();}},true);
+document.addEventListener('click',event=>{const button=event.target.closest?.('[data-stock-history105]');if(button){event.preventDefault();history(button.dataset.stockHistory105);}});
+window.addEventListener('focus',()=>schedule(true));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(true);});
+window.StarredStock105={build:BUILD,mount,save,reset,loadEvent,card,check,schedule,getPrep,history,clearPrivate};
+const oldLogout=window.logout;if(oldLogout)window.logout=function(){clearPrivate();return oldLogout.apply(this,arguments);};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{mount();schedule();},{once:true});else{mount();schedule();}
+setInterval(()=>{if(inAdmin())check();else if(lastIdentity&&!identity())clearPrivate();},60000);
+})();
 </script>
