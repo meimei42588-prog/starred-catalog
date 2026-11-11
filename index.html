@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v114: atomic same-store shared sales, front role selection, 60/40 provisional allocation, independent payroll. Requires starred-order SQL + v114 API. -->
 <!-- v113: compact aligned workday summary; read-only store/person month analysis. Base v112, API/SQL unchanged. -->
 <!-- v112: desktop-only order alignment/pickup label, account page visibility controls, blank real names and active activity outlines. Requires v112 catalog SQL + line-api. -->
 <!-- v111.1 checked delivery: unique patch placement; server-side order-query wrapper preserved. -->
@@ -17,7 +18,7 @@
 <!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
 <!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
-<html lang="zh-Hant" data-site-build="v113">
+<html lang="zh-Hant" data-site-build="v114">
 <head>
 <meta charset="UTF-8">
 <!-- v90: report schema recovery; exact v89 base retained. -->
@@ -4837,7 +4838,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
   <p>本月預設與上月相同日數比較；歷史月份比較整月。兩月有回傳的對象與天數可能不同，請搭配日均判讀，不能僅由成長率推論活動或個人造成變化。</p>
  </details>
 </div><div id="salesComparisonDetailPanel"><div id="salesPersonDetailChoices" class="sales-person-detail-choices"></div><div id="salesPersonDetailTable" class="sales-person-detail-table-wrap"></div></div><div id="salesComparisonAveragePanel" hidden><div class="sales-average-inline-note">平均業績＝個人營業總額 ÷ 已確認上班日期；同一天只算 1 天，計日薪與時薪日期都納入，代銷售不增加上班天數。</div><div id="salesAveragePerformanceTable" class="sales-average-table-wrap"></div></div></div>
-        <div id="salesReportWorkdaysView" class="sales-report-view">
+        <div id="salesReportWorkdaysView" class="sales-report-view"><div id="salesSharedReview114" hidden></div>
           <div class="sales-workday-note">業績與薪資分開計算：同店同日只有一人本人回傳時自動計 1 日薪；同店多人或同一人同日跨兩個門市時，會進入核准。代銷售不計日薪。日薪金額與小時分開填寫；時薪填 0.5～7.5 小時，同組可分別選日薪、時薪或不計薪。日期異動後，相關工時與薪資需重新確認。</div>
           <section class="sales-workday-review-panel">
             <header class="sales-workday-review-heading"><div><span>WORK HOURS &amp; PAY REVIEW</span><h3>待確認工時與薪資</h3><p>選「日薪」直接填金額（元），不必換算小時；留空只記日薪天數，不指定金額。需要時薪或不計薪，可逐人切換。</p></div><b id="salesWorkdayPendingSummary">待確認 0 組</b></header>
@@ -11185,7 +11186,7 @@ function renderSalesOwnRecords(){
     var pendingWorkdayText=group.salesRecord&&['dual_store','mixed'].includes(String(group.salesRecord.workdayReviewReason||''))?'一日雙門市上傳・確認中':'工時與薪資待後台確認';
     var proxyBadge=salesIsTyphoon97(group.salesRecord)?'<small class="sales-own-proxy-note workday-excluded">颱風天放假・當天不計薪</small>':group.salesRecord&&group.salesRecord.isProxySale===true?'<small class="sales-own-proxy-note">'+salesKindLabel88(group.salesRecord)+'給 '+salesEsc(salesCreditedName(group.salesRecord))+'・不自動計日薪</small>':workdayStatus==='pending'?'<small class="sales-own-proxy-note workday-pending">'+salesEsc(pendingWorkdayText)+'</small>':workdayStatus==='excluded'?'<small class="sales-own-proxy-note '+(salesWorkdayIsHourly(workHours)?'workday-hourly':'workday-excluded')+'">'+salesEsc(salesWorkdayPayText(workHours,workdayStatus))+'</small>':'';
     return '<details class="sales-record-row grouped-record '+(!group.salesRecord?'return-record':'sales-record')+'">'+
-      '<summary><div class="sales-record-primary"><time title="'+salesEsc(group.businessDate||'')+'">'+salesEsc(shortDate)+'</time><div class="sales-record-store"><b>'+salesEsc(salesStoreText(group))+'</b>'+proxyBadge+'</div></div>'+
+      '<summary><div class="sales-record-primary"><time title="'+salesEsc(group.businessDate||'')+'">'+salesEsc(shortDate)+'</time><div class="sales-record-store"><b>'+salesEsc(salesStoreText(group))+'</b>'+proxyBadge+(window.StarredSharedSales114?window.StarredSharedSales114.note(group.salesRecord):'')+'</div></div>'+
       '<div class="sales-record-secondary"><div class="sales-record-toggle"><span class="sales-record-status '+meta.className+'">'+meta.label+'</span><span class="sales-record-chevron">⌄</span></div><div class="sales-record-amounts">'+amountHtml+'</div></div></summary>'+
       '<div class="sales-record-detail">'+salesOwnReturnDetailsHtml(group)+salesAction+'</div></details>';
   }).join('');
@@ -11610,21 +11611,30 @@ async function submitSalesRecord(){
       var testReview=recordType==='sales'&&isProxySale!==true?salesReconcileTestWorkdayGroup(businessDate,storeId):{reviewRequired:false,candidateCount:0};
       saveResult={workdayReviewRequired:testReview.reviewRequired,workdayCandidateCount:testReview.candidateCount};
     }else{
-      saveResult=await starredApi('sales_save',{sales:payload});
+      saveResult=(!id&&recordType==='sales'&&!isProxySale)
+        ?await window.StarredSharedSales114.submit(payload)
+        :await starredApi('sales_save',{sales:payload});
     }
     resetSalesForm();
-    await loadSalesData();
+    var refreshed114=await loadSalesData();
+    if(saveResult&&saveResult.sharedSalesBuild114&&!refreshed114)saveResult.postCommitWarning114=(saveResult.postCommitWarning114?saveResult.postCommitWarning114+'\n':'')+'業績已儲存，但最新清單尚未載入。請重新整理查核，不需重新新增。';
     var successMessage=id?(recordType==='return'?'退貨修改已完成。':isProxySale?'代銷售業績修改已完成。':'業績修改已完成。'):(recordType==='return'?'退貨申請已回傳完成。':isProxySale?'代銷售業績已回傳，並計入所選人員名下。':'今日業績已回傳完成。');
     if(recordType==='sales'&&!isProxySale&&saveResult&&saveResult.workdayReviewRequired){
       successMessage=saveResult.dualStorePending||['dual_store','mixed'].includes(String(saveResult.workdayReviewReason||''))
         ?'業績已回傳完成；偵測到一日雙門市上傳，前台不擋單，目前標示為「確認中」，請等待後台核准日薪。'
         :'業績已回傳完成；同門市同一天有 '+String(saveResult.workdayCandidateCount||2)+' 人回傳，日薪已轉為待後台確認。';
     }
+    if(saveResult&&saveResult.allocated&&saveResult.record&&saveResult.record.sharedSale114){
+      var share114=saveResult.record.sharedSale114;
+      successMessage='雙人業績已回傳並暫分配。門市共同總額 '+salesMoney(share114.totalAmount)+' 只計一次；您為'+(share114.role==='primary'?'主櫃 60%':'支援 40%')+'，業績 '+salesMoney(saveResult.record.grossAmount)+'。請等待後台確認業績分配；工時與薪資另行確認。';
+    }
+    if(saveResult&&saveResult.postCommitWarning114)successMessage+='\n'+saveResult.postCommitWarning114;
     salesSetStatus(successMessage,'success');
-    showSalesSuccessModal(successMessage,saveResult&&saveResult.workdayReviewRequired?'日薪待確認':'成功',saveResult&&saveResult.workdayReviewRequired?'pending':'');
+    showSalesSuccessModal(successMessage,saveResult&&saveResult.allocated?'已暫分配，待後台確認':saveResult&&saveResult.workdayReviewRequired?'日薪待確認':'成功',saveResult&&(saveResult.allocated||saveResult.workdayReviewRequired)?'pending':'');
   }catch(error){
+    if(error&&error.cancelled114){salesSetStatus(error.message,'working');return;}
     console.error('業績儲存失敗',error);
-    salesSetStatus('儲存失敗：'+String(error&&error.message||error),'error');
+    salesSetStatus('儲存未確認：'+String(error&&error.message||error)+(error&&error.outcomeUnknown?'\n請保留目前內容並重試原送出，勿重新新增。':''),'error');
   }finally{
     if(button)button.disabled=false;
   }
@@ -12250,10 +12260,11 @@ function salesWorkdayReviewCardHtml(group,confirmed){
   }).join('');
   var reasonLabel=group.reviewReason==='single_review'?'單人薪資複核':group.reviewReason==='dual_store'?'一日雙門市':group.reviewReason==='mixed'?'同店多人＋一日雙門市':'同店多人';
   var note=confirmed?'<small class="sales-workday-review-confirmed-note">最後確認：'+salesEsc(confirmer||'後台人員')+'・'+salesEsc(salesDateTime(confirmedAt))+'；可修改金額或計薪方式後再次確認。</small>':'<small class="sales-workday-review-warning">日薪可直接填金額；不同人可選不同計薪方式。各自業績不變。</small>';
-  return '<article class="sales-workday-review-card pay96-card '+(confirmed?'confirmed':'pending')+'" data-pay-source793="'+salesEsc(JSON.stringify(source793))+'" data-business-date="'+salesEsc(group.businessDate)+'" data-store-id="'+salesEsc(group.storeId)+'" data-record-ids="'+salesEsc((group.recordIds||[]).join(','))+'"><header><div><time>'+salesEsc(String(group.businessDate).replace(/-/g,'/'))+'</time><b>'+salesEsc(salesStoreText(group))+'</b></div><span class="sales-workday-review-reason">'+salesEsc(reasonLabel)+'・'+String(group.people.length)+' 人・'+salesMoney(group.grossAmount)+'</span></header><div class="sales-workday-review-people">'+people+'</div><footer>'+note+'<span class="sales-workday-review-actions"><button type="button" class="primary" onclick="confirmSalesWorkdayGroup(this)">'+(confirmed?'修改薪資':'確認薪資')+'</button></span><div class="sales-workday-save-status793" role="status" aria-live="polite" hidden></div></footer></article>';
+  return '<article class="sales-workday-review-card pay96-card '+(confirmed?'confirmed':'pending')+'" data-pay-source793="'+salesEsc(JSON.stringify(source793))+'" data-business-date="'+salesEsc(group.businessDate)+'" data-store-id="'+salesEsc(group.storeId)+'" data-record-ids="'+salesEsc((group.recordIds||[]).join(','))+'"><header><div><time>'+salesEsc(String(group.businessDate).replace(/-/g,'/'))+'</time><b>'+salesEsc(salesStoreText(group))+'</b></div><span class="sales-workday-review-reason">'+salesEsc(reasonLabel)+'・'+String(group.people.length)+' 人・'+salesMoney(group.grossAmount)+'</span></header>'+(window.StarredSharedSales114?window.StarredSharedSales114.card(group,salesAdminData.records):'')+'<div class="sales-workday-review-people">'+people+'</div><footer>'+note+'<span class="sales-workday-review-actions"><button type="button" class="primary" onclick="confirmSalesWorkdayGroup(this)">'+(confirmed?'修改薪資':'確認薪資')+'</button></span><div class="sales-workday-save-status793" role="status" aria-live="polite" hidden></div></footer></article>';
 }
 
 function renderSalesWorkdayReviews(){
+  window.StarredSharedSales114?.renderPanel(salesAdminData.records||[]);
   var pendingList=salesEl('salesWorkdayPendingList');var confirmedList=salesEl('salesWorkdayConfirmedList');if(!pendingList||!confirmedList)return;
   var personFilter=String((salesEl('salesAdminPerson')||{}).value||'');
   var storeFilter=String((salesEl('salesAdminStore')||{}).value||'');var areaFilter=String((salesEl('salesAdminArea')||{}).value||'');
@@ -12837,7 +12848,8 @@ function salesAdminActionsHtml(record){
   if(salesIsOvernight88(record)){var oid88=salesEsc(String(record.id||''));return '<span class="sales-admin-row-actions"><button type="button" class="sales-admin-action" onclick="StarredOvernight88.view(\''+oid88+'\')">查看／作廢</button></span>'} 
   var id=salesEsc(String(record&&record.id||''));
   var history=salesAmountAuditLogs(record,'').length?'<button type="button" class="sales-admin-action" onclick="openSalesAuditHistory(\''+id+'\',\'\')">紀錄</button>':'';
-  return '<span class="sales-admin-row-actions"><button type="button" class="sales-admin-action" onclick="openSalesAdminEdit(\''+id+'\')">修改</button>'+history+'<button type="button" class="sales-admin-action danger" onclick="deleteSalesAdminRecord(\''+id+'\')">刪除</button></span>';
+  var sharedAction114=record.sharedSale114?'<button type="button" class="sales-admin-action" data-shared114-open data-shared114-date="'+salesEsc(record.businessDate)+'" data-shared114-store="'+salesEsc(record.storeId)+'">智慧分類</button>':'';
+  return '<span class="sales-admin-row-actions">'+sharedAction114+'<button type="button" class="sales-admin-action" onclick="openSalesAdminEdit(\''+id+'\')">修改</button>'+history+'<button type="button" class="sales-admin-action danger" onclick="deleteSalesAdminRecord(\''+id+'\')">刪除</button></span>';
 }
 function ensureSalesAdminEditModal(){
   var modal=salesEl('salesAdminEditModal');
@@ -16262,7 +16274,7 @@ var baseApi=null,loading=false,lastResult=null,baseTitle=document.title,refreshT
 var refreshActions=new Set([
   'expense_submit','expense_update','expense_cancel','expense_delete','expense_admin_review','expense_admin_note','expense_admin_update','expense_admin_delete',
   'external_account_submit','external_account_update','external_account_cancel','external_account_delete','external_account_admin_review','external_account_admin_update','external_account_admin_delete',
-  'sales_save','sales_request_edit','sales_admin_create_proxy','sales_admin_review_edit','sales_admin_update_report','sales_admin_delete_report','sales_assign_return','sales_confirm_workday_group','sales_admin_workday_note','sales_admin_set_store_reporting_end','sales_admin_clear_store_reporting_end',
+  'sales_shared_review114','sales_save','sales_request_edit','sales_admin_create_proxy','sales_admin_review_edit','sales_admin_update_report','sales_admin_delete_report','sales_assign_return','sales_confirm_workday_group','sales_admin_workday_note','sales_admin_set_store_reporting_end','sales_admin_clear_store_reporting_end',
   'bulk_order_status','update_order','line_group_message_update','line_group_messages_mark_printed','line_group_messages_ai_classify'
 ]);
 function el(id){return document.getElementById(id)}
@@ -25215,5 +25227,239 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 </script>
+<style id="shared-sales-v114-style">
+/* v114: scoped, compact iOS-style shared sales UI; no existing layout or payroll overrides. */
+.ss114-dialog{padding:0;border:1px solid #ccd8e1;border-radius:22px;width:min(650px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:90vh;max-height:90dvh;box-shadow:0 24px 65px rgba(25,45,59,.24);color:#29495e;background:#fff;font-family:inherit}
+.ss114-dialog::backdrop{background:rgba(31,46,59,.48);backdrop-filter:blur(5px)}
+.ss114-dialog:not([open]){display:none!important}
+.ss114-shell{display:flex;flex-direction:column;max-height:90vh;max-height:90dvh;min-height:0}
+.ss114-dialog header{padding:20px 22px 15px;border-bottom:1px solid #dde5eb;flex:none}
+.ss114-eyebrow{font-size:12px;letter-spacing:.06em;color:#768999}
+.ss114-dialog h2{font-size:23px;font-weight:500;margin:7px 0}
+.ss114-dialog header p{font-size:14px;color:#698090;margin:0;line-height:1.5}
+.ss114-body{padding:16px 22px;overflow:auto;min-height:0;overscroll-behavior:contain;background:#f5f7f9;font-size:15px;line-height:1.6}
+.ss114-total{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#e9eff4;border:1px solid #d5e0e8;padding:12px 14px;border-radius:13px;margin-bottom:12px;flex-wrap:wrap}
+.ss114-total>span{font-size:14px}.ss114-total strong{font-size:25px;font-weight:500;color:#274d66}
+.ss114-note{font-size:14px;line-height:1.65;color:#647b8a;margin:10px 0}
+.ss114-field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:400;margin:10px 0;color:#506c80;min-width:0}
+.ss114-field input,.ss114-field select,.ss114-field textarea{font-size:16px!important;border:1px solid #cbd9e3;border-radius:10px;padding:9px 11px;min-height:42px;background:#fff;color:#29495e;min-width:0}
+.ss114-admin-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ss114-preview{background:#fff;border:1px solid #d8e2e9;border-radius:12px;overflow:hidden;font-size:15px;margin:12px 0}
+.ss114-preview>p{padding:10px;margin:0;color:#6a8090}
+.ss114-preview table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px}
+.ss114-preview th,.ss114-preview td{padding:10px 12px;text-align:left;font-weight:400;border-bottom:1px solid #e1e7ec;overflow-wrap:anywhere}
+.ss114-preview th{background:#eaf0f4;font-size:13px;color:#597284}
+.ss114-preview td:last-child,.ss114-preview th:last-child{text-align:right}
+.ss114-preview small{display:block;font-size:12px;color:#80909b;margin-top:3px}
+.ss114-preview tfoot{background:#f0f4f7}.ss114-preview tfoot td{border-bottom:0}
+.ss114-dialog footer{padding:12px 22px 18px;border-top:1px solid #dbe5ed;flex:none;background:#fff}
+#ss114Status{font-size:14px;color:#587385;white-space:pre-wrap;line-height:1.6;margin-bottom:9px}
+#ss114Status:empty{display:none}#ss114Status.error{color:#a44736}
+#ss114Actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#ss114Actions button{font-size:15px!important;min-height:42px!important;min-width:0!important;padding:9px 14px!important;border-radius:10px!important;font-weight:400!important;white-space:nowrap!important}
+#ss114Actions .ss114-separate{color:#965e34;background:#fff5e9;border:1px solid #e5d4ba}
+.ss114-history{border-top:1px solid #dce5eb;padding-top:8px;color:#657e8e;font-size:13px}.ss114-history summary{cursor:pointer}.ss114-history>div{padding:8px 0;border-bottom:1px solid #dce5eb}.ss114-history small{display:block}
+.ss114-result-row{display:flex;justify-content:space-between;gap:8px;padding:11px 13px;border-bottom:1px solid #e1e8ed}.ss114-result-row:last-child{border-bottom:0}
+#salesReportTab .ss114-card-tool{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;background:#eaf0f5;border-top:1px solid #d4e0e9;border-bottom:1px solid #d4e0e9;padding:10px 12px;font-size:14px;font-weight:400}
+#salesReportTab .ss114-card-tool>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px}
+#salesReportTab .ss114-card-tool button{min-height:38px!important;padding:7px 12px!important;font-size:14px!important;font-weight:400!important;white-space:nowrap!important;border:1px solid #bdcfdd!important;background:#fff!important;color:#355b74!important;border-radius:10px}
+.ss114-chip{padding:3px 7px;background:#fff4df;color:#8e642e;border-radius:7px;font-size:12px;white-space:nowrap}
+.ss114-record-note{display:block;margin-top:4px;color:#597b94;font-size:12px!important;font-weight:400!important;line-height:1.6}
+@media(max-width:620px){.ss114-dialog header{padding:16px 14px 12px}.ss114-dialog h2{font-size:21px}.ss114-body{padding:12px 14px}.ss114-dialog footer{padding:12px 14px 15px}.ss114-admin-fields{grid-template-columns:1fr;gap:0}.ss114-preview th,.ss114-preview td{padding:9px 8px;font-size:14px}#ss114Actions button{flex:1 1 auto}.ss114-total strong{font-size:24px}}
+#salesSharedReview114{margin:0 0 14px;background:#f1f5f8;border:1px solid #cddce6;border-radius:14px;padding:12px 14px;color:#35556c;font-size:14px}
+#salesSharedReview114[hidden]{display:none!important}
+.ss114-review-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid #d3e0e9}.ss114-review-head small{color:#738898;font-size:12px}
+.ss114-review-line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #dce6ed}.ss114-review-line:last-child{border-bottom:0;padding-bottom:0}.ss114-review-line>div{display:flex;gap:8px;flex-wrap:wrap}.ss114-review-line time,.ss114-review-line small{color:#728999}.ss114-review-line small{display:block;font-size:12px;text-align:right}.ss114-review-line button{min-width:0!important;font-size:14px!important;font-weight:400!important;min-height:36px!important;padding:6px 10px!important;white-space:nowrap!important}
+@media(max-width:520px){.ss114-review-line{grid-template-columns:minmax(0,1fr) auto;gap:6px 8px}.ss114-review-line>div{grid-column:1/-1}.ss114-review-line small{text-align:left}.ss114-review-line>button{justify-self:end}}
+
+</style>
+<script id="shared-sales-v114-module">
+(function(){
+'use strict';
+const BUILD='20261109-shared-sales-v114', KEY='starred_shared_sales_v114';
+let modalState=null;
+const el=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=v=>'$'+Number(v||0).toLocaleString('zh-TW');
+function allocation(total){if(!Number.isSafeInteger(total)||total<1||total>10000000)throw new Error('門市總額請填 1～10,000,000 元整數。');const primary=Math.round(total*60/100);return {primary,support:total-primary,total};}
+function identity(){const u=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(window.starredVerifiedLineUser?.lineUserId||u?.id||'');}
+function auth(admin=false){return identity()+(admin?'|'+String(typeof currentUser!=='undefined'&&currentUser?currentUser.adminSessionToken||'':''):'');}
+function storage(){return window.StarredStorage89?.session||null;}
+function readIntent(){try{return JSON.parse(storage()?.getItem(KEY)||'null')}catch(_){return null;}}
+function putIntent(v){try{if(v)storage()?.setItem(KEY,JSON.stringify(v));else storage()?.removeItem(KEY)}catch(_){}}
+function formatTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{hour12:false})}catch(_){return String(value);}}
+function mount(){
+ if(el('sharedSalesDialog114'))return;
+ const dialog=document.createElement('dialog');dialog.id='sharedSalesDialog114';dialog.className='ss114-dialog';dialog.setAttribute('aria-labelledby','ss114Title');
+ dialog.innerHTML='<div class="ss114-shell"><header><span class="ss114-eyebrow">雙人站櫃・業績分配</span><h2 id="ss114Title"></h2><p id="ss114Scope"></p></header><div class="ss114-body" id="ss114Body"></div><footer><div id="ss114Status" role="status" aria-live="polite"></div><div id="ss114Actions"></div></footer></div>';
+ dialog.addEventListener('cancel',e=>{e.preventDefault();close(false);});
+ dialog.addEventListener('click',e=>{const b=e.target.closest('[data-ss114-action]');if(!b)return;const a=b.dataset.ss114Action;if(a==='back'||a==='done')close(false);if(a==='submit')submitRole();if(a==='confirm')review('confirm');if(a==='separate')review('separate');});
+ dialog.addEventListener('change',e=>{if(e.target.id==='ss114Role'||e.target.id==='ss114Primary'){status('');preview();}});
+ dialog.addEventListener('input',e=>{if(e.target.id==='ss114Total')preview();});
+ document.body.appendChild(dialog);
+}
+function status(text,bad=false){const node=el('ss114Status');if(node){node.textContent=text||'';node.classList.toggle('error',bad);}}
+function show(title,scope){mount();el('ss114Title').textContent=title;el('ss114Scope').textContent=scope||'';status('');const d=el('sharedSalesDialog114');if(!d.open)d.showModal();}
+function close(ok){const s=modalState;if(s?.busy)return;modalState=null;const d=el('sharedSalesDialog114');if(d?.open)d.close();if(s?.resolve)s.resolve(ok||null);if(s?.previous?.isConnected)s.previous.focus({preventScroll:true});}
+function setBusy(value){if(modalState)modalState.busy=value;el('sharedSalesDialog114')?.querySelectorAll('button,input,select,textarea').forEach(n=>n.disabled=value);}
+function roleDialog(data){
+ if(modalState)throw new Error('請先完成目前的業績確認視窗。');
+ mount();
+ return new Promise(resolve=>{
+  modalState={kind:'front',data,resolve,auth:auth(),previous:document.activeElement,busy:false};
+  show('本日業績有兩人站櫃',[data.businessDate,data.storeName,data.storeFloor].filter(Boolean).join('｜'));
+  el('ss114Body').innerHTML='<div class="ss114-total"><span>本日門市營業額（只計一次）</span><strong>'+esc(money(data.totalAmount))+'</strong></div>'+
+   '<p class="ss114-note">另一位人員「'+esc(data.peerName||'已回傳人員')+'」已回傳相同金額。確認是同一筆門市營業額後，選擇您今天的角色。</p>'+
+   '<label class="ss114-field" for="ss114Role"><span>我是 '+esc(data.selfName||'本次回傳人員')+'</span><select id="ss114Role"><option value="">請選擇主櫃或支援</option><option value="primary">主櫃人員・60%</option><option value="support">支援人員・40%</option></select></label>'+
+   '<div id="ss114Preview" class="ss114-preview"><p>選擇角色後顯示兩人的分配金額。</p></div>'+
+   '<p class="ss114-note">送出即暫分配、待後台確認；兩人的合計仍為 '+esc(money(data.totalAmount))+'，不會加成兩倍。若是兩筆獨立業績，請返回核對並聯絡後台，不要直接套用。</p>';
+  el('ss114Actions').innerHTML='<button type="button" class="secondary" data-ss114-action="back">返回核對</button><button type="button" class="primary" data-ss114-action="submit">確認角色並回傳</button>';
+  setTimeout(()=>el('ss114Role')?.focus(),0);
+ });
+}
+function preview(){
+ const s=modalState;if(!s||s.busy)return;
+ const box=el('ss114Preview');if(!box)return;
+ try{
+  let rows=[];let total;
+  if(s.kind==='front'){
+   const role=el('ss114Role').value;if(!role){box.innerHTML='<p>請先選擇角色。</p>';return;}
+   total=Number(s.data.totalAmount);const amounts=allocation(total);
+   rows=[{name:s.data.selfName||'本次回傳人員',role,amount:amounts[role]},{name:s.data.peerName||'另一位人員',role:role==='primary'?'support':'primary',amount:amounts[role==='primary'?'support':'primary']}];
+  }else{
+   total=Number(el('ss114Total').value);const amounts=allocation(total),primary=el('ss114Primary').value;
+   rows=s.data.records.map(r=>({name:r.salespersonName||r.submitterName,role:primary?(String(r.id)===primary?'primary':'support'):'',amount:primary?amounts[String(r.id)===primary?'primary':'support']:null,original:r.sharedSale114?.originalAmount??r.grossAmount}));
+  }
+  box.innerHTML='<table><thead><tr><th>人員</th><th>角色／比例</th><th>分配業績</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.name)+(r.original!=null?'<small>原回傳 '+esc(money(r.original))+'</small>':'')+'</td><td>'+esc(r.role==='primary'?'主櫃 60%':r.role==='support'?'支援 40%':'待選擇')+'</td><td>'+esc(r.amount==null?'—':money(r.amount))+'</td></tr>').join('')+'</tbody><tfoot><tr><td colspan="2">合計・門市只計一次</td><td>'+esc(money(total))+'</td></tr></tfoot></table>';
+ }catch(error){box.textContent=String(error.message||error);}
+}
+function submitRole(){
+ const s=modalState;if(!s||s.kind!=='front'||s.busy)return;
+ if(s.auth!==auth()){status('登入身分已變更，請返回後重新登入。',true);return;}
+ const role=el('ss114Role').value;if(!['primary','support'].includes(role)){status('請先選擇您是主櫃人員或支援人員。',true);return;}
+ const resolve=s.resolve,choice={role,scopeToken:s.data.scopeToken};s.resolve=null;close(false);resolve(choice);
+}
+async function submit(payload){
+ const who=auth();if(!who)throw new Error('請先登入 LINE。');
+ const fingerprint=JSON.stringify({who,date:payload.businessDate,store:payload.storeId,amount:Number(payload.grossAmount),note:String(payload.note||'')});
+ let intent=readIntent();
+ if(intent&&intent.auth===who&&intent.uncertain&&intent.fingerprint!==fingerprint)throw new Error('上一筆送出結果尚未確認，請先用原日期、店點與金額重試或核對我的回傳紀錄；不要直接另建。');
+ if(!intent||intent.auth!==who||intent.fingerprint!==fingerprint)intent={id:crypto.randomUUID(),auth:who,fingerprint,choice:null,uncertain:false};
+ putIntent(intent);
+ const fieldIds=['salesBusinessDate','salesArea','salesStore','salesGrossAmount','salesReturnAmount','salesProxyPerson','salesOriginalInvoiceDate'];
+ const fields=fieldIds.map(el).filter(Boolean),disabled=fields.map(n=>n.disabled);fields.forEach(n=>n.disabled=true);
+ let dispatched=false;
+ try{
+  for(let attempt=0;attempt<2;attempt++){
+   if(who!==auth())throw new Error('登入身分已變更，請重新登入。');
+   dispatched=true;intent.uncertain=true;putIntent(intent);
+   const result=await window.starredApi('sales_save',{sales:payload,sharedSalesVersion114:114,submissionId114:intent.id,sharedChoice114:intent.choice});
+   if(who!==auth())throw new Error('登入身分已變更，請重新登入並核對原回傳。');
+   if(result.sharedSalesBuild114!==BUILD)throw new Error('後端尚未回傳 v114 收據；請先核對此筆是否已送出，再更新 line-api，勿重複建立。');
+   if(result.requiresRole){
+    dispatched=false;intent.uncertain=false;intent.choice=null;putIntent(intent);
+    if(result.writeNotStarted!==true||result.businessDate!==payload.businessDate||result.storeId!==payload.storeId||Number(result.totalAmount)!==Number(payload.grossAmount)||!/^[0-9a-f]{32}$/.test(String(result.scopeToken||'')))throw new Error('雙人站櫃的日期、門市或金額不一致，請重新核對。');
+    const choice=await roleDialog(result);
+    if(!choice){putIntent(null);const e=new Error('已返回核對，第二筆尚未送出，表單內容保留。');e.cancelled114=true;throw e;}
+    intent.choice=choice;putIntent(intent);continue;
+   }
+   if(!result.record?.id||result.record.businessDate!==payload.businessDate||result.record.storeId!==payload.storeId)throw new Error('儲存收據不完整；請保留目前表單並以原送出重試。');
+   if(result.allocated){
+    const meta=result.record.sharedSale114,amounts=allocation(Number(meta?.totalAmount));
+    if(!meta||!['primary','support'].includes(meta.role)||amounts.total!==Number(payload.grossAmount)||Number(result.record.grossAmount)!==amounts[meta.role])throw new Error('分配收據與預期不一致，請先核對後台；勿另建同筆資料。');
+   }
+   putIntent(null);return result;
+  }
+  throw new Error('資料於核對期間變更，請重新核對後再送出。');
+ }catch(error){
+  if(error.writeNotStarted===true){intent.uncertain=false;intent.choice=null;putIntent(intent);}
+  else if(dispatched){intent.uncertain=true;putIntent(intent);}
+  throw error;
+ }finally{fields.forEach((n,i)=>n.disabled=disabled[i]);}
+}
+function ordinary(r){return r&&r.recordType==='sales'&&r.isProxySale!==true&&!r.isOvernightSale&&!r.overnightMeta&&!r.isTyphoonClosure&&Number(r.overnightAllocatedAmount||0)===0;}
+function eligible(rows){return rows.length===2&&rows.every(ordinary)&&Boolean(rows[0].businessDate&&rows[0].storeId)&&rows.every(r=>r.businessDate===rows[0].businessDate&&r.storeId===rows[0].storeId)&&new Set(rows.map(r=>r.salespersonLineUserId||r.submitterLineUserId)).size===2&&
+ (rows.every(r=>r.sharedSale114?.groupId)&&new Set(rows.map(r=>r.sharedSale114.groupId)).size===1||Number(rows[0].grossAmount)>0&&Number(rows[0].grossAmount)===Number(rows[1].grossAmount)&&rows.every(r=>!r.sharedSale114));}
+function card(group,allRows){
+ const ids=new Set((group.recordIds||[]).map(String));const grouped=new Map();
+ (allRows||[]).filter(r=>ids.has(String(r.id))).forEach(r=>{const key=r.businessDate+'|'+r.storeId;if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(r);});
+ return Array.from(grouped.values()).filter(eligible).map(rows=>{
+  const r=rows[0],m=r.sharedSale114,total=m?Number(m.totalAmount):Number(r.grossAmount),label=m?(m.state==='confirmed'?'已確認分配':'已暫分配・待確認'):'相同金額・請核對';
+  return '<div class="ss114-card-tool"><div><span class="ss114-chip">'+esc(label)+'</span><span>共同總額 '+esc(money(total))+' ・ 主櫃 60%／支援 40%</span></div><button type="button" class="secondary" data-shared114-open data-shared114-date="'+esc(r.businessDate)+'" data-shared114-store="'+esc(r.storeId)+'">智慧分類</button></div>';
+ }).join('');
+}
+function payIsDirty(card){return card&&Array.from(card.querySelectorAll('.sales-workday-review-person')).some(r=>r.dataset.modeChanged96==='1'||r.dataset.moneyChanged96==='1'||r.dataset.hoursChanged96==='1');}
+async function openAdmin(date,store,sourceButton){
+ if(modalState)return;
+ if(Array.from(document.querySelectorAll('#salesReportWorkdaysView .sales-workday-review-card')).some(payIsDirty)){window.alert('畫面有尚未儲存的薪資輸入，請先確認薪資，再使用智慧分類；避免重新查詢時遺失。');return;}
+ mount();const s={kind:'admin',auth:auth(true),previous:sourceButton||document.activeElement,busy:true,data:null,operation:null};modalState=s;
+ show('智慧分類｜雙人業績分配',date);
+ el('ss114Body').textContent='正在核對雲端的兩筆業績、站櫃角色與原始金額…';el('ss114Actions').innerHTML='<button type="button" class="secondary" data-ss114-action="back">返回</button>';setBusy(true);
+ try{
+  const data=await window.starredApi('sales_shared_options114',{businessDate:date,storeId:store});
+  if(modalState!==s)return;
+  if(s.auth!==auth(true))throw new Error('登入身分已變更，請重新登入。');
+  if(data.sharedSalesBuild114!==BUILD||data.businessDate!==date||data.storeId!==store||!Array.isArray(data.records)||!eligible(data.records))throw new Error('目前不是可自動分配的兩筆同額本人業績，或含代銷售／隔夜帳／停班；本次未修改。');
+  s.data=data;const total=Number(data.group?.total_amount??data.records[0].grossAmount);s.initialTotal=total;
+  el('ss114Scope').textContent=[date,data.store?.name,data.store?.floor].filter(Boolean).join('｜');
+  el('ss114Body').innerHTML='<div class="ss114-admin-fields"><label class="ss114-field"><span>門市當日總額・只計一次</span><input id="ss114Total" type="number" min="1" max="10000000" step="1" inputmode="numeric" value="'+esc(total)+'"></label><label class="ss114-field"><span>主櫃人員（另一位為支援）</span><select id="ss114Primary"><option value="">請指定主櫃</option>'+data.records.map(r=>'<option value="'+esc(r.id)+'"'+(String(data.group?.primary_report_id||'')===String(r.id)?' selected':'')+'>'+esc(r.salespersonName||r.submitterName)+'</option>').join('')+'</select></label></div>'+
+   '<p class="ss114-note">'+(data.group?'前台已選擇角色並暫分配；請核對後確認。':'這是尚未分類的舊資料。請先確認兩筆代表同一筆門市營業額，再指定主櫃。')+' 本功能不改工時、日薪或時薪。</p><div id="ss114Preview" class="ss114-preview"></div>'+
+   '<label class="ss114-field"><span>核對備註（改總額／解除時必填）</span><textarea id="ss114Reason" maxlength="500" rows="2" placeholder="例如：已核對結機金額與站櫃人員"></textarea></label>'+
+   '<p class="ss114-note">整元分配：主櫃四捨五入，支援取剩餘金額，合計始終等於門市總額。原回傳及每次操作紀錄均保留。</p>'+
+   (data.history?.length?'<details class="ss114-history"><summary>查看分配紀錄（最近 '+data.history.length+' 筆）</summary>'+data.history.map(h=>'<div>'+esc({provisional:'前台暫分配',confirm:'後台確認／調整',separate:'解除共同分配'}[h.operation]||h.operation)+' · '+esc(h.actor_name)+' · '+esc(formatTime(h.created_at))+'<small>'+esc(h.reason||'—')+'</small><small>'+esc((h.after_data||[]).map(r=>(r.salesperson_name||r.submitter_name||'人員')+' '+money(r.gross_amount)).join('／'))+'</small></div>').join('')+'</details>':'');
+  el('ss114Actions').innerHTML='<button type="button" class="secondary" data-ss114-action="back">返回</button>'+(data.group?'<button type="button" class="secondary ss114-separate" data-ss114-action="separate">解除共同分配</button>':'')+'<button type="button" class="primary" data-ss114-action="confirm">確認分配</button>';
+  setBusy(false);preview();
+ }catch(error){if(modalState===s){status(String(error.message||error),true);setBusy(false);}}
+}
+async function review(operation){
+ const s=modalState;if(!s||s.kind!=='admin'||s.busy||!s.data)return;
+ if(s.auth!==auth(true)){status('登入身分已變更，請返回後重新登入。',true);return;}
+ const primary=el('ss114Primary')?.value,total=Number(el('ss114Total')?.value),reason=String(el('ss114Reason')?.value||'').trim();
+ try{
+  if(operation==='confirm'){
+   allocation(total);if(!s.data.records.some(r=>String(r.id)===primary))throw new Error('請選擇主櫃人員。');
+   if(total!==s.initialTotal&&reason.length<2)throw new Error('調整門市總額請填寫至少 2 個字的原因。');
+  }else{
+   if(reason.length<2)throw new Error('解除共同分配請填寫原因。');
+   const restored=s.data.records.reduce((n,r)=>n+Number(r.sharedSale114?.originalAmount??r.grossAmount),0);
+   if(!window.confirm('解除後會恢復兩人原始回傳金額，這兩筆合計為 '+money(restored)+'。\n只適用確認為兩筆獨立業績或需要重新核對的情況。確定解除？'))return;
+  }
+  const payload={businessDate:s.data.businessDate,storeId:s.data.storeId,scopeToken:s.data.scopeToken,operation,primaryReportId:primary||null,totalAmount:operation==='confirm'?total:null,reason};
+  const key=JSON.stringify(payload);
+  if(s.operation&&s.operation.key!==key&&s.operation.uncertain)throw new Error('上次操作結果尚未確認，請保留原內容重試，不要改成另一個操作。');
+  if(!s.operation||s.operation.key!==key)s.operation={key,id:crypto.randomUUID(),uncertain:false};
+  setBusy(true);status('正在整組儲存分配，原始回傳與薪資設定會保留…');s.operation.uncertain=true;
+  const data=await window.starredApi('sales_shared_review114',{...payload,operationId:s.operation.id});
+  if(modalState!==s||s.auth!==auth(true)){if(modalState===s){setBusy(false);close(false);}return;}
+  if(data.sharedSalesBuild114!==BUILD||!Array.isArray(data.records)||data.records.length!==2||data.records.reduce((n,r)=>n+Number(r.grossAmount),0)!==Number(data.totalAmount))throw new Error('儲存回應不完整，請保留原操作識別碼重試並查核。');
+  s.operation.uncertain=false;
+  const refreshed=await Promise.allSettled([window.loadSalesAdminReport(),window.loadSalesData()]);
+  if(modalState!==s)return;
+  const loaded=refreshed.every(r=>r.status==='fulfilled'&&r.value!=null&&r.value!==false);
+  el('ss114Title').textContent=operation==='confirm'?'業績分配已確認':'共同分配已解除';
+  el('ss114Body').innerHTML='<div class="ss114-total"><span>兩筆業績合計</span><strong>'+esc(money(data.totalAmount))+'</strong></div><div class="ss114-preview">'+data.records.map(r=>'<div class="ss114-result-row"><span>'+esc(r.salespersonName||r.submitterName)+'</span><span>'+esc(money(r.grossAmount))+'</span></div>').join('')+'</div><p class="ss114-note">已同步雲端；工時、日薪、時薪與不計薪設定未變更。</p>';
+  el('ss114Actions').innerHTML='<button type="button" class="primary" data-ss114-action="done">完成</button>';s.data=null;
+  status(loaded?'': '分配已儲存，但部分畫面尚未更新。請重新整理查核，不需再次確認。',!loaded);setBusy(false);
+ }catch(error){if(modalState===s){if(error.writeNotStarted&&s.operation)s.operation.uncertain=false;status(String(error.message||error),true);setBusy(false);}}
+}
+function note(r){const m=r?.sharedSale114;if(!m)return '';return '<small class="ss114-record-note">'+esc((m.role==='primary'?'主櫃 60%':'支援 40%')+'・'+(m.state==='confirmed'?'分配已確認':'暫分配待確認')+'｜門市共同總額 '+money(m.totalAmount)+'（只計一次）')+'</small>';}
+function renderPanel(records){
+ const panel=el('salesSharedReview114');if(!panel)return;
+ if(['salesAdminPerson','salesAdminStore','salesAdminArea'].some(id=>el(id)?.value)){panel.hidden=true;panel.replaceChildren();return;}
+ const scopes=new Map();
+ (records||[]).filter(r=>r.recordType==='sales').forEach(r=>{const key=r.businessDate+'|'+r.storeId;if(!scopes.has(key))scopes.set(key,[]);scopes.get(key).push(r);});
+ const candidates=Array.from(scopes.values()).filter(eligible).filter(rows=>rows.some(r=>!r.sharedSale114||r.sharedSale114.state!=='confirmed')).sort((a,b)=>String(b[0].businessDate).localeCompare(String(a[0].businessDate)));
+ panel.hidden=!candidates.length;
+ panel.innerHTML=candidates.length?'<div class="ss114-review-head"><span>雙人業績分配・待核對 '+candidates.length+' 組</span><small>業績分配與下方薪資確認分開</small></div>'+candidates.map(rows=>{
+  const r=rows[0],m=r.sharedSale114;return '<div class="ss114-review-line"><div><time>'+esc(r.businessDate)+'</time><span>'+esc([r.storeName,r.storeFloor].filter(Boolean).join('｜'))+'</span></div><span>'+esc(money(m?.totalAmount??r.grossAmount))+'<small>'+esc(m?'已暫分配，待確認':'兩筆同額，待核對')+'</small></span><button type="button" class="secondary" data-shared114-open data-shared114-date="'+esc(r.businessDate)+'" data-shared114-store="'+esc(r.storeId)+'">智慧分類</button></div>';
+ }).join(''):'';
+}
+
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-shared114-open]');if(b){e.preventDefault();openAdmin(b.dataset.shared114Date,b.dataset.shared114Store,b);}});
+window.StarredSharedSales114={build:BUILD,submit,card,openAdmin,note,allocation,eligible,renderPanel};
+})();
+
+</script>
+
 </body>
 </html>
