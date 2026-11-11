@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v115: own-role declaration, conflict resolution and authorized backoffice entry. Requires v115 SQL + line-api on starred-order. -->
 <!-- v114: atomic same-store shared sales, front role selection, 60/40 provisional allocation, independent payroll. Requires starred-order SQL + v114 API. -->
 <!-- v113: compact aligned workday summary; read-only store/person month analysis. Base v112, API/SQL unchanged. -->
 <!-- v112: desktop-only order alignment/pickup label, account page visibility controls, blank real names and active activity outlines. Requires v112 catalog SQL + line-api. -->
@@ -18,7 +19,7 @@
 <!-- UI PATCH v93: 今日上傳全列／隔夜帳隔日門市及次月人員，base v92; API v93; SQL v93 after v90. -->
 <!-- UI PATCH v92: admin LINE users compact list; base v91. No API, SQL, login, payroll, ledger or order contract changes. -->
 <!-- UI PATCH: 20261007-company-in-expense-tabs-v91; base: report_schema_repair_v90/index.html; v90 API/SQL unchanged -->
-<html lang="zh-Hant" data-site-build="v114">
+<html lang="zh-Hant" data-site-build="v115">
 <head>
 <meta charset="UTF-8">
 <!-- v90: report schema recovery; exact v89 base retained. -->
@@ -4784,7 +4785,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
       <section class="panel sales-admin-panel">
         <div class="sales-admin-heading">
           <div><span class="sales-eyebrow">SALES REPORT</span><h2>業績報表</h2><p>依日期、區域、門市或銷售人員查看每日明細與統計。</p></div>
-          <div class="sales-report-main-actions"><button type="button" id="salesTyphoonOpen97" class="secondary sales-typhoon-open97" onclick="StarredTyphoon97.open()">颱風天放假</button><button type="button" class="secondary" onclick="printCurrentSalesReport()">友善列印</button><button type="button" id="salesExportBtn" class="primary sales-export-btn" onclick="exportCurrentSalesReportExcel()">匯出 Excel</button></div>
+          <div class="sales-report-main-actions"><button type="button" id="salesDelegateOpen115" class="secondary" hidden onclick="StarredSharedSales114.openDelegate115()">＋ 代回傳業績</button><button type="button" id="salesTyphoonOpen97" class="secondary sales-typhoon-open97" onclick="StarredTyphoon97.open()">颱風天放假</button><button type="button" class="secondary" onclick="printCurrentSalesReport()">友善列印</button><button type="button" id="salesExportBtn" class="primary sales-export-btn" onclick="exportCurrentSalesReportExcel()">匯出 Excel</button></div>
         </div>
         <div class="sales-admin-filter">
           <div class="field sales-admin-date-field"><label>開始日期</label><div class="sales-admin-date-control"><input id="salesAdminDateFrom" type="date" onchange="loadSalesAdminReport()"></div></div>
@@ -11140,6 +11141,8 @@ function salesAdminPersonCellHtml(record){
   if(salesRecordType(record)==='return')return '<span class="sales-person-cell"><b>'+salesEsc(salesSubmitterName(record))+'</b><small>退貨處理人</small></span>';
   var credited=salesCreditedName(record);
   if(record&&record.isProxySale===true)return '<span class="sales-person-cell proxy"><b>'+salesEsc(credited)+'</b><small>'+salesKindLabel88(record)+'・'+salesEsc(salesSubmitterName(record))+' 回傳</small>'+salesOvernightRowNote93(record)+'</span>';
+  var origin115=record&&record.entryOrigin115;
+  if(origin115&&origin115.kind==='backoffice')return '<span class="sales-person-cell"><b>'+salesEsc(credited)+'</b><small>後台代回傳・'+salesEsc(origin115.operatorName||'')+'（'+salesEsc(origin115.operatorAccount||'')+'）</small><small>'+salesEsc(origin115.reason||'')+'</small></span>';
   return '<span class="sales-person-cell"><b>'+salesEsc(credited)+'</b><small>本人回傳</small></span>';
 }
 function salesGroupStatus(group){
@@ -11626,7 +11629,7 @@ async function submitSalesRecord(){
     }
     if(saveResult&&saveResult.allocated&&saveResult.record&&saveResult.record.sharedSale114){
       var share114=saveResult.record.sharedSale114;
-      successMessage='雙人業績已回傳並暫分配。門市共同總額 '+salesMoney(share114.totalAmount)+' 只計一次；您為'+(share114.role==='primary'?'主櫃 60%':'支援 40%')+'，業績 '+salesMoney(saveResult.record.grossAmount)+'。請等待後台確認業績分配；工時與薪資另行確認。';
+      successMessage=window.StarredSharedSales114.resultText115(saveResult)+'\n請等待後台確認業績分配；工時與薪資另行確認。';
     }
     if(saveResult&&saveResult.postCommitWarning114)successMessage+='\n'+saveResult.postCommitWarning114;
     salesSetStatus(successMessage,'success');
@@ -13477,6 +13480,11 @@ async function salesExportReportExcelWithExcelJs(){
     '樓層／櫃位':record.storeFloor,
     '銷售人員':salesRecordType(record)==='return'?salesSubmitterName(record):salesCreditedName(record),
     '回傳人員':salesSubmitterName(record),
+    '建立來源':record.entryOrigin115?.kind==='backoffice'?'後台代回傳':'本人回傳',
+    '實際代操作人':record.entryOrigin115?.kind==='backoffice'?String(record.entryOrigin115.operatorName||''):'',
+    '代操作帳號':record.entryOrigin115?.kind==='backoffice'?String(record.entryOrigin115.operatorAccount||''):'',
+    '代回傳原因':record.entryOrigin115?.kind==='backoffice'?String(record.entryOrigin115.reason||''):'',
+    '申報站櫃角色':({primary:'主櫃人員',support:'支援人員',undecided:'交後台判定'})[record.counterRole115]||'',
     '是否代銷售':record.isProxySale?'是':'否',
     '上班時數':salesRecordType(record)==='return'?'':(salesWorkHoursValue(record)===null?'':salesWorkHoursNumberText(salesWorkHoursValue(record))),
     '薪資狀態':salesRecordType(record)==='return'?'':salesWorkdayRecordLabel96(record),
@@ -25276,7 +25284,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="shared-sales-v114-module">
 (function(){
 'use strict';
-const BUILD='20261109-shared-sales-v114', KEY='starred_shared_sales_v114';
+const BUILD='20261109-shared-sales-v114', ROLE_BUILD115='20261111-roles-delegate-v115', KEY='starred_shared_sales_v115';
 let modalState=null;
 const el=id=>document.getElementById(id);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25285,8 +25293,8 @@ function allocation(total){if(!Number.isSafeInteger(total)||total<1||total>10000
 function identity(){const u=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;return String(window.starredVerifiedLineUser?.lineUserId||u?.id||'');}
 function auth(admin=false){return identity()+(admin?'|'+String(typeof currentUser!=='undefined'&&currentUser?currentUser.adminSessionToken||'':''):'');}
 function storage(){return window.StarredStorage89?.session||null;}
-function readIntent(){try{return JSON.parse(storage()?.getItem(KEY)||'null')}catch(_){return null;}}
-function putIntent(v){try{if(v)storage()?.setItem(KEY,JSON.stringify(v));else storage()?.removeItem(KEY)}catch(_){}}
+function readIntent(delegated=false){try{return JSON.parse(storage()?.getItem(KEY+(delegated?'_delegate':'_self'))||'null')}catch(_){return null;}}
+function putIntent(v,delegated=false){const key=KEY+(delegated?'_delegate':'_self');try{if(v)storage()?.setItem(key,JSON.stringify(v));else storage()?.removeItem(key)}catch(_){}}
 function formatTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{hour12:false})}catch(_){return String(value);}}
 function mount(){
  if(el('sharedSalesDialog114'))return;
@@ -25294,7 +25302,12 @@ function mount(){
  dialog.innerHTML='<div class="ss114-shell"><header><span class="ss114-eyebrow">雙人站櫃・業績分配</span><h2 id="ss114Title"></h2><p id="ss114Scope"></p></header><div class="ss114-body" id="ss114Body"></div><footer><div id="ss114Status" role="status" aria-live="polite"></div><div id="ss114Actions"></div></footer></div>';
  dialog.addEventListener('cancel',e=>{e.preventDefault();close(false);});
  dialog.addEventListener('click',e=>{const b=e.target.closest('[data-ss114-action]');if(!b)return;const a=b.dataset.ss114Action;if(a==='back'||a==='done')close(false);if(a==='submit')submitRole();if(a==='confirm')review('confirm');if(a==='separate')review('separate');});
- dialog.addEventListener('change',e=>{if(e.target.id==='ss114Role'||e.target.id==='ss114Primary'){status('');preview();}});
+ dialog.addEventListener('change',e=>{
+  if(e.target.name==='ss115RoleChoice'){
+   el('ss114Role').value=e.target.value;status('');preview();
+   const submit=el('ss114Actions')?.querySelector('[data-ss114-action="submit"]');if(submit)submit.disabled=false;
+  }else if(e.target.id==='ss114Role'||e.target.id==='ss114Primary'){status('');preview();}
+ });
  dialog.addEventListener('input',e=>{if(e.target.id==='ss114Total')preview();});
  document.body.appendChild(dialog);
 }
@@ -25302,81 +25315,111 @@ function status(text,bad=false){const node=el('ss114Status');if(node){node.textC
 function show(title,scope){mount();el('ss114Title').textContent=title;el('ss114Scope').textContent=scope||'';status('');const d=el('sharedSalesDialog114');if(!d.open)d.showModal();}
 function close(ok){const s=modalState;if(s?.busy)return;modalState=null;const d=el('sharedSalesDialog114');if(d?.open)d.close();if(s?.resolve)s.resolve(ok||null);if(s?.previous?.isConnected)s.previous.focus({preventScroll:true});}
 function setBusy(value){if(modalState)modalState.busy=value;el('sharedSalesDialog114')?.querySelectorAll('button,input,select,textarea').forEach(n=>n.disabled=value);}
-function roleDialog(data){
+function roleText115(role){return {primary:'主櫃人員',support:'支援人員',undecided:'交後台判定'}[role]||'尚未申報';}
+function claimDecision115(data,role){
+ if(!data.hasPeer)return 'single';
+ const peer=data.peerDeclaredRole;
+ if(['primary','support'].includes(role)&&['primary','support'].includes(peer))return role===peer?'conflict':'compatible';
+ return 'incomplete';
+}
+function roleDialog(data,context){
  if(modalState)throw new Error('請先完成目前的業績確認視窗。');
- mount();
+ mount();context=context||{};
  return new Promise(resolve=>{
-  modalState={kind:'front',data,resolve,auth:auth(),previous:document.activeElement,busy:false};
-  show('本日業績有兩人站櫃',[data.businessDate,data.storeName,data.storeFloor].filter(Boolean).join('｜'));
-  el('ss114Body').innerHTML='<div class="ss114-total"><span>本日門市營業額（只計一次）</span><strong>'+esc(money(data.totalAmount))+'</strong></div>'+
-   '<p class="ss114-note">另一位人員「'+esc(data.peerName||'已回傳人員')+'」已回傳相同金額。確認是同一筆門市營業額後，選擇您今天的角色。</p>'+
-   '<label class="ss114-field" for="ss114Role"><span>我是 '+esc(data.selfName||'本次回傳人員')+'</span><select id="ss114Role"><option value="">請選擇主櫃或支援</option><option value="primary">主櫃人員・60%</option><option value="support">支援人員・40%</option></select></label>'+
-   '<div id="ss114Preview" class="ss114-preview"><p>選擇角色後顯示兩人的分配金額。</p></div>'+
-   '<p class="ss114-note">送出即暫分配、待後台確認；兩人的合計仍為 '+esc(money(data.totalAmount))+'，不會加成兩倍。若是兩筆獨立業績，請返回核對並聯絡後台，不要直接套用。</p>';
-  el('ss114Actions').innerHTML='<button type="button" class="secondary" data-ss114-action="back">返回核對</button><button type="button" class="primary" data-ss114-action="submit">確認角色並回傳</button>';
-  setTimeout(()=>el('ss114Role')?.focus(),0);
+  modalState={kind:'front',data,context,resolve,auth:auth(!!context.delegate),previous:document.activeElement,busy:false};
+  show(context.delegate?'請確認代回傳人員的站櫃身分':'您今天是支援，還是主櫃？',[data.businessDate,data.storeName,data.storeFloor].filter(Boolean).join('｜'));
+  el('sharedSalesDialog114').querySelector('.ss114-eyebrow').textContent=data.hasPeer?'雙人站櫃・角色核對':'每日業績・站櫃身分';
+  el('ss114Body').innerHTML='<div class="ss114-total"><span>'+(data.hasPeer?'本日門市營業額・只計一次':'本次回傳營業額')+'</span><strong>'+esc(money(data.totalAmount))+'</strong></div>'+
+   '<p class="ss115-person">'+(context.delegate?'代回傳對象：':'目前上傳人員：')+'<strong>'+esc(data.selfName||'本次人員')+'</strong></p>'+
+   (context.delegate?'<p class="ss115-subnote">代操作人：'+esc(data.operatorName||'後台人員')+'；業績記在上述人員名下。</p>':'')+
+   '<fieldset class="ss115-role-choices"><legend>請選擇'+(context.delegate?'這位人員':'您自己')+'今天的角色</legend>'+
+   '<label class="ss115-role-option"><input type="radio" name="ss115RoleChoice" value="support"><span><b>'+(context.delegate?'支援人員':'我是支援人員')+'</b><small>與主櫃搭配站櫃</small></span></label>'+
+   '<label class="ss115-role-option"><input type="radio" name="ss115RoleChoice" value="primary"><span><b>'+(context.delegate?'主櫃人員':'我是主櫃人員')+'</b><small>本次申報為主櫃</small></span></label></fieldset>'+
+   '<label class="ss115-unsure"><input type="radio" name="ss115RoleChoice" value="undecided"><span>不確定，交給後台判定</span></label><input id="ss114Role" type="hidden" value="">'+
+   (data.hasPeer?'<div class="ss115-peer">另一位：'+esc(data.peerName||'已回傳人員')+'<span>申報角色：'+esc(roleText115(data.peerDeclaredRole))+'</span></div>':'')+
+   '<div id="ss114Preview" class="ss114-preview"><p>請先選擇自己的角色。</p></div>'+
+   '<p class="ss115-subnote">'+(data.hasPeer?'兩筆須是同一筆門市總額。角色不同才暫按 60%／40%；兩人都選主櫃或角色未定，交後台判定，不會強制把另一人改為支援。':'目前只有這一筆金額，仍全額計入；選支援不會直接扣成 40%。之後有第二筆同額回傳，才核對雙方角色。')+'</p>';
+  el('ss114Actions').innerHTML='<button type="button" class="secondary" data-ss114-action="back">返回修改</button><button type="button" class="primary" data-ss114-action="submit">確認並'+(context.delegate?'代回傳':'回傳')+'</button>';
+  el('ss114Actions').querySelector('[data-ss114-action="submit"]').disabled=true;
+  setTimeout(()=>el('ss114Body').querySelector('input[name="ss115RoleChoice"]')?.focus(),0);
  });
 }
 function preview(){
  const s=modalState;if(!s||s.busy)return;
  const box=el('ss114Preview');if(!box)return;
  try{
-  let rows=[];let total;
+  let rows=[],total,lead='';
   if(s.kind==='front'){
-   const role=el('ss114Role').value;if(!role){box.innerHTML='<p>請先選擇角色。</p>';return;}
-   total=Number(s.data.totalAmount);const amounts=allocation(total);
-   rows=[{name:s.data.selfName||'本次回傳人員',role,amount:amounts[role]},{name:s.data.peerName||'另一位人員',role:role==='primary'?'support':'primary',amount:amounts[role==='primary'?'support':'primary']}];
+   const role=el('ss114Role').value;if(!role){box.innerHTML='<p>請先選擇自己的角色。</p>';return;}
+   total=Number(s.data.totalAmount);
+   const state=claimDecision115(s.data,role);
+   if(state==='single'){
+    box.innerHTML='<div class="ss115-single"><span>申報：'+esc(roleText115(role))+'</span><span>本次業績 '+esc(money(total))+'（全額）</span></div>';return;
+   }
+   if(state==='compatible'){
+    const amounts=allocation(total);
+    rows=[{name:s.data.selfName,role,amount:amounts[role]},{name:s.data.peerName,role:s.data.peerDeclaredRole,amount:amounts[s.data.peerDeclaredRole]}];
+    lead='<p>雙方角色相符，先暫分配，後台再確認。</p>';
+   }else{
+    // The earlier report keeps the rounding residual; no claim is changed to fit 60/40.
+    const mine=Math.floor(total/2),peer=total-mine;
+    rows=[{name:s.data.selfName,role:'undecided',claim:role,amount:mine},{name:s.data.peerName,role:'undecided',claim:s.data.peerDeclaredRole,amount:peer}];
+    lead='<p class="ss115-conflict">'+(state==='conflict'?'兩位都申報「'+esc(roleText115(role))+'」。':'另一人尚未申報，或有人選擇交後台判定。')+'<br>將交由後台決定主櫃；兩人先各暫列 50%，不是最終分配。門市總額只計一次。</p>';
+   }
   }else{
    total=Number(el('ss114Total').value);const amounts=allocation(total),primary=el('ss114Primary').value;
-   rows=s.data.records.map(r=>({name:r.salespersonName||r.submitterName,role:primary?(String(r.id)===primary?'primary':'support'):'',amount:primary?amounts[String(r.id)===primary?'primary':'support']:null,original:r.sharedSale114?.originalAmount??r.grossAmount}));
+   rows=s.data.records.map(r=>({name:r.salespersonName||r.submitterName,role:primary?(String(r.id)===primary?'primary':'support'):'',amount:primary?amounts[String(r.id)===primary?'primary':'support']:null,original:r.sharedSale114?.originalAmount??r.grossAmount,claim:r.counterRole115}));
   }
-  box.innerHTML='<table><thead><tr><th>人員</th><th>角色／比例</th><th>分配業績</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.name)+(r.original!=null?'<small>原回傳 '+esc(money(r.original))+'</small>':'')+'</td><td>'+esc(r.role==='primary'?'主櫃 60%':r.role==='support'?'支援 40%':'待選擇')+'</td><td>'+esc(r.amount==null?'—':money(r.amount))+'</td></tr>').join('')+'</tbody><tfoot><tr><td colspan="2">合計・門市只計一次</td><td>'+esc(money(total))+'</td></tr></tfoot></table>';
+  box.innerHTML=lead+'<table><thead><tr><th>人員</th><th>分配方式</th><th>暫列業績</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.name||'人員')+(r.claim?'<small>申報：'+esc(roleText115(r.claim))+'</small>':'')+(r.original!=null?'<small>原回傳 '+esc(money(r.original))+'</small>':'')+'</td><td>'+esc(r.role==='primary'?'主櫃 60%':r.role==='support'?'支援 40%':r.role==='undecided'?'待判定・暫列 50%':'待指定')+'</td><td>'+esc(r.amount==null?'—':money(r.amount))+'</td></tr>').join('')+'</tbody><tfoot><tr><td colspan="2">門市合計・只計一次</td><td>'+esc(money(total))+'</td></tr></tfoot></table>';
  }catch(error){box.textContent=String(error.message||error);}
 }
 function submitRole(){
  const s=modalState;if(!s||s.kind!=='front'||s.busy)return;
- if(s.auth!==auth()){status('登入身分已變更，請返回後重新登入。',true);return;}
- const role=el('ss114Role').value;if(!['primary','support'].includes(role)){status('請先選擇您是主櫃人員或支援人員。',true);return;}
+ if(s.auth!==auth(!!s.context?.delegate)){status('登入身分已變更，請返回後重新登入。',true);return;}
+ const role=el('ss114Role').value;if(!['primary','support','undecided'].includes(role)){status('請先選擇今天的角色。',true);return;}
  const resolve=s.resolve,choice={role,scopeToken:s.data.scopeToken};s.resolve=null;close(false);resolve(choice);
 }
-async function submit(payload){
- const who=auth();if(!who)throw new Error('請先登入 LINE。');
- const fingerprint=JSON.stringify({who,date:payload.businessDate,store:payload.storeId,amount:Number(payload.grossAmount),note:String(payload.note||'')});
- let intent=readIntent();
- if(intent&&intent.auth===who&&intent.uncertain&&intent.fingerprint!==fingerprint)throw new Error('上一筆送出結果尚未確認，請先用原日期、店點與金額重試或核對我的回傳紀錄；不要直接另建。');
+async function submit(payload,context={}){
+ const delegated=!!context.delegate,who=auth(delegated);if(!identity())throw new Error('請先登入 LINE。');
+ const fingerprint=JSON.stringify({who,target:context.target||identity(),reason:context.reason||'',date:payload.businessDate,store:payload.storeId,amount:Number(payload.grossAmount),note:String(payload.note||'')});
+ let intent=readIntent(delegated);
+ if(intent&&intent.auth===who&&intent.uncertain&&intent.fingerprint!==fingerprint)throw new Error('上一筆送出結果尚未確認，請先用原人員、日期、店點與金額重試或核對紀錄；不要直接另建。');
  if(!intent||intent.auth!==who||intent.fingerprint!==fingerprint)intent={id:crypto.randomUUID(),auth:who,fingerprint,choice:null,uncertain:false};
- putIntent(intent);
- const fieldIds=['salesBusinessDate','salesArea','salesStore','salesGrossAmount','salesReturnAmount','salesProxyPerson','salesOriginalInvoiceDate'];
+ putIntent(intent,delegated);
+ const fieldIds=delegated?[]:['salesBusinessDate','salesArea','salesStore','salesGrossAmount','salesReturnAmount','salesProxyPerson','salesOriginalInvoiceDate','salesNote80'];
  const fields=fieldIds.map(el).filter(Boolean),disabled=fields.map(n=>n.disabled);fields.forEach(n=>n.disabled=true);
  let dispatched=false;
  try{
-  for(let attempt=0;attempt<2;attempt++){
-   if(who!==auth())throw new Error('登入身分已變更，請重新登入。');
-   dispatched=true;intent.uncertain=true;putIntent(intent);
-   const result=await window.starredApi('sales_save',{sales:payload,sharedSalesVersion114:114,submissionId114:intent.id,sharedChoice114:intent.choice});
-   if(who!==auth())throw new Error('登入身分已變更，請重新登入並核對原回傳。');
-   if(result.sharedSalesBuild114!==BUILD)throw new Error('後端尚未回傳 v114 收據；請先核對此筆是否已送出，再更新 line-api，勿重複建立。');
+  for(let attempt=0;attempt<3;attempt++){
+   if(who!==auth(delegated))throw new Error('登入身分已變更，請重新登入。');
+   dispatched=true;intent.uncertain=true;putIntent(intent,delegated);
+   const result=await window.starredApi(delegated?'sales_delegate_submit115':'sales_save',{sales:payload,sharedSalesVersion115:115,submissionId115:intent.id,sharedChoice115:intent.choice,
+    ...(delegated?{targetPersonId115:context.target,delegateReason115:context.reason}:{})});
+   if(who!==auth(delegated))throw new Error('登入身分已變更，請重新登入並核對原回傳。');
+   if(result.salesRolesBuild115!==ROLE_BUILD115)throw new Error('尚未收到 v115 收據；請核對此筆是否已送出並完成 line-api 更新，不要另建同筆。');
    if(result.requiresRole){
-    dispatched=false;intent.uncertain=false;intent.choice=null;putIntent(intent);
-    if(result.writeNotStarted!==true||result.businessDate!==payload.businessDate||result.storeId!==payload.storeId||Number(result.totalAmount)!==Number(payload.grossAmount)||!/^[0-9a-f]{32}$/.test(String(result.scopeToken||'')))throw new Error('雙人站櫃的日期、門市或金額不一致，請重新核對。');
-    const choice=await roleDialog(result);
-    if(!choice){putIntent(null);const e=new Error('已返回核對，第二筆尚未送出，表單內容保留。');e.cancelled114=true;throw e;}
-    intent.choice=choice;putIntent(intent);continue;
+    dispatched=false;intent.uncertain=false;intent.choice=null;putIntent(intent,delegated);
+    if(result.writeNotStarted!==true||result.businessDate!==payload.businessDate||result.storeId!==payload.storeId||Number(result.totalAmount)!==Number(payload.grossAmount)||
+       result.targetPersonId!==(context.target||identity())||!/^[0-9a-f]{32}$/.test(String(result.scopeToken||'')))throw new Error('人員、日期、門市或金額不一致，請重新核對。');
+    const choice=await roleDialog(result,context);
+    if(!choice){putIntent(null,delegated);const e=new Error('已返回修改，這一筆尚未送出，表單內容保留。');e.cancelled114=true;throw e;}
+    intent.choice=choice;putIntent(intent,delegated);continue;
    }
-   if(!result.record?.id||result.record.businessDate!==payload.businessDate||result.record.storeId!==payload.storeId)throw new Error('儲存收據不完整；請保留目前表單並以原送出重試。');
+   if(!result.record?.id||result.record.businessDate!==payload.businessDate||result.record.storeId!==payload.storeId||result.record.salespersonLineUserId!==(context.target||identity()))throw new Error('儲存收據不完整；請保留表單並以原送出重試。');
    if(result.allocated){
-    const meta=result.record.sharedSale114,amounts=allocation(Number(meta?.totalAmount));
-    if(!meta||!['primary','support'].includes(meta.role)||amounts.total!==Number(payload.grossAmount)||Number(result.record.grossAmount)!==amounts[meta.role])throw new Error('分配收據與預期不一致，請先核對後台；勿另建同筆資料。');
+    const meta=result.record.sharedSale114,items=result.allocationSummary115;
+    if(!meta||Number(meta.totalAmount)!==Number(payload.grossAmount)||!Array.isArray(items)||items.length!==2||items.reduce((n,r)=>n+Number(r.amount),0)!==Number(meta.totalAmount)||!items.some(r=>r.id===result.record.id&&Number(r.amount)===Number(result.record.grossAmount)))throw new Error('分配合計未完成核對，請用原內容重試查核，不要重複新增。');
    }
-   putIntent(null);return result;
+   putIntent(null,delegated);return result;
   }
   throw new Error('資料於核對期間變更，請重新核對後再送出。');
  }catch(error){
-  if(error.writeNotStarted===true){intent.uncertain=false;intent.choice=null;putIntent(intent);}
-  else if(dispatched){intent.uncertain=true;putIntent(intent);}
+  if(error.writeNotStarted===true){intent.uncertain=false;intent.choice=null;putIntent(intent,delegated);}
+  else if(dispatched){intent.uncertain=true;putIntent(intent,delegated);}
   throw error;
  }finally{fields.forEach((n,i)=>n.disabled=disabled[i]);}
 }
+
 function ordinary(r){return r&&r.recordType==='sales'&&r.isProxySale!==true&&!r.isOvernightSale&&!r.overnightMeta&&!r.isTyphoonClosure&&Number(r.overnightAllocatedAmount||0)===0;}
 function eligible(rows){return rows.length===2&&rows.every(ordinary)&&Boolean(rows[0].businessDate&&rows[0].storeId)&&rows.every(r=>r.businessDate===rows[0].businessDate&&r.storeId===rows[0].storeId)&&new Set(rows.map(r=>r.salespersonLineUserId||r.submitterLineUserId)).size===2&&
  (rows.every(r=>r.sharedSale114?.groupId)&&new Set(rows.map(r=>r.sharedSale114.groupId)).size===1||Number(rows[0].grossAmount)>0&&Number(rows[0].grossAmount)===Number(rows[1].grossAmount)&&rows.every(r=>!r.sharedSale114));}
@@ -25384,8 +25427,8 @@ function card(group,allRows){
  const ids=new Set((group.recordIds||[]).map(String));const grouped=new Map();
  (allRows||[]).filter(r=>ids.has(String(r.id))).forEach(r=>{const key=r.businessDate+'|'+r.storeId;if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(r);});
  return Array.from(grouped.values()).filter(eligible).map(rows=>{
-  const r=rows[0],m=r.sharedSale114,total=m?Number(m.totalAmount):Number(r.grossAmount),label=m?(m.state==='confirmed'?'已確認分配':'已暫分配・待確認'):'相同金額・請核對';
-  return '<div class="ss114-card-tool"><div><span class="ss114-chip">'+esc(label)+'</span><span>共同總額 '+esc(money(total))+' ・ 主櫃 60%／支援 40%</span></div><button type="button" class="secondary" data-shared114-open data-shared114-date="'+esc(r.businessDate)+'" data-shared114-store="'+esc(r.storeId)+'">智慧分類</button></div>';
+  const r=rows[0],m=r.sharedSale114,total=m?Number(m.totalAmount):Number(r.grossAmount),label=m?(m.state==='confirmed'?'已確認分配':rolePending115(m)?(m.roleStatus==='conflict'?'角色衝突・待判定':'角色未完整・待判定'):'已暫分配・待確認'):'相同金額・請核對';
+  return '<div class="ss114-card-tool"><div><span class="ss114-chip">'+esc(label)+'</span><span>共同總額 '+esc(money(total))+(rolePending115(m)?' ・ 暫列各 50%（非最終）':' ・ 主櫃 60%／支援 40%')+'</span></div><button type="button" class="secondary" data-shared114-open data-shared114-date="'+esc(r.businessDate)+'" data-shared114-store="'+esc(r.storeId)+'">智慧分類</button></div>';
  }).join('');
 }
 function payIsDirty(card){return card&&Array.from(card.querySelectorAll('.sales-workday-review-person')).some(r=>r.dataset.modeChanged96==='1'||r.dataset.moneyChanged96==='1'||r.dataset.hoursChanged96==='1');}
@@ -25402,9 +25445,9 @@ async function openAdmin(date,store,sourceButton){
   if(data.sharedSalesBuild114!==BUILD||data.businessDate!==date||data.storeId!==store||!Array.isArray(data.records)||!eligible(data.records))throw new Error('目前不是可自動分配的兩筆同額本人業績，或含代銷售／隔夜帳／停班；本次未修改。');
   s.data=data;const total=Number(data.group?.total_amount??data.records[0].grossAmount);s.initialTotal=total;
   el('ss114Scope').textContent=[date,data.store?.name,data.store?.floor].filter(Boolean).join('｜');
-  el('ss114Body').innerHTML='<div class="ss114-admin-fields"><label class="ss114-field"><span>門市當日總額・只計一次</span><input id="ss114Total" type="number" min="1" max="10000000" step="1" inputmode="numeric" value="'+esc(total)+'"></label><label class="ss114-field"><span>主櫃人員（另一位為支援）</span><select id="ss114Primary"><option value="">請指定主櫃</option>'+data.records.map(r=>'<option value="'+esc(r.id)+'"'+(String(data.group?.primary_report_id||'')===String(r.id)?' selected':'')+'>'+esc(r.salespersonName||r.submitterName)+'</option>').join('')+'</select></label></div>'+
-   '<p class="ss114-note">'+(data.group?'前台已選擇角色並暫分配；請核對後確認。':'這是尚未分類的舊資料。請先確認兩筆代表同一筆門市營業額，再指定主櫃。')+' 本功能不改工時、日薪或時薪。</p><div id="ss114Preview" class="ss114-preview"></div>'+
-   '<label class="ss114-field"><span>核對備註（改總額／解除時必填）</span><textarea id="ss114Reason" maxlength="500" rows="2" placeholder="例如：已核對結機金額與站櫃人員"></textarea></label>'+
+  el('ss114Body').innerHTML=claimsHtml115(data)+'<div class="ss114-admin-fields"><label class="ss114-field"><span>門市當日總額・只計一次</span><input id="ss114Total" type="number" min="1" max="10000000" step="1" inputmode="numeric" value="'+esc(total)+'"></label><label class="ss114-field"><span>主櫃人員（另一位為支援）</span><select id="ss114Primary"><option value="">請指定主櫃</option>'+data.records.map(r=>'<option value="'+esc(r.id)+'"'+(!['conflict','incomplete'].includes(data.group?.role_status_v115)&&String(data.group?.primary_report_id||'')===String(r.id)?' selected':'')+'>'+esc(r.salespersonName||r.submitterName)+'</option>').join('')+'</select></label></div>'+
+   '<p class="ss114-note">'+(data.group?(['conflict','incomplete'].includes(data.group.role_status_v115)?'目前角色待判定，兩人僅各暫列 50%。請核對上方各自申報，指定主櫃並填判定原因。':'已暫分配，請核對各自申報與金額後確認。'):'這是尚未分類的舊資料。請先確認兩筆代表同一筆門市營業額，再指定主櫃。')+' 本功能不改工時、日薪或時薪。</p><div id="ss114Preview" class="ss114-preview"></div>'+
+   '<label class="ss114-field"><span>判定原因（角色待判定／更換主櫃／改總額／解除時必填）</span><textarea id="ss114Reason" maxlength="500" rows="2" placeholder="例如：已核對結機金額與站櫃人員"></textarea></label>'+
    '<p class="ss114-note">整元分配：主櫃四捨五入，支援取剩餘金額，合計始終等於門市總額。原回傳及每次操作紀錄均保留。</p>'+
    (data.history?.length?'<details class="ss114-history"><summary>查看分配紀錄（最近 '+data.history.length+' 筆）</summary>'+data.history.map(h=>'<div>'+esc({provisional:'前台暫分配',confirm:'後台確認／調整',separate:'解除共同分配'}[h.operation]||h.operation)+' · '+esc(h.actor_name)+' · '+esc(formatTime(h.created_at))+'<small>'+esc(h.reason||'—')+'</small><small>'+esc((h.after_data||[]).map(r=>(r.salesperson_name||r.submitter_name||'人員')+' '+money(r.gross_amount)).join('／'))+'</small></div>').join('')+'</details>':'');
   el('ss114Actions').innerHTML='<button type="button" class="secondary" data-ss114-action="back">返回</button>'+(data.group?'<button type="button" class="secondary ss114-separate" data-ss114-action="separate">解除共同分配</button>':'')+'<button type="button" class="primary" data-ss114-action="confirm">確認分配</button>';
@@ -25419,6 +25462,7 @@ async function review(operation){
   if(operation==='confirm'){
    allocation(total);if(!s.data.records.some(r=>String(r.id)===primary))throw new Error('請選擇主櫃人員。');
    if(total!==s.initialTotal&&reason.length<2)throw new Error('調整門市總額請填寫至少 2 個字的原因。');
+   if(s.data.group&&(['conflict','incomplete'].includes(s.data.group.role_status_v115)||String(s.data.group.primary_report_id)!==primary)&&reason.length<2)throw new Error('角色衝突、尚未判定或更換主櫃時，請填寫至少 2 字的判定原因。');
   }else{
    if(reason.length<2)throw new Error('解除共同分配請填寫原因。');
    const restored=s.data.records.reduce((n,r)=>n+Number(r.sharedSale114?.originalAmount??r.grossAmount),0);
@@ -25442,7 +25486,18 @@ async function review(operation){
   status(loaded?'': '分配已儲存，但部分畫面尚未更新。請重新整理查核，不需再次確認。',!loaded);setBusy(false);
  }catch(error){if(modalState===s){if(error.writeNotStarted&&s.operation)s.operation.uncertain=false;status(String(error.message||error),true);setBusy(false);}}
 }
-function note(r){const m=r?.sharedSale114;if(!m)return '';return '<small class="ss114-record-note">'+esc((m.role==='primary'?'主櫃 60%':'支援 40%')+'・'+(m.state==='confirmed'?'分配已確認':'暫分配待確認')+'｜門市共同總額 '+money(m.totalAmount)+'（只計一次）')+'</small>';}
+function rolePending115(m){return m&&m.state!=='confirmed'&&['conflict','incomplete'].includes(m.roleStatus);}
+function sourceNote115(r){const o=r?.entryOrigin115;return o?.kind==='backoffice'?'<small class="ss114-record-note">後台代回傳：'+esc(o.operatorName||'')+(o.operatorAccount?'（'+esc(o.operatorAccount)+'）':'')+' ・ '+esc(formatTime(o.createdAt))+'</small>':'';}
+function note(r){
+ const source=sourceNote115(r),m=r?.sharedSale114;
+ if(!m)return source+(r?.counterRole115?'<small class="ss114-record-note">申報角色：'+esc(roleText115(r.counterRole115))+'</small>':'');
+ const label=rolePending115(m)?'角色待後台判定・暫列 50%':(m.role==='primary'?'主櫃 60%':'支援 40%')+'・'+(m.state==='confirmed'?'分配已確認':'暫分配待確認');
+ return source+'<small class="ss114-record-note">'+esc(label+'｜門市共同總額 '+money(m.totalAmount)+'（只計一次）')+'</small>';
+}
+function claimsHtml115(data){
+ return '<div class="ss115-claims"><div class="ss115-claims-heading">各自申報的角色（保留原申報，不互相覆蓋）</div>'+data.records.map(r=>'<div><span>'+esc(r.salespersonName||r.submitterName)+'</span><span>'+esc(roleText115(r.counterRole115))+'</span></div>').join('')+sourceClaims115(data.records)+'</div>';
+}
+function sourceClaims115(rows){return rows.filter(r=>r.entryOrigin115?.kind==='backoffice').map(r=>'<p class="ss115-subnote">'+esc(r.salespersonName||r.submitterName)+'：由 '+esc(r.entryOrigin115.operatorName)+'（'+esc(r.entryOrigin115.operatorAccount||'')+'）代填；'+esc(r.entryOrigin115.reason||'')+'</p>').join('');}
 function renderPanel(records){
  const panel=el('salesSharedReview114');if(!panel)return;
  if(['salesAdminPerson','salesAdminStore','salesAdminArea'].some(id=>el(id)?.value)){panel.hidden=true;panel.replaceChildren();return;}
@@ -25451,15 +25506,121 @@ function renderPanel(records){
  const candidates=Array.from(scopes.values()).filter(eligible).filter(rows=>rows.some(r=>!r.sharedSale114||r.sharedSale114.state!=='confirmed')).sort((a,b)=>String(b[0].businessDate).localeCompare(String(a[0].businessDate)));
  panel.hidden=!candidates.length;
  panel.innerHTML=candidates.length?'<div class="ss114-review-head"><span>雙人業績分配・待核對 '+candidates.length+' 組</span><small>業績分配與下方薪資確認分開</small></div>'+candidates.map(rows=>{
-  const r=rows[0],m=r.sharedSale114;return '<div class="ss114-review-line"><div><time>'+esc(r.businessDate)+'</time><span>'+esc([r.storeName,r.storeFloor].filter(Boolean).join('｜'))+'</span></div><span>'+esc(money(m?.totalAmount??r.grossAmount))+'<small>'+esc(m?'已暫分配，待確認':'兩筆同額，待核對')+'</small></span><button type="button" class="secondary" data-shared114-open data-shared114-date="'+esc(r.businessDate)+'" data-shared114-store="'+esc(r.storeId)+'">智慧分類</button></div>';
+  const r=rows[0],m=r.sharedSale114;return '<div class="ss114-review-line"><div><time>'+esc(r.businessDate)+'</time><span>'+esc([r.storeName,r.storeFloor].filter(Boolean).join('｜'))+'</span></div><span>'+esc(money(m?.totalAmount??r.grossAmount))+'<small>'+esc(m?(rolePending115(m)?'角色待判定・暫列各 50%':'已暫分配，待確認'):'兩筆同額，待核對')+'</small></span><button type="button" class="secondary" data-shared114-open data-shared114-date="'+esc(r.businessDate)+'" data-shared114-store="'+esc(r.storeId)+'">智慧分類</button></div>';
  }).join(''):'';
 }
 
+let delegateState115=null;
+function delegateAllowed115(){
+ return typeof currentUser!=='undefined'&&!!currentUser&&typeof isAdminLoginValid==='function'&&isAdminLoginValid()&&
+  ['admin','accounting'].includes(typeof normalizeCurrentAdminRole==='function'?normalizeCurrentAdminRole(currentUser.role):String(currentUser.role||''))&&
+  (!window.StarredPageAccess112||window.StarredPageAccess112.can('salesReport'));
+}
+function delegateStatus115(text,bad=false){const n=el('sd115Status');if(n){n.textContent=text||'';n.classList.toggle('error',bad);}}
+function delegateClose115(){if(delegateState115?.busy)return;const previous=delegateState115?.previous;delegateState115=null;el('salesDelegateDialog115')?.close();previous?.focus?.({preventScroll:true});}
+function delegateMount115(){
+ if(el('salesDelegateDialog115'))return;
+ const d=document.createElement('dialog');d.id='salesDelegateDialog115';d.className='ss114-dialog';d.setAttribute('aria-labelledby','sd115Title');
+ d.innerHTML='<div class="ss114-shell"><header><span class="ss114-eyebrow">後台協助・每日業績</span><h2 id="sd115Title">代回傳業績</h2><p>業績記在櫃姐名下，另外記錄實際操作人。不屬於代銷售。</p></header><div id="sd115Body" class="ss114-body"></div><footer><div id="sd115Status" role="status" aria-live="polite"></div><div class="sd115-actions"><button type="button" class="secondary" id="sd115Close">取消</button><button type="button" class="primary" id="sd115Submit">下一步・核對角色</button></div></footer></div>';
+ d.addEventListener('cancel',e=>{e.preventDefault();delegateClose115();});d.addEventListener('click',e=>{if(e.target.id==='sd115Close')delegateClose115();if(e.target.id==='sd115Submit')delegateSave115();});
+ d.addEventListener('change',e=>{if(e.target.id==='sd115Area')delegateStores115();});
+ d.addEventListener('input',e=>{if(e.target.id==='sd115Search')delegatePeople115();});document.body.appendChild(d);
+}
+function delegateStores115(){const s=delegateState115;if(!s?.options)return;const area=el('sd115Area').value,select=el('sd115Store'),previous=select.value;
+ select.innerHTML='<option value="">請選擇店點／樓層</option>'+s.options.stores.filter(x=>!area||x.area===area).sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')||a.floor.localeCompare(b.floor,'zh-Hant')).map(x=>'<option value="'+esc(x.id)+'">'+esc([x.name,x.floor].filter(Boolean).join('｜'))+'</option>').join('');select.value=previous;
+}
+function delegatePeople115(){const s=delegateState115;if(!s?.options)return;const q=el('sd115Search').value.trim().toLowerCase(),select=el('sd115Person'),previous=select.value;
+ select.innerHTML='<option value="">請選擇業績歸屬人員</option>'+s.options.people.filter(x=>!q||x.name.toLowerCase().includes(q)||x.id===previous).sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');select.value=previous;
+}
+async function openDelegate115(){
+ if(!delegateAllowed115()){window.alert('只有具業績報表權限的會計或系統管理員可代回傳。');return;}
+ if(delegateState115||modalState)return;
+ if(Array.from(document.querySelectorAll('#salesReportWorkdaysView .sales-workday-review-card')).some(payIsDirty)){window.alert('請先儲存尚未確認的薪資欄位，避免代回傳後重新查詢造成輸入遺失。');return;}
+ delegateMount115();const s={auth:auth(true),previous:document.activeElement,busy:false,options:null};delegateState115=s;
+ el('sd115Body').textContent='正在讀取正式門市與啟用人員…';el('sd115Submit').disabled=true;delegateStatus115('');el('salesDelegateDialog115').showModal();
+ try{
+  const data=await window.starredApi('sales_delegate_options115',{});
+  if(delegateState115!==s)return;if(s.auth!==auth(true)||!delegateAllowed115())throw new Error('登入或權限已變更，請關閉後重新登入。');
+  if(data.salesRolesBuild115!==ROLE_BUILD115||!Array.isArray(data.stores)||!Array.isArray(data.people)||!data.serverDate)throw new Error('代回傳後端尚未更新完整，請先完成 v115 SQL 與 line-api。');
+  s.options=data;
+  el('sd115Body').innerHTML='<p class="ss115-source">實際操作人：'+esc(data.operator?.name||'')+'（'+esc(data.operator?.account||'')+'）</p>'+
+   '<div class="ss114-admin-fields"><label class="ss114-field"><span>業績日期</span><input id="sd115Date" type="date" max="'+esc(data.serverDate)+'" value="'+esc(data.serverDate)+'"></label><label class="ss114-field"><span>區域</span><select id="sd115Area"><option value="">全部區域</option><option value="north">北部</option><option value="central">中部</option><option value="south">南部</option><option value="east">東部／離島</option></select></label></div>'+
+   '<label class="ss114-field"><span>回傳店點／樓層</span><select id="sd115Store"></select></label>'+
+   '<div class="ss114-admin-fields"><label class="ss114-field"><span>搜尋人員</span><input id="sd115Search" type="search" placeholder="輸入姓名"></label><label class="ss114-field"><span>業績歸屬人員</span><select id="sd115Person"></select></label></div>'+
+   '<label class="ss114-field"><span>當日營業額（元）</span><input id="sd115Amount" type="number" min="0" max="10000000" step="1" inputmode="numeric" placeholder="填寫原回傳金額，不先乘 60%／40%"></label>'+
+   '<label class="ss114-field"><span>代回傳原因（必填）</span><textarea id="sd115Reason" rows="2" maxlength="500" placeholder="例如：櫃姐手機無法回傳，依結機資料補登"></textarea></label>'+
+   '<label class="ss114-field"><span>業績備註（選填）</span><textarea id="sd115Note" rows="2" maxlength="500"></textarea></label>'+
+   '<p class="ss115-subnote">同人、同店、同日已有資料時會阻擋重複新增。若另一位回傳相同門市總額，下一步會核對雙方角色。</p>';
+  delegateStores115();delegatePeople115();el('sd115Submit').disabled=false;el('sd115Date').focus();
+ }catch(e){if(delegateState115===s)delegateStatus115(String(e.message||e),true);}
+}
+async function delegateSave115(){
+ const s=delegateState115;if(!s||s.busy||!s.options)return;
+ if(!delegateAllowed115()||s.auth!==auth(true)){delegateStatus115('登入或權限已變更，請重新登入。',true);return;}
+ const value=id=>String(el(id)?.value||'').trim();
+ const date=value('sd115Date'),store=value('sd115Store'),person=value('sd115Person'),raw=value('sd115Amount'),amount=Number(raw),reason=value('sd115Reason'),note=value('sd115Note');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>s.options.serverDate||!s.options.stores.some(x=>x.id===store)||!s.options.people.some(x=>x.id===person)||!raw||!Number.isSafeInteger(amount)||amount<0||amount>10000000||reason.length<2){delegateStatus115('請完整選擇日期、店點、人員，填寫整數營業額及至少 2 字代回傳原因。',true);return;}
+ s.busy=true;el('salesDelegateDialog115').querySelectorAll('button,input,select,textarea').forEach(n=>n.disabled=true);delegateStatus115('正在核對資料…');let committed=false;
+ try{
+  const result=await submit({recordType:'sales',businessDate:date,storeId:store,grossAmount:amount,note,isProxySale:false},{delegate:true,target:person,reason});
+  committed=true;
+  if(delegateState115!==s)return;
+  const name=result.record.salespersonName||s.options.people.find(x=>x.id===person).name;
+  const message='已替 '+name+' 回傳 '+date+' 業績。\n'+resultText115(result)+'\n實際代操作人與原因已保留；工時薪資沿用原確認規則。'+(result.postCommitWarning114?'\n'+result.postCommitWarning114:'');
+  s.busy=false;delegateClose115();
+  const refreshed=await Promise.allSettled([window.loadSalesAdminReport(),window.loadSalesData()]);
+  const warning=refreshed.some(r=>r.status==='rejected'||r.value===false)?'\n資料已儲存，但部分畫面未更新，請重新查詢，不需再新增。':'';
+  if(typeof showSalesSuccessModal==='function')showSalesSuccessModal(message+warning,'代回傳完成',result.allocated?'pending':'');else window.alert(message+warning);
+ }catch(e){if(delegateState115===s)delegateStatus115((committed?'資料已儲存，請重新查詢：':'')+String(e.message||e),true);}
+ finally{if(delegateState115===s){s.busy=false;el('salesDelegateDialog115').querySelectorAll('button,input,select,textarea').forEach(n=>n.disabled=false);}}
+}
+function resultText115(result){
+ const r=result?.record,m=r?.sharedSale114;if(!r)return '';
+ if(!m)return '本次業績 '+money(r.grossAmount)+'；已申報 '+roleText115(r.counterRole115)+'。';
+ if(m.role==='undecided')return '已交後台判定角色。門市總額 '+money(m.totalAmount)+' 只計一次；目前兩人暫列各 50%，這位人員暫列 '+money(r.grossAmount)+'，不是最終分配。';
+ return '門市總額 '+money(m.totalAmount)+' 只計一次；這位人員暫按 '+roleText115(m.role)+' '+m.percent+'% 計 '+money(r.grossAmount)+'，待後台確認。';
+}
+function syncDelegate115(){const b=el('salesDelegateOpen115');if(b)b.hidden=!delegateAllowed115();}
+const oldApply115=window.applyAdminRoleUI;
+if(typeof oldApply115==='function')window.applyAdminRoleUI=function(){const r=oldApply115.apply(this,arguments);syncDelegate115();return r;};
+window.addEventListener('starred-sales-report-loaded113',syncDelegate115);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncDelegate115,{once:true});else syncDelegate115();
+const oldSalesLogout115=window.logout;
+if(typeof oldSalesLogout115==='function')window.logout=function(){if(delegateState115){delegateState115.busy=false;delegateClose115();}if(modalState?.kind==='front'){modalState.busy=false;close(false);}return oldSalesLogout115.apply(this,arguments);};
+
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-shared114-open]');if(b){e.preventDefault();openAdmin(b.dataset.shared114Date,b.dataset.shared114Store,b);}});
-window.StarredSharedSales114={build:BUILD,submit,card,openAdmin,note,allocation,eligible,renderPanel};
+window.StarredSharedSales114={build:BUILD,rolesBuild115:ROLE_BUILD115,submit,card,openAdmin,note,allocation,eligible,renderPanel,openDelegate115,resultText115,delegateAllowed115,claimDecision115};
 })();
 
 </script>
 
+<style id="roles-delegate-v115-style">
+/* v115: only role/entry dialogs; no other forms, payroll controls or print templates are changed. */
+.ss115-person{margin:5px 0 10px;font-size:16px;color:#29495e;line-height:1.5}.ss115-person strong{font-weight:500;font-size:19px}
+.ss115-role-choices{border:0;margin:12px 0 8px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
+.ss115-role-choices legend{font-size:15px;color:#35576e;margin:0 0 8px;padding:0}
+.ss115-role-option{display:flex;align-items:center;gap:9px;border:1px solid #cbd9e3;background:#fff;border-radius:14px;padding:14px 12px;min-height:82px;color:#35586f;cursor:pointer;transition:background .15s,box-shadow .15s;min-width:0}
+.ss115-role-option:has(input:checked){background:#e6eff6;border:2px solid #527893;padding:13px 11px;box-shadow:0 3px 9px rgba(40,69,90,.12)}
+.ss115-role-option:has(input:focus-visible){outline:3px solid #b3cadd;outline-offset:2px}
+.ss115-role-option input,.ss115-unsure input{flex:none;width:20px!important;height:20px!important;min-height:20px!important;margin:0!important;accent-color:#385c75}
+.ss115-role-option span{display:grid;gap:3px;min-width:0}.ss115-role-option b{font-size:17px;font-weight:500;line-height:1.4}.ss115-role-option small{font-size:12px;color:#718694;font-weight:400}
+.ss115-unsure{display:flex;align-items:center;gap:8px;min-height:40px;font-size:14px;color:#647d8e;padding:6px 2px;cursor:pointer}
+.ss115-peer{display:flex;gap:7px;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#e9eef2;font-size:14px;flex-wrap:wrap;color:#547186;margin-top:8px}.ss115-peer span{font-size:13px}
+.ss115-subnote{font-size:13px;color:#758996;line-height:1.65;margin:8px 0;white-space:normal}
+.ss115-conflict{background:#fff4e6!important;color:#83582e!important;font-size:14px;line-height:1.65}
+.ss115-single{display:flex;gap:6px;flex-direction:column;padding:10px 12px;font-size:14px}
+.ss115-claims{border:1px solid #d0dce4;border-radius:12px;background:#fff;margin-bottom:12px;overflow:hidden;font-size:14px}.ss115-claims-heading{background:#e8eef3;padding:8px 10px;color:#597586;font-size:13px}
+.ss115-claims>div:not(:first-child){padding:9px 10px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid #e3eaf0}.ss115-claims>p{padding:5px 10px}
+.ss115-source{background:#e8eef3;border:1px solid #d4e0e8;border-radius:10px;padding:9px 11px;font-size:14px;margin:0 0 10px;line-height:1.5}
+#salesDelegateDialog115 .ss114-field{margin:7px 0}#salesDelegateDialog115 textarea{min-height:62px!important;resize:vertical}
+#sd115Status{font-size:14px;line-height:1.6;white-space:pre-wrap;margin:0 0 8px;color:#547285}#sd115Status:empty{display:none}#sd115Status.error{color:#a44f3c}
+.sd115-actions{display:flex;gap:8px;justify-content:flex-end}.sd115-actions button{min-height:42px!important;font-size:15px!important;font-weight:400!important;padding:9px 14px!important}
+#salesReportTab #salesDelegateOpen115[hidden]{display:none!important}#salesReportTab #salesDelegateOpen115{font-weight:400!important;white-space:nowrap!important}
+@media(max-width:620px){.ss115-role-choices{gap:8px}.ss115-role-option{padding:12px 9px;gap:6px;min-height:75px}.ss115-role-option:has(input:checked){padding:11px 8px}.ss115-role-option b{font-size:16px}.ss115-role-option small{font-size:12px}.sd115-actions button{flex:1}.ss115-peer{font-size:14px}.ss114-dialog h2{font-size:21px!important}.ss114-dialog .ss114-body{line-height:1.5}.ss114-dialog .ss114-preview th,.ss114-dialog .ss114-preview td{padding:7px 8px}}
+@media(prefers-reduced-motion:reduce){.ss115-role-option{transition:none}}
+
+.ss115-role-option input,.ss115-unsure input{padding:0!important;border:0!important;border-radius:50%!important;box-shadow:none!important;appearance:auto!important;background:transparent!important}
+
+</style>
 </body>
 </html>
