@@ -4498,7 +4498,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
 
 <section id="externalAccountPage" class="page">
   <section class="external-account-hero">
-    <div><span>COMPANY ACCOUNT</span><h1>公司帳</h1><p>查看公司匯款帳號並登記客戶交易金額；後台核准後，會列在當月個人業績底部。</p></div>
+    <div><span>COMPANY ACCOUNT</span><h1>公司帳</h1><p>登記客訂或員購的匯款資料；後台核准後，會列在當月個人業績底部。</p></div>
     <div class="external-account-user"><span>目前登記人員</span><b id="externalAccountCurrentUser">LINE 登入後自動帶入</b></div>
   </section>
   <div class="external-account-front-grid">
@@ -4510,13 +4510,22 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
     <section class="panel external-account-entry-card">
       <div class="external-account-section-head"><div><span>01</span><h2>新增公司帳交易</h2></div></div>
       <div class="external-account-form-grid">
-        <div class="field"><label>姓名</label><input id="externalAccountSubmitterName" readonly></div>
-        <div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountDate" type="date"></div></div>
-        <div class="field external-account-wide"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="0"></div></div>
-        <div class="field external-account-wide"><label>備註（選填）</label><textarea id="externalAccountNote" rows="3" maxlength="500" placeholder="有需要再補充；沒有填也可以送出"></textarea><div class="note">最多 500 個字，不強制填寫。</div></div>
+        <fieldset class="ea116-type-choice external-account-wide"><legend>交易類型 *</legend><div>
+          <label class="ea116-choice"><input id="externalAccountPurchaseTypeCustomer" type="radio" name="externalAccountPurchaseType" value="customer_order"><span>客訂</span></label>
+          <label class="ea116-choice"><input id="externalAccountPurchaseTypeEmployee" type="radio" name="externalAccountPurchaseType" value="employee_purchase"><span>員購</span></label>
+        </div></fieldset>
+        <div class="field"><label for="externalAccountSubmitterName">姓名</label><input id="externalAccountSubmitterName" readonly></div>
+        <div class="field external-account-date-field"><label for="externalAccountDate">交易日期 *</label><div class="external-account-date-control"><input id="externalAccountDate" type="date"></div></div>
+        <div class="field external-account-wide"><label for="externalAccountStore">目前當班的門市 *</label><select id="externalAccountStore"><option value="">正在讀取門市…</option></select></div>
+        <div class="field"><label for="externalAccountDiscount">折扣 *</label><select id="externalAccountDiscount"><option value="">請選擇折扣</option><option value="70">7 折</option><option value="75">75 折</option><option value="80">8 折</option><option value="85">85 折</option><option value="90">9 折</option><option value="100">無</option></select></div>
+        <div class="field"><label for="externalAccountAmount">交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="0"></div><div class="note">填寫折扣後實際交易金額。</div></div>
+        <div class="field external-account-wide"><label for="externalAccountLastFive">匯款後五碼 *</label><input id="externalAccountLastFive" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" autocomplete="off" placeholder="例如：00123"><div class="note">填寫匯出帳號後 5 碼，包含開頭的 0。</div></div>
+        <div class="field external-account-wide"><label for="externalAccountNote">購買商品／備註</label><textarea id="externalAccountNote" rows="3" maxlength="500" placeholder="填寫購買商品或是上傳購買清單照片(2擇1)"></textarea><div class="note">商品文字說明與購買清單照片，至少提供一項；文字最多 500 字。</div></div>
+        <div class="field external-account-wide"><label for="externalAccountPhotoFiles">購買清單／相關照片（最多 5 張）</label><input id="externalAccountPhotoFiles" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple onchange="previewExternalAccountPhotos116(event,'externalAccount')"><div class="note">可拍照或選取照片，送出前會自動壓縮。未填商品說明時，請提供購買清單照片。</div><div id="externalAccountPhotoPreview" class="ea116-photo-preview" aria-live="polite"><div class="ea116-photo-empty">尚未加入照片</div></div></div>
+      
       </div>
       <div id="externalAccountFormStatus" class="external-account-status" role="status" aria-live="polite"></div>
-      <button id="externalAccountSubmitBtn" type="button" class="primary external-account-submit-btn" onclick="submitExternalAccountTransaction()">送出公司帳交易</button>
+      <button id="externalAccountSubmitBtn" disabled type="button" class="primary external-account-submit-btn" onclick="submitExternalAccountTransaction()">送出公司帳交易</button>
     </section>
     <section class="panel external-account-own-card">
       <div class="external-account-section-head"><div><span>02</span><h2>我的公司帳紀錄</h2></div><b id="externalAccountOwnCount">0 筆</b></div>
@@ -4775,7 +4784,7 @@ button.danger{border:1px solid #e6c0bc;background:#fff4f2}
         <p id="companyAdminScope83" class="review83-scope">待審核不限月份並優先顯示；其他狀態依日期範圍。</p>
         <div id="externalAccountAdminStatusMessage" class="external-account-status" role="status" aria-live="polite"></div>
         <div class="external-account-admin-summary"><article><span>待審核（不限日期）</span><b id="externalAccountAdminPending">0 筆</b></article><article><span>區間內已核准</span><b id="externalAccountAdminApproved">0 筆</b></article><article><span>區間內核准金額</span><b id="externalAccountAdminApprovedAmount">$0</b></article><article><span>篩選結果</span><b id="externalAccountAdminTotal">0 筆</b></article></div>
-        <div class="external-account-admin-table-wrap"><table class="external-account-admin-table"><thead><tr><th>交易日期</th><th>人員</th><th>客戶交易金額</th><th>狀態</th><th>審核／異動</th><th>操作</th></tr></thead><tbody id="externalAccountAdminBody"></tbody></table></div>
+        <div class="external-account-admin-table-wrap"><table class="external-account-admin-table"><thead><tr><th>交易日期</th><th>人員／交易明細</th><th>交易金額</th><th>狀態</th><th>審核／異動</th><th>操作</th></tr></thead><tbody id="externalAccountAdminBody"></tbody></table></div>
         <div id="externalAccountAdminMobile" class="external-account-admin-mobile"></div>
         <div id="externalAccountAdminPagination" class="external-account-pagination"></div>
       </section>
@@ -15949,6 +15958,174 @@ function eaMonth(){return eaToday().slice(0,7)}
 function eaMoney(value){var amount=Number(value||0);if(!Number.isFinite(amount))amount=0;return (amount<0?'-$':'$')+Math.abs(amount).toLocaleString('zh-TW',{maximumFractionDigits:0})}
 function eaDateTime(value){if(!value)return '—';try{return new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}catch(_){return String(value)}}
 function eaIdentity(){var profile=typeof getCurrentLineUser==='function'?getCurrentLineUser():null;var verified=window.starredVerifiedLineUser||{};return {id:String((profile&&profile.id)||verified.lineUserId||''),name:String(verified.employeeName||(profile&&(profile.employeeName||profile.name))||verified.lineDisplayName||(profile&&profile.displayName)||'LINE 使用者')}}
+// v116: Company-account details, local photo drafts and explicit schema capability.
+var ea116={build:'20261120-company-account-v116',ready:false,stores:[],photos:{},ownIdentity:'',loadSeq:0};
+var eaDiscountLabels116={70:'7 折',75:'75 折',80:'8 折',85:'85 折',90:'9 折',100:'無'};
+function eaPrefix116(prefix){return ['externalAccount','externalAccountOwnEdit','externalAccountEdit'].indexOf(prefix)!==-1}
+function eaStatusId116(prefix){return prefix==='externalAccount'?'externalAccountFormStatus':prefix+'Status'}
+function eaSaveId116(prefix){return prefix==='externalAccount'?'externalAccountSubmitBtn':prefix+'Save'}
+function eaPhotoState116(prefix){
+  if(!eaPrefix116(prefix))throw new Error('公司帳表單不正確');
+  return ea116.photos[prefix]||(ea116.photos[prefix]={kept:[],pending:[],generation:0,processing:false,saving:false});
+}
+function eaResetIdentity116(identity){
+  if(ea116.ownIdentity===identity.id)return;
+  ea116.ownIdentity=identity.id;eaOwnData=[];ea116.ready=false;ea116.ownEditItem=null;ea116.adminEditItem=null;
+  eaAdminState.rows=[];eaAdminState.people=[];eaAdminState.summary={};eaAdminState.total=0;
+  ['externalAccount','externalAccountOwnEdit','externalAccountEdit'].forEach(function(prefix){
+    ['Id','Amount','Note','LastFive','Store','Discount'].forEach(function(suffix){var input=eaEl(prefix+suffix);if(input)input.value=''});
+    var date=eaEl(prefix+'Date');if(date)date.value=eaToday();
+    document.querySelectorAll('input[name="'+prefix+'PurchaseType"]').forEach(function(input){input.checked=false});
+    var modal=eaEl(prefix+'Modal');if(modal)modal.hidden=true;
+    eaResetPhotos116(prefix);eaSyncForm116(prefix);
+  });
+  closeExternalAccountPhoto116();document.body.style.overflow='';
+  if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;
+  if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;
+  renderExternalAccountOwnList();eaClearReport83('登入人員已變更，請重新整理公司帳清單。');
+}
+function eaSafePhotoUrl116(value){
+  try{var url=new URL(String(value||''));var endpoint=new URL(STARRED_LINE_API_URL);
+    return url.protocol==='https:'&&url.origin===endpoint.origin&&url.pathname.indexOf('/storage/v1/object/sign/company-account-photos/')===0?url.href:'';
+  }catch(_){return ''}
+}
+function eaDataPhoto116(value){return /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(value||''))}
+function eaItemPhotos116(item){
+  var paths=Array.isArray(item&&item.photoPaths)?item.photoPaths:[];
+  var photos=Array.isArray(item&&item.photos)?item.photos:[];
+  return paths.map(function(path,index){var photo=photos.find(function(row){return row&&String(row.path)===String(path)});
+    return {path:String(path),url:eaSafePhotoUrl116(photo?photo.url:((item.photoUrls||[])[index]||''))};
+  });
+}
+function eaApplyCapabilities116(result){
+  ea116.ready=Boolean(result&&result.companyAccountBuild116===ea116.build&&result.companyAccountReady116===true&&Array.isArray(result.stores));
+  ea116.stores=Array.isArray(result&&result.stores)?result.stores.slice():[];
+  eaFillStores116('externalAccount');
+  ['externalAccount','externalAccountOwnEdit','externalAccountEdit'].forEach(eaSyncForm116);
+}
+function eaSyncForm116(prefix){
+  var state=eaPhotoState116(prefix),save=eaEl(eaSaveId116(prefix));
+  if(save)save.disabled=!ea116.ready||state.processing||state.saving;
+  var root=prefix==='externalAccount'?eaEl('externalAccountPage')&&eaEl('externalAccountPage').querySelector('.external-account-entry-card'):eaEl(prefix+'Modal');
+  if(root)root.querySelectorAll('input,select,textarea,[data-ea116-remove]').forEach(function(input){input.disabled=state.saving||((input.type==='file'||input.hasAttribute('data-ea116-remove'))&&state.processing)});
+}
+function eaTypeFields116(prefix){
+  return '<fieldset class="ea116-type-choice external-account-wide"><legend>交易類型 *</legend><div>'+
+    '<label class="ea116-choice"><input id="'+prefix+'PurchaseTypeCustomer" type="radio" name="'+prefix+'PurchaseType" value="customer_order"><span>客訂</span></label>'+
+    '<label class="ea116-choice"><input id="'+prefix+'PurchaseTypeEmployee" type="radio" name="'+prefix+'PurchaseType" value="employee_purchase"><span>員購</span></label></div></fieldset>';
+}
+function eaStoreField116(prefix){return '<div class="field external-account-wide"><label for="'+prefix+'Store">目前當班的門市 *</label><select id="'+prefix+'Store"><option value="">請選擇當班門市</option></select></div>'}
+function eaDiscountField116(prefix){return '<div class="field"><label for="'+prefix+'Discount">折扣 *</label><select id="'+prefix+'Discount"><option value="">請選擇折扣</option>'+Object.keys(eaDiscountLabels116).map(function(value){return '<option value="'+value+'">'+eaDiscountLabels116[value]+'</option>'}).join('')+'</select></div>'}
+function eaAmountField116(prefix){return '<div class="field"><label for="'+prefix+'Amount">交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="'+prefix+'Amount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="0"></div><div class="note">填寫折扣後實際交易金額。</div></div>'}
+function eaLastFiveField116(prefix){return '<div class="field external-account-wide"><label for="'+prefix+'LastFive">匯款後五碼 *</label><input id="'+prefix+'LastFive" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" autocomplete="off" placeholder="例如：00123"><div class="note">填寫匯出帳號後 5 碼，包含開頭的 0。</div></div>'}
+function eaNotePhotoFields116(prefix){
+  return '<div class="field external-account-wide"><label for="'+prefix+'Note">購買商品／備註</label><textarea id="'+prefix+'Note" rows="3" maxlength="500" placeholder="填寫購買商品或是上傳購買清單照片(2擇1)"></textarea><div class="note">商品文字說明與購買清單照片，至少提供一項；文字最多 500 字。</div></div>'+
+    '<div class="field external-account-wide"><label for="'+prefix+'PhotoFiles">購買清單／相關照片（最多 5 張）</label><input id="'+prefix+'PhotoFiles" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple onchange="previewExternalAccountPhotos116(event,\''+prefix+'\')"><div class="note">可拍照或選取照片，送出前會自動壓縮。未填商品說明時，請提供購買清單照片。</div><div id="'+prefix+'PhotoPreview" class="ea116-photo-preview" aria-live="polite"></div></div>';
+}
+function eaStoreText116(store){return [store.name||store.storeName,store.floor||store.storeFloor].filter(Boolean).join(' / ')}
+function eaFillStores116(prefix,item){
+  var select=eaEl(prefix+'Store');if(!select)return;
+  var value=item?String(item.storeId||''):String(select.value||'');
+  var rows=ea116.stores.filter(function(store){return store&&store.id&&store.is_enabled!==false});
+  var names={north:'北區',central:'中區',south:'南區',east:'東區',other:'其他'};
+  rows.sort(function(a,b){return String(a.region||'').localeCompare(String(b.region||''))||Number(a.sort_order||0)-Number(b.sort_order||0)||eaStoreText116(a).localeCompare(eaStoreText116(b),'zh-Hant')});
+  select.innerHTML='<option value="">'+(ea116.ready?'請選擇當班門市':'門市資料尚未就緒')+'</option>'+rows.map(function(store){var region=names[store.region]||store.region||'';return '<option value="'+eaEsc(store.id)+'">'+eaEsc((region?'['+region+'] ':'')+eaStoreText116(store))+'</option>'}).join('');
+  if(item&&value&&!rows.some(function(store){return String(store.id)===value})){
+    var option=document.createElement('option');option.value=value;option.textContent=(eaStoreText116(item)||'原紀錄門市')+'（原紀錄）';select.appendChild(option);
+  }
+  if(Array.from(select.options).some(function(option){return option.value===value}))select.value=value;
+}
+function eaFillExtraFields116(prefix,item){
+  document.querySelectorAll('input[name="'+prefix+'PurchaseType"]').forEach(function(input){input.checked=input.value===String(item&&item.purchaseType||'')});
+  eaFillStores116(prefix,item);
+  if(eaEl(prefix+'Discount'))eaEl(prefix+'Discount').value=item&&item.discountPercent!=null?String(item.discountPercent):'';
+  if(eaEl(prefix+'LastFive'))eaEl(prefix+'LastFive').value=String(item&&item.remittanceLastFive||'');
+  eaResetPhotos116(prefix,item);
+  var hint=eaEl(prefix+'LegacyHint');if(hint)hint.hidden=Boolean(item&&item.purchaseType);
+  eaSyncForm116(prefix);
+}
+function eaResetPhotos116(prefix,item){
+  var state=eaPhotoState116(prefix);state.generation++;state.kept=eaItemPhotos116(item||{});state.pending=[];state.processing=false;
+  var input=eaEl(prefix+'PhotoFiles');if(input)input.value='';eaRenderPhotos116(prefix);
+}
+function eaRenderPhotos116(prefix){
+  var state=eaPhotoState116(prefix),box=eaEl(prefix+'PhotoPreview');if(!box)return;
+  var items=state.kept.map(function(photo){return {src:photo.url,saved:true}}).concat(state.pending.map(function(src){return {src:src,saved:false}}));
+  box.innerHTML=items.length?items.map(function(photo,index){return '<div class="ea116-photo-item">'+
+    (photo.src?'<button type="button" class="ea116-photo-thumb" onclick="openExternalAccountPhoto116(\''+prefix+'\','+index+')"><img src="'+eaEsc(photo.src)+'" alt="購買清單照片 '+(index+1)+'"></button>':'<span class="ea116-photo-unavailable">原照片 '+(index+1)+'<small>預覽暫時無法載入<br>儲存時仍會保留</small></span>')+
+    '<button type="button" class="ea116-photo-remove" data-ea116-remove onclick="removeExternalAccountPhoto116(\''+prefix+'\','+index+')" aria-label="移除第 '+(index+1)+' 張照片">×</button><small>'+(photo.saved?'已儲存':'新加入')+'</small></div>'}).join(''):'<div class="ea116-photo-empty">尚未加入照片</div>';
+  eaSyncForm116(prefix);
+}
+async function previewExternalAccountPhotos116(event,prefix){
+  if(!eaPrefix116(prefix))return;
+  var state=eaPhotoState116(prefix),input=event&&event.target,files=Array.from(input&&input.files||[]);if(input)input.value='';
+  if(!files.length||state.processing||state.saving)return;
+  var room=5-state.kept.length-state.pending.length;
+  if(files.length>room){eaSetStatus(eaStatusId116(prefix),'照片最多 5 張，目前還可以加入 '+Math.max(room,0)+' 張。','error');return}
+  var ticket=++state.generation;state.processing=true;eaSyncForm116(prefix);eaSetStatus(eaStatusId116(prefix),'正在處理照片，請稍候…','working');
+  try{
+    var staged=[];
+    for(var i=0;i<files.length;i++){
+      if(!/^(image\/(jpeg|png|webp|heic|heif))$/i.test(String(files[i].type||''))&&!/\.(heic|heif)$/i.test(files[i].name||''))throw new Error('請選擇 JPG、PNG、WebP 或手機照片。');
+      var data=await compressOrderPhoto(files[i]);
+      if(!eaDataPhoto116(data)||Math.floor(data.split(',')[1].length*3/4)>1024*1024)throw new Error('照片壓縮後仍超過 1 MB，請選擇較小的圖片。');
+      staged.push(data);
+    }
+    if(ticket!==state.generation)return;
+    state.pending=state.pending.concat(staged);eaRenderPhotos116(prefix);eaSetStatus(eaStatusId116(prefix),'已加入照片，共 '+(state.kept.length+state.pending.length)+' / 5 張。','success');
+  }catch(error){if(ticket===state.generation)eaSetStatus(eaStatusId116(prefix),'照片未加入：'+String(error&&error.message||error)+' 原本的照片仍保留。','error')}
+  finally{if(ticket===state.generation){state.processing=false;eaSyncForm116(prefix)}}
+}
+function removeExternalAccountPhoto116(prefix,index){
+  if(!eaPrefix116(prefix))return;var state=eaPhotoState116(prefix);if(state.processing||state.saving||!Number.isInteger(index)||index<0)return;
+  if(index<state.kept.length)state.kept.splice(index,1);else state.pending.splice(index-state.kept.length,1);
+  eaRenderPhotos116(prefix);eaSetStatus(eaStatusId116(prefix),'照片已從本次表單移除；儲存後才會更新紀錄。','working');
+}
+function openExternalAccountPhoto116(prefix,index){
+  if(!eaPrefix116(prefix))return;var state=eaPhotoState116(prefix),source=state.kept.map(function(photo){return photo.url}).concat(state.pending)[index];
+  if(!source||(!eaSafePhotoUrl116(source)&&!eaDataPhoto116(source)))return;
+  var modal=eaEl('externalAccountPhotoViewer116');
+  if(!modal){modal=document.createElement('div');modal.id='externalAccountPhotoViewer116';modal.className='ea116-photo-viewer';modal.hidden=true;modal.innerHTML='<section role="dialog" aria-modal="true" aria-label="購買清單照片"><button type="button" onclick="closeExternalAccountPhoto116()" aria-label="關閉照片">關閉 ×</button><img alt="購買清單照片"></section>';modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountPhoto116()});document.body.appendChild(modal)}
+  ea116.photoFocus=document.activeElement;modal.querySelector('img').src=source;modal.hidden=false;modal.querySelector('button').focus();
+}
+function closeExternalAccountPhoto116(){var modal=eaEl('externalAccountPhotoViewer116');if(modal){modal.hidden=true;modal.querySelector('img').removeAttribute('src')}if(ea116.photoFocus&&ea116.photoFocus.isConnected)ea116.photoFocus.focus()}
+function eaExtraPayload116(prefix,note,item){
+  if(prefix!=='externalAccountEdit'&&ea116.ownIdentity!==eaIdentity().id){eaResetIdentity116(eaIdentity());throw new Error('登入人員已變更，請重新整理公司帳後再填寫。');}
+  if(!ea116.ready)throw new Error('公司帳新增欄位尚未就緒，請重新整理；若仍未就緒，請聯絡管理員完成更新。');
+  var state=eaPhotoState116(prefix);if(state.processing)throw new Error('照片處理中，完成後再送出。');
+  var type=(document.querySelector('input[name="'+prefix+'PurchaseType"]:checked')||{}).value||'';
+  var store=String((eaEl(prefix+'Store')||{}).value||''),discount=String((eaEl(prefix+'Discount')||{}).value||''),lastFive=String((eaEl(prefix+'LastFive')||{}).value||'').trim();
+  var legacy=item&&!item.purchaseType&&!type&&!store&&!discount&&!lastFive&&!state.kept.length&&!state.pending.length;
+  if(legacy)return {};
+  if(type!=='customer_order'&&type!=='employee_purchase')throw new Error('請先選擇「客訂」或「員購」。');
+  if(!store)throw new Error('請選擇目前當班的門市。');
+  if(!Object.prototype.hasOwnProperty.call(eaDiscountLabels116,discount))throw new Error('請選擇折扣；沒有折扣請選「無」。');
+  if(!/^[0-9]{5}$/.test(lastFive))throw new Error('匯款後五碼請填寫 5 位數字，包含開頭的 0。');
+  if(!note&&!state.kept.length&&!state.pending.length)throw new Error('請填寫購買商品，或上傳購買清單照片，至少提供一項。');
+  if(state.kept.length+state.pending.length>5)throw new Error('照片最多 5 張。');
+  return {purchaseType:type,storeId:store,discountPercent:Number(discount),remittanceLastFive:lastFive,photoDataList:state.pending.slice(),keepPhotoPaths:state.kept.map(function(photo){return photo.path})};
+}
+function eaValidateBase116(payload){
+  var date=payload.transactionDate;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date||date>eaToday())throw new Error('請選擇正確的交易日期，日期不可晚於今天。');
+  if(!Number.isSafeInteger(payload.customerAmount)||payload.customerAmount<1||payload.customerAmount>10000000)throw new Error('交易金額請輸入 1～10,000,000 元的整數。');
+  if(payload.note.length>500)throw new Error('備註最多 500 個字。');
+}
+function eaDetailsText116(item){
+  var rows=[],type=item.purchaseType==='employee_purchase'?'員購':item.purchaseType==='customer_order'?'客訂':'';
+  if(type)rows.push('類型：'+type);else rows.push('類型：舊紀錄未填寫');
+  if(item.storeName)rows.push('門市：'+eaStoreText116(item));
+  if(item.discountPercent!=null&&Object.prototype.hasOwnProperty.call(eaDiscountLabels116,String(item.discountPercent)))rows.push('折扣：'+eaDiscountLabels116[item.discountPercent]);
+  if(item.remittanceLastFive)rows.push('匯款後五碼：'+String(item.remittanceLastFive));
+  return rows;
+}
+function eaDetailsHtml116(item){return '<div class="ea116-record-details">'+eaDetailsText116(item).map(function(value){return '<span>'+eaEsc(value)+'</span>'}).join('')+'</div>'}
+function eaPhotosHtml116(item){
+  var photos=eaItemPhotos116(item);if(!photos.length)return '';
+  return '<div class="ea116-record-photos"><span>照片 '+photos.length+' 張</span>'+photos.map(function(photo,index){return photo.url?'<a href="'+eaEsc(photo.url)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">查看 '+(index+1)+'</a>':'<span class="ea116-photo-warning">第 '+(index+1)+' 張暫時無法開啟，請重新整理</span>'}).join('')+'</div>';
+}
+function eaSetBusy116(prefix,busy){eaPhotoState116(prefix).saving=busy;eaSyncForm116(prefix)}
+function eaSaveMessage116(result,normal){return result&&result.auditWarning?normal+' '+String(result.auditWarning):normal}
+
 function eaStatusLabel(status){return status==='approved'?'已核准':status==='rejected'?'未通過':status==='cancelled'?'已取消':'待審核'}
 function eaSetStatus(id,text,type){var box=eaEl(id);if(!box)return;box.className=(id==='externalAccountCopyStatus'?'external-account-copy-status':'external-account-status')+(text?' show '+(type||'working'):'');box.textContent=text||''}
 function eaHasSetting(setting){return Boolean(setting&&setting.bankName&&setting.accountName&&setting.accountNumber)}
@@ -15971,70 +16148,98 @@ function renderExternalAccountOwnList(){
     var reviewNote=String(item.reviewNote||'').trim();
     return '<article class="external-account-own-item '+eaEsc(itemStatus)+'">'
       +'<div class="external-account-own-main"><div class="external-account-own-title"><time>'+eaEsc(item.transactionDate||'—')+'</time><span class="external-account-pill '+eaEsc(itemStatus)+'">'+eaStatusLabel(itemStatus)+'</span><small>v'+eaEsc(item.revisionNo||1)+'</small></div><strong class="external-account-own-amount">'+eaMoney(item.customerAmount)+'</strong></div>'
+      +eaDetailsHtml116(item)+eaPhotosHtml116(item)
       +'<p class="external-account-own-note '+(note?'':'empty')+'">'+eaEsc(note||'無備註')+'</p>'
       +'<div class="external-account-own-meta">送出 '+eaEsc(eaDateTime(item.createdAt))+(item.editedAt?'・最後編輯 '+eaEsc(eaDateTime(item.editedAt)):'')+(reviewMeta?'・'+eaEsc(reviewMeta):'')+'</div>'
       +(reviewNote?'<p class="external-account-own-note review">審核備註：'+eaEsc(reviewNote)+'</p>':'')
       +'<div class="external-account-own-actions">'+editButton+cancelButton+deleteButton+'</div></article>';
   }).join(''):'<div class="external-account-empty">目前篩選條件沒有公司帳紀錄。</div>';
 }
-async function loadExternalAccountData(){if(eaLoading)return;eaLoading=true;var identity=eaIdentity();if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;eaSetStatus('externalAccountFormStatus','正在讀取公司帳資料…','working');try{var result=await starredApi('external_account_bootstrap',{});eaSetting=result.setting||{};eaOwnData=Array.isArray(result.transactions)?result.transactions:[];renderExternalAccountSetting();renderExternalAccountOwnList();eaSetStatus('externalAccountFormStatus','')}catch(error){eaSetStatus('externalAccountFormStatus','公司帳資料載入失敗：'+String(error&&error.message||error),'error')}finally{eaLoading=false}}
-async function submitExternalAccountTransaction(){
-  var transactionDate=String((eaEl('externalAccountDate')||{}).value||'');
-  var customerAmount=Number((eaEl('externalAccountAmount')||{}).value||0);
-  var note=String((eaEl('externalAccountNote')||{}).value||'').trim();
-  if(!transactionDate){eaSetStatus('externalAccountFormStatus','請選擇交易日期。','error');return}
-  if(transactionDate>eaToday()){eaSetStatus('externalAccountFormStatus','交易日期不可晚於今天。','error');return}
-  if(!Number.isFinite(customerAmount)||customerAmount<=0){eaSetStatus('externalAccountFormStatus','請輸入正確的客戶交易金額。','error');return}
-  if(note.length>500){eaSetStatus('externalAccountFormStatus','備註最多 500 個字。','error');return}
-  var button=eaEl('externalAccountSubmitBtn');if(button)button.disabled=true;
-  eaSetStatus('externalAccountFormStatus','正在送出公司帳交易…','working');
+async function loadExternalAccountData(){
+  if(eaLoading)return false;
+  eaLoading=true;var identity=eaIdentity(),ticket=++ea116.loadSeq;
+  eaResetIdentity116(identity);
+  if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;
+  if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;
+  eaSetStatus('externalAccountFormStatus','正在讀取公司帳資料…','working');
   try{
-    await starredApi('external_account_submit',{transactionDate:transactionDate,customerAmount:customerAmount,note:note});
-    if(eaEl('externalAccountAmount'))eaEl('externalAccountAmount').value='';
-    if(eaEl('externalAccountNote'))eaEl('externalAccountNote').value='';
-    eaSetStatus('externalAccountFormStatus','公司帳交易已送出，等待後台核准。','success');
-    await loadExternalAccountData();
-  }catch(error){eaSetStatus('externalAccountFormStatus','送出失敗：'+String(error&&error.message||error),'error')}
-  finally{if(button)button.disabled=false}
+    var result=await starredApi('external_account_bootstrap',{});
+    if(ticket!==ea116.loadSeq||identity.id!==eaIdentity().id){eaResetIdentity116(eaIdentity());return false;}
+    eaSetting=result.setting||{};eaOwnData=Array.isArray(result.transactions)?result.transactions:[];eaApplyCapabilities116(result);
+    renderExternalAccountSetting();renderExternalAccountOwnList();
+    eaSetStatus('externalAccountFormStatus',ea116.ready?'':'公司帳新增欄位尚未就緒，請聯絡管理員完成更新。',ea116.ready?'':'error');
+    return true;
+  }catch(error){ea116.ready=false;eaSyncForm116('externalAccount');eaSetStatus('externalAccountFormStatus','公司帳資料載入失敗：'+String(error&&error.message||error),'error');return false}
+  finally{if(ticket===ea116.loadSeq)eaLoading=false}
+}
+async function submitExternalAccountTransaction(){
+  var prefix='externalAccount',state=eaPhotoState116(prefix),identity=eaIdentity().id;if(state.saving)return;
+  var payload={transactionDate:String((eaEl(prefix+'Date')||{}).value||''),customerAmount:Number((eaEl(prefix+'Amount')||{}).value||0),note:String((eaEl(prefix+'Note')||{}).value||'').trim()};
+  try{eaValidateBase116(payload);Object.assign(payload,eaExtraPayload116(prefix,payload.note,null))}
+  catch(error){eaSetStatus('externalAccountFormStatus',String(error&&error.message||error),'error');return}
+  eaSetBusy116(prefix,true);eaSetStatus('externalAccountFormStatus','正在送出公司帳交易與照片…','working');
+  try{
+    var result=await starredApi('external_account_submit',payload);
+    if(identity!==eaIdentity().id){eaResetIdentity116(eaIdentity());return;}
+    if(!result.transaction||!result.transaction.id)throw new Error('尚未取得交易編號，請先重新整理確認紀錄，避免重複送出。');
+    ['Amount','Note','LastFive'].forEach(function(suffix){if(eaEl(prefix+suffix))eaEl(prefix+suffix).value=''});
+    document.querySelectorAll('input[name="'+prefix+'PurchaseType"]').forEach(function(input){input.checked=false});
+    if(eaEl(prefix+'Discount'))eaEl(prefix+'Discount').value='';
+    eaResetPhotos116(prefix);
+    var refreshed=await loadExternalAccountData();
+    if(identity===eaIdentity().id)eaSetStatus('externalAccountFormStatus',eaSaveMessage116(result,refreshed?'公司帳交易已送出，等待後台核准。':'公司帳交易已送出，但清單重新整理未完成。請重新整理紀錄，無須重複送出。'),result.auditWarning||!refreshed?'working':'success');
+  }catch(error){if(identity!==eaIdentity().id)eaResetIdentity116(eaIdentity());else eaSetStatus('externalAccountFormStatus','送出未完成：'+String(error&&error.message||error),'error')}
+  finally{eaSetBusy116(prefix,false)}
 }
 function ensureExternalAccountOwnEditModal(){
   var modal=eaEl('externalAccountOwnEditModal');if(modal)return modal;
-  modal=document.createElement('div');modal.id='externalAccountOwnEditModal';modal.className='external-account-edit-modal';modal.hidden=true;
-  modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="externalAccountOwnEditTitle"><header><div><h3 id="externalAccountOwnEditTitle">編輯公司帳</h3><small>儲存後會重新送到後台審核</small></div><button type="button" onclick="closeExternalAccountOwnEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="externalAccountOwnEditId" type="hidden"><div class="external-account-edit-grid"><div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountOwnEditDate" type="date"></div></div><div class="field"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountOwnEditAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div></div><div class="field"><label>備註（選填）</label><textarea id="externalAccountOwnEditNote" maxlength="500" rows="3" placeholder="沒有填也可以儲存"></textarea></div></div><div id="externalAccountOwnEditStatus" class="external-account-status" role="status"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountOwnEdit()">不編輯了</button><button id="externalAccountOwnEditSave" type="button" class="primary" onclick="saveExternalAccountOwnEdit()">儲存並重新送審</button></footer></section>';
-  modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountOwnEdit()});
-  document.body.appendChild(modal);return modal;
+  var prefix='externalAccountOwnEdit';
+  modal=document.createElement('div');modal.id=prefix+'Modal';modal.className='external-account-edit-modal';modal.hidden=true;
+  modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="externalAccountOwnEditTitle"><header><div><h3 id="externalAccountOwnEditTitle">編輯公司帳</h3><small>儲存後會重新送到後台審核</small></div><button type="button" onclick="closeExternalAccountOwnEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="'+prefix+'Id" type="hidden"><div class="external-account-edit-grid">'+
+    '<p id="'+prefix+'LegacyHint" class="ea116-legacy-hint" hidden>這是尚未填寫新欄位的舊紀錄。可以保留原資料；若要補登交易類型，請一併填寫門市、折扣及匯款後五碼。</p>'+eaTypeFields116(prefix)+
+    '<div class="field external-account-wide external-account-date-field"><label for="'+prefix+'Date">交易日期 *</label><div class="external-account-date-control"><input id="'+prefix+'Date" type="date"></div></div>'+eaStoreField116(prefix)+eaDiscountField116(prefix)+eaAmountField116(prefix)+eaLastFiveField116(prefix)+eaNotePhotoFields116(prefix)+
+    '</div><div id="'+prefix+'Status" class="external-account-status" role="status" aria-live="polite"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountOwnEdit()">不編輯了</button><button id="'+prefix+'Save" type="button" class="primary" onclick="saveExternalAccountOwnEdit()">儲存並重新送審</button></footer></section>';
+  modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountOwnEdit()});document.body.appendChild(modal);return modal;
 }
 function openExternalAccountOwnEdit(id){
   var item=eaOwnData.find(function(row){return String(row.id)===String(id)});if(!item){alert('找不到這筆公司帳，請重新整理。');return}
-  var modal=ensureExternalAccountOwnEditModal();
-  eaEl('externalAccountOwnEditId').value=String(item.id||'');
-  eaEl('externalAccountOwnEditDate').value=String(item.transactionDate||'');
-  eaEl('externalAccountOwnEditDate').max=eaToday();
-  eaEl('externalAccountOwnEditAmount').value=String(item.customerAmount||'');
-  eaEl('externalAccountOwnEditNote').value=String(item.note||'');
-  eaSetStatus('externalAccountOwnEditStatus','');modal.hidden=false;document.body.style.overflow='hidden';
+  var modal=ensureExternalAccountOwnEditModal(),prefix='externalAccountOwnEdit';
+  if(eaPhotoState116(prefix).saving)return;
+  eaEl(prefix+'Id').value=String(item.id||'');eaEl(prefix+'Date').value=String(item.transactionDate||'');eaEl(prefix+'Date').max=eaToday();
+  eaEl(prefix+'Amount').value=String(item.customerAmount||'');eaEl(prefix+'Note').value=String(item.note||'');eaFillExtraFields116(prefix,item);
+  ea116.ownEditItem=Object.assign({},item);eaSetStatus(prefix+'Status',ea116.ready?'':'公司帳新增欄位尚未就緒，請重新整理後再編輯。',ea116.ready?'':'error');
+  ea116.ownEditFocus=document.activeElement;modal.hidden=false;document.body.style.overflow='hidden';
+  eaEl(prefix+'PurchaseTypeCustomer').focus();
 }
-function closeExternalAccountOwnEdit(){var modal=eaEl('externalAccountOwnEditModal');if(modal)modal.hidden=true;document.body.style.overflow=''}
+function closeExternalAccountOwnEdit(){
+  var prefix='externalAccountOwnEdit';if(eaPhotoState116(prefix).saving)return;
+  var modal=eaEl(prefix+'Modal');if(modal)modal.hidden=true;eaPhotoState116(prefix).generation++;eaPhotoState116(prefix).processing=false;
+  document.body.style.overflow='';if(ea116.ownEditFocus&&ea116.ownEditFocus.isConnected)ea116.ownEditFocus.focus();
+}
 async function saveExternalAccountOwnEdit(){
-  var transactionId=String((eaEl('externalAccountOwnEditId')||{}).value||'');
-  var item=eaOwnData.find(function(row){return String(row.id)===transactionId});
-  var payload={transactionId:transactionId,transactionDate:String((eaEl('externalAccountOwnEditDate')||{}).value||''),customerAmount:Number((eaEl('externalAccountOwnEditAmount')||{}).value||0),note:String((eaEl('externalAccountOwnEditNote')||{}).value||'').trim()};
-  if(!payload.transactionDate||payload.transactionDate>eaToday()||!Number.isFinite(payload.customerAmount)||payload.customerAmount<=0){eaSetStatus('externalAccountOwnEditStatus','請填寫正確的交易日期與金額。','error');return}
-  if(payload.note.length>500){eaSetStatus('externalAccountOwnEditStatus','備註最多 500 個字。','error');return}
-  if(item&&item.status==='approved'&&!confirm('這筆公司帳已核准。編輯後會先改為「待審核」，後台再次核准後才會計入業績，確定儲存？'))return;
-  var button=eaEl('externalAccountOwnEditSave');if(button)button.disabled=true;eaSetStatus('externalAccountOwnEditStatus','正在儲存並重新送審…','working');
-  try{await starredApi('external_account_update',payload);closeExternalAccountOwnEdit();await loadExternalAccountData();eaSetStatus('externalAccountFormStatus','公司帳已更新，目前為待審核。','success')}
-  catch(error){eaSetStatus('externalAccountOwnEditStatus','編輯失敗：'+String(error&&error.message||error),'error')}
-  finally{if(button)button.disabled=false}
+  var prefix='externalAccountOwnEdit',state=eaPhotoState116(prefix),identity=eaIdentity().id;if(state.saving)return;
+  var item=ea116.ownEditItem,transactionId=String((eaEl(prefix+'Id')||{}).value||'');
+  if(!item||String(item.id)!==transactionId){eaSetStatus(prefix+'Status','資料已改變，請關閉後重新開啟。','error');return}
+  var payload={transactionId:transactionId,transactionDate:String((eaEl(prefix+'Date')||{}).value||''),customerAmount:Number((eaEl(prefix+'Amount')||{}).value||0),note:String((eaEl(prefix+'Note')||{}).value||'').trim(),expectedRevisionNo:Number(item.revisionNo||1),expectedUpdatedAt:String(item.updatedAt||'')};
+  try{eaValidateBase116(payload);Object.assign(payload,eaExtraPayload116(prefix,payload.note,item))}
+  catch(error){eaSetStatus(prefix+'Status',String(error&&error.message||error),'error');return}
+  if(item.status==='approved'&&!confirm('這筆公司帳已核准。編輯後會先改為「待審核」，後台再次核准後才會計入業績，確定儲存？'))return;
+  eaSetBusy116(prefix,true);eaSetStatus(prefix+'Status','正在儲存並重新送審…','working');
+  try{
+    var result=await starredApi('external_account_update',payload);if(identity!==eaIdentity().id){eaResetIdentity116(eaIdentity());return;}if(!result.transaction||!result.transaction.id)throw new Error('尚未取得儲存結果，請重新整理紀錄確認。');
+    eaSetBusy116(prefix,false);closeExternalAccountOwnEdit();var refreshed=await loadExternalAccountData();
+    if(identity===eaIdentity().id)eaSetStatus('externalAccountFormStatus',eaSaveMessage116(result,refreshed?'公司帳已更新，目前為待審核。':'公司帳已更新，但清單重新整理未完成，請重新整理紀錄。'),result.auditWarning||!refreshed?'working':'success');
+  }catch(error){if(identity!==eaIdentity().id)eaResetIdentity116(eaIdentity());else eaSetStatus(prefix+'Status','編輯失敗：'+String(error&&error.message||error),'error')}
+  finally{eaSetBusy116(prefix,false)}
 }
 async function cancelExternalAccountOwn(id){
   if(!confirm('確定取消這筆待審核公司帳？取消後仍可編輯並重新送審。'))return;
-  try{await starredApi('external_account_cancel',{transactionId:id});await loadExternalAccountData()}
+  try{var result116=await starredApi('external_account_cancel',{transactionId:id});await loadExternalAccountData();if(result116.auditWarning)eaSetStatus('externalAccountFormStatus',eaSaveMessage116(result116,'公司帳已更新。'),'working')}
   catch(error){alert('取消失敗：'+String(error&&error.message||error))}
 }
 async function deleteExternalAccountOwn(id){
   if(!confirm('確定刪除這筆公司帳？刪除後前台清單不再顯示。'))return;
-  try{await starredApi('external_account_delete',{transactionId:id});await loadExternalAccountData()}
+  try{var result116=await starredApi('external_account_delete',{transactionId:id});await loadExternalAccountData();if(result116.auditWarning)eaSetStatus('externalAccountFormStatus',eaSaveMessage116(result116,'公司帳已更新。'),'working')}
   catch(error){alert('刪除失敗：'+String(error&&error.message||error))}
 }
 function eaCanManageAdmin(){return Boolean(currentUser&&typeof normalizeCurrentAdminRole==='function'&&normalizeCurrentAdminRole(currentUser.role)!=='manager')}
@@ -16061,12 +16266,12 @@ function renderExternalAccountAdmin(){
     var note=item.note?'<span class="external-account-admin-note">申請備註：'+eaEsc(item.note)+'</span>':'';
     var reviewerLabel=item.status==='approved'?'核准人':item.status==='rejected'?'駁回人':'審核人';
     var auditParts=[item.reviewerName?reviewerLabel+'：'+item.reviewerName:'尚未核准'];if(item.reviewedAt)auditParts.push('審核時間：'+eaDateTime(item.reviewedAt));if(item.editedAt)auditParts.push('修改：'+eaDateTime(item.editedAt));
-    return '<tr class="'+eaEsc(item.status||'pending')+'"><td>'+eaEsc(item.transactionDate||'—')+window.StarredAdminReview83.badge('company',item.transactionDate,item.status)+'</td><td><b>'+eaEsc(item.submitterName||'LINE 使用者')+'</b>'+note+'</td><td class="amount">'+eaMoney(item.customerAmount)+'</td><td><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></td><td><small class="external-account-admin-audit">'+eaEsc(auditParts.join('・'))+'</small>'+(item.reviewNote?'<span class="external-account-admin-note">審核備註：'+eaEsc(item.reviewNote)+'</span>':'')+'</td><td>'+eaAdminActionHtml(item)+'</td></tr>';
+    return '<tr class="'+eaEsc(item.status||'pending')+'"><td>'+eaEsc(item.transactionDate||'—')+window.StarredAdminReview83.badge('company',item.transactionDate,item.status)+'</td><td><b>'+eaEsc(item.submitterName||'LINE 使用者')+'</b>'+eaDetailsHtml116(item)+note+eaPhotosHtml116(item)+'</td><td class="amount">'+eaMoney(item.customerAmount)+'</td><td><span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></td><td><small class="external-account-admin-audit">'+eaEsc(auditParts.join('・'))+'</small>'+(item.reviewNote?'<span class="external-account-admin-note">審核備註：'+eaEsc(item.reviewNote)+'</span>':'')+'</td><td>'+eaAdminActionHtml(item)+'</td></tr>';
   }).join(''):'<tr><td colspan="6"><div class="external-account-empty">目前篩選條件沒有公司帳紀錄。</div></td></tr>';
   if(mobile)mobile.innerHTML=rows.length?rows.map(function(item){
     var reviewerLabel=item.status==='approved'?'核准人':item.status==='rejected'?'駁回人':'審核人';
     var reviewerMeta=item.reviewerName?reviewerLabel+'：'+eaEsc(item.reviewerName)+(item.reviewedAt?'・'+eaEsc(eaDateTime(item.reviewedAt)):''):'尚未核准';
-    return '<article class="'+eaEsc(item.status||'pending')+'"><header><h4>'+eaEsc(item.transactionDate||'—')+'・'+eaEsc(item.submitterName||'LINE 使用者')+'</h4>'+window.StarredAdminReview83.badge('company',item.transactionDate,item.status)+'<span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></header><p>客戶交易金額</p><strong>'+eaMoney(item.customerAmount)+'</strong>'+(item.note?'<span class="external-account-admin-note">備註：'+eaEsc(item.note)+'</span>':'')+'<small class="external-account-approval-meta">'+reviewerMeta+'</small>'+(item.reviewNote?'<small>審核備註：'+eaEsc(item.reviewNote)+'</small>':'')+'<footer>'+eaAdminActionHtml(item)+'</footer></article>';
+    return '<article class="'+eaEsc(item.status||'pending')+'"><header><h4>'+eaEsc(item.transactionDate||'—')+'・'+eaEsc(item.submitterName||'LINE 使用者')+'</h4>'+window.StarredAdminReview83.badge('company',item.transactionDate,item.status)+'<span class="external-account-pill '+eaEsc(item.status)+'">'+eaStatusLabel(item.status)+'</span></header><p>交易金額</p><strong>'+eaMoney(item.customerAmount)+'</strong>'+eaDetailsHtml116(item)+eaPhotosHtml116(item)+(item.note?'<span class="external-account-admin-note">備註：'+eaEsc(item.note)+'</span>':'')+'<small class="external-account-approval-meta">'+reviewerMeta+'</small>'+(item.reviewNote?'<small>審核備註：'+eaEsc(item.reviewNote)+'</small>':'')+'<footer>'+eaAdminActionHtml(item)+'</footer></article>';
   }).join(''):'<div class="external-account-empty">目前篩選條件沒有公司帳紀錄。</div>';
   renderExternalAccountPagination();eaFillSettingsForm();eaFillAdminPeople();
 }
@@ -16090,6 +16295,7 @@ async function loadExternalAccountAdminReport(page){
   if(seq!==eaAdminLoadSeq83||key!==helper.auth('company'))return false;
   if(JSON.stringify(q)!==JSON.stringify(helper.companyQuery())||size!==Number((eaEl('externalAccountAdminPageSize')||{}).value||50)){eaSetStatus('externalAccountAdminStatusMessage','篩選已變更，請按套用篩選。','error');return false}
   if(!Array.isArray(result.transactions)||!result.summary||Number(result.total)!==Number(result.summary.totalCount))throw new Error('公司帳回傳不完整，請重新整理。');
+  eaApplyCapabilities116(result);
   eaAdminState.rows=result.transactions;eaAdminState.people=Array.isArray(result.people)?result.people:[];eaAdminState.setting=result.setting||{};eaAdminState.summary=result.summary;
   eaAdminState.total=Number(result.total||0);eaAdminState.page=Number(result.page||1);eaAdminState.pageSize=Number(result.pageSize||size);eaAdminState.canEditSettings=result.canEditSettings===true;
   renderExternalAccountAdmin();eaSetStatus('externalAccountAdminStatusMessage','公司帳已更新，共 '+eaAdminState.total+' 筆；待審核跨月份優先顯示。','success');return true;
@@ -16100,12 +16306,50 @@ function reloadExternalAccountAdminReport(){eaAdminState.page=1;loadExternalAcco
 function goExternalAccountAdminPage(page){var totalPages=Math.max(1,Math.ceil(Number(eaAdminState.total||0)/Number(eaAdminState.pageSize||50)));page=Math.max(1,Math.min(totalPages,Number(page||1)));loadExternalAccountAdminReport(page)}
 function resetExternalAccountAdminFilters(){var today=eaToday();if(eaEl('externalAccountAdminDateFrom'))eaEl('externalAccountAdminDateFrom').value=today.slice(0,7)+'-01';if(eaEl('externalAccountAdminDateTo'))eaEl('externalAccountAdminDateTo').value=today;if(eaEl('externalAccountAdminStatus'))eaEl('externalAccountAdminStatus').value='';if(eaEl('externalAccountAdminPerson'))eaEl('externalAccountAdminPerson').value='';if(eaEl('externalAccountAdminKeyword'))eaEl('externalAccountAdminKeyword').value='';if(eaEl('externalAccountAdminPageSize'))eaEl('externalAccountAdminPageSize').value='50';reloadExternalAccountAdminReport()}
 async function saveExternalAccountSettings(){if(!eaAdminState.canEditSettings){eaSetStatus('externalAccountSettingStatus','只有系統管理員可以修改公司帳號。','error');return}var payload={displayTitle:String((eaEl('externalAccountSettingTitle')||{}).value||'').trim(),bankName:String((eaEl('externalAccountSettingBank')||{}).value||'').trim(),bankCode:String((eaEl('externalAccountSettingBankCode')||{}).value||'').trim(),branchName:String((eaEl('externalAccountSettingBranch')||{}).value||'').trim(),accountName:String((eaEl('externalAccountSettingName')||{}).value||'').trim(),accountNumber:String((eaEl('externalAccountSettingNumber')||{}).value||'').trim(),remittanceNote:String((eaEl('externalAccountSettingNote')||{}).value||'').trim()};if(!payload.displayTitle||!payload.bankName||!payload.accountName||!payload.accountNumber){eaSetStatus('externalAccountSettingStatus','請填寫顯示標題、銀行名稱、戶名與帳號。','error');return}var button=eaEl('externalAccountSettingSave');if(button)button.disabled=true;eaSetStatus('externalAccountSettingStatus','正在儲存公司帳號…','working');try{var result=await starredApi('external_account_settings_update',payload);eaAdminState.setting=result.setting||payload;eaSetting=eaAdminState.setting;eaFillSettingsForm();renderExternalAccountSetting();eaSetStatus('externalAccountSettingStatus','公司帳號已更新，前台會立即顯示。','success')}catch(error){eaSetStatus('externalAccountSettingStatus','儲存失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=!eaAdminState.canEditSettings}}
-async function reviewExternalAccountTransaction(id,decision){var approve=decision==='approved';var note='';if(approve){if(!confirm('確定核准這筆公司帳？核准後會列在該人員當月個人業績底部。'))return}else{note=String(prompt('請輸入駁回原因（至少 2 個字）：')||'').trim();if(note.length<2)return}eaSetStatus('externalAccountAdminStatusMessage',approve?'正在核准公司帳…':'正在駁回公司帳…','working');try{await starredApi('external_account_admin_review',{transactionId:id,decision:decision,reviewNote:note});await loadExternalAccountAdminReport(eaAdminState.page)}catch(error){eaSetStatus('externalAccountAdminStatusMessage','審核失敗：'+String(error&&error.message||error),'error')}}
-function ensureExternalAccountEditModal(){var modal=eaEl('externalAccountEditModal');if(modal)return modal;modal=document.createElement('div');modal.id='externalAccountEditModal';modal.className='external-account-edit-modal';modal.hidden=true;modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true"><header><h3>編輯公司帳</h3><button type="button" onclick="closeExternalAccountEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="externalAccountEditId" type="hidden"><div class="external-account-edit-grid"><div class="field"><label>人員 *</label><select id="externalAccountEditPerson"></select></div><div class="field external-account-date-field"><label>交易日期 *</label><div class="external-account-date-control"><input id="externalAccountEditDate" type="date"></div></div><div class="field"><label>客戶交易金額 *</label><div class="external-account-money-input"><span>$</span><input id="externalAccountEditAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric"></div></div><div class="field"><label>備註（選填）</label><textarea id="externalAccountEditNote" maxlength="500" rows="3"></textarea></div></div><div id="externalAccountEditStatus" class="external-account-status" role="status"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountEdit()">取消</button><button id="externalAccountEditSave" type="button" class="primary" onclick="saveExternalAccountEdit()">儲存修改</button></footer></section>';modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountEdit()});document.body.appendChild(modal);return modal}
-function openExternalAccountEdit(id){var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item){alert('找不到這筆公司帳，請重新整理。');return}var modal=ensureExternalAccountEditModal();eaEl('externalAccountEditId').value=item.id;var person=eaEl('externalAccountEditPerson');person.innerHTML=eaAdminState.people.map(function(row){return '<option value="'+eaEsc(row.lineUserId)+'">'+eaEsc(row.name)+'</option>'}).join('');person.value=String(item.submitterLineUserId||'');eaEl('externalAccountEditDate').value=String(item.transactionDate||'');eaEl('externalAccountEditDate').max=eaToday();eaEl('externalAccountEditAmount').value=String(item.customerAmount||'');eaEl('externalAccountEditNote').value=String(item.note||'');eaSetStatus('externalAccountEditStatus','');modal.hidden=false;document.body.style.overflow='hidden'}
-function closeExternalAccountEdit(){var modal=eaEl('externalAccountEditModal');if(modal)modal.hidden=true;document.body.style.overflow=''}
-async function saveExternalAccountEdit(){var payload={transactionId:String((eaEl('externalAccountEditId')||{}).value||''),submitterLineUserId:String((eaEl('externalAccountEditPerson')||{}).value||''),transactionDate:String((eaEl('externalAccountEditDate')||{}).value||''),customerAmount:Number((eaEl('externalAccountEditAmount')||{}).value||0),note:String((eaEl('externalAccountEditNote')||{}).value||'').trim()};if(!payload.submitterLineUserId||!payload.transactionDate||payload.transactionDate>eaToday()||payload.customerAmount<=0){eaSetStatus('externalAccountEditStatus','請完整填寫人員、正確日期與金額。','error');return}if(payload.note.length>500){eaSetStatus('externalAccountEditStatus','備註最多 500 個字。','error');return}var button=eaEl('externalAccountEditSave');if(button)button.disabled=true;eaSetStatus('externalAccountEditStatus','正在儲存修改…','working');try{await starredApi('external_account_admin_update',payload);closeExternalAccountEdit();await loadExternalAccountAdminReport(eaAdminState.page)}catch(error){eaSetStatus('externalAccountEditStatus','修改失敗：'+String(error&&error.message||error),'error')}finally{if(button)button.disabled=false}}
-async function deleteExternalAccountTransaction(id){var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item)return;if(!confirm('確定刪除 '+String(item.transactionDate||'')+'・'+String(item.submitterName||'')+' 的公司帳 '+eaMoney(item.customerAmount)+'？\n清單會隱藏，但系統保留操作軌跡。'))return;eaSetStatus('externalAccountAdminStatusMessage','正在刪除公司帳…','working');try{await starredApi('external_account_admin_delete',{transactionId:id});var page=eaAdminState.page;if(eaAdminState.rows.length===1&&page>1)page-=1;await loadExternalAccountAdminReport(page)}catch(error){eaSetStatus('externalAccountAdminStatusMessage','刪除失敗：'+String(error&&error.message||error),'error')}}
+async function reviewExternalAccountTransaction(id,decision){var approve=decision==='approved';var note='';if(approve){if(!confirm('確定核准這筆公司帳？核准後會列在該人員當月個人業績底部。'))return}else{note=String(prompt('請輸入駁回原因（至少 2 個字）：')||'').trim();if(note.length<2)return}eaSetStatus('externalAccountAdminStatusMessage',approve?'正在核准公司帳…':'正在駁回公司帳…','working');try{var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item)throw new Error('清單資料已改變，請重新整理後再審核。');var result116=await starredApi('external_account_admin_review',{transactionId:id,decision:decision,reviewNote:note,expectedRevisionNo:Number(item.revisionNo||1),expectedUpdatedAt:String(item.updatedAt||'')});await loadExternalAccountAdminReport(eaAdminState.page);if(result116.auditWarning)eaSetStatus('externalAccountAdminStatusMessage',eaSaveMessage116(result116,'審核結果已儲存。'),'working')}catch(error){eaSetStatus('externalAccountAdminStatusMessage','審核失敗：'+String(error&&error.message||error),'error')}}
+function ensureExternalAccountEditModal(){
+  var prefix='externalAccountEdit',modal=eaEl(prefix+'Modal');if(modal)return modal;
+  modal=document.createElement('div');modal.id=prefix+'Modal';modal.className='external-account-edit-modal';modal.hidden=true;
+  modal.innerHTML='<section class="external-account-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="externalAccountEditTitle116"><header><h3 id="externalAccountEditTitle116">編輯公司帳</h3><button type="button" onclick="closeExternalAccountEdit()" aria-label="關閉">×</button></header><div class="external-account-edit-body"><input id="'+prefix+'Id" type="hidden"><div class="external-account-edit-grid">'+
+    '<p id="'+prefix+'LegacyHint" class="ea116-legacy-hint" hidden>這是尚未填寫新欄位的舊紀錄。可以保留原資料；若要補登交易類型，請一併填寫門市、折扣及匯款後五碼。</p>'+eaTypeFields116(prefix)+
+    '<div class="field"><label for="'+prefix+'Person">人員 *</label><select id="'+prefix+'Person"></select></div><div class="field external-account-date-field"><label for="'+prefix+'Date">交易日期 *</label><div class="external-account-date-control"><input id="'+prefix+'Date" type="date"></div></div>'+eaStoreField116(prefix)+eaDiscountField116(prefix)+eaAmountField116(prefix)+eaLastFiveField116(prefix)+eaNotePhotoFields116(prefix)+
+    '</div><div id="'+prefix+'Status" class="external-account-status" role="status" aria-live="polite"></div></div><footer><button type="button" class="secondary" onclick="closeExternalAccountEdit()">取消</button><button id="'+prefix+'Save" type="button" class="primary" onclick="saveExternalAccountEdit()">儲存修改</button></footer></section>';
+  modal.addEventListener('click',function(event){if(event.target===modal)closeExternalAccountEdit()});document.body.appendChild(modal);return modal;
+}
+function openExternalAccountEdit(id){
+  var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item){alert('找不到這筆公司帳，請重新整理。');return}
+  var modal=ensureExternalAccountEditModal(),prefix='externalAccountEdit';if(eaPhotoState116(prefix).saving)return;
+  eaEl(prefix+'Id').value=item.id;var person=eaEl(prefix+'Person');
+  person.innerHTML=eaAdminState.people.map(function(row){return '<option value="'+eaEsc(row.lineUserId)+'">'+eaEsc(row.name)+'</option>'}).join('');
+  if(!Array.from(person.options).some(function(option){return option.value===String(item.submitterLineUserId||'')})){var option=document.createElement('option');option.value=String(item.submitterLineUserId||'');option.textContent=String(item.submitterName||'原紀錄人員');person.appendChild(option)}
+  person.value=String(item.submitterLineUserId||'');eaEl(prefix+'Date').value=String(item.transactionDate||'');eaEl(prefix+'Date').max=eaToday();
+  eaEl(prefix+'Amount').value=String(item.customerAmount||'');eaEl(prefix+'Note').value=String(item.note||'');eaFillExtraFields116(prefix,item);ea116.adminEditItem=Object.assign({},item);
+  ea116.adminEditIdentity=window.StarredAdminReview83.auth('company');
+  eaSetStatus(prefix+'Status',ea116.ready?'':'公司帳新增欄位尚未就緒，請重新整理後再編輯。',ea116.ready?'':'error');
+  ea116.adminEditFocus=document.activeElement;modal.hidden=false;document.body.style.overflow='hidden';eaEl(prefix+'PurchaseTypeCustomer').focus();
+}
+function closeExternalAccountEdit(){
+  var prefix='externalAccountEdit';if(eaPhotoState116(prefix).saving)return;
+  var modal=eaEl(prefix+'Modal');if(modal)modal.hidden=true;eaPhotoState116(prefix).generation++;eaPhotoState116(prefix).processing=false;
+  document.body.style.overflow='';if(ea116.adminEditFocus&&ea116.adminEditFocus.isConnected)ea116.adminEditFocus.focus();
+}
+async function saveExternalAccountEdit(){
+  var prefix='externalAccountEdit',state=eaPhotoState116(prefix);if(state.saving)return;
+  var item=ea116.adminEditItem,transactionId=String((eaEl(prefix+'Id')||{}).value||'');
+  if(!item||String(item.id)!==transactionId){eaSetStatus(prefix+'Status','資料已改變，請關閉後重新開啟。','error');return}
+  if(!ea116.adminEditIdentity||ea116.adminEditIdentity!==window.StarredAdminReview83.auth('company')){closeExternalAccountEdit();eaSetStatus('externalAccountAdminStatusMessage','登入身分已變更，請重新整理公司帳清單。','error');return}
+  var payload={transactionId:transactionId,submitterLineUserId:String((eaEl(prefix+'Person')||{}).value||''),transactionDate:String((eaEl(prefix+'Date')||{}).value||''),customerAmount:Number((eaEl(prefix+'Amount')||{}).value||0),note:String((eaEl(prefix+'Note')||{}).value||'').trim(),expectedRevisionNo:Number(item.revisionNo||1),expectedUpdatedAt:String(item.updatedAt||'')};
+  try{eaValidateBase116(payload);if(!payload.submitterLineUserId)throw new Error('請選擇人員。');Object.assign(payload,eaExtraPayload116(prefix,payload.note,item))}
+  catch(error){eaSetStatus(prefix+'Status',String(error&&error.message||error),'error');return}
+  eaSetBusy116(prefix,true);eaSetStatus(prefix+'Status','正在儲存修改…','working');
+  try{
+    var result=await starredApi('external_account_admin_update',payload);if(!result.transaction||!result.transaction.id)throw new Error('尚未取得儲存結果，請重新整理紀錄確認。');
+    eaSetBusy116(prefix,false);closeExternalAccountEdit();var refreshed=await loadExternalAccountAdminReport(eaAdminState.page);
+    if(!refreshed||result.auditWarning)eaSetStatus('externalAccountAdminStatusMessage',eaSaveMessage116(result,refreshed?'公司帳修改已儲存。':'修改已儲存，但清單重新整理未完成，請重新整理紀錄。'),'working');
+  }catch(error){eaSetStatus(prefix+'Status','修改失敗：'+String(error&&error.message||error),'error')}
+  finally{eaSetBusy116(prefix,false)}
+}
+async function deleteExternalAccountTransaction(id){var item=eaAdminState.rows.find(function(row){return String(row.id)===String(id)});if(!item)return;if(!confirm('確定刪除 '+String(item.transactionDate||'')+'・'+String(item.submitterName||'')+' 的公司帳 '+eaMoney(item.customerAmount)+'？\n清單會隱藏，但系統保留操作軌跡。'))return;eaSetStatus('externalAccountAdminStatusMessage','正在刪除公司帳…','working');try{var result116=await starredApi('external_account_admin_delete',{transactionId:id});var page=eaAdminState.page;if(eaAdminState.rows.length===1&&page>1)page-=1;await loadExternalAccountAdminReport(page);if(result116.auditWarning)eaSetStatus('externalAccountAdminStatusMessage',eaSaveMessage116(result116,'公司帳已刪除。'),'working')}catch(error){eaSetStatus('externalAccountAdminStatusMessage','刪除失敗：'+String(error&&error.message||error),'error')}}
 function renderSalesPersonExternalAccountSection(lineUserId){
   var section=document.getElementById('salesStatDetailExternalAccountSection');if(!section)return;
   var source85=window.STARRED_SALES_REPORT_BRIDGE_V55?window.STARRED_SALES_REPORT_BRIDGE_V55.getData():window.salesAdminData;var rows=((source85&&source85.externalAccounts)||[]).filter(function(item){return String(item.submitterLineUserId||'')===String(lineUserId||'')&&String(item.status||'approved')==='approved'}).slice().sort(function(a,b){return String(b.transactionDate||'').localeCompare(String(a.transactionDate||''))});
@@ -16114,8 +16358,8 @@ function renderSalesPersonExternalAccountSection(lineUserId){
   section.hidden=false;
   section.innerHTML='<div class="sales-person-ledger-heading sales-person-external-account-heading"><div><span>APPROVED EXTERNAL ACCOUNT</span><h4>核准公司帳</h4><p>依本人及查詢日期列示，不受業績區域／門市篩選影響；計入業績總額。跨月刪除仍在刪除當月沖減。</p></div><div class="sales-person-ledger-total"><b>'+eaMoney(total)+'</b><small>'+String(rows.length)+' 筆</small></div></div><div class="sales-person-ledger-head"><span>日期</span><span>類型</span><span>明細／備註</span><span>審核資訊</span><span>金額／時數</span><span>單據</span></div><div class="sales-person-ledger-list sales-person-external-account-list">'+rows.map(function(item){
     var isAdjustment=item.isDeletionAdjustment===true;
-    var title=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalTransactionDate||'原日期')+' 的公司帳')):'客戶交易';
-    var detailMeta=isAdjustment?'原日期：'+String(item.originalTransactionDate||'—'):(item.note?'備註：'+item.note:'無備註');
+    var title=isAdjustment?String(item.deletionNote||('刪除 '+String(item.originalTransactionDate||'原日期')+' 的公司帳')):(item.purchaseType==='employee_purchase'?'員購':item.purchaseType==='customer_order'?'客訂':'公司帳');
+    var detailMeta=isAdjustment?'原日期：'+String(item.originalTransactionDate||'—'):eaDetailsText116(item).concat(item.note?['備註：'+item.note]:[]).join('・');
     var reviewerText=isAdjustment?(item.deletedByName?'刪除人：'+item.deletedByName:'異動當月沖減'):(item.reviewerName?'核准人：'+item.reviewerName:'已核准');
     var reviewer=eaEsc(reviewerText);if(item.reviewedAt&&!isAdjustment)reviewer+='<small>'+eaEsc(eaDateTime(item.reviewedAt))+'</small>';
     return '<article class="sales-person-ledger-row '+(isAdjustment?'deletion-adjustment':'')+'"><time data-label="日期">'+eaEsc(item.transactionDate||'—')+'</time><span data-label="類型" class="sales-person-expense-type external">'+(isAdjustment?'刪除沖減':'公司帳')+'</span><div data-label="明細／備註" class="sales-person-ledger-detail"><b>'+eaEsc(title)+'</b><small>'+eaEsc(detailMeta)+'</small></div><span data-label="審核資訊" class="sales-person-ledger-review">'+reviewer+'</span><strong data-label="金額／時數">'+eaMoney(item.customerAmount)+'</strong><span data-label="單據" class="sales-person-ledger-action">—</span></article>';
@@ -16135,6 +16379,9 @@ window.showAdminTab=function(name){
   if(name!=='expenseAdmin')eaEl('externalAccountAdminTab')?.classList.remove('active');
 };
 var eaPreviousApplyAdminRoleUI=window.applyAdminRoleUI;if(typeof eaPreviousApplyAdminRoleUI==='function')window.applyAdminRoleUI=function(){var result=eaPreviousApplyAdminRoleUI.apply(this,arguments);eaSyncAdminRole();return result};
+window.previewExternalAccountPhotos116=previewExternalAccountPhotos116;window.removeExternalAccountPhoto116=removeExternalAccountPhoto116;window.openExternalAccountPhoto116=openExternalAccountPhoto116;window.closeExternalAccountPhoto116=closeExternalAccountPhoto116;
+window.StarredCompanyAccount116=Object.freeze({build:ea116.build,detailsText:eaDetailsText116});
+document.addEventListener('keydown',function(event){if(event.key==='Escape'){var viewer=eaEl('externalAccountPhotoViewer116');if(viewer&&!viewer.hidden){closeExternalAccountPhoto116();return}var own=eaEl('externalAccountOwnEditModal'),admin=eaEl('externalAccountEditModal');if(own&&!own.hidden)closeExternalAccountOwnEdit();else if(admin&&!admin.hidden)closeExternalAccountEdit()}});
 window.copyExternalAccountInfo=copyExternalAccountInfo;window.renderExternalAccountOwnList=renderExternalAccountOwnList;window.loadExternalAccountData=loadExternalAccountData;window.submitExternalAccountTransaction=submitExternalAccountTransaction;window.openExternalAccountOwnEdit=openExternalAccountOwnEdit;window.closeExternalAccountOwnEdit=closeExternalAccountOwnEdit;window.saveExternalAccountOwnEdit=saveExternalAccountOwnEdit;window.cancelExternalAccountOwn=cancelExternalAccountOwn;window.deleteExternalAccountOwn=deleteExternalAccountOwn;window.loadExternalAccountAdminReport=loadExternalAccountAdminReport;window.reloadExternalAccountAdminReport=reloadExternalAccountAdminReport;window.goExternalAccountAdminPage=goExternalAccountAdminPage;window.resetExternalAccountAdminFilters=resetExternalAccountAdminFilters;window.saveExternalAccountSettings=saveExternalAccountSettings;window.reviewExternalAccountTransaction=reviewExternalAccountTransaction;window.openExternalAccountEdit=openExternalAccountEdit;window.closeExternalAccountEdit=closeExternalAccountEdit;window.saveExternalAccountEdit=saveExternalAccountEdit;window.deleteExternalAccountTransaction=deleteExternalAccountTransaction;window.renderSalesPersonExternalAccountSection=renderSalesPersonExternalAccountSection;
 document.addEventListener('DOMContentLoaded',function(){var today=eaToday();if(eaEl('externalAccountDate')){eaEl('externalAccountDate').value=today;eaEl('externalAccountDate').max=today}if(eaEl('externalAccountOwnMonth'))eaEl('externalAccountOwnMonth').value=today.slice(0,7);if(eaEl('externalAccountAdminDateFrom')){eaEl('externalAccountAdminDateFrom').value=today.slice(0,7)+'-01';eaEl('externalAccountAdminDateFrom').max=today}if(eaEl('externalAccountAdminDateTo')){eaEl('externalAccountAdminDateTo').value=today;eaEl('externalAccountAdminDateTo').max=today}var identity=eaIdentity();if(eaEl('externalAccountCurrentUser'))eaEl('externalAccountCurrentUser').textContent=identity.name;if(eaEl('externalAccountSubmitterName'))eaEl('externalAccountSubmitterName').value=identity.name;eaSyncAdminRole()});
 })();
@@ -22092,15 +22339,15 @@ function validateRow(r,t,seen){
  seen.add(String(r.id));return Object.assign({},r,{customerAmount:Number(r.customerAmount)});
 }
 function audit(r){var a=[];if(r.reviewerName)a.push((r.status==='rejected'?'審核人：':'核准人：')+r.reviewerName);if(r.reviewedAt)a.push('審核：'+stamp(r.reviewedAt));if(r.editedAt)a.push('修改：'+stamp(r.editedAt)+(r.editedByName?'（'+r.editedByName+'）':''));if(r.cancelledAt)a.push('取消：'+stamp(r.cancelledAt)+(r.cancelledByName?'（'+r.cancelledByName+'）':''));if(r.createdAt)a.push('送出：'+stamp(r.createdAt));return a.length?a.join('\n'):'—'}
-function notes(r){return [r.note?'申請備註：'+r.note:'',r.reviewNote?'審核備註：'+r.reviewNote:''].filter(Boolean).join('\n')||'—'}
+function notes(r){return (window.StarredCompanyAccount116?window.StarredCompanyAccount116.detailsText(r):[]).concat([r.note?'申請備註：'+r.note:'',Array.isArray(r.photoPaths)&&r.photoPaths.length?'購買清單照片：'+r.photoPaths.length+' 張（後台可開啟）':'',r.reviewNote?'審核備註：'+r.reviewNote:'']).filter(Boolean).join('\n')||'—'}
 function report(t){
  var q=t.query,s=t.summary;
  var filtersText=(q.status==='pending'?'待審核不限月份；':!q.status?'待審核不限月份；其他狀態依日期；':'')+'交易日期：'+(q.dateFrom||'不限')+' ～ '+(q.dateTo||'不限')+'　｜　人員：'+t.person+'　｜　狀態：'+(q.status?label(q.status):'全部狀態')+(q.keyword?'　｜　搜尋姓名：'+q.keyword:'');
  var high=function(n){return Math.abs(n)>=10000?' ea82-high':''};
  var body='<main class="sheet"><header class="report-head"><div><p class="eyebrow">星紅織品 · 公司帳管理</p><h1>公司帳交易明細</h1></div><p class="generated">資料讀取時間（台灣）<br>'+esc(stamp(t.loadedAt))+'</p></header><p class="filters">'+esc(filtersText)+'</p>';
  body+='<div class="totals"><div><span>列印筆數</span><strong>'+s.totalCount+' 筆</strong><small>包含全部分頁</small></div><div><span>區間內已核准金額</span><strong class="'+high(s.approvedAmount).trim()+'">'+money(s.approvedAmount)+'</strong><small>'+s.approvedCount+' 筆已核准</small></div><div><span>待審核金額</span><strong class="'+high(s.pendingAmount).trim()+'">'+money(s.pendingAmount)+'</strong><small>'+s.pendingCount+' 筆，尚未核准</small></div><div><span>未通過／已取消</span><strong>'+(s.rejectedCount+s.cancelledCount)+' 筆</strong><small>不列入核准金額</small></div></div>';
- body+='<table><colgroup><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:9%"><col style="width:30%"><col style="width:25%"></colgroup><thead><tr>'+['交易日期','人員','客戶交易金額','狀態','備註','審核／異動'].map(function(h){return '<th scope="col">'+h+'</th>'}).join('')+'</tr></thead><tbody>';
- body+=t.rows.map(function(r){var longNote=notes(r).length>260||notes(r).split('\n').length>8;return '<tr'+(longNote?' class="ea82-long-row"':'')+'><td data-label="交易日期" class="date">'+esc(r.transactionDate)+'</td><td data-label="人員">'+esc(r.submitterName||'LINE 使用者')+'</td><td data-label="客戶交易金額" class="amount'+high(r.customerAmount)+'">'+money(r.customerAmount)+'</td><td data-label="狀態">'+esc(label(r.status))+'</td><td data-label="備註" class="notes">'+esc(notes(r))+'</td><td data-label="審核／異動" class="audit">'+esc(audit(r))+'</td></tr>'}).join('');
+ body+='<table><colgroup><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:9%"><col style="width:30%"><col style="width:25%"></colgroup><thead><tr>'+['交易日期','人員','交易金額','狀態','交易明細／備註','審核／異動'].map(function(h){return '<th scope="col">'+h+'</th>'}).join('')+'</tr></thead><tbody>';
+ body+=t.rows.map(function(r){var longNote=notes(r).length>260||notes(r).split('\n').length>8;return '<tr'+(longNote?' class="ea82-long-row"':'')+'><td data-label="交易日期" class="date">'+esc(r.transactionDate)+'</td><td data-label="人員">'+esc(r.submitterName||'LINE 使用者')+'</td><td data-label="交易金額" class="amount'+high(r.customerAmount)+'">'+money(r.customerAmount)+'</td><td data-label="狀態">'+esc(label(r.status))+'</td><td data-label="交易明細／備註" class="notes">'+esc(notes(r))+'</td><td data-label="審核／異動" class="audit">'+esc(audit(r))+'</td></tr>'}).join('');
  body+='</tbody></table><footer class="report-footer"><p>本次交易金額合計（含未核准）：<span class="'+high(s.totalAmount).trim()+'">'+money(s.totalAmount)+'</span>　｜　已核准金額：<span class="'+high(s.approvedAmount).trim()+'">'+money(s.approvedAmount)+'</span></p><p>待審核、未通過及已取消紀錄不列入核准金額；本表為目前未刪除的公司帳交易清單，不混入業績、費用或扣款。</p></footer></main>';
  return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>星紅織品－公司帳明細</title><style>'+reportCss()+'</style></head><body>'+body+'</body></html>';
 }
@@ -25620,6 +25867,59 @@ window.StarredSharedSales114={build:BUILD,rolesBuild115:ROLE_BUILD115,submit,car
 @media(prefers-reduced-motion:reduce){.ss115-role-option{transition:none}}
 
 .ss115-role-option input,.ss115-unsure input{padding:0!important;border:0!important;border-radius:50%!important;box-shadow:none!important;appearance:auto!important;background:transparent!important}
+
+</style>
+<style id="company-account-v116-style">
+/* Company-account form only. The rest of the site retains the uploaded layout. */
+#externalAccountPage .external-account-form-grid{gap:11px 12px!important}
+#externalAccountPage .external-account-entry-card label,
+.external-account-edit-modal label,.ea116-type-choice legend{font-weight:400!important}
+.ea116-type-choice{margin:0;padding:0;border:0;min-width:0}
+.ea116-type-choice legend{padding:0;margin:0 0 7px;color:#4f6877;font-size:15px}
+.ea116-type-choice>div{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ea116-type-choice .ea116-choice{display:flex!important;align-items:center;gap:9px;margin:0!important;padding:12px 14px;border:1px solid #c6d2da;border-radius:10px;background:#fff;color:#294858;cursor:pointer;font-size:16px!important}
+.ea116-type-choice .ea116-choice:has(input:checked){border:2px solid #526674;background:#eef0f2;padding:11px 13px}
+.ea116-type-choice .ea116-choice:focus-within{outline:2px solid #315c78;outline-offset:3px}
+.ea116-type-choice input{width:18px!important;height:18px!important;min-height:0!important;margin:0!important;accent-color:#36596d;flex:0 0 18px;padding:0!important;border:0!important;border-radius:50%!important;box-shadow:none!important;appearance:auto!important;background:transparent!important}
+#externalAccountPage .external-account-entry-card .field{min-width:0}
+#externalAccountPage .external-account-entry-card textarea{min-height:84px!important;resize:vertical}
+#externalAccountPage .external-account-entry-card .note,.external-account-edit-modal .note{font-size:12px!important;line-height:1.55;margin-top:5px;color:#6a7f8c;white-space:normal!important}
+#externalAccountPage input[type="file"],.external-account-edit-modal input[type="file"]{width:100%;min-width:0;box-sizing:border-box;height:auto!important;padding:8px!important;font-size:13px!important}
+#externalAccountPage input[type="file"]::file-selector-button,.external-account-edit-modal input[type="file"]::file-selector-button{padding:8px 10px;margin-right:10px;border:1px solid #cbd6de;border-radius:7px;background:#f0f4f6;color:#284959;cursor:pointer}
+.ea116-photo-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;min-width:0}
+.ea116-photo-empty{font-size:12px;color:#7a8d98;padding:10px 12px;border:1px dashed #cfd9df;border-radius:8px;width:100%}
+.ea116-photo-item{position:relative;width:96px;min-width:0;padding:0 0 3px;text-align:center}
+.ea116-photo-thumb{padding:0!important;margin:0!important;width:96px!important;height:96px!important;min-width:0!important;min-height:0!important;border:1px solid #cbd7de!important;background:#f4f6f8!important;border-radius:8px!important;overflow:hidden;display:block}
+.ea116-photo-thumb img{display:block;width:100%;height:100%;object-fit:contain}
+.ea116-photo-item>.ea116-photo-remove{position:absolute;top:-5px;right:-5px;width:26px!important;height:26px!important;min-width:0!important;min-height:0!important;padding:0!important;border:1px solid #8f9da6!important;background:#fff!important;color:#334955!important;border-radius:50%!important;font-size:19px!important;line-height:1!important}
+.ea116-photo-item>small{display:block;font-size:11px;font-weight:400;color:#607684;margin-top:3px}
+.ea116-photo-unavailable{display:flex;flex-direction:column;justify-content:center;background:#eef2f5;border:1px solid #cbd7de;border-radius:8px;width:96px;height:96px;font-size:12px;color:#607684}
+.ea116-photo-unavailable small{font-size:10px;line-height:1.5;margin-top:4px}
+.ea116-record-details{display:flex!important;flex-wrap:wrap!important;gap:4px 12px!important;margin:6px 0!important;white-space:normal!important;font-size:12px!important;line-height:1.6;color:#536d7b;font-weight:400!important}
+.ea116-record-details>span{white-space:normal!important;overflow-wrap:anywhere}
+.ea116-record-photos{display:flex!important;flex-wrap:wrap!important;align-items:center;gap:6px 9px;margin-top:6px;font-size:12px;font-weight:400;white-space:normal!important}
+.ea116-record-photos a{display:inline-block;padding:4px 8px;border:1px solid #cad5de;background:#f3f5f7;border-radius:6px;color:#285c79;text-decoration:none}
+.ea116-photo-warning{color:#97611c;font-size:11px}
+.external-account-own-item .external-account-own-note{white-space:pre-wrap!important;overflow-wrap:anywhere;max-width:100%;text-overflow:clip!important;font-weight:400!important}
+#externalAccountAdminTab .external-account-admin-table td:nth-child(2){min-width:230px;white-space:normal!important}
+#externalAccountAdminTab .external-account-admin-table td .external-account-admin-note{white-space:pre-wrap!important}
+.ea116-legacy-hint{grid-column:1/-1;margin:0;padding:8px 10px;border-radius:8px;background:#f2f5f7;color:#627885;font-size:12px;line-height:1.6;font-weight:400}
+.external-account-edit-modal .external-account-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.external-account-edit-modal .external-account-edit-dialog{width:min(640px,100%)}
+.ea116-photo-viewer{position:fixed;inset:0;z-index:3000000;background:rgba(20,34,43,.85);display:grid;place-items:center;padding:16px}
+.ea116-photo-viewer[hidden]{display:none!important}
+.ea116-photo-viewer section{position:relative;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center}
+.ea116-photo-viewer img{display:block;max-width:calc(100vw - 32px);max-height:calc(100dvh - 90px);object-fit:contain}
+.ea116-photo-viewer button{position:absolute;right:0;bottom:calc(100% + 8px);border:1px solid #c5d1db;border-radius:7px;padding:8px 13px;background:#fff;color:#294858;font-weight:400;font-size:14px}
+@media(max-width:760px){
+  #externalAccountPage .external-account-form-grid{grid-template-columns:minmax(0,1fr)!important;gap:11px!important}
+  .external-account-edit-modal .external-account-edit-grid{grid-template-columns:minmax(0,1fr)}
+  .external-account-edit-modal .external-account-wide{grid-column:1/-1}
+  .ea116-type-choice .ea116-choice{padding:12px;font-size:16px!important}
+  .ea116-type-choice .ea116-choice:has(input:checked){padding:11px}
+  .ea116-record-details{font-size:12px!important;gap:3px 10px!important}
+  .external-account-edit-modal input,.external-account-edit-modal select,.external-account-edit-modal textarea{font-size:16px!important}
+}
 
 </style>
 </body>
